@@ -28,6 +28,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 const chatRoutes = require('./routes/api-chat');
 app.use('/api/chat', chatRoutes(io));
 
+// WhatsApp webhook
+const whatsappRoutes = require('./routes/api-whatsapp');
+app.use('/webhook/whatsapp', whatsappRoutes(io));
+
 // Socket.io connection
 io.on('connection', (socket) => {
   console.log('Dashboard bağlandı:', socket.id);
