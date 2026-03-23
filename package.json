@@ -1,0 +1,17 @@
+{
+  "name": "photoreel-dashboard",
+  "version": "1.0.0",
+  "description": "PhotoReel AI - Claude & Gemini Dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "socket.io": "^4.7.5",
+    "@anthropic-ai/sdk": "^0.39.0",
+    "dotenv": "^16.4.5",
+    "cors": "^2.8.5"
+  }
+}

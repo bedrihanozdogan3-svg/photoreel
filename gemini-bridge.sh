@@ -2,7 +2,12 @@
 # Gemini Bridge - Claude <-> Gemini API köprüsü
 # Kullanım: ./gemini-bridge.sh "sorunuz"
 
-GEMINI_API_KEY="AIzaSyBujMLkIOfQsBWrhS6uSAcB28K5OG0E8Tw"
+# .env dosyasından key'i oku
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/.env" ]; then
+  source "$SCRIPT_DIR/.env"
+fi
+GEMINI_API_KEY="${GEMINI_API_KEY:-}"
 MODEL="gemini-2.5-flash"
 API_URL="https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}"
 
