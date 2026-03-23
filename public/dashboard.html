@@ -17,96 +17,136 @@
 body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--coal); min-height:100vh; display:flex; flex-direction:column; }
 
 header {
-  background:var(--coal); color:var(--cream); padding:14px 20px;
+  background:var(--coal); color:var(--cream); padding:10px 20px;
   display:flex; align-items:center; justify-content:space-between;
 }
-.logo { font-size:20px; font-weight:600; }
+.logo { font-size:18px; font-weight:600; }
 .logo span { color:var(--gold); }
+.header-btns { display:flex; gap:8px; align-items:center; }
 .status-badge {
-  padding:4px 12px; border-radius:12px; font-size:11px; font-weight:500;
+  padding:4px 10px; border-radius:12px; font-size:10px; font-weight:500;
   background:#333; color:#999;
 }
 .status-badge.running { background:#1b5e20; color:#a5d6a7; }
 .status-badge.paused { background:#e65100; color:#ffcc80; }
+.tab-btn {
+  padding:6px 12px; border:1px solid #444; border-radius:6px; font-size:11px;
+  cursor:pointer; background:transparent; color:#999; transition:all .2s;
+}
+.tab-btn.active { background:var(--gold); color:#fff; border-color:var(--gold); }
 
+.main-area { flex:1; display:flex; overflow:hidden; }
+
+/* CHAT PANEL */
+.chat-panel { flex:1; display:flex; flex-direction:column; min-width:0; }
 .controls {
   background:var(--warm); border-bottom:1px solid var(--border);
-  padding:12px 20px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+  padding:8px 12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;
 }
 .controls input[type=text] {
-  flex:1; min-width:200px; padding:10px 14px; border:1px solid var(--border);
-  border-radius:8px; font-size:14px; outline:none; background:#fff;
+  flex:1; min-width:120px; padding:8px 10px; border:1px solid var(--border);
+  border-radius:6px; font-size:13px; outline:none; background:#fff;
 }
 .controls input:focus { border-color:var(--gold); }
 .btn {
-  padding:10px 18px; border:none; border-radius:8px; font-size:13px;
+  padding:8px 14px; border:none; border-radius:6px; font-size:12px;
   font-weight:500; cursor:pointer; transition:all .2s;
 }
 .btn-start { background:var(--coal); color:var(--cream); }
-.btn-start:hover { background:#333; }
 .btn-stop { background:#c62828; color:#fff; }
-.btn-stop:hover { background:#e53935; }
 .btn-pause { background:var(--gold); color:#fff; }
 .btn-send { background:var(--gold-d); color:#fff; }
-.btn-send:hover { background:var(--gold); }
 
 .chat-area {
-  flex:1; overflow-y:auto; padding:16px 20px; display:flex;
-  flex-direction:column; gap:10px;
+  flex:1; overflow-y:auto; padding:10px 12px; display:flex;
+  flex-direction:column; gap:8px;
 }
 .msg {
-  max-width:85%; padding:12px 16px; border-radius:12px;
-  font-size:14px; line-height:1.5; border-left:4px solid;
+  max-width:90%; padding:10px 12px; border-radius:10px;
+  font-size:13px; line-height:1.4; border-left:3px solid;
   word-wrap:break-word; white-space:pre-wrap;
 }
 .msg.claude { background:var(--claude-bg); border-color:var(--claude-border); align-self:flex-start; }
 .msg.gemini { background:var(--gemini-bg); border-color:var(--gemini-border); align-self:flex-end; }
 .msg.user { background:var(--user-bg); border-color:var(--user-border); align-self:center; }
-.msg.system { background:#f3e5f5; border-color:#9c27b0; align-self:center; font-size:12px; }
-.msg-sender {
-  font-size:11px; font-weight:600; text-transform:uppercase;
-  letter-spacing:1px; margin-bottom:4px; opacity:.7;
-}
+.msg.system { background:#f3e5f5; border-color:#9c27b0; align-self:center; font-size:11px; }
+.msg-sender { font-size:10px; font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; opacity:.7; }
 .msg.claude .msg-sender { color:var(--claude-border); }
 .msg.gemini .msg-sender { color:var(--gemini-border); }
 .msg.user .msg-sender { color:var(--user-border); }
-.msg-time { font-size:10px; color:var(--soft); margin-top:4px; }
+.msg-time { font-size:9px; color:var(--soft); margin-top:3px; }
 
 .input-bar {
   background:var(--warm); border-top:1px solid var(--border);
-  padding:12px 20px; display:flex; gap:10px; align-items:center;
+  padding:8px 12px; display:flex; gap:8px; align-items:center;
 }
 .input-bar input {
-  flex:1; padding:10px 14px; border:1px solid var(--border);
-  border-radius:8px; font-size:14px; outline:none; background:#fff;
+  flex:1; padding:8px 10px; border:1px solid var(--border);
+  border-radius:6px; font-size:13px; outline:none; background:#fff;
 }
-.input-bar input:focus { border-color:var(--gold); }
 .input-bar select {
-  padding:10px; border:1px solid var(--border); border-radius:8px;
-  font-size:13px; background:#fff;
+  padding:8px; border:1px solid var(--border); border-radius:6px;
+  font-size:11px; background:#fff;
 }
-
-.bottom-nav {
-  background:var(--coal); padding:10px 20px; display:flex;
-  justify-content:center; gap:20px;
-}
-.bottom-nav a {
-  color:var(--soft); text-decoration:none; font-size:12px;
-  padding:6px 14px; border-radius:6px; transition:all .2s;
-}
-.bottom-nav a:hover, .bottom-nav a.active { color:var(--gold); background:rgba(201,168,76,.1); }
 
 .empty-state {
   flex:1; display:flex; align-items:center; justify-content:center;
-  flex-direction:column; color:var(--soft); gap:8px;
+  flex-direction:column; color:var(--soft); gap:6px;
 }
-.empty-state .icon { font-size:48px; }
-.empty-state p { font-size:14px; }
+.empty-state .icon { font-size:40px; }
+.empty-state p { font-size:13px; }
 
-@media (max-width:600px) {
+/* CODE PANEL */
+.code-panel {
+  width:50%; border-left:2px solid var(--border); display:flex;
+  flex-direction:column; background:#1e1e1e;
+}
+.code-panel.hidden { display:none; }
+.code-panel .chat-panel { flex:1; }
+.code-header {
+  background:#252526; padding:8px 12px; display:flex; align-items:center;
+  justify-content:space-between; border-bottom:1px solid #333;
+}
+.code-header span { color:#ccc; font-size:12px; font-weight:500; }
+.code-tabs { display:flex; gap:4px; }
+.code-tab {
+  padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer;
+  background:#333; color:#999; border:none; transition:all .2s;
+}
+.code-tab.active { background:var(--gold); color:#fff; }
+.code-area {
+  flex:1; overflow-y:auto; padding:12px; font-family:'Consolas','Courier New',monospace;
+  font-size:12px; line-height:1.6; color:#d4d4d4; white-space:pre-wrap;
+}
+.code-input-bar {
+  background:#252526; padding:8px 12px; display:flex; gap:8px;
+  border-top:1px solid #333;
+}
+.code-input-bar input {
+  flex:1; padding:8px 10px; border:1px solid #444; border-radius:6px;
+  font-size:12px; outline:none; background:#1e1e1e; color:#d4d4d4;
+}
+.code-input-bar button {
+  padding:8px 14px; border:none; border-radius:6px; font-size:11px;
+  cursor:pointer; background:var(--gold); color:#fff;
+}
+
+.bottom-nav {
+  background:var(--coal); padding:8px 20px; display:flex;
+  justify-content:center; gap:16px;
+}
+.bottom-nav a {
+  color:var(--soft); text-decoration:none; font-size:11px;
+  padding:4px 10px; border-radius:6px; transition:all .2s;
+}
+.bottom-nav a:hover, .bottom-nav a.active { color:var(--gold); background:rgba(201,168,76,.1); }
+
+/* MOBILE */
+@media (max-width:768px) {
+  .main-area { flex-direction:column; }
+  .code-panel { width:100%; height:50%; border-left:none; border-top:2px solid var(--border); }
   .controls { flex-direction:column; }
   .controls input[type=text] { min-width:auto; }
-  .msg { max-width:95%; }
 }
 </style>
 </head>
@@ -114,32 +154,58 @@ header {
 
 <header>
   <div class="logo">Photo<span>Reel</span> AI</div>
-  <div class="status-badge" id="statusBadge">Bağlanıyor...</div>
+  <div class="header-btns">
+    <button class="tab-btn active" onclick="toggleView('chat')">Sohbet</button>
+    <button class="tab-btn" onclick="toggleView('code')">Kod</button>
+    <button class="tab-btn" onclick="toggleView('both')">Her İkisi</button>
+    <div class="status-badge" id="statusBadge">Bağlanıyor...</div>
+  </div>
 </header>
 
-<div class="controls">
-  <input type="text" id="topicInput" placeholder="Konu girin... (ör: PhotoReel için Instagram trend analizi)">
-  <button class="btn btn-start" id="btnStart" onclick="startConversation()">Başlat</button>
-  <button class="btn btn-pause" id="btnPause" onclick="pauseConversation()" style="display:none">Duraklat</button>
-  <button class="btn btn-stop" id="btnStop" onclick="stopConversation()" style="display:none">Durdur</button>
-</div>
-
-<div class="chat-area" id="chatArea">
-  <div class="empty-state" id="emptyState">
-    <div class="icon">🤖</div>
-    <p>Claude ve Gemini'yi konuşturmak için bir konu girin</p>
-    <p style="font-size:12px">İki AI birbirleriyle tartışacak, siz izleyeceksiniz</p>
+<div class="main-area">
+  <!-- CHAT PANEL -->
+  <div class="chat-panel" id="chatPanel">
+    <div class="controls">
+      <input type="text" id="topicInput" placeholder="Konu girin... (ör: PhotoReel v10 mimarisini tartışın)">
+      <button class="btn btn-start" id="btnStart" onclick="startConversation()">Başlat</button>
+      <button class="btn btn-pause" id="btnPause" onclick="pauseConversation()" style="display:none">Duraklat</button>
+      <button class="btn btn-stop" id="btnStop" onclick="stopConversation()" style="display:none">Durdur</button>
+    </div>
+    <div class="chat-area" id="chatArea">
+      <div class="empty-state" id="emptyState">
+        <div class="icon">🤖</div>
+        <p>Claude ve Gemini'yi konuşturmak için bir konu girin</p>
+        <p style="font-size:11px">İki AI birbirleriyle tartışacak, siz izleyeceksiniz</p>
+      </div>
+    </div>
+    <div class="input-bar">
+      <select id="targetSelect">
+        <option value="both">Her İkisine</option>
+        <option value="gemini">Gemini'ye</option>
+        <option value="claude">Claude'a</option>
+      </select>
+      <input type="text" id="msgInput" placeholder="Mesaj yazın..." onkeypress="if(event.key==='Enter')sendMessage()">
+      <button class="btn btn-send" onclick="sendMessage()">Gönder</button>
+    </div>
   </div>
-</div>
 
-<div class="input-bar">
-  <select id="targetSelect">
-    <option value="both">Her İkisine</option>
-    <option value="gemini">Gemini'ye</option>
-    <option value="claude">Claude'a</option>
-  </select>
-  <input type="text" id="msgInput" placeholder="Mesaj yazın..." onkeypress="if(event.key==='Enter')sendMessage()">
-  <button class="btn btn-send" onclick="sendMessage()">Gönder</button>
+  <!-- CODE PANEL -->
+  <div class="code-panel hidden" id="codePanel">
+    <div class="code-header">
+      <span>Kod Paneli</span>
+      <div class="code-tabs">
+        <button class="code-tab active" onclick="loadFile('photoreel_v9.html')">v9.html</button>
+        <button class="code-tab" onclick="loadFile('server.js')">server.js</button>
+        <button class="code-tab" onclick="loadFile('services/gemini-service.js')">gemini</button>
+        <button class="code-tab" onclick="loadFile('services/claude-service.js')">claude</button>
+      </div>
+    </div>
+    <div class="code-area" id="codeArea">Dosya seçin veya Gemini'ye kod sorun...</div>
+    <div class="code-input-bar">
+      <input type="text" id="codeInput" placeholder="Gemini'ye kod hakkında sorun..." onkeypress="if(event.key==='Enter')askCodeQuestion()">
+      <button onclick="askCodeQuestion()">Sor</button>
+    </div>
+  </div>
 </div>
 
 <div class="bottom-nav">
@@ -153,8 +219,81 @@ const socket = io();
 const chatArea = document.getElementById('chatArea');
 const emptyState = document.getElementById('emptyState');
 const statusBadge = document.getElementById('statusBadge');
+const codeArea = document.getElementById('codeArea');
 let isRunning = false;
+let currentView = 'chat';
 
+// VIEW TOGGLE
+function toggleView(view) {
+  currentView = view;
+  const chatPanel = document.getElementById('chatPanel');
+  const codePanel = document.getElementById('codePanel');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+
+  if (view === 'chat') {
+    chatPanel.style.display = 'flex';
+    codePanel.classList.add('hidden');
+  } else if (view === 'code') {
+    chatPanel.style.display = 'none';
+    codePanel.classList.remove('hidden');
+    codePanel.style.width = '100%';
+  } else {
+    chatPanel.style.display = 'flex';
+    codePanel.classList.remove('hidden');
+    codePanel.style.width = '50%';
+  }
+}
+
+// FILE LOADING
+async function loadFile(filename) {
+  document.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  codeArea.textContent = 'Yükleniyor...';
+  try {
+    const res = await fetch('/api/chat/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: `${filename} dosyasının içeriğini kısaca analiz et. Ne yapıyor, kaç satır, ana fonksiyonlar neler?` })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      codeArea.textContent = `📄 ${filename}\n${'─'.repeat(40)}\n\n${data.response}`;
+    } else {
+      codeArea.textContent = 'Hata: ' + (data.error || 'Bilinmeyen hata');
+    }
+  } catch(e) {
+    codeArea.textContent = 'Bağlantı hatası: ' + e.message;
+  }
+}
+
+// CODE QUESTION
+async function askCodeQuestion() {
+  const input = document.getElementById('codeInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  codeArea.textContent += `\n\n💬 Sen: ${text}\n⏳ Gemini düşünüyor...`;
+  codeArea.scrollTop = codeArea.scrollHeight;
+  try {
+    const res = await fetch('/api/chat/gemini', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      codeArea.textContent += `\n\n🟢 Gemini:\n${data.response}`;
+    } else {
+      codeArea.textContent += `\n\n❌ Hata: ${data.error}`;
+    }
+  } catch(e) {
+    codeArea.textContent += `\n\n❌ Bağlantı hatası: ${e.message}`;
+  }
+  codeArea.scrollTop = codeArea.scrollHeight;
+}
+
+// SOCKET EVENTS
 socket.on('connect', () => {
   statusBadge.textContent = 'Bağlı';
   statusBadge.className = 'status-badge';
@@ -167,6 +306,12 @@ socket.on('disconnect', () => {
 
 socket.on('message', (msg) => {
   addMessage(msg.sender, msg.text, msg.timestamp);
+  // Kod panelinde de göster
+  if (msg.sender !== 'user' && currentView !== 'chat') {
+    const label = msg.sender === 'claude' ? '🔵 Claude' : '🟢 Gemini';
+    codeArea.textContent += `\n\n${label}:\n${msg.text}`;
+    codeArea.scrollTop = codeArea.scrollHeight;
+  }
 });
 
 socket.on('status', (data) => {
@@ -241,30 +386,15 @@ async function sendMessage() {
   const input = document.getElementById('msgInput');
   const text = input.value.trim();
   if (!text) return;
-
   const target = document.getElementById('targetSelect').value;
   input.value = '';
-
   addMessage('user', text);
-
   if (target === 'gemini') {
-    await fetch('/api/chat/gemini', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
-    });
+    await fetch('/api/chat/gemini', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text}) });
   } else if (target === 'claude') {
-    await fetch('/api/chat/claude', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
-    });
+    await fetch('/api/chat/claude', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text}) });
   } else {
-    await fetch('/api/chat/inject', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
-    });
+    await fetch('/api/chat/inject', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text}) });
   }
 }
 </script>
