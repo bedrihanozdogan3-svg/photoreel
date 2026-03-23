@@ -78,6 +78,22 @@ class ConversationManager {
 
   async injectMessage(text) {
     this._addMessage('user', text);
+    // Gemini'ye gönder
+    try {
+      const geminiRes = await geminiService.sendMessage(this.messages, text);
+      this._addMessage('gemini', geminiRes);
+    } catch(e) {
+      this._emit('error', { message: 'Gemini hatası: ' + e.message });
+    }
+    // Claude'a gönder (hata verirse atla)
+    if (claudeService.isAvailable()) {
+      try {
+        const claudeRes = await claudeService.sendMessage(this.messages, text);
+        this._addMessage('claude', claudeRes);
+      } catch(e) {
+        this._emit('error', { message: 'Claude hatası: ' + e.message });
+      }
+    }
   }
 
   async sendToGemini(text) {
