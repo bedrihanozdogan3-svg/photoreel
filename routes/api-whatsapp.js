@@ -1,6 +1,7 @@
 const express = require('express');
 const geminiService = require('../services/gemini-service');
 const claudeService = require('../services/claude-service');
+const sharedMemory = require('../services/shared-memory-service');
 
 // Twilio config
 const TWILIO_SID = process.env.TWILIO_ACCOUNT_SID;
@@ -69,6 +70,9 @@ function getHelpText(lang) {
     `• /incele dosya.js → Hatalari bul\n` +
     `• /duzelt dosya.js aciklama → Bug duzelt\n` +
     `• /dosyalar → Tum dosyalari listele\n\n` +
+    `🧠 Hafıza:\n` +
+    `• /hafiza → Paylaşımlı hafızayı gör\n` +
+    `• /not bilgi → Hafızaya not ekle\n\n` +
     `⚙️ Ayarlar:\n` +
     `• /dil tr|en → Dil degistir\n` +
     `• /durum → Sistem durumu\n` +
@@ -285,6 +289,12 @@ module.exports = function(io) {
           history.push({ sender: 'claude', text: response });
           if (global.trackUsage) global.trackUsage('claude');
           response = `🔵 Claude:\n${response}`;
+
+          // Önemli konuşmaları hafızaya kaydet
+          if (sharedMemory.shouldSaveToMemory(text.replace(/^\/claude\s+/i, '').replace(/^claude:\s*/i, '')) || sharedMemory.shouldSaveToMemory(response)) {
+            const summary = text.replace(/^\/claude\s+/i, '').replace(/^claude:\s*/i, '');
+            sharedMemory.addConversationNote('Kullanıcı→Claude', summary.length > 100 ? summary.substring(0, 100) + '...' : summary);
+          }
         }
       }
       // Her ikisi
@@ -377,6 +387,26 @@ module.exports = function(io) {
           `🟢 Sunucu: Calisiyor\n` +
           `📱 Admin: ${isAdmin ? 'Evet (sen)' : 'Hayir'}`;
       }
+      // Hafıza görüntüle
+      else if (lowerText === '/hafiza' || lowerText === '/memory') {
+        const memory = sharedMemory.readMemory();
+        if (memory) {
+          const preview = memory.length > 1400 ? memory.substring(0, 1400) + '\n\n... (kısaltıldı)' : memory;
+          response = `🧠 Paylaşımlı Hafıza:\n\n${preview}`;
+        } else {
+          response = '🧠 Hafıza boş.';
+        }
+      }
+      // Hafızaya not ekle
+      else if (lowerText.startsWith('/not ') || lowerText.startsWith('/note ')) {
+        const note = text.replace(/^\/(not|note)\s+/i, '').trim();
+        if (note) {
+          sharedMemory.addDecision(note);
+          response = `✅ Hafızaya kaydedildi: "${note}"`;
+        } else {
+          response = '❌ Kullanım: /not <kaydedilecek bilgi>';
+        }
+      }
       // Yardim
       else if (lowerText === '/yardim' || lowerText === '/help') {
         response = getHelpText(lang);
@@ -397,6 +427,12 @@ module.exports = function(io) {
         history.push({ sender: 'gemini', text: response });
         if (global.trackUsage) global.trackUsage('gemini');
         response = `🟢 Gemini:\n${response}`;
+
+        // Önemli konuşmaları hafızaya kaydet
+        if (sharedMemory.shouldSaveToMemory(text) || sharedMemory.shouldSaveToMemory(response)) {
+          const summary = text.length > 100 ? text.substring(0, 100) + '...' : text;
+          sharedMemory.addConversationNote('Kullanıcı→Gemini', summary);
+        }
       }
 
       // Gecmisi sinirla

@@ -1,3 +1,5 @@
+const sharedMemory = require('./shared-memory-service');
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const MODEL = 'gemini-2.5-flash';
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
@@ -13,6 +15,16 @@ async function sendMessage(history, message) {
     parts: [{ text: message }]
   });
 
+  // Paylaşımlı hafızayı system prompt'a ekle
+  const memoryContext = sharedMemory.getSystemContext();
+
+  const systemText = `Sen PhotoReel AI projesinde çalışan Gemini'sin. Claude ile birlikte çalışıyorsun. Türkçe yanıt ver.
+
+Geliştirici Bedrihan Özdoğan ile WhatsApp üzerinden konuşuyorsun. Ona "Bedrihan" diye hitap et.
+Kısa, öz ve faydalı cevaplar ver. Kod önerilerinde pratik ol. Gereksiz açıklama yapma.
+
+${memoryContext}`;
+
   const payload = {
     contents,
     generationConfig: {
@@ -20,7 +32,7 @@ async function sendMessage(history, message) {
       maxOutputTokens: 8192
     },
     systemInstruction: {
-      parts: [{ text: 'Sen PhotoReel AI projesinde çalışan Gemini\'sin. Claude ile birlikte çalışıyorsun. Türkçe yanıt ver.' }]
+      parts: [{ text: systemText }]
     }
   };
 

@@ -424,36 +424,24 @@ async function sendMessage() {
   if (!text) return;
   const target = document.getElementById('targetSelect').value;
   input.value = '';
-  addMessage('user', text);
 
+  // Mesajlar socket üzerinden gelecek (user + AI cevabı), burada tekrar ekleme
   try {
     if (target === 'gemini') {
       const res = await fetch('/api/chat/gemini', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text}) });
       const data = await res.json();
-      if (data.ok) addMessage('gemini', data.response);
-      else addMessage('system', 'Gemini hatası: ' + (data.error || 'Bilinmeyen'));
+      if (!data.ok) addMessage('system', 'Gemini hatası: ' + (data.error || 'Bilinmeyen'));
     } else if (target === 'claude') {
       const res = await fetch('/api/chat/claude', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text}) });
       const data = await res.json();
-      if (data.ok) addMessage('claude', data.response);
-      else addMessage('system', 'Claude hatası: ' + (data.error || 'Bilinmeyen'));
+      if (!data.ok) addMessage('system', 'Claude hatası: ' + (data.error || 'Bilinmeyen'));
     } else {
-      // Her ikisine
+      // Her ikisine — sırayla gönder (paralel gönderim user mesajını 2 kez ekler)
       addMessage('system', '⏳ Gemini ve Claude düşünüyor...');
-      const [geminiRes, claudeRes] = await Promise.allSettled([
-        fetch('/api/chat/gemini', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text}) }).then(r => r.json()),
-        fetch('/api/chat/claude', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text}) }).then(r => r.json())
-      ]);
-      if (geminiRes.status === 'fulfilled' && geminiRes.value.ok) {
-        addMessage('gemini', geminiRes.value.response);
-      } else {
-        addMessage('system', '❌ Gemini yanıt veremedi');
-      }
-      if (claudeRes.status === 'fulfilled' && claudeRes.value.ok) {
-        addMessage('claude', claudeRes.value.response);
-      } else {
-        addMessage('system', '❌ Claude yanıt veremedi (API kredi gerekli olabilir)');
-      }
+      const geminiRes = await fetch('/api/chat/gemini', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text}) }).then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
+      if (!geminiRes.ok) addMessage('system', '❌ Gemini yanıt veremedi');
+      const claudeRes = await fetch('/api/chat/claude', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text}) }).then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
+      if (!claudeRes.ok) addMessage('system', '❌ Claude yanıt veremedi (API kredi gerekli olabilir)');
     }
   } catch(e) {
     addMessage('system', '❌ Bağlantı hatası: ' + e.message);

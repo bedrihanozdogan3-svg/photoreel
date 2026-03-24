@@ -97,6 +97,7 @@ class ConversationManager {
   }
 
   async sendToGemini(text) {
+    this._addMessage('user', text);
     const response = await geminiService.sendMessage(this.messages, text);
     this._addMessage('gemini', response);
     return response;
@@ -106,6 +107,7 @@ class ConversationManager {
     if (!claudeService.isAvailable()) {
       throw new Error('Claude API key ayarlanmamış');
     }
+    this._addMessage('user', text);
     const response = await claudeService.sendMessage(this.messages, text);
     this._addMessage('claude', response);
     return response;
