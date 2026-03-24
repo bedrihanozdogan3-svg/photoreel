@@ -13,7 +13,7 @@ html{height:100%;overflow:hidden}
 table#layout{width:100vw;height:100dvh;border-collapse:collapse;table-layout:fixed}
 td{vertical-align:top;overflow:hidden}
 td#sol{width:40%;height:100dvh;position:relative;border-right:2px solid #1f6feb}
-td#sag{width:60%;height:100dvh;background:#0a0e14;font-family:'Cascadia Code',Consolas,'Courier New',monospace;font-size:12px;padding:0;overflow-y:auto;overflow-x:hidden;line-height:1.5;position:relative}
+td#sag-td{width:60%;height:100%;background:#0a0e14;font-family:'Cascadia Code',Consolas,'Courier New',monospace;font-size:12px;padding:0;line-height:1.5;position:relative}
 td#sag::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,255,0,.02) 0%,transparent 50%,rgba(0,255,0,.02) 100%);pointer-events:none;z-index:1}
 .t-line{padding:2px 8px 2px 40px;position:relative;color:#39ff14;border-bottom:1px solid rgba(57,255,20,.05);animation:typeFade .4s ease;word-wrap:break-word;word-break:break-all;white-space:pre-wrap}
 .t-line:hover{background:rgba(57,255,20,.05)}
@@ -105,7 +105,7 @@ button:active{transform:scale(.95)}
     </div>
   </div>
 </td>
-<td id="sag"></td>
+<td id="sag-td"><div id="sag" style="height:100%;overflow-y:auto;overflow-x:hidden"></div></td>
 </tr>
 </table>
 
