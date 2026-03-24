@@ -37,6 +37,10 @@ app.use('/webhook/whatsapp', whatsappRoutes(io));
 const agentRoutes = require('./routes/api-agent');
 app.use('/api/agent', agentRoutes);
 
+// Local Claude (API key olmadan tablet↔Claude iletişimi)
+const localClaudeRoutes = require('./routes/api-local-claude');
+app.use('/api/claude-local', localClaudeRoutes);
+
 // Tablet kontrol paneli
 app.get('/kontrol', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'kontrol.html'));
