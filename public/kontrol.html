@@ -372,6 +372,33 @@
             display: none;
         }
 
+        /* Tablet dikey mod */
+        @media (max-width: 1024px) and (orientation: portrait) {
+            .main-container {
+                flex-direction: column;
+            }
+            #terminal-panel {
+                flex-basis: 25%;
+                border-right: none;
+                border-bottom: 1px solid #30363d;
+            }
+            #chat-panel {
+                flex-basis: 50%;
+                border-right: none;
+                border-bottom: 1px solid #30363d;
+            }
+            #quick-access-panel {
+                flex-basis: 25%;
+            }
+        }
+
+        /* Tablet yatay mod */
+        @media (max-width: 1280px) and (orientation: landscape) {
+            #terminal-panel { flex-basis: 25%; }
+            #chat-panel { flex-basis: 50%; }
+            #quick-access-panel { flex-basis: 25%; }
+        }
+
     </style>
 </head>
 <body>
