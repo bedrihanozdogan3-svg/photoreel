@@ -1,4 +1,12 @@
-const sharedMemory = require('./shared-memory-service');
+let firestoreService = null;
+
+// Lazy load firestore (çökmemesi için)
+function getFirestore() {
+  if (!firestoreService) {
+    try { firestoreService = require('./firestore-service'); } catch(e) { console.log('Firestore yüklenemedi:', e.message); }
+  }
+  return firestoreService;
+}
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const MODEL = 'gemini-2.5-flash';
@@ -15,15 +23,19 @@ async function sendMessage(history, message) {
     parts: [{ text: message }]
   });
 
-  // Paylaşımlı hafızayı system prompt'a ekle
-  const memoryContext = sharedMemory.getSystemContext();
+  // Firestore'dan bağlam al (hata olursa atla)
+  let firestoreContext = '';
+  try {
+    const fs = getFirestore();
+    if (fs) firestoreContext = await fs.getSystemContext();
+  } catch(e) { console.log('Firestore context atlandı:', e.message); }
 
   const systemText = `Sen PhotoReel AI projesinde çalışan Gemini'sin. Claude ile birlikte çalışıyorsun. Türkçe yanıt ver.
 
 Geliştirici Bedrihan Özdoğan ile WhatsApp üzerinden konuşuyorsun. Ona "Bedrihan" diye hitap et.
 Kısa, öz ve faydalı cevaplar ver. Kod önerilerinde pratik ol. Gereksiz açıklama yapma.
 
-${memoryContext}`;
+${firestoreContext}`;
 
   const payload = {
     contents,

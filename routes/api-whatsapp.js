@@ -2,6 +2,7 @@ const express = require('express');
 const geminiService = require('../services/gemini-service');
 const claudeService = require('../services/claude-service');
 const sharedMemory = require('../services/shared-memory-service');
+const firestoreService = require('../services/firestore-service');
 
 // Twilio config
 const TWILIO_SID = process.env.TWILIO_ACCOUNT_SID;
@@ -70,9 +71,20 @@ function getHelpText(lang) {
     `• /incele dosya.js → Hatalari bul\n` +
     `• /duzelt dosya.js aciklama → Bug duzelt\n` +
     `• /dosyalar → Tum dosyalari listele\n\n` +
-    `🧠 Hafıza:\n` +
-    `• /hafiza → Paylaşımlı hafızayı gör\n` +
-    `• /not bilgi → Hafızaya not ekle\n\n` +
+    `🧠 Beyin Merkezi:\n` +
+    `• /fikir metin → Fikir kaydet\n` +
+    `• /bug metin → Bug kaydet\n` +
+    `• /karar metin → Karar kaydet\n` +
+    `• /gorev metin → Görev ekle\n` +
+    `• /not metin → Not ekle\n` +
+    `• /fikirler → Fikirleri listele\n` +
+    `• /buglar → Bugları listele\n` +
+    `• /gorevler → Görevleri listele\n` +
+    `• /ozet → Tüm özet\n` +
+    `• /hafiza → Hafızayı gör\n\n` +
+    `🎤 Medya:\n` +
+    `• Sesli mesaj gönder → Gemini dinler ve cevaplar\n` +
+    `• Görsel gönder → Gemini analiz eder\n\n` +
     `⚙️ Ayarlar:\n` +
     `• /dil tr|en → Dil degistir\n` +
     `• /durum → Sistem durumu\n` +
@@ -227,11 +239,94 @@ module.exports = function(io) {
         return;
       }
 
-      // Medya mesaji
-      if (msgType !== 'text' && msgType !== 'media') return;
-      if (msgType === 'media' && !text) {
-        await sendWhatsAppMessage(from, '📸 Gorsel/ses isleme yakinda! Simdilik metin kullanin.\n/yardim yazarak komutlari gorebilirsiniz.');
-        return;
+      // Medya mesaji (sesli mesaj veya görsel)
+      if (msgType === 'media' && body.NumMedia > 0) {
+        const mediaUrl = body.MediaUrl0;
+        const mediaType = body.MediaContentType0 || '';
+        console.log(`[MEDIA] Tür: ${mediaType}, URL: ${mediaUrl}`);
+
+        if (mediaType.startsWith('audio/') || mediaType === 'audio/ogg') {
+          // SESLİ MESAJ → Gemini'ye gönder, yazıya çevir ve cevapla
+          try {
+            await sendWhatsAppMessage(from, '🎤 Sesli mesajın işleniyor...');
+            // Twilio media URL'den ses dosyasını indir
+            const audioRes = await fetch(mediaUrl, {
+              headers: { 'Authorization': 'Basic ' + Buffer.from(`${TWILIO_SID}:${TWILIO_AUTH}`).toString('base64') }
+            });
+            const audioBuffer = await audioRes.arrayBuffer();
+            const base64Audio = Buffer.from(audioBuffer).toString('base64');
+
+            // Gemini'ye ses gönder
+            const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+            const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [
+                  { inlineData: { mimeType: mediaType, data: base64Audio } },
+                  { text: 'Bu sesli mesajı Türkçe olarak yazıya çevir. Sonra içeriğine uygun kısa bir cevap ver. Kullanıcıya "Bedrihan" diye hitap et.' }
+                ]}],
+                generationConfig: { temperature: 0.3, maxOutputTokens: 4096 }
+              })
+            });
+            const geminiData = await geminiRes.json();
+            if (geminiData.candidates?.[0]?.content?.parts?.[0]?.text) {
+              text = '[Sesli mesaj]';
+              response = `🎤 ${geminiData.candidates[0].content.parts[0].text}`;
+              if (global.trackUsage) global.trackUsage('gemini');
+              await sendWhatsAppMessage(from, response);
+            } else {
+              await sendWhatsAppMessage(from, '❌ Sesli mesaj çözümlenemedi. Tekrar dene.');
+            }
+          } catch(e) {
+            console.error('Sesli mesaj hatası:', e.message);
+            await sendWhatsAppMessage(from, '❌ Sesli mesaj işlenirken hata: ' + e.message);
+          }
+          return;
+        }
+        else if (mediaType.startsWith('image/')) {
+          // GÖRSEL → Gemini'ye analiz ettir + Firestore'a kaydet
+          try {
+            await sendWhatsAppMessage(from, '📸 Görsel analiz ediliyor...');
+            const imgRes = await fetch(mediaUrl, {
+              headers: { 'Authorization': 'Basic ' + Buffer.from(`${TWILIO_SID}:${TWILIO_AUTH}`).toString('base64') }
+            });
+            const imgBuffer = await imgRes.arrayBuffer();
+            const base64Img = Buffer.from(imgBuffer).toString('base64');
+
+            const caption = body.Body || '';
+            const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+            const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [
+                  { inlineData: { mimeType: mediaType, data: base64Img } },
+                  { text: `Bu görseli analiz et. ${caption ? 'Kullanıcı notu: ' + caption : ''}\n\nBu bir PhotoReel AI projesi için gönderilen görsel. Görselin içeriğini, renklerini, kompozisyonunu, ürün kategorisini ve potansiyel kullanım alanlarını açıkla. Bedrihan'a hitap et.` }
+                ]}],
+                generationConfig: { temperature: 0.5, maxOutputTokens: 4096 }
+              })
+            });
+            const geminiData = await geminiRes.json();
+            if (geminiData.candidates?.[0]?.content?.parts?.[0]?.text) {
+              const analysis = geminiData.candidates[0].content.parts[0].text;
+              // Firestore'a kaydet
+              await firestoreService.addNot(`[GÖRSEL ANALİZ] ${analysis.substring(0, 200)}`, from);
+              if (global.trackUsage) global.trackUsage('gemini');
+              await sendWhatsAppMessage(from, `📸 Görsel Analiz:\n\n${analysis}`);
+            } else {
+              await sendWhatsAppMessage(from, '❌ Görsel analiz edilemedi.');
+            }
+          } catch(e) {
+            console.error('Görsel analiz hatası:', e.message);
+            await sendWhatsAppMessage(from, '❌ Görsel işlenirken hata: ' + e.message);
+          }
+          return;
+        }
+        else if (!text) {
+          await sendWhatsAppMessage(from, '📎 Bu dosya türü henüz desteklenmiyor. Metin, ses veya görsel gönder.');
+          return;
+        }
       }
 
       console.log(`WhatsApp mesaj isleniyor: ${from} ${isAdmin ? '(ADMIN)' : ''} -> ${text}`);
@@ -259,8 +354,86 @@ module.exports = function(io) {
 
       // === KOMUTLAR ===
 
+      // === BEYİN MERKEZİ KOMUTLARI ===
+
+      // Fikir kaydet
+      if (lowerText.startsWith('/fikir ')) {
+        const fikir = text.replace(/^\/fikir\s+/i, '').trim();
+        if (fikir) {
+          await firestoreService.addFikir(fikir, from);
+          response = `💡 Fikir kaydedildi: "${fikir}"`;
+        } else {
+          response = '❌ Kullanım: /fikir <fikir metni>';
+        }
+      }
+      // Bug kaydet
+      else if (lowerText.startsWith('/bug ')) {
+        const bug = text.replace(/^\/bug\s+/i, '').trim();
+        if (bug) {
+          await firestoreService.addBug(bug, from);
+          response = `🐛 Bug kaydedildi: "${bug}"`;
+        } else {
+          response = '❌ Kullanım: /bug <hata açıklaması>';
+        }
+      }
+      // Karar kaydet
+      else if (lowerText.startsWith('/karar ')) {
+        const karar = text.replace(/^\/karar\s+/i, '').trim();
+        if (karar) {
+          await firestoreService.addKarar(karar, from);
+          response = `✅ Karar kaydedildi: "${karar}"`;
+        } else {
+          response = '❌ Kullanım: /karar <karar metni>';
+        }
+      }
+      // Görev kaydet
+      else if (lowerText.startsWith('/gorev ')) {
+        const gorev = text.replace(/^\/gorev\s+/i, '').trim();
+        if (gorev) {
+          await firestoreService.addGorev(gorev, from);
+          response = `📋 Görev eklendi: "${gorev}"`;
+        } else {
+          response = '❌ Kullanım: /gorev <görev açıklaması>';
+        }
+      }
+      // Fikirleri listele
+      else if (lowerText === '/fikirler' || lowerText === '/ideas') {
+        const fikirler = await firestoreService.getFikirler(10);
+        if (fikirler.length) {
+          response = '💡 Son Fikirler:\n\n' + fikirler.map((f, i) => `${i + 1}. [${f.date}] ${f.text}`).join('\n');
+        } else {
+          response = '💡 Henüz fikir yok. /fikir <metin> ile ekle.';
+        }
+      }
+      // Bugları listele
+      else if (lowerText === '/buglar' || lowerText === '/bugs') {
+        const buglar = await firestoreService.getBuglar(10);
+        if (buglar.length) {
+          response = '🐛 Açık Buglar:\n\n' + buglar.map((b, i) => `${i + 1}. [${b.date}] ${b.text}`).join('\n');
+        } else {
+          response = '🐛 Açık bug yok!';
+        }
+      }
+      // Görevleri listele
+      else if (lowerText === '/gorevler' || lowerText === '/tasks') {
+        const gorevler = await firestoreService.getGorevler(10);
+        if (gorevler.length) {
+          response = '📋 Açık Görevler:\n\n' + gorevler.map((g, i) => `${i + 1}. [${g.date}] ${g.text}`).join('\n');
+        } else {
+          response = '📋 Açık görev yok!';
+        }
+      }
+      // Tüm özet
+      else if (lowerText === '/ozet' || lowerText === '/summary') {
+        const context = await firestoreService.getFullContext(5);
+        if (context.length > 50) {
+          response = `🧠 ${context}`;
+        } else {
+          response = '🧠 Henüz kayıt yok. /fikir, /bug, /karar, /gorev ile ekle.';
+        }
+      }
       // Dil degistir
-      if (lowerText.startsWith('/dil ') || lowerText.startsWith('/lang ')) {
+      else if (lowerText.startsWith('/dil ') || lowerText.startsWith('/lang ')) {
         const newLang = lowerText.split(' ')[1];
         if (newLang === 'tr' || newLang === 'en') {
           userLangs[from] = newLang;

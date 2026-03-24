@@ -1,7 +1,15 @@
 const Anthropic = require('@anthropic-ai/sdk');
-const sharedMemory = require('./shared-memory-service');
 
 let client = null;
+let firestoreService = null;
+
+// Lazy load firestore (çökmemesi için)
+function getFirestore() {
+  if (!firestoreService) {
+    try { firestoreService = require('./firestore-service'); } catch(e) { console.log('Firestore yüklenemedi:', e.message); }
+  }
+  return firestoreService;
+}
 
 function getClient() {
   if (!client && process.env.ANTHROPIC_API_KEY) {
@@ -23,15 +31,19 @@ async function sendMessage(history, message) {
 
   messages.push({ role: 'user', content: message });
 
-  // Paylaşımlı hafızayı system prompt'a ekle
-  const memoryContext = sharedMemory.getSystemContext();
+  // Firestore'dan bağlam al (hata olursa atla)
+  let firestoreContext = '';
+  try {
+    const fs = getFirestore();
+    if (fs) firestoreContext = await fs.getSystemContext();
+  } catch(e) { console.log('Firestore context atlandı:', e.message); }
 
   const systemPrompt = `Sen PhotoReel AI projesinde çalışan Claude'sun. Gemini ile birlikte çalışıyorsun. Türkçe yanıt ver.
 
 Geliştirici Bedrihan Özdoğan ile WhatsApp üzerinden konuşuyorsun. Ona "Bedrihan" diye hitap et.
 Kısa, öz ve faydalı cevaplar ver. Kod önerilerinde pratik ol. Gereksiz açıklama yapma.
 
-${memoryContext}`;
+${firestoreContext}`;
 
   const response = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',
