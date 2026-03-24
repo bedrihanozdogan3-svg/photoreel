@@ -29,7 +29,7 @@ td#sag{width:60%;height:100vh;background:#0a0e14;color:#39ff14;font-family:'Casc
 .zaman{font-size:11px;color:#555;margin-top:2px;letter-spacing:0.3px}
 
 /* GİRİŞ ALANI */
-#giris{background:#161b22;padding:8px;border-top:2px solid #21262d;flex-shrink:0}
+#giris{background:#161b22;padding:6px;border-top:2px solid #21262d;flex-shrink:0;max-height:110px}
 #giris-satir{display:flex;gap:6px;margin-bottom:6px;align-items:center}
 #giris-satir input{flex:1;background:#0d1117;border:2px solid #30363d;color:#c9d1d9;padding:12px 16px;border-radius:20px;font-size:16px;outline:none;transition:border-color .2s}
 #giris-satir input:focus{border-color:#1f6feb;box-shadow:0 0 0 3px rgba(31,111,235,.15)}
@@ -43,8 +43,8 @@ button:active{transform:scale(.95)}
 .bsend:hover{box-shadow:0 4px 12px rgba(31,111,235,.5)}
 
 /* HIZLI KOMUTLAR */
-#komutlar{display:flex;gap:4px;flex-wrap:wrap}
-#komutlar button{flex:1;min-width:48px;background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:12px 8px;border-radius:10px;font-size:18px;min-height:48px;transition:all .15s}
+#komutlar{display:flex;gap:3px;margin-bottom:4px}
+#komutlar button{flex:1;background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:6px;border-radius:8px;font-size:16px;min-height:36px;transition:all .15s}
 #komutlar button:active{background:#30363d;transform:scale(.95)}
 #komutlar .onay{background:#238636;color:#fff;border-color:#238636;box-shadow:0 2px 4px rgba(35,134,54,.3)}
 #komutlar .red{background:#da3633;color:#fff;border-color:#da3633;box-shadow:0 2px 4px rgba(218,54,51,.3)}
@@ -75,12 +75,6 @@ button:active{transform:scale(.95)}
       <div class="balon balon-c"><div class="balon-ic">Claude da hazır. Yaz bana.</div><div class="zaman">Claude</div></div>
     </div>
     <div id="giris">
-      <div id="giris-satir">
-        <button class="bg" id="tg" onclick="sec('gemini')">G</button>
-        <button class="bc off" id="tc" onclick="sec('claude')">C</button>
-        <input type="text" id="inp" placeholder="Mesaj yaz..." enterkeyhint="send">
-        <button class="bsend" onclick="gonder()">➤</button>
-      </div>
       <div id="komutlar">
         <button onclick="komut('screenshot')">📸</button>
         <button onclick="komut('message')">💬</button>
@@ -88,6 +82,12 @@ button:active{transform:scale(.95)}
         <button onclick="komut('lock')">🔒</button>
         <button class="onay" onclick="onayla(true)">✅</button>
         <button class="red" onclick="onayla(false)">❌</button>
+      </div>
+      <div id="giris-satir">
+        <button class="bg" id="tg" onclick="sec('gemini')">G</button>
+        <button class="bc off" id="tc" onclick="sec('claude')">C</button>
+        <input type="text" id="inp" placeholder="Mesaj yaz..." enterkeyhint="send">
+        <button class="bsend" onclick="gonder()">➤</button>
       </div>
     </div>
   </div>
