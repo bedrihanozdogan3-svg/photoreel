@@ -2,22 +2,55 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,interactive-widget=resizes-content">
+<meta name="mobile-web-app-capable" content="yes">
 <title>Kontrol Paneli</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;height:100%;overflow:hidden;position:fixed;width:100%;top:0;left:0;bottom:0;right:0}
-html{height:100%;overflow:hidden}
+html,body{height:100%;overflow:hidden;background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px}
 
-/* ANA TABLO DÜZENİ - %40 sol, %60 sağ */
-table#layout{width:100vw;height:100dvh;border-collapse:collapse;table-layout:fixed}
+table#layout{width:100%;height:100%;border-collapse:collapse;table-layout:fixed}
 td{vertical-align:top;overflow:hidden}
-td#sol{width:40%;height:100dvh;position:relative;border-right:2px solid #1f6feb}
-td#sag-td{width:60%;height:100%;background:#0a0e14;font-family:'Cascadia Code',Consolas,'Courier New',monospace;font-size:12px;padding:0;line-height:1.5;position:relative}
-td#sag::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,255,0,.02) 0%,transparent 50%,rgba(0,255,0,.02) 100%);pointer-events:none;z-index:1}
-.t-line{padding:2px 8px 2px 40px;position:relative;color:#39ff14;border-bottom:1px solid rgba(57,255,20,.05);animation:typeFade .4s ease;word-wrap:break-word;word-break:break-all;white-space:pre-wrap}
-.t-line:hover{background:rgba(57,255,20,.05)}
-.t-line .ln{position:absolute;left:0;width:32px;text-align:right;color:#2a5a1a;font-size:10px;padding-right:6px;border-right:1px solid #1a3a1a;user-select:none}
+td#sol{width:40%;border-right:2px solid #1f6feb}
+td#sag-td{width:60%;background:#0a0e14}
+
+/* SOL */
+#sol-ic{display:flex;flex-direction:column;height:100vh;height:100dvh}
+#baslik{background:#161b22;padding:8px 12px;font-weight:700;font-size:14px;border-bottom:1px solid #30363d;flex-shrink:0;display:flex;align-items:center;gap:6px}
+#baslik::before{content:'';width:7px;height:7px;border-radius:50%;background:#3fb950;box-shadow:0 0 6px #3fb950}
+#mesajlar{flex:1;overflow-y:auto;padding:8px;min-height:0}
+.balon{margin-bottom:6px;animation:slideIn .2s ease}
+@keyframes slideIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.balon-ic{display:inline-block;padding:8px 12px;border-radius:12px;max-width:85%;font-size:14px;line-height:1.4;box-shadow:0 1px 2px rgba(0,0,0,.3);word-break:break-word}
+.balon-g .balon-ic{background:linear-gradient(135deg,#1a3a2a,#1e4d35);border-bottom-left-radius:3px}
+.balon-c .balon-ic{background:linear-gradient(135deg,#1a2a3a,#1e354d);border-bottom-left-radius:3px}
+.balon-u{text-align:right}
+.balon-u .balon-ic{background:linear-gradient(135deg,#2d333b,#363e48);border-bottom-right-radius:3px}
+.zaman{font-size:10px;color:#555;margin-top:1px}
+
+/* GİRİŞ */
+#giris{background:#161b22;padding:5px;border-top:1px solid #30363d;flex-shrink:0}
+#komutlar{display:flex;gap:2px;margin-bottom:3px}
+#komutlar button{flex:1;background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:5px 2px;border-radius:6px;font-size:12px;min-height:30px}
+#komutlar button:active{background:#30363d}
+#komutlar .onay{background:#238636;color:#fff;border-color:#238636}
+#komutlar .red{background:#da3633;color:#fff;border-color:#da3633}
+#giris-satir{display:flex;gap:3px;align-items:center}
+#giris-satir input{flex:1;background:#0d1117;border:1px solid #30363d;color:#c9d1d9;padding:8px 10px;border-radius:14px;font-size:14px;outline:none}
+#giris-satir input:focus{border-color:#1f6feb}
+button{border:none;border-radius:8px;padding:7px 10px;font-size:12px;font-weight:700;cursor:pointer;touch-action:manipulation}
+button:active{transform:scale(.95)}
+.bg{background:#238636;color:#fff}
+.bg.off{background:#21262d;color:#8b949e}
+.bc{background:#1f6feb;color:#fff}
+.bc.off{background:#21262d;color:#8b949e}
+.bsend{background:#1f6feb;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;font-size:16px}
+
+/* TERMINAL */
+#sag{height:100vh;height:100dvh;overflow-y:auto;overflow-x:hidden;padding:0}
+.t-line{padding:2px 6px 2px 36px;position:relative;color:#39ff14;border-bottom:1px solid rgba(57,255,20,.04);animation:typeFade .3s ease;word-wrap:break-word;word-break:break-all;white-space:pre-wrap;font-family:Consolas,monospace;font-size:11px;line-height:1.5}
+.t-line:hover{background:rgba(57,255,20,.06)}
+.t-line .ln{position:absolute;left:0;width:30px;text-align:right;color:#2a5a1a;font-size:9px;padding-right:4px;border-right:1px solid #1a3a1a}
 .t-line .code{color:#39ff14}
 .t-line .code .kw{color:#ff7b72}
 .t-line .code .str{color:#a5d6ff}
@@ -25,58 +58,32 @@ td#sag::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;backgr
 .t-line .code .cm{color:#8b949e;font-style:italic}
 .t-line .code .num{color:#79c0ff}
 .t-line .code .em{color:#ffa657}
-@keyframes typeFade{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+@keyframes typeFade{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
 
-/* SOL İÇERİK */
-#sol-ic{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
-#baslik{background:linear-gradient(135deg,#161b22,#1c2333);padding:10px 14px;font-weight:700;font-size:16px;border-bottom:1px solid #30363d;flex-shrink:0;display:flex;align-items:center;gap:8px}
-#baslik::before{content:'';width:8px;height:8px;border-radius:50%;background:#3fb950;box-shadow:0 0 6px #3fb950}
-#mesajlar{flex:1;overflow-y:auto;padding:8px;background:#0d1117;min-height:0}
-.balon{margin-bottom:8px;animation:slideIn .2s ease}
-@keyframes slideIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-.balon-ic{display:inline-block;padding:10px 14px;border-radius:14px;max-width:85%;font-size:15px;line-height:1.5;box-shadow:0 1px 3px rgba(0,0,0,.3);word-break:break-word}
-.balon-g .balon-ic{background:linear-gradient(135deg,#1a3a2a,#1e4d35);border-bottom-left-radius:4px}
-.balon-c .balon-ic{background:linear-gradient(135deg,#1a2a3a,#1e354d);border-bottom-left-radius:4px}
-.balon-u{text-align:right}
-.balon-u .balon-ic{background:linear-gradient(135deg,#2d333b,#363e48);border-bottom-right-radius:4px}
-.zaman{font-size:11px;color:#555;margin-top:2px;letter-spacing:0.3px}
-
-/* GİRİŞ ALANI */
-#giris{background:#161b22;padding:6px;border-top:2px solid #21262d;flex-shrink:0}
-#giris-satir{display:flex;gap:4px;align-items:center}
-#giris-satir input{flex:1;background:#0d1117;border:2px solid #30363d;color:#c9d1d9;padding:8px 12px;border-radius:16px;font-size:14px;outline:none;transition:border-color .2s}
-#giris-satir input:focus{border-color:#1f6feb;box-shadow:0 0 0 3px rgba(31,111,235,.15)}
-button{border:none;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent;transition:all .15s;min-height:34px}
-button:active{transform:scale(.95)}
-.bg{background:#238636;color:#fff;box-shadow:0 2px 4px rgba(35,134,54,.3)}
-.bg.off{background:#21262d;color:#8b949e;box-shadow:none}
-.bc{background:#1f6feb;color:#fff;box-shadow:0 2px 4px rgba(31,111,235,.3)}
-.bc.off{background:#21262d;color:#8b949e;box-shadow:none}
-.bsend{background:#1f6feb;color:#fff;padding:8px 14px;border-radius:50%;width:38px;height:38px;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 8px rgba(31,111,235,.4)}
-.bsend:hover{box-shadow:0 4px 12px rgba(31,111,235,.5)}
-
-/* HIZLI KOMUTLAR */
-#komutlar{display:flex;gap:2px;margin-bottom:3px}
-#komutlar button{flex:1;background:#21262d;border:1px solid #30363d;color:#c9d1d9;padding:4px 2px;border-radius:6px;font-size:13px;min-height:28px;transition:all .15s}
-#komutlar button:active{background:#30363d;transform:scale(.95)}
-#komutlar .onay{background:#238636;color:#fff;border-color:#238636;box-shadow:0 2px 4px rgba(35,134,54,.3)}
-#komutlar .red{background:#da3633;color:#fff;border-color:#da3633;box-shadow:0 2px 4px rgba(218,54,51,.3)}
+/* ONAY POPUP */
+#onay-popup{position:fixed;top:0;left:0;right:0;background:#f59e0b;color:#000;padding:8px 12px;z-index:999;display:none;align-items:center;justify-content:space-between;font-weight:bold;font-size:13px}
+#onay-popup button{margin:0 3px;padding:6px 12px;border:none;border-radius:6px;font-weight:bold;cursor:pointer;font-size:12px}
 
 /* TOAST */
-.toast-k{position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:999}
-.toast-m{background:#30363d;color:#fff;padding:10px 20px;border-radius:8px;font-size:12px;margin-bottom:4px;box-shadow:0 4px 12px rgba(0,0,0,.4);animation:fadeIn .3s}
+.toast-k{position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:999}
+.toast-m{background:#30363d;color:#fff;padding:8px 16px;border-radius:6px;font-size:11px;margin-bottom:3px;box-shadow:0 4px 8px rgba(0,0,0,.4);animation:fadeIn .3s}
 .toast-m.err{background:#da3633}
 .toast-m.ok{background:#238636}
-@keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
 
-/* Scrollbar */
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:#30363d;border-radius:4px}
-::-webkit-scrollbar-thumb:hover{background:#484f58}
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:#30363d;border-radius:3px}
 </style>
 </head>
 <body>
+
+<div id="onay-popup">
+  <span id="onay-text">🔔 Onay bekleniyor</span>
+  <span>
+    <button onclick="onayla(true)" style="background:#238636;color:#fff">✅ Onayla</button>
+    <button onclick="onayla(false)" style="background:#da3633;color:#fff">❌ Reddet</button>
+  </span>
+</div>
 
 <table id="layout">
 <tr>
@@ -105,7 +112,7 @@ button:active{transform:scale(.95)}
     </div>
   </div>
 </td>
-<td id="sag-td"><div id="sag" style="height:100%;overflow-y:auto;overflow-x:hidden"></div></td>
+<td id="sag-td"><div id="sag"></div></td>
 </tr>
 </table>
 
@@ -114,6 +121,7 @@ button:active{transform:scale(.95)}
 <script src="/socket.io/socket.io.js"></script>
 <script>
 var model='gemini',mesajlar=document.getElementById('mesajlar'),inp=document.getElementById('inp'),sag=document.getElementById('sag');
+var seenClaudeReplies={};
 
 function sec(m){model=m;document.getElementById('tg').className='bg'+(m==='gemini'?'':' off');document.getElementById('tc').className='bc'+(m==='claude'?'':' off');bildir(m==='gemini'?'Gemini seçildi':'Claude seçildi')}
 
@@ -127,17 +135,13 @@ if(model==='gemini'){ft('/api/chat/gemini','POST',{text:t}).then(function(r){if(
 else{ft('/api/claude-local/send','POST',{text:t}).then(function(){bildir('Claude mesajı gönderildi')}).catch(function(e){bildir('Hata: '+e.message,'err')})}}
 
 inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();gonder()}});
-// Klavye açılınca sayfa kaymasını engelle
-inp.addEventListener('focus',function(){
-  setTimeout(function(){window.scrollTo(0,0);document.body.scrollTop=0;document.documentElement.scrollTop=0},100);
-  setTimeout(function(){window.scrollTo(0,0);document.body.scrollTop=0;document.documentElement.scrollTop=0},300);
-  setTimeout(function(){window.scrollTo(0,0);document.body.scrollTop=0;document.documentElement.scrollTop=0},500);
-});
-window.addEventListener('resize',function(){window.scrollTo(0,0);document.body.scrollTop=0;document.documentElement.scrollTop=0});
-// Visual viewport API — en güvenilir yöntem
+
+// Klavye beyaz ekran fix
 if(window.visualViewport){
-  window.visualViewport.addEventListener('resize',function(){document.body.style.height=window.visualViewport.height+'px'});
-  window.visualViewport.addEventListener('scroll',function(){window.scrollTo(0,0)});
+  window.visualViewport.addEventListener('resize',function(){
+    document.getElementById('sol-ic').style.height=window.visualViewport.height+'px';
+    document.getElementById('sag').style.height=window.visualViewport.height+'px';
+  });
 }
 
 function komut(tip){
@@ -146,49 +150,56 @@ else if(tip==='fikir'){var t=prompt('Fikir:');if(t)ft('/api/chat/gemini','POST',
 else{ft('/api/agent/command/bedrihan-pc','POST',{type:tip,data:''}).then(function(){bildir('Gönderildi','ok')})}}
 
 function onayla(ok){
-  // Bekleyen onay varsa ona cevap ver
   if(window._pendingApprovalId){
     ft('/api/approval/respond/'+window._pendingApprovalId,'POST',{decision:ok?'approved':'rejected'}).then(function(){
       bildir(ok?'Onaylandı ✅':'Reddedildi ❌',ok?'ok':'err');
       window._pendingApprovalId=null;
-      var popup=document.getElementById('onay-popup');if(popup)popup.style.display='none';
+      document.getElementById('onay-popup').style.display='none';
     });
   } else {
     ft('/api/agent/command/bedrihan-pc','POST',{type:'approval',data:ok?'approved':'rejected'}).then(function(){bildir(ok?'Onaylandı ✅':'Reddedildi ❌',ok?'ok':'err')});
   }
 }
 
-// Onay popup göster
-function showApproval(data){
-  window._pendingApprovalId=data.id;
-  var popup=document.getElementById('onay-popup');
-  if(!popup){
-    popup=document.createElement('div');popup.id='onay-popup';
-    popup.style.cssText='position:fixed;top:0;left:0;right:0;background:#f59e0b;color:#000;padding:10px 16px;z-index:999;display:flex;align-items:center;justify-content:space-between;font-weight:bold;font-size:14px';
-    popup.innerHTML='<span id="onay-text"></span><span><button onclick="onayla(true)" style="background:#238636;color:#fff;margin:0 4px;padding:6px 14px;border:none;border-radius:6px;font-weight:bold;cursor:pointer">✅ Onayla</button><button onclick="onayla(false)" style="background:#da3633;color:#fff;padding:6px 14px;border:none;border-radius:6px;font-weight:bold;cursor:pointer">❌ Reddet</button></span>';
-    document.body.appendChild(popup);
-  }
-  popup.style.display='flex';
-  document.getElementById('onay-text').textContent='🔔 '+data.title+': '+data.description;
-  bildir('Yeni onay isteği: '+data.title);
-}
-
-// Onay polling (5sn)
-setInterval(function(){
-  ft('/api/approval/pending').then(function(d){
-    if(d.approvals&&d.approvals.length>0)showApproval(d.approvals[0]);
-  }).catch(function(){});
-},5000);
-
-function ft(url,method,body){var fullUrl=window.location.origin+url;return fetch(fullUrl,{method:method||'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):null}).then(function(r){return r.json()})}
+function ft(url,method,body){var u=window.location.origin+url;return fetch(u,{method:method||'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):null}).then(function(r){return r.json()})}
 
 function bildir(msg,tip){var c=document.getElementById('toast'),d=document.createElement('div');d.className='toast-m '+(tip||'');d.textContent=msg;c.appendChild(d);setTimeout(function(){d.remove()},2500)}
 
-// Claude cevap polling
-setInterval(function(){fetch(window.location.origin+'/api/claude-local/replies').then(function(r){return r.json()}).then(function(d){if(d.replies&&d.replies.length)d.replies.forEach(function(r){ekle(r.text,'c')})}).catch(function(){})},3000);
+// CLAUDE CEVAP - duplicate engeli
+setInterval(function(){
+  fetch(window.location.origin+'/api/claude-local/replies').then(function(r){return r.json()}).then(function(d){
+    if(d.replies&&d.replies.length){
+      d.replies.forEach(function(r){
+        var key=r.text+r.timestamp;
+        if(!seenClaudeReplies[key]){seenClaudeReplies[key]=true;ekle(r.text,'c')}
+      });
+    }
+  }).catch(function(){});
+},3000);
 
-// Terminal polling (3sn) - socket.io çalışmazsa yedek
-var termSince=0;
+// TERMINAL - satır satır aşağı akar, son satır sabit görünür
+var lineNum=0,termSince=0;
+function addTermLine(text){
+  lineNum++;
+  var div=document.createElement('div');div.className='t-line';
+  var ln=document.createElement('span');ln.className='ln';ln.textContent=lineNum;
+  var code=document.createElement('span');code.className='code';
+  var h=esc(text)
+  .replace(/\b(function|const|let|var|if|else|return|async|await|try|catch|for|while|import|export|class|new)\b/g,'<span class="kw">$1</span>')
+  .replace(/(&quot;[^&]*&quot;|&#39;[^&]*&#39;)/g,'<span class="str">$1</span>')
+  .replace(/\b(\d+)\b/g,'<span class="num">$1</span>')
+  .replace(/(\/\/.*)/g,'<span class="cm">$1</span>')
+  .replace(/(\w+)\(/g,'<span class="fn">$1</span>(')
+  .replace(/(📝|📄|🟢|📡|⏰|✏️|---)/g,'<span class="em">$1</span>');
+  code.innerHTML=h;
+  div.appendChild(ln);div.appendChild(code);
+  sag.appendChild(div);
+  while(sag.children.length>200)sag.removeChild(sag.firstChild);
+  // SON SATIR HER ZAMAN GÖRÜNSÜN
+  sag.scrollTop=sag.scrollHeight;
+}
+
+// Terminal polling
 setInterval(function(){
   ft('/api/terminal/lines?since='+termSince).then(function(d){
     if(d.lines&&d.lines.length>0){
@@ -198,29 +209,30 @@ setInterval(function(){
   }).catch(function(){});
 },3000);
 
+// ONAY polling
+setInterval(function(){
+  ft('/api/approval/pending').then(function(d){
+    if(d.approvals&&d.approvals.length>0){
+      var a=d.approvals[0];
+      window._pendingApprovalId=a.id;
+      document.getElementById('onay-text').textContent='🔔 '+a.title+': '+(a.description||'');
+      document.getElementById('onay-popup').style.display='flex';
+      bildir('Onay isteği: '+a.title);
+    }
+  }).catch(function(){});
+},5000);
+
 // Socket.io
-var lineNum=0;
-function addTermLine(text){
-lineNum++;
-var div=document.createElement('div');div.className='t-line';
-var ln=document.createElement('span');ln.className='ln';ln.textContent=lineNum;
-var code=document.createElement('span');code.className='code';
-// Basit syntax highlight
-var h=esc(text)
-.replace(/\b(function|const|let|var|if|else|return|async|await|try|catch|for|while|import|export|class|new)\b/g,'<span class="kw">$1</span>')
-.replace(/(&quot;[^&]*&quot;|&#39;[^&]*&#39;)/g,'<span class="str">$1</span>')
-.replace(/\b(\d+)\b/g,'<span class="num">$1</span>')
-.replace(/(\/\/.*)/g,'<span class="cm">$1</span>')
-.replace(/(\w+)\(/g,'<span class="fn">$1</span>(')
-.replace(/(📝|📄|🟢|📡|⏰|---)/g,'<span class="em">$1</span>');
-code.innerHTML=h;
-div.appendChild(ln);div.appendChild(code);
-sag.appendChild(div);
-// Max 200 satır tut
-while(sag.children.length>200)sag.removeChild(sag.firstChild);
-sag.scrollTop=sag.scrollHeight;
-}
-try{var socket=io();socket.on('claude_reply',function(d){if(d.text)ekle(d.text,'c')});socket.on('terminal_output',function(d){if(d)addTermLine(d)})}catch(e){}
+try{
+  var socket=io();
+  socket.on('claude_reply',function(d){if(d.text&&!seenClaudeReplies[d.text]){seenClaudeReplies[d.text]=true;ekle(d.text,'c')}});
+  socket.on('terminal_output',function(d){if(d)addTermLine(d)});
+  socket.on('approval_request',function(d){
+    window._pendingApprovalId=d.id;
+    document.getElementById('onay-text').textContent='🔔 '+d.title+': '+(d.description||'');
+    document.getElementById('onay-popup').style.display='flex';
+  });
+}catch(e){}
 </script>
 </body>
 </html>
