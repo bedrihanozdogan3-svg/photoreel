@@ -12,7 +12,7 @@ body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFo
 table#layout{width:100vw;height:100vh;border-collapse:collapse;table-layout:fixed}
 td{vertical-align:top;overflow:hidden}
 td#sol{width:40%;height:100vh;position:relative;border-right:2px solid #1f6feb}
-td#sag{width:60%;height:100vh;background:#0a0e14;color:#39ff14;font-family:'Cascadia Code',Consolas,'Courier New',monospace;font-size:14px;padding:12px;overflow-y:auto;white-space:pre-wrap;line-height:1.5;letter-spacing:0.3px}
+td#sag{width:60%;height:100vh;background:#0a0e14;color:#39ff14;font-family:'Cascadia Code',Consolas,'Courier New',monospace;font-size:13px;padding:10px;overflow-y:auto;overflow-x:hidden;white-space:pre-wrap;word-wrap:break-word;word-break:break-all;line-height:1.6;letter-spacing:0.2px}
 
 /* SOL İÇERİK */
 #sol-ic{display:flex;flex-direction:column;height:100vh;overflow:hidden}
@@ -131,7 +131,7 @@ function bildir(msg,tip){var c=document.getElementById('toast'),d=document.creat
 setInterval(function(){fetch(window.location.origin+'/api/claude-local/replies').then(function(r){return r.json()}).then(function(d){if(d.replies&&d.replies.length)d.replies.forEach(function(r){ekle(r.text,'c')})}).catch(function(){})},3000);
 
 // Socket.io
-try{var socket=io();socket.on('claude_reply',function(d){if(d.text)ekle(d.text,'c')});socket.on('terminal_output',function(d){if(d){sag.textContent+=d+'\n';sag.scrollTop=sag.scrollHeight}})}catch(e){}
+try{var socket=io();socket.on('claude_reply',function(d){if(d.text)ekle(d.text,'c')});socket.on('terminal_output',function(d){if(d){var line=document.createElement('div');line.style.borderBottom='1px solid #1a2a1a';line.style.padding='2px 0';line.textContent=d;sag.appendChild(line);sag.scrollTop=sag.scrollHeight}})}catch(e){}
 </script>
 </body>
 </html>
