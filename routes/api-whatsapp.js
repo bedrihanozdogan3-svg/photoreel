@@ -364,7 +364,11 @@ module.exports = function(io) {
       await sendWhatsAppMessage(from, response);
 
     } catch(err) {
-      console.error('WhatsApp hata:', err.message);
+      console.error('WhatsApp GENEL hata:', err.message, err.stack);
+      // Hata olsa bile kullanıcıya bildir
+      try {
+        await sendWhatsAppMessage(from, '❌ Bir hata oluştu. Lütfen tekrar deneyin.');
+      } catch(e) {}
     }
   });
 
@@ -375,6 +379,7 @@ module.exports = function(io) {
 async function sendWhatsAppMessage(to, text) {
   if (!WA_TOKEN || !WA_PHONE_ID) {
     console.log('WhatsApp token/phone ID eksik, mesaj gönderilemedi');
+    console.log('WA_TOKEN:', WA_TOKEN ? 'VAR' : 'YOK', 'WA_PHONE_ID:', WA_PHONE_ID || 'YOK');
     return;
   }
 
@@ -382,7 +387,9 @@ async function sendWhatsAppMessage(to, text) {
 
   for (const chunk of chunks) {
     try {
-      await fetch(`https://graph.facebook.com/v19.0/${WA_PHONE_ID}/messages`, {
+      const url = `https://graph.facebook.com/v22.0/${WA_PHONE_ID}/messages`;
+      console.log('WhatsApp gönderim:', to, 'URL:', url);
+      const res = await fetch(url, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${WA_TOKEN}`,
@@ -395,6 +402,12 @@ async function sendWhatsAppMessage(to, text) {
           text: { body: chunk }
         })
       });
+      const data = await res.json();
+      if (data.error) {
+        console.error('WhatsApp API hatası:', JSON.stringify(data.error));
+      } else {
+        console.log('WhatsApp mesaj gönderildi:', to);
+      }
     } catch(err) {
       console.error('WhatsApp gönderim hatası:', err.message);
     }
