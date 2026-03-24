@@ -33,6 +33,7 @@
             display: flex;
             flex-grow: 1;
             overflow: hidden;
+            min-height: 0;
         }
 
         .panel {
@@ -49,22 +50,21 @@
         }
 
         #terminal-panel {
-            flex-basis: 30%;
-            flex-shrink: 0;
-            flex-grow: 0;
+            flex: 0 1 30%;
+            min-width: 0;
             font-family: 'Consolas', monospace;
             font-size: 13px;
         }
 
         #chat-panel {
-            flex-basis: 45%;
-            flex-shrink: 0;
-            flex-grow: 0;
+            flex: 1 1 45%;
+            min-width: 0;
             position: relative;
         }
 
         #quick-access-panel {
-            flex-basis: 25%;
+            flex: 0 1 25%;
+            min-width: 0;
             flex-shrink: 0;
             flex-grow: 0;
         }
@@ -392,11 +392,30 @@
             }
         }
 
-        /* Tablet yatay mod */
+        /* Tablet yatay mod - 11 inç */
         @media (max-width: 1280px) and (orientation: landscape) {
             #terminal-panel { flex-basis: 25%; }
             #chat-panel { flex-basis: 50%; }
             #quick-access-panel { flex-basis: 25%; }
+            .panel { padding: 6px; }
+            .panel-header { font-size: 11px; padding: 4px; }
+            body { font-size: 12px; }
+        }
+
+        /* Tablet yatay mod - 9-10 inç (küçük ekran) */
+        @media (max-width: 1024px) and (orientation: landscape) {
+            body { font-size: 11px; }
+            .panel { padding: 4px; }
+            .panel-header { font-size: 10px; padding: 3px; }
+            #terminal-panel { flex-basis: 22%; font-size: 11px; }
+            #chat-panel { flex-basis: 53%; }
+            #quick-access-panel { flex-basis: 25%; }
+            .chat-bubble { padding: 6px 10px; font-size: 11px; max-width: 85%; }
+            .chat-meta { font-size: 9px; }
+            #chat-input { font-size: 12px; padding: 6px; }
+            .quick-button { padding: 6px 8px; font-size: 10px; }
+            .quick-card { padding: 4px 6px; font-size: 10px; }
+            .bottom-bar button { font-size: 10px; padding: 4px 8px; }
         }
 
     </style>
