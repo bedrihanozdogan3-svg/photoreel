@@ -22,25 +22,28 @@ function getSystemInfo() {
   const freeMem = os.freemem();
   const usedMem = totalMem - freeMem;
 
-  // CPU kullanımı
+  // CPU kullanımı (PowerShell - Windows 11 uyumlu)
   let cpuUsage = 0;
   try {
-    const result = execSync('wmic cpu get loadpercentage /value', { encoding: 'utf8', timeout: 5000 });
-    const match = result.match(/LoadPercentage=(\d+)/);
-    if (match) cpuUsage = parseInt(match[1]);
-  } catch(e) { cpuUsage = Math.round(Math.random() * 30 + 20); }
+    const result = execSync('powershell -command "Get-CimInstance Win32_Processor | Select -Expand LoadPercentage"', { encoding: 'utf8', timeout: 8000 });
+    const val = parseInt(result.trim());
+    if (!isNaN(val)) cpuUsage = val;
+  } catch(e) {
+    // Fallback: os modülü ile hesapla
+    const cpuStart = os.cpus().map(c => ({ idle: c.times.idle, total: Object.values(c.times).reduce((a, b) => a + b) }));
+    cpuUsage = Math.round(cpuStart.reduce((acc, c) => acc + (1 - c.idle / c.total), 0) / cpuStart.length * 100);
+  }
 
-  // Disk bilgisi
+  // Disk bilgisi (PowerShell - Windows 11 uyumlu)
   let diskInfo = { total: 0, free: 0, used: 0 };
   try {
-    const result = execSync('wmic logicaldisk where "DeviceID=\'C:\'" get Size,FreeSpace /value', { encoding: 'utf8', timeout: 5000 });
-    const freeMatch = result.match(/FreeSpace=(\d+)/);
-    const sizeMatch = result.match(/Size=(\d+)/);
-    if (freeMatch && sizeMatch) {
-      diskInfo.total = Math.round(parseInt(sizeMatch[1]) / 1073741824);
-      diskInfo.free = Math.round(parseInt(freeMatch[1]) / 1073741824);
-      diskInfo.used = diskInfo.total - diskInfo.free;
-    }
+    const result = execSync('powershell -command "Get-PSDrive C | Select-Object @{N=\'Used\';E={$_.Used}},@{N=\'Free\';E={$_.Free}} | ConvertTo-Json"', { encoding: 'utf8', timeout: 8000 });
+    const data = JSON.parse(result.trim());
+    const usedBytes = data.Used || 0;
+    const freeBytes = data.Free || 0;
+    diskInfo.total = Math.round((usedBytes + freeBytes) / 1073741824);
+    diskInfo.free = Math.round(freeBytes / 1073741824);
+    diskInfo.used = Math.round(usedBytes / 1073741824);
   } catch(e) {}
 
   // Açık uygulamalar
