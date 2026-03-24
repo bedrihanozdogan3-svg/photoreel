@@ -1,501 +1,367 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Honor Tablet Kontrol Paneli</title>
+    <!-- PWA Manifest Link -->
     <link rel="manifest" href="/manifest.json">
     <style>
-        :root {
-            --bg-dark: #0d1117;
-            --panel-bg: #161b22;
-            --header-bg: #21262d;
-            --text-light: rgb(200, 200, 200);
-            --text-muted: rgb(150, 150, 150);
-            --border-color: #30363d;
-            --gemini-bubble: #1a3a2a;
-            --claude-bubble: #1a2a3a;
-            --user-bubble: #2d333b;
-            --accent-orange: #f59e0b; /* Tailwind orange-500 */
-            --button-bg: #2d333b;
-            --button-hover-bg: #3c444f;
-            --input-bg: #0d1117;
-            --panel-header-height: 28px;
-            --bottom-nav-height: 28px;
-            --font-size-general: 12px;
-            --font-size-monospace: 11px;
-        }
-
-        body, html {
+        /* KESİN KURALLAR */
+        /* 1. EKRAN TAM SIGMALI - hiçbir şey alta kaymasın, scroll olmasın. */
+        html, body {
             margin: 0;
             padding: 0;
-            height: 100%;
-            overflow: hidden; /* Prevent body scroll */
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            font-size: var(--font-size-general);
-            color: var(--text-light);
-            background-color: var(--bg-dark);
+            height: 100vh; /* Tam ekran yüksekliği */
+            overflow: hidden; /* Ana sayfada scroll olmasın */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-size: 12px; /* 9. Font: 11-12px */
+            color: #e0e0e0;
+            background-color: #0d1117; /* 10. Koyu tema #0d1117 */
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
 
         #app {
             display: flex;
-            flex-direction: column;
-            height: 100vh; /* Use 100vh as requested, assuming OS/browser handles its own bars */
+            height: 100%; /* body'nin 100vh'sini kullan */
             width: 100%;
         }
 
-        #top-banner {
-            background-color: var(--accent-orange);
-            color: var(--bg-dark);
-            padding: 4px 10px;
-            text-align: center;
-            font-weight: bold;
-            font-size: var(--font-size-general);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            z-index: 10;
-        }
-
-        #main-content {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: row;
-            gap: 8px; /* Gap between panels */
-            padding: 8px;
-            overflow: hidden; /* Ensure panels don't overflow */
-        }
-
-        .panel {
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden; /* For inner scrollable content */
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-        }
-
-        .panel-header {
-            height: var(--panel-header-height);
-            min-height: var(--panel-header-height);
-            background-color: var(--header-bg);
-            border-bottom: 1px solid var(--border-color);
-            padding: 0 10px;
-            display: flex;
-            align-items: center;
-            font-weight: bold;
-            font-size: var(--font-size-general);
-        }
-
-        .panel-content {
-            flex-grow: 1;
-            padding: 8px;
-            overflow-y: auto;
-            scrollbar-width: thin; /* Firefox */
-            scrollbar-color: var(--border-color) var(--panel-bg); /* Firefox */
-        }
-
-        .panel-content::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .panel-content::-webkit-scrollbar-track {
-            background: var(--panel-bg);
-        }
-
-        .panel-content::-webkit-scrollbar-thumb {
-            background-color: var(--border-color);
-            border-radius: 3px;
-        }
-
-        /* Terminal Panel */
-        #terminal-panel {
-            flex-basis: 25%;
-            min-width: 0; /* Allow shrinking */
-        }
-
-        #terminal-content {
-            font-family: 'Cascadia Code', 'Fira Code', 'Roboto Mono', monospace;
-            font-size: var(--font-size-monospace);
-            white-space: pre-wrap;
-            word-break: break-all;
-            color: var(--text-light);
-        }
-
-        /* Chat Panel */
+        /* 3. LAYOUT (yatay, tek satir) */
+        /* SOL: Sohbet paneli (%50) */
         #chat-panel {
-            flex-basis: 50%;
-            min-width: 0;
-            display: flex;
-            flex-direction: column; /* Override .panel default for nested flex */
-        }
-
-        #chat-content {
-            flex-grow: 1;
+            flex: 0 0 50%; /* Genişliğin %50'si */
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            padding: 8px;
-            overflow-y: auto;
-            scrollbar-width: thin;
-            scrollbar-color: var(--border-color) var(--panel-bg);
+            padding: 8px; /* 9. padding minimal, bosluk az */
+            border-right: 1px solid #2d333b;
+            box-sizing: border-box;
+        }
+
+        #messages {
+            flex-grow: 1; /* Kalan dikey alanı doldur */
+            overflow-y: auto; /* Sohbet mesajları kendi içinde scroll olsun */
+            padding-right: 5px; /* Scrollbar için boşluk */
+            -ms-overflow-style: none; /* IE and Edge */
+            scrollbar-width: none; /* Firefox */
+        }
+        #messages::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+
+        .message-container {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 8px;
         }
 
         .message-bubble {
-            max-width: 80%;
-            padding: 8px 12px;
+            padding: 6px 10px; /* 4. Sohbet balonlari KUCUK */
+            font-size: 11px; /* 4. Sohbet balonlari KUCUK */
             border-radius: 12px;
-            line-height: 1.4;
+            max-width: 80%; /* 4. Sohbet balonlari KUCUK */
             word-wrap: break-word;
-            font-size: var(--font-size-general);
+            line-height: 1.4;
         }
 
-        .message-bubble.user {
-            background-color: var(--user-bubble);
+        .message-timestamp {
+            font-size: 9px; /* Sohbet balonlari altinda "Gemini - 23:45" (9px) */
+            margin-top: 2px;
+            color: #999;
+        }
+
+        /* User: bg #2d333b, sag yasli */
+        .message-user {
+            background-color: #2d333b;
             align-self: flex-end;
-            border-bottom-right-radius: 4px;
+        }
+        .message-user + .message-timestamp {
+            align-self: flex-end;
+            margin-right: 5px; /* Balonla aynı hizada olması için */
         }
 
-        .message-bubble.gemini {
-            background-color: var(--gemini-bubble);
+        /* Gemini: bg #1a3a2a, sol yasli */
+        .message-gemini {
+            background-color: #1a3a2a;
             align-self: flex-start;
-            border-bottom-left-radius: 4px;
+        }
+        .message-gemini + .message-timestamp {
+            align-self: flex-start;
+            margin-left: 5px;
         }
 
-        .message-bubble.claude {
-            background-color: var(--claude-bubble);
+        /* Claude: bg #1a2a3a, sol yasli */
+        .message-claude {
+            background-color: #1a2a3a;
             align-self: flex-start;
-            border-bottom-left-radius: 4px;
+        }
+        .message-claude + .message-timestamp {
+            align-self: flex-start;
+            margin-left: 5px;
         }
 
         #chat-input-area {
             display: flex;
-            align-items: center;
-            padding: 8px;
-            border-top: 1px solid var(--border-color);
-            background-color: var(--header-bg); /* Match header for consistency */
+            flex-direction: column;
+            margin-top: 8px;
+            gap: 5px;
+            flex-shrink: 0; /* Input alanı büzülmesin */
         }
 
         #chat-input {
-            flex-grow: 1;
-            padding: 8px 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 20px;
-            background-color: var(--input-bg);
-            color: var(--text-light);
-            font-size: var(--font-size-general);
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #2d333b;
+            border-radius: 8px;
+            background-color: #1a1e24;
+            color: #e0e0e0;
+            resize: none;
+            box-sizing: border-box;
+            font-size: 12px;
+            min-height: 40px; /* En az tek satır görünmesi için */
+            max-height: 100px; /* Çok fazla büyümesini engellemek için */
+            line-height: 1.4;
+        }
+        #chat-input:focus {
             outline: none;
-            margin-right: 8px;
+            border-color: #007bff;
         }
 
-        #chat-input::placeholder {
-            color: var(--text-muted);
-        }
-
-        .chat-toggle {
+        #chat-controls {
             display: flex;
-            background-color: var(--button-bg);
-            border-radius: 20px;
-            overflow: hidden;
-            border: 1px solid var(--border-color);
-            margin-right: 8px;
+            gap: 8px;
+            align-items: center;
         }
 
-        .chat-toggle button {
-            background-color: transparent;
-            border: none;
-            color: var(--text-muted);
+        #chat-controls button {
             padding: 6px 12px;
-            cursor: pointer;
-            font-size: var(--font-size-general);
-            transition: background-color 0.2s, color 0.2s;
-        }
-
-        .chat-toggle button.active {
-            background-color: var(--accent-orange);
-            color: var(--bg-dark);
-            font-weight: bold;
-        }
-
-        #send-button {
-            background-color: var(--accent-orange);
-            color: var(--bg-dark);
             border: none;
-            border-radius: 50%;
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
+            font-size: 11px;
+            background-color: #007bff;
+            color: white;
             transition: background-color 0.2s;
-            flex-shrink: 0; /* Prevent shrinking */
+            flex-shrink: 0;
+        }
+        #chat-controls button:hover {
+            background-color: #0056b3;
+        }
+        #chat-controls button.active {
+            background-color: #28a745;
+        }
+        #chat-controls button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
         }
 
-        #send-button:hover {
-            background-color: #e68a00; /* Darker orange */
-        }
 
-        /* Commands Panel */
-        #commands-panel {
-            flex-basis: 25%;
-            min-width: 0;
-        }
-
-        #commands-panel-content {
+        /* SAG: Terminal (%30) + Komutlar (%20) ust uste */
+        #right-panel {
+            flex: 0 0 50%; /* Genişliğin %50'si */
             display: flex;
             flex-direction: column;
-            gap: 12px;
-        }
-
-        .info-card-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 8px;
-        }
-
-        .info-card {
-            background-color: var(--header-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
             padding: 8px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            font-size: var(--font-size-general);
+            box-sizing: border-box;
         }
 
-        .info-card .label {
-            color: var(--text-muted);
-            font-size: 10px;
-            text-transform: uppercase;
-        }
-
-        .info-card .value {
-            font-weight: bold;
-            color: var(--text-light);
-        }
-
-        .quick-buttons-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr); /* 2 columns */
-            gap: 8px;
-        }
-
-        .quick-button {
-            background-color: var(--button-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
+        /* Sag taraf ikiye bolunecek: Ust yarisi Terminal */
+        #terminal-output {
+            flex: 1; /* Kalan dikey alanı doldur, komut panelinden daha büyük olacak */
+            min-height: 100px; /* Minimum bir yükseklik sağla */
+            background-color: black;
+            color: #0f0;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            font-size: 11px; /* 9. Font: 11-12px */
             padding: 8px;
-            text-align: center;
-            cursor: pointer;
-            transition: background-color 0.2s;
-            font-size: var(--font-size-general);
-            color: var(--text-light);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .quick-button:hover {
-            background-color: var(--button-hover-bg);
-        }
-
-        .quick-button:active {
-            transform: scale(0.98);
-        }
-
-        /* Bottom Navigation */
-        #bottom-nav {
-            height: var(--bottom-nav-height);
-            min-height: var(--bottom-nav-height);
-            background-color: var(--header-bg);
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            padding: 0 8px;
-            box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.2);
-            z-index: 10;
-        }
-
-        .nav-button {
-            background-color: transparent;
-            border: none;
-            color: var(--text-muted);
-            padding: 4px 10px;
-            cursor: pointer;
-            font-size: var(--font-size-general);
-            font-weight: bold;
-            transition: color 0.2s, background-color 0.2s;
+            overflow-y: auto; /* Terminal çıktısı kendi içinde scroll olsun */
             border-radius: 4px;
+            margin-bottom: 8px; /* Komutlar ile arasına boşluk */
+            white-space: pre-wrap; /* Satır sonlarını koru */
+            box-sizing: border-box;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            line-height: 1.3;
+        }
+        #terminal-output::-webkit-scrollbar {
+            display: none;
         }
 
-        .nav-button:hover {
-            color: var(--text-light);
-            background-color: var(--button-bg);
+        /* Alt yarisi Komutlar + Onay butonu */
+        #commands-panel {
+            flex-shrink: 0; /* Komut paneli sabit boyutlu olsun, büzülmesin */
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
-        .nav-button.active {
-            color: var(--accent-orange);
-            background-color: var(--button-bg);
+        /* 6. KOMUTLAR: 2x3 grid kucuk butonlar */
+        #command-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* 3 sütun eşit genişlikte */
+            gap: 6px; /* Butonlar arası boşluk */
+        }
+
+        .command-button {
+            padding: 10px 6px; /* Kucuk butonlar */
+            font-size: 11px;
+            border: 1px solid #007bff;
+            border-radius: 6px;
+            background-color: #1a1e24;
+            color: #007bff;
+            cursor: pointer;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            text-align: center;
+            white-space: nowrap; /* Metin tek satırda kalsın */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .command-button:hover {
+            background-color: #007bff;
+            color: white;
+        }
+        .command-button:active {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        /* Altinda [Onayla] [Reddet] butonlari */
+        #approval-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        #approval-buttons button {
+            flex: 1;
+            padding: 12px 10px;
+            font-size: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #approve-button {
+            background-color: #28a745;
+            color: white;
+        }
+        #approve-button:hover {
+            background-color: #218838;
+        }
+
+        #reject-button {
+            background-color: #dc3545;
+            color: white;
+        }
+        #reject-button:hover {
+            background-color: #c82333;
         }
 
         /* Toast Notifications */
         #toast-container {
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: 10px;
+            right: 10px;
             z-index: 1000;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px;
         }
 
         .toast {
-            background-color: var(--header-bg);
-            color: var(--text-light);
+            background-color: #333;
+            color: white;
             padding: 10px 15px;
-            border-radius: 6px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
             min-width: 200px;
             max-width: 300px;
-            opacity: 0;
-            transform: translateY(-20px);
-            transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+            font-size: 12px;
+            line-height: 1.4;
         }
-
         .toast.show {
             opacity: 1;
-            transform: translateY(0);
         }
-
         .toast.error {
-            background-color: #ef4444; /* Red */
-            border-color: #dc2626;
+            background-color: #dc3545;
         }
-
-        .toast.info {
-            background-color: var(--header-bg);
-            border-color: var(--border-color);
-        }
-
         .toast.success {
-            background-color: #22c55e; /* Green */
-            border-color: #16a34a;
+            background-color: #28a745;
         }
+        .toast.info {
+            background-color: #007bff;
+        }
+
     </style>
 </head>
 <body>
     <div id="app">
-        <div id="top-banner">Onay Gerekiyor: Lütfen bekleyen işlemleri kontrol edin.</div>
-
-        <div id="main-content">
-            <div id="terminal-panel" class="panel">
-                <div class="panel-header">Terminal</div>
-                <div id="terminal-content" class="panel-content">
-                    <pre>$ _</pre>
-                </div>
+        <div id="chat-panel">
+            <div id="messages">
+                <!-- Chat messages will be appended here -->
             </div>
-
-            <div id="chat-panel" class="panel">
-                <div class="panel-header">Sohbet</div>
-                <div id="chat-content" class="panel-content">
-                    <!-- Chat messages will be appended here -->
-                    <div class="message-bubble gemini">Merhaba! Nasıl yardımcı olabilirim?</div>
-                </div>
-                <div id="chat-input-area">
-                    <div class="chat-toggle">
-                        <button id="gemini-toggle" class="active">Gemini</button>
-                        <button id="claude-toggle">Claude</button>
-                    </div>
-                    <input type="text" id="chat-input" placeholder="Mesajınızı buraya yazın...">
-                    <button id="send-button">➤</button>
-                </div>
-            </div>
-
-            <div id="commands-panel" class="panel">
-                <div class="panel-header">Komutlar</div>
-                <div id="commands-panel-content" class="panel-content">
-                    <div class="info-card-grid">
-                        <div class="info-card">
-                            <span class="label">CPU</span>
-                            <span class="value" id="cpu-value">--%</span>
-                        </div>
-                        <div class="info-card">
-                            <span class="label">RAM</span>
-                            <span class="value" id="ram-value">--%</span>
-                        </div>
-                        <div class="info-card">
-                            <span class="label">DISK</span>
-                            <span class="value" id="disk-value">--%</span>
-                        </div>
-                        <div class="info-card">
-                            <span class="label">Internet</span>
-                            <span class="value" id="internet-value">--</span>
-                        </div>
-                    </div>
-
-                    <h3>Hızlı Komutlar</h3>
-                    <div class="quick-buttons-grid">
-                        <button class="quick-button" data-command="restart-agent">Agent Yenile</button>
-                        <button class="quick-button" data-command="shutdown-pc">PC Kapat</button>
-                        <button class="quick-button" data-command="reboot-pc">PC Yeniden Başlat</button>
-                        <button class="quick-button" data-command="lock-pc">PC Kilitle</button>
-                        <button class="quick-button" data-command="sleep-pc">PC Uyut</button>
-                        <button class="quick-button" data-command="toggle-mic">Mic Aç/Kapa</button>
-                    </div>
+            <div id="chat-input-area">
+                <textarea id="chat-input" placeholder="Mesajınızı yazın..." rows="1"></textarea>
+                <div id="chat-controls">
+                    <button id="send-chat-button">Gönder</button>
+                    <button id="gemini-toggle" class="active">Gemini</button>
+                    <button id="claude-toggle">Claude</button>
                 </div>
             </div>
         </div>
 
-        <div id="bottom-nav">
-            <button class="nav-button active" data-panel="terminal-panel">Terminal</button>
-            <button class="nav-button active" data-panel="chat-panel">Sohbet</button>
-            <button class="nav-button active" data-panel="commands-panel">Komutlar</button>
-            <button class="nav-button active" data-panel="all">Hepsi</button>
+        <div id="right-panel">
+            <pre id="terminal-output">Terminal Başlatıldı...</pre>
+
+            <div id="commands-panel">
+                <div id="command-grid">
+                    <!-- Command buttons will be generated here -->
+                </div>
+                <div id="approval-buttons">
+                    <button id="approve-button">Onayla</button>
+                    <button id="reject-button">Reddet</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <div id="toast-container"></div>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <!-- Socket.io CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.0/socket.io.min.js"></script>
     <script>
-        // --- Global State ---
-        let activeChatModel = 'gemini'; // 'gemini' or 'claude'
-        let chatHistory = [];
-        let agentStatus = { cpu: '--', ram: '--', disk: '--', internet: 'N/A' };
-        let currentPollingIntervals = {};
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                        showToast('Service Worker başarıyla kaydedildi.', 'success');
+                    })
+                    .catch(registrationError => {
+                        console.error('SW registration failed: ', registrationError);
+                        showToast(`Service Worker kaydedilemedi: ${registrationError.message}`, 'error');
+                    });
+            });
+        }
 
-        // --- DOM Elements ---
-        const chatContent = document.getElementById('chat-content');
-        const chatInput = document.getElementById('chat-input');
-        const sendButton = document.getElementById('send-button');
-        const geminiToggle = document.getElementById('gemini-toggle');
-        const claudeToggle = document.getElementById('claude-toggle');
-        const cpuValue = document.getElementById('cpu-value');
-        const ramValue = document.getElementById('ram-value');
-        const diskValue = document.getElementById('disk-value');
-        const internetValue = document.getElementById('internet-value');
-        const quickButtonsGrid = document.querySelector('.quick-buttons-grid');
-        const bottomNav = document.getElementById('bottom-nav');
-        const mainContent = document.getElementById('main-content');
-        const toastContainer = document.getElementById('toast-container');
-        const terminalContent = document.getElementById('terminal-content');
+        // --- Global Variables ---
+        const API_BASE = ''; // API endpointleriniz aynı domain üzerinde ise boş bırakın.
+        let currentChatModel = 'gemini'; // 'gemini' or 'claude'
 
-        // --- Utility Functions ---
+        // --- Helper Functions ---
         function showToast(message, type = 'info', duration = 3000) {
+            const toastContainer = document.getElementById('toast-container');
             const toast = document.createElement('div');
-            toast.classList.add('toast', type);
+            toast.className = `toast ${type}`;
             toast.textContent = message;
             toastContainer.appendChild(toast);
 
-            // Trigger reflow to apply initial transform
+            // Trigger reflow to ensure transition plays
             void toast.offsetWidth;
 
             toast.classList.add('show');
@@ -506,267 +372,245 @@
             }, duration);
         }
 
-        async function safeFetch(url, options = {}, retries = 3, delay = 1000) {
-            for (let i = 0; i <= retries; i++) {
+        function getCurrentTime() {
+            const now = new Date();
+            return now.getHours().toString().padStart(2, '0') + ':' +
+                   now.getMinutes().toString().padStart(2, '0');
+        }
+
+        async function fetchWithRetry(url, options = {}, retries = 3) {
+            for (let i = 0; i < retries; i++) {
                 try {
                     const response = await fetch(url, options);
                     if (!response.ok) {
                         const errorData = await response.json().catch(() => ({ message: response.statusText }));
-                        throw new Error(`HTTP error! Status: ${response.status}, Message: ${errorData.message || 'Unknown error'}`);
+                        throw new Error(`HTTP error! Status: ${response.status}, Mesaj: ${errorData.message || 'Bilinmeyen Hata'}`);
                     }
                     return await response.json();
                 } catch (error) {
-                    console.error(`Fetch error for ${url} (attempt ${i + 1}/${retries + 1}):`, error);
-                    if (i < retries) {
-                        showToast(`API Hatası (${url.split('/').pop()}): ${error.message}. Tekrar deneniyor...`, 'error', 2000);
-                        await new Promise(resolve => setTimeout(resolve, delay * (i + 1))); // Exponential backoff
+                    console.error(`Fetch failed for ${url} (attempt ${i + 1}/${retries}):`, error);
+                    if (i < retries - 1) {
+                        showToast(`Bağlantı hatası: ${error.message}. Tekrar deneniyor...`, 'error', 2000);
+                        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1))); // Exponential backoff
                     } else {
-                        showToast(`API Hatası (${url.split('/').pop()}): ${error.message}. İşlem başarısız.`, 'error');
+                        showToast(`Bağlantı hatası: ${error.message}. Lütfen daha sonra tekrar deneyin.`, 'error', 5000);
                         throw error; // Re-throw if all retries fail
                     }
                 }
             }
         }
 
-        function scrollToBottom(element) {
-            element.scrollTop = element.scrollHeight;
+        // --- Chat Panel Functions ---
+        const messagesDiv = document.getElementById('messages');
+        const chatInput = document.getElementById('chat-input');
+        const sendChatButton = document.getElementById('send-chat-button');
+        const geminiToggle = document.getElementById('gemini-toggle');
+        const claudeToggle = document.getElementById('claude-toggle');
+
+        function addMessage(text, type) {
+            const messageContainer = document.createElement('div');
+            messageContainer.className = 'message-container';
+
+            const messageBubble = document.createElement('div');
+            messageBubble.className = `message-bubble message-${type}`;
+            messageBubble.textContent = text;
+
+            const messageTimestamp = document.createElement('div');
+            messageTimestamp.className = 'message-timestamp';
+            messageTimestamp.textContent = `${type === 'user' ? 'Sen' : type.charAt(0).toUpperCase() + type.slice(1)} - ${getCurrentTime()}`;
+
+            messageContainer.appendChild(messageBubble);
+            messageContainer.appendChild(messageTimestamp);
+            messagesDiv.appendChild(messageContainer);
+
+            // Scroll to bottom
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
 
-        // --- Chat Logic ---
-        function renderMessages() {
-            chatContent.innerHTML = '';
-            chatHistory.forEach(msg => {
-                const bubble = document.createElement('div');
-                bubble.classList.add('message-bubble', msg.sender);
-                bubble.textContent = msg.text;
-                chatContent.appendChild(bubble);
-            });
-            scrollToBottom(chatContent);
-        }
+        async function sendChatMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
 
-        async function sendMessage() {
-            const message = chatInput.value.trim();
-            if (!message) return;
-
-            chatHistory.push({ sender: 'user', text: message });
+            addMessage(text, 'user');
             chatInput.value = '';
-            renderMessages();
+            chatInput.style.height = 'auto'; // Reset textarea height
+
+            sendChatButton.disabled = true;
 
             try {
-                let responseData;
-                if (activeChatModel === 'gemini') {
-                    responseData = await safeFetch('/api/chat/gemini', {
+                if (currentChatModel === 'gemini') {
+                    const response = await fetchWithRetry(`${API_BASE}/api/chat/gemini`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ text: message })
+                        body: JSON.stringify({ text })
                     });
-                    if (responseData && responseData.response) {
-                        chatHistory.push({ sender: 'gemini', text: responseData.response });
-                    } else if (responseData && responseData.reply) {
-                        chatHistory.push({ sender: 'gemini', text: responseData.reply });
+                    if (response.ok && response.response) {
+                        addMessage(response.response, 'gemini');
+                        showToast('Gemini yanıtı alındı!', 'success');
                     } else {
-                        throw new Error('Geçersiz Gemini yanıtı.');
+                        throw new Error(response.error || 'Gemini yanıtı başarısız.');
                     }
-                } else if (activeChatModel === 'claude') {
-                    responseData = await safeFetch('/api/claude-local/send', {
+                } else if (currentChatModel === 'claude') {
+                    const response = await fetchWithRetry(`${API_BASE}/api/claude-local/send`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ text: message })
+                        body: JSON.stringify({ text })
                     });
-                    if (responseData && responseData.ok) {
-                        // Claude replies are polled, so no immediate push to history
-                        showToast('Claude mesajı gönderildi, yanıt bekleniyor...', 'info', 2000);
-                    } else {
-                        throw new Error('Claude mesajı gönderme hatası.');
+                    if (!response.ok) {
+                        throw new Error(response.error || 'Claude mesajı gönderme başarısız.');
                     }
+                    showToast('Claude mesajı gönderildi. Yanıt bekleniyor...', 'info');
                 }
             } catch (error) {
-                console.error('Mesaj gönderme hatası:', error);
+                console.error('Chat mesajı gönderme hatası:', error);
                 showToast(`Mesaj gönderilemedi: ${error.message}`, 'error');
             } finally {
-                renderMessages();
+                sendChatButton.disabled = false;
             }
         }
 
-        async function pollClaudeReplies() {
-            try {
-                const replies = await safeFetch('/api/claude-local/replies', { method: 'GET' });
-                if (replies && replies.replies && replies.replies.length > 0) {
-                    replies.replies.forEach(reply => {
-                        const isDuplicate = chatHistory.some(msg => msg.sender === 'claude' && msg.text === reply.text);
-                        if (!isDuplicate) {
-                            chatHistory.push({ sender: 'claude', text: reply.text });
-                            showToast('Yeni Claude yanıtı!', 'info', 1500);
-                        }
-                    });
-                    renderMessages();
-                }
-            } catch (error) {
-                console.warn('Claude yanıtları alınamadı (polling):', error.message);
+        chatInput.addEventListener('input', () => {
+            chatInput.style.height = 'auto';
+            chatInput.style.height = Math.min(chatInput.scrollHeight, 100) + 'px'; // Max 100px
+        });
+
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChatMessage();
             }
+        });
+
+        sendChatButton.addEventListener('click', sendChatMessage);
+
+        geminiToggle.addEventListener('click', () => {
+            currentChatModel = 'gemini';
+            geminiToggle.classList.add('active');
+            claudeToggle.classList.remove('active');
+            showToast('Sohbet modeli Gemini olarak ayarlandı.', 'info', 1500);
+        });
+
+        claudeToggle.addEventListener('click', () => {
+            currentChatModel = 'claude';
+            claudeToggle.classList.add('active');
+            geminiToggle.classList.remove('active');
+            showToast('Sohbet modeli Claude olarak ayarlandı.', 'info', 1500);
+        });
+
+
+        // --- Right Panel Functions (Terminal & Commands) ---
+        const terminalOutput = document.getElementById('terminal-output');
+        const commandGrid = document.getElementById('command-grid');
+        const approveButton = document.getElementById('approve-button');
+        const rejectButton = document.getElementById('reject-button');
+
+        function addTerminalOutput(text) {
+            terminalOutput.textContent += text + '\n';
+            terminalOutput.scrollTop = terminalOutput.scrollHeight;
         }
 
-        function setChatModel(model) {
-            activeChatModel = model;
-            geminiToggle.classList.toggle('active', model === 'gemini');
-            claudeToggle.classList.toggle('active', model === 'claude');
-            chatInput.placeholder = `Mesajınızı ${model === 'gemini' ? 'Gemini' : 'Claude'} ile buraya yazın...`;
-            showToast('Sohbet modeli ' + (model === 'gemini' ? 'Gemini' : 'Claude') + ' olarak ayarlandı.', 'info', 1500);
+        // Example Commands (replace with actual commands for Bedrihan PC)
+        const commands = [
+            { label: 'PC Kapat', type: 'system_action', data: { action: 'shutdown' } },
+            { label: 'PC Yeniden Başlat', type: 'system_action', data: { action: 'restart' } },
+            { label: 'Ekran Görüntüsü', type: 'capture_screen', data: {} },
+            { label: 'Tarayıcı Aç', type: 'open_browser', data: { url: 'https://google.com' } },
+            { label: 'Uyg. Çalıştır', type: 'run_app', data: { app_name: 'notepad.exe' } },
+            { label: 'Ses Kapat', type: 'set_volume', data: { volume: 0 } },
+            { label: 'Ses %50', type: 'set_volume', data: { volume: 50 } },
+            { label: 'Ses %100', type: 'set_volume', data: { volume: 100 } },
+            { label: 'Metin Söyle', type: 'speak_text', data: { text: 'Merhaba Bedrihan, bu bir test mesajıdır.' } },
+        ];
+
+        function createCommandButtons() {
+            commandGrid.innerHTML = ''; // Clear existing
+            commands.forEach(cmd => {
+                const button = document.createElement('button');
+                button.className = 'command-button';
+                button.textContent = cmd.label;
+                button.dataset.type = cmd.type;
+                button.dataset.data = JSON.stringify(cmd.data); // Store data as string
+                commandGrid.appendChild(button);
+            });
         }
 
-        // --- Commands Logic ---
-        async function pollAgentStatus() {
+        async function sendAgentCommand(type, data) {
+            addTerminalOutput(`Komut gönderiliyor: ${type} ${JSON.stringify(data)}`);
             try {
-                const status = await safeFetch('/api/agent/status/bedrihan-pc', { method: 'GET' });
-                if (status) {
-                    agentStatus = status;
-                    cpuValue.textContent = `${status.cpu || '--'}%`;
-                    ramValue.textContent = `${status.ram || '--'}%`;
-                    diskValue.textContent = `${status.disk || '--'}%`;
-                    internetValue.textContent = status.internet ? 'Açık' : 'Kapalı';
-                    internetValue.style.color = status.internet ? '#22c55e' : '#ef4444'; // Green/Red
-                }
-            } catch (error) {
-                console.warn('Agent durumu alınamadı (polling):', error.message);
-                cpuValue.textContent = '--%';
-                ramValue.textContent = '--%';
-                diskValue.textContent = '--%';
-                internetValue.textContent = 'Hata';
-                internetValue.style.color = '#ef4444';
-            }
-        }
-
-        async function sendAgentCommand(command) {
-            try {
-                const result = await safeFetch('/api/agent/command/bedrihan-pc', {
+                const response = await fetchWithRetry(`${API_BASE}/api/agent/command/bedrihan-pc`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ command })
+                    body: JSON.stringify({ type, data })
                 });
-                if (result && result.status === 'success') {
-                    showToast(`Komut '${command}' başarıyla gönderildi.`, 'success');
+                if (response.ok) {
+                    showToast(`Komut "${type}" başarıyla gönderildi.`, 'success');
                 } else {
-                    throw new Error(result.message || 'Komut gönderme başarısız.');
+                    throw new Error(response.error || 'Komut gönderme başarısız.');
                 }
             } catch (error) {
-                console.error('Komut gönderme hatası:', error);
-                showToast(`Komut '${command}' gönderilemedi: ${error.message}`, 'error');
+                console.error('Agent komut gönderme hatası:', error);
+                showToast(`Komut gönderilemedi: ${error.message}`, 'error');
             }
         }
 
-        // --- Socket.io (Placeholder for real-time updates) ---
-        const socket = io(); // Connects to the host that served the page
+        commandGrid.addEventListener('click', (e) => {
+            const button = e.target.closest('.command-button');
+            if (button) {
+                const type = button.dataset.type;
+                const data = JSON.parse(button.dataset.data);
+                sendAgentCommand(type, data);
+            }
+        });
+
+        approveButton.addEventListener('click', () => {
+            showToast('Onaylama komutu gönderildi!', 'info');
+            sendAgentCommand('user_approval', { decision: 'approved', timestamp: new Date().toISOString() });
+        });
+
+        rejectButton.addEventListener('click', () => {
+            showToast('Reddetme komutu gönderildi!', 'info');
+            sendAgentCommand('user_approval', { decision: 'rejected', timestamp: new Date().toISOString() });
+        });
+
+        // --- Socket.io Integration ---
+        const socket = io(API_BASE); // Connect to the same host as the API
 
         socket.on('connect', () => {
-            console.log('Connected to Socket.IO server');
-            showToast('Sunucuya bağlandı.', 'info', 1500);
+            console.log('Socket.io connected.');
+            showToast('Sunucuya bağlandı.', 'success');
         });
 
         socket.on('disconnect', () => {
-            console.log('Disconnected from Socket.IO server');
+            console.log('Socket.io disconnected.');
             showToast('Sunucu bağlantısı kesildi.', 'error');
         });
 
-        socket.on('terminalOutput', (data) => {
-            console.log('Terminal output:', data);
-            const pre = terminalContent.querySelector('pre');
-            if (pre) {
-                pre.textContent += data + '\n';
-                scrollToBottom(terminalContent);
+        socket.on('claude_reply', (data) => {
+            if (data && data.text) {
+                addMessage(data.text, 'claude');
+                showToast('Claude\'dan yeni yanıt alındı!', 'info');
             }
         });
 
-        socket.on('agentStatusUpdate', (status) => {
-            console.log('Agent status update via Socket.IO:', status);
-            agentStatus = status;
-            cpuValue.textContent = `${status.cpu || '--'}%`;
-            ramValue.textContent = `${status.ram || '--'}%`;
-            diskValue.textContent = `${status.disk || '--'}%`;
-            internetValue.textContent = status.internet ? 'Açık' : 'Kapalı';
-            internetValue.style.color = status.internet ? '#22c55e' : '#ef4444';
-            showToast('Agent durumu güncellendi (Socket.IO)', 'info', 1000);
-        });
-
-        // --- Event Listeners ---
-        sendButton.addEventListener('click', sendMessage);
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                sendMessage();
+        socket.on('terminal_output', (data) => {
+            if (data && data.output) {
+                addTerminalOutput(data.output);
             }
         });
 
-        geminiToggle.addEventListener('click', () => setChatModel('gemini'));
-        claudeToggle.addEventListener('click', () => setChatModel('claude'));
-
-        quickButtonsGrid.addEventListener('click', (e) => {
-            const button = e.target.closest('.quick-button');
-            if (button && button.dataset.command) {
-                sendAgentCommand(button.dataset.command);
-            }
-        });
-
-        bottomNav.addEventListener('click', (e) => {
-            const button = e.target.closest('.nav-button');
-            if (button && button.dataset.panel) {
-                // Remove active from all buttons
-                document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));
-                // Add active to clicked button
-                button.classList.add('active');
-
-                // Hide all panels first
-                document.querySelectorAll('#main-content > .panel').forEach(panel => {
-                    panel.style.display = 'none';
-                    panel.style.flexBasis = '0%';
-                });
-
-                if (button.dataset.panel === 'all') {
-                    // Show all panels and reset flex-basis
-                    document.getElementById('terminal-panel').style.display = 'flex';
-                    document.getElementById('terminal-panel').style.flexBasis = '25%';
-                    document.getElementById('chat-panel').style.display = 'flex';
-                    document.getElementById('chat-panel').style.flexBasis = '50%';
-                    document.getElementById('commands-panel').style.display = 'flex';
-                    document.getElementById('commands-panel').style.flexBasis = '25%';
-                    mainContent.style.flexDirection = 'row';
-                    mainContent.style.flexWrap = 'nowrap'; // Ensure they stay in a row
-                } else {
-                    // Show only the selected panel
-                    const panelToShow = document.getElementById(button.dataset.panel);
-                    if (panelToShow) {
-                        panelToShow.style.display = 'flex';
-                        panelToShow.style.flexBasis = '100%'; // Make it take full width
-                        mainContent.style.flexDirection = 'column'; // Stack if only one panel
-                        mainContent.style.flexWrap = 'wrap';
-                    }
-                }
-            }
+        socket.on('error', (error) => {
+            console.error('Socket.io error:', error);
+            showToast(`Socket hatası: ${error.message}`, 'error');
         });
 
         // --- Initial Setup ---
         document.addEventListener('DOMContentLoaded', () => {
-            // Set initial chat model
-            setChatModel('gemini');
-
-            // Initial render of chat history (if any)
-            renderMessages();
-
-            // Start polling for Claude replies (every 3 seconds)
-            currentPollingIntervals.claude = setInterval(pollClaudeReplies, 3000);
-
-            // Start polling for agent status (every 10 seconds)
-            currentPollingIntervals.agentStatus = setInterval(pollAgentStatus, 10000);
-            pollAgentStatus(); // Run once immediately
-
-            // Set initial panel view to 'all'
-            document.querySelector('.nav-button[data-panel="all"]').click();
-
-            // PWA service worker registration (if manifest is present)
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(reg => console.log('Service Worker Registered', reg))
-                    .catch(err => console.error('Service Worker Registration Failed:', err));
-            }
+            createCommandButtons();
+            // Initial height adjustment for chat input
+            chatInput.style.height = 'auto';
+            chatInput.style.height = Math.min(chatInput.scrollHeight, 100) + 'px';
         });
+
     </script>
 </body>
 </html>
