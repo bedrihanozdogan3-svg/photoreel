@@ -12,7 +12,19 @@ body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFo
 table#layout{width:100vw;height:100dvh;border-collapse:collapse;table-layout:fixed}
 td{vertical-align:top;overflow:hidden}
 td#sol{width:40%;height:100dvh;position:relative;border-right:2px solid #1f6feb}
-td#sag{width:60%;height:100dvh;background:#0a0e14;color:#39ff14;font-family:'Cascadia Code',Consolas,'Courier New',monospace;font-size:13px;padding:10px;overflow-y:auto;overflow-x:hidden;white-space:pre-wrap;word-wrap:break-word;word-break:break-all;line-height:1.6;letter-spacing:0.2px}
+td#sag{width:60%;height:100dvh;background:#0a0e14;font-family:'Cascadia Code',Consolas,'Courier New',monospace;font-size:12px;padding:0;overflow-y:auto;overflow-x:hidden;line-height:1.5;position:relative}
+td#sag::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:linear-gradient(180deg,rgba(0,255,0,.02) 0%,transparent 50%,rgba(0,255,0,.02) 100%);pointer-events:none;z-index:1}
+.t-line{padding:2px 8px 2px 40px;position:relative;color:#39ff14;border-bottom:1px solid rgba(57,255,20,.05);animation:typeFade .4s ease;word-wrap:break-word;word-break:break-all;white-space:pre-wrap}
+.t-line:hover{background:rgba(57,255,20,.05)}
+.t-line .ln{position:absolute;left:0;width:32px;text-align:right;color:#2a5a1a;font-size:10px;padding-right:6px;border-right:1px solid #1a3a1a;user-select:none}
+.t-line .code{color:#39ff14}
+.t-line .code .kw{color:#ff7b72}
+.t-line .code .str{color:#a5d6ff}
+.t-line .code .fn{color:#d2a8ff}
+.t-line .code .cm{color:#8b949e;font-style:italic}
+.t-line .code .num{color:#79c0ff}
+.t-line .code .em{color:#ffa657}
+@keyframes typeFade{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
 
 /* SOL İÇERİK */
 #sol-ic{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
@@ -92,8 +104,7 @@ button:active{transform:scale(.95)}
     </div>
   </div>
 </td>
-<td id="sag">$ Terminal başlatıldı...
-</td>
+<td id="sag"></td>
 </tr>
 </table>
 
@@ -131,7 +142,28 @@ function bildir(msg,tip){var c=document.getElementById('toast'),d=document.creat
 setInterval(function(){fetch(window.location.origin+'/api/claude-local/replies').then(function(r){return r.json()}).then(function(d){if(d.replies&&d.replies.length)d.replies.forEach(function(r){ekle(r.text,'c')})}).catch(function(){})},3000);
 
 // Socket.io
-try{var socket=io();socket.on('claude_reply',function(d){if(d.text)ekle(d.text,'c')});socket.on('terminal_output',function(d){if(d){var line=document.createElement('div');line.style.borderBottom='1px solid #1a2a1a';line.style.padding='2px 0';line.textContent=d;sag.appendChild(line);sag.scrollTop=sag.scrollHeight}})}catch(e){}
+var lineNum=0;
+function addTermLine(text){
+lineNum++;
+var div=document.createElement('div');div.className='t-line';
+var ln=document.createElement('span');ln.className='ln';ln.textContent=lineNum;
+var code=document.createElement('span');code.className='code';
+// Basit syntax highlight
+var h=esc(text)
+.replace(/\b(function|const|let|var|if|else|return|async|await|try|catch|for|while|import|export|class|new)\b/g,'<span class="kw">$1</span>')
+.replace(/(&quot;[^&]*&quot;|&#39;[^&]*&#39;)/g,'<span class="str">$1</span>')
+.replace(/\b(\d+)\b/g,'<span class="num">$1</span>')
+.replace(/(\/\/.*)/g,'<span class="cm">$1</span>')
+.replace(/(\w+)\(/g,'<span class="fn">$1</span>(')
+.replace(/(📝|📄|🟢|📡|⏰|---)/g,'<span class="em">$1</span>');
+code.innerHTML=h;
+div.appendChild(ln);div.appendChild(code);
+sag.appendChild(div);
+// Max 200 satır tut
+while(sag.children.length>200)sag.removeChild(sag.firstChild);
+sag.scrollTop=sag.scrollHeight;
+}
+try{var socket=io();socket.on('claude_reply',function(d){if(d.text)ekle(d.text,'c')});socket.on('terminal_output',function(d){if(d)addTermLine(d)})}catch(e){}
 </script>
 </body>
 </html>
