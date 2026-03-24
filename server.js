@@ -46,13 +46,27 @@ app.get('/kontrol', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'kontrol.html'));
 });
 
+// Onay sistemi API
+const approvalRoutes = require('./routes/api-approval');
+app.use('/api/approval', approvalRoutes);
+
 // Terminal output API (bilgisayardan tablete canlı kod akışı)
+const terminalBuffer = [];
 app.post('/api/terminal/output', (req, res) => {
   const { text } = req.body;
-  if (text && global.io) {
-    global.io.emit('terminal_output', text);
+  if (text) {
+    terminalBuffer.push({ text, timestamp: new Date().toISOString() });
+    if (terminalBuffer.length > 200) terminalBuffer.shift();
+    if (global.io) global.io.emit('terminal_output', text);
   }
   res.json({ ok: true });
+});
+
+// Terminal buffer getir (polling için)
+app.get('/api/terminal/lines', (req, res) => {
+  const since = parseInt(req.query.since) || 0;
+  const newLines = terminalBuffer.slice(since);
+  res.json({ lines: newLines, total: terminalBuffer.length });
 });
 
 // Health check (Cloud Run için)

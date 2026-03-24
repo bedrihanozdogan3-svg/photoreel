@@ -11,7 +11,7 @@ const WATCH_PATHS = [
   'C:/Users/ASUS/Desktop/photoreel-repo',
   'C:/Users/ASUS/Desktop/muhasebe'
 ];
-const INTERVAL = 5000;
+const INTERVAL = 3000;
 
 let lastGitLog = '';
 let lastFiles = {};
@@ -81,12 +81,31 @@ async function init() {
   } catch(e) {}
 }
 
+// Dosya içerik değişikliklerini izle
+let watchedFiles = {};
+async function checkFileContents() {
+  const files = ['public/kontrol.html', 'server.js', 'services/gemini-service.js', 'services/claude-service.js', 'routes/api-whatsapp.js'];
+  for (const file of files) {
+    try {
+      const fullPath = path.join(REPO_PATH, file);
+      const stat = fs.statSync(fullPath);
+      const mtime = stat.mtimeMs;
+      if (watchedFiles[file] && watchedFiles[file] !== mtime) {
+        const size = Math.round(stat.size / 1024);
+        await send('✏️ Dosya değişti: ' + file + ' (' + size + 'KB)');
+      }
+      watchedFiles[file] = mtime;
+    } catch(e) {}
+  }
+}
+
 // Ana döngü
 async function run() {
   await init();
   setInterval(async () => {
     await checkGitLog();
     await checkFileChanges();
+    await checkFileContents();
   }, INTERVAL);
 }
 

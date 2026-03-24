@@ -132,7 +132,40 @@ if(tip==='message'){var t=prompt('Mesaj:');if(t)ft('/api/agent/command/bedrihan-
 else if(tip==='fikir'){var t=prompt('Fikir:');if(t)ft('/api/chat/gemini','POST',{text:'/fikir '+t}).then(function(){bildir('Kaydedildi','ok')})}
 else{ft('/api/agent/command/bedrihan-pc','POST',{type:tip,data:''}).then(function(){bildir('Gönderildi','ok')})}}
 
-function onayla(ok){ft('/api/agent/command/bedrihan-pc','POST',{type:'approval',data:ok?'approved':'rejected'}).then(function(){bildir(ok?'Onaylandı ✅':'Reddedildi ❌',ok?'ok':'err')})}
+function onayla(ok){
+  // Bekleyen onay varsa ona cevap ver
+  if(window._pendingApprovalId){
+    ft('/api/approval/respond/'+window._pendingApprovalId,'POST',{decision:ok?'approved':'rejected'}).then(function(){
+      bildir(ok?'Onaylandı ✅':'Reddedildi ❌',ok?'ok':'err');
+      window._pendingApprovalId=null;
+      var popup=document.getElementById('onay-popup');if(popup)popup.style.display='none';
+    });
+  } else {
+    ft('/api/agent/command/bedrihan-pc','POST',{type:'approval',data:ok?'approved':'rejected'}).then(function(){bildir(ok?'Onaylandı ✅':'Reddedildi ❌',ok?'ok':'err')});
+  }
+}
+
+// Onay popup göster
+function showApproval(data){
+  window._pendingApprovalId=data.id;
+  var popup=document.getElementById('onay-popup');
+  if(!popup){
+    popup=document.createElement('div');popup.id='onay-popup';
+    popup.style.cssText='position:fixed;top:0;left:0;right:0;background:#f59e0b;color:#000;padding:10px 16px;z-index:999;display:flex;align-items:center;justify-content:space-between;font-weight:bold;font-size:14px';
+    popup.innerHTML='<span id="onay-text"></span><span><button onclick="onayla(true)" style="background:#238636;color:#fff;margin:0 4px;padding:6px 14px;border:none;border-radius:6px;font-weight:bold;cursor:pointer">✅ Onayla</button><button onclick="onayla(false)" style="background:#da3633;color:#fff;padding:6px 14px;border:none;border-radius:6px;font-weight:bold;cursor:pointer">❌ Reddet</button></span>';
+    document.body.appendChild(popup);
+  }
+  popup.style.display='flex';
+  document.getElementById('onay-text').textContent='🔔 '+data.title+': '+data.description;
+  bildir('Yeni onay isteği: '+data.title);
+}
+
+// Onay polling (5sn)
+setInterval(function(){
+  ft('/api/approval/pending').then(function(d){
+    if(d.approvals&&d.approvals.length>0)showApproval(d.approvals[0]);
+  }).catch(function(){});
+},5000);
 
 function ft(url,method,body){var fullUrl=window.location.origin+url;return fetch(fullUrl,{method:method||'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):null}).then(function(r){return r.json()})}
 
@@ -140,6 +173,17 @@ function bildir(msg,tip){var c=document.getElementById('toast'),d=document.creat
 
 // Claude cevap polling
 setInterval(function(){fetch(window.location.origin+'/api/claude-local/replies').then(function(r){return r.json()}).then(function(d){if(d.replies&&d.replies.length)d.replies.forEach(function(r){ekle(r.text,'c')})}).catch(function(){})},3000);
+
+// Terminal polling (3sn) - socket.io çalışmazsa yedek
+var termSince=0;
+setInterval(function(){
+  ft('/api/terminal/lines?since='+termSince).then(function(d){
+    if(d.lines&&d.lines.length>0){
+      d.lines.forEach(function(l){addTermLine(l.text)});
+      termSince=d.total;
+    }
+  }).catch(function(){});
+},3000);
 
 // Socket.io
 var lineNum=0;
