@@ -48,8 +48,46 @@ io.on('connection', (socket) => {
   });
 });
 
+// WhatsApp Sandbox otomatik hatirlatma (48 saatte bir)
+const SANDBOX_REMINDER_INTERVAL = 48 * 60 * 60 * 1000; // 48 saat
+let lastSandboxReminder = Date.now();
+
+setInterval(async () => {
+  const now = Date.now();
+  if (now - lastSandboxReminder >= SANDBOX_REMINDER_INTERVAL) {
+    lastSandboxReminder = now;
+    try {
+      const twilio = require('twilio');
+      const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+      await client.messages.create({
+        from: 'whatsapp:+14155238886',
+        to: `whatsapp:+${process.env.ADMIN_PHONE || '905309070098'}`,
+        body: '⚠️ WhatsApp Sandbox suresi dolmak uzere!\n\nBaglantinin devam etmesi icin +1 415 523 8886 numarasina "join tea-student" yazin.\n\nBu otomatik bir hatirlatmadir.'
+      });
+      console.log('Sandbox hatirlatma mesaji gonderildi');
+    } catch(e) {
+      console.log('Sandbox hatirlatma gonderilemedi:', e.message);
+    }
+  }
+}, 60 * 60 * 1000); // Her saat kontrol et
+
+// WhatsApp baglanti testi (her 6 saatte)
+setInterval(async () => {
+  try {
+    const twilio = require('twilio');
+    const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    // Hesap durumunu kontrol et
+    const account = await client.api.accounts(process.env.TWILIO_ACCOUNT_SID).fetch();
+    console.log(`WhatsApp durum kontrolu: ${account.status} - Bakiye: $${account.balance || 'N/A'}`);
+  } catch(e) {
+    console.log('WhatsApp durum kontrolu basarisiz:', e.message);
+  }
+}, 6 * 60 * 60 * 1000);
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`PhotoReel Dashboard: http://localhost:${PORT}`);
   console.log(`PhotoReel App: http://localhost:${PORT}/app`);
+  console.log('WhatsApp Sandbox hatirlatma: Aktif (48 saat aralik)');
+  console.log('WhatsApp durum kontrolu: Aktif (6 saat aralik)');
 });
