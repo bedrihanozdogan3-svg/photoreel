@@ -46,6 +46,15 @@ app.get('/kontrol', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'kontrol.html'));
 });
 
+// Terminal output API (bilgisayardan tablete canlı kod akışı)
+app.post('/api/terminal/output', (req, res) => {
+  const { text } = req.body;
+  if (text && global.io) {
+    global.io.emit('terminal_output', text);
+  }
+  res.json({ ok: true });
+});
+
 // Health check (Cloud Run için)
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
