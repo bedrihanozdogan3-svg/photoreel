@@ -8,9 +8,12 @@ function getFirestore() {
   return firestoreService;
 }
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const MODEL = 'gemini-2.5-flash';
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
+function getApiUrl() {
+  const key = process.env.GEMINI_API_KEY;
+  return `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${key}`;
+}
 
 async function sendMessage(history, message) {
   const contents = history.map(msg => ({
@@ -48,7 +51,7 @@ ${firestoreContext}`;
     }
   };
 
-  const res = await fetch(API_URL, {
+  const res = await fetch(getApiUrl(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
