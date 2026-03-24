@@ -71,27 +71,20 @@ html,body{height:100vh;overflow:hidden;background:#0d1117;color:#c9d1d9;font:11p
       <input id="inp" placeholder="Mesaj yaz..." onkeydown="if(event.key==='Enter')send()">
       <button class="btn btn-send" onclick="send()">➤</button>
     </div>
+    <div style="display:flex;gap:3px;padding:3px 4px;background:#161b22;border-top:1px solid #30363d;flex-wrap:wrap">
+      <div class="cmd-btn" onclick="cmd('screenshot')" style="flex:1;min-width:50px">📸</div>
+      <div class="cmd-btn" onclick="cmd('message')" style="flex:1;min-width:50px">💬</div>
+      <div class="cmd-btn" onclick="cmd('fikir')" style="flex:1;min-width:50px">💡</div>
+      <div class="cmd-btn" onclick="cmd('lock')" style="flex:1;min-width:50px">🔒</div>
+      <div class="cmd-btn" onclick="approve(true)" style="flex:1;min-width:50px;background:#238636;color:#fff">✅</div>
+      <div class="cmd-btn" onclick="approve(false)" style="flex:1;min-width:50px;background:#da3633;color:#fff">❌</div>
+    </div>
   </div>
 
   <!-- SAĞ: TERMİNAL + KOMUTLAR -->
   <div id="right">
     <div id="term">$ Terminal başlatıldı...\n</div>
-    <div id="cmds">
-      <h3>Hızlı Komutlar</h3>
-      <div class="cmd-grid">
-        <div class="cmd-btn" onclick="cmd('screenshot')">📸 Ekran</div>
-        <div class="cmd-btn" onclick="cmd('message')">💬 Mesaj</div>
-        <div class="cmd-btn" onclick="cmd('fikir')">💡 Fikir</div>
-        <div class="cmd-btn" onclick="cmd('lock')">🔒 Kilitle</div>
-        <div class="cmd-btn" onclick="cmd('restart')">🔄 Yenile</div>
-        <div class="cmd-btn" onclick="cmd('shutdown')">⏻ Kapat</div>
-      </div>
-      <h3>Onay</h3>
-      <div id="approval">
-        <button class="btn-ok" onclick="approve(true)">✅ Onayla</button>
-        <button class="btn-no" onclick="approve(false)">❌ Reddet</button>
-      </div>
-    </div>
+    <!-- Komutlar sohbet altına taşındı -->
   </div>
 </div>
 <div id="toast"></div>
