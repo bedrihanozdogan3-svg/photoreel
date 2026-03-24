@@ -6,11 +6,21 @@ const VERIFY_TOKEN = process.env.WA_VERIFY_TOKEN || 'photoreel_verify_2026';
 const WA_TOKEN = process.env.WA_ACCESS_TOKEN;
 const WA_PHONE_ID = process.env.WA_PHONE_NUMBER_ID;
 const ADMIN_PHONE = process.env.ADMIN_PHONE || '905309070098';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const GITHUB_REPO = 'bedrihanozdogan3-svg/photoreel';
 
 // Kullanıcı dil tercihleri (telefon numarasına göre)
 const userLangs = {};
 // Kullanıcı bazlı konuşma geçmişi
 const userHistories = {};
+// Onay bekleyen işlemler
+const pendingApprovals = {};
+// Engellenen numaralar
+const blockedNumbers = new Set();
+// Mesaj hız limiti (spam koruması)
+const rateLimits = {};
+const RATE_LIMIT_MAX = 20; // dakikada max mesaj
+const RATE_LIMIT_WINDOW = 60000; // 1 dakika
 
 // Dil tespiti - basit anahtar kelime bazlı
 function detectLanguage(text) {
@@ -30,22 +40,86 @@ function getLangPrompt(lang) {
 function getHelpText(lang) {
   if (lang === 'en') {
     return `📖 PhotoReel AI WhatsApp Commands:\n\n` +
+      `💬 Chat:\n` +
       `• gemini: question → Ask Gemini\n` +
       `• claude: question → Ask Claude\n` +
-      `• both: question → Ask both\n` +
+      `• both: question → Ask both\n\n` +
+      `💻 Code:\n` +
+      `• /code file.js → View file code\n` +
+      `• /review file.js → Review & find bugs\n` +
+      `• /fix file.js description → Fix a bug\n` +
+      `• /files → List all files\n\n` +
+      `⚙️ Settings:\n` +
       `• /lang tr → Switch to Turkish\n` +
       `• /lang en → Switch to English\n` +
+      `• /status → System status\n` +
       `• /help → This menu\n\n` +
-      `Example: gemini: analyze Instagram trends`;
+      `Example: /review server.js`;
   }
   return `📖 PhotoReel AI WhatsApp Komutları:\n\n` +
+    `💬 Sohbet:\n` +
     `• gemini: soru → Gemini'ye sor\n` +
     `• claude: soru → Claude'a sor\n` +
-    `• ikisine: soru → Her ikisine sor\n` +
+    `• ikisine: soru → Her ikisine sor\n\n` +
+    `💻 Kod:\n` +
+    `• /kod dosya.js → Dosya kodunu gör\n` +
+    `• /incele dosya.js → Hataları bul\n` +
+    `• /düzelt dosya.js açıklama → Bug düzelt\n` +
+    `• /dosyalar → Tüm dosyaları listele\n\n` +
+    `⚙️ Ayarlar:\n` +
     `• /dil tr → Türkçe'ye geç\n` +
     `• /dil en → İngilizce'ye geç\n` +
+    `• /durum → Sistem durumu\n` +
     `• /yardım → Bu menü\n\n` +
-    `Örnek: gemini: PhotoReel için trend analizi yap`;
+    `Örnek: /incele server.js`;
+}
+
+// Hız limiti kontrolü
+function checkRateLimit(from) {
+  const now = Date.now();
+  if (!rateLimits[from]) rateLimits[from] = [];
+  rateLimits[from] = rateLimits[from].filter(t => now - t < RATE_LIMIT_WINDOW);
+  if (rateLimits[from].length >= RATE_LIMIT_MAX) return false;
+  rateLimits[from].push(now);
+  return true;
+}
+
+// GitHub dosya okuma
+async function readGitHubFile(filepath) {
+  try {
+    const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${filepath}`;
+    const headers = { 'Accept': 'application/vnd.github.v3+json' };
+    if (GITHUB_TOKEN) headers['Authorization'] = `token ${GITHUB_TOKEN}`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return Buffer.from(data.content, 'base64').toString('utf-8');
+  } catch(e) {
+    return null;
+  }
+}
+
+// GitHub dosya listesi
+async function listGitHubFiles(dirPath) {
+  try {
+    const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${dirPath || ''}`;
+    const headers = { 'Accept': 'application/vnd.github.v3+json' };
+    if (GITHUB_TOKEN) headers['Authorization'] = `token ${GITHUB_TOKEN}`;
+    const res = await fetch(url, { headers });
+    if (!res.ok) return [];
+    const data = await res.json();
+    let files = [];
+    for (const item of data) {
+      if (item.type === 'file') files.push(item.path);
+      else if (item.type === 'dir' && !item.name.startsWith('.') && item.name !== 'node_modules') {
+        const subFiles = await listGitHubFiles(item.path);
+        files = files.concat(subFiles);
+      }
+    }
+    return files;
+  } catch(e) {
+    return [];
+  }
 }
 
 module.exports = function(io) {
@@ -80,11 +154,39 @@ module.exports = function(io) {
       if (!messages || !messages.length) return;
 
       const msg = messages[0];
-      if (msg.type !== 'text') return;
-
       const from = msg.from;
-      const text = msg.text.body;
       const isAdmin = from === ADMIN_PHONE || from === ADMIN_PHONE.replace(/^0/, '');
+
+      // Engellenen numara kontrolü
+      if (blockedNumbers.has(from) && !isAdmin) {
+        return;
+      }
+
+      // Hız limiti kontrolü
+      if (!isAdmin && !checkRateLimit(from)) {
+        await sendWhatsAppMessage(from, '⚠️ Çok fazla mesaj gönderdiniz. Lütfen 1 dakika bekleyin.');
+        return;
+      }
+
+      let text = '';
+
+      // Sesli mesaj desteği
+      if (msg.type === 'audio' || msg.type === 'voice') {
+        text = '[Sesli mesaj alındı - henüz yazıya çevirme aktif değil. Lütfen metin olarak gönderin.]';
+        await sendWhatsAppMessage(from, '🎤 Sesli mesaj desteği yakında! Şimdilik metin olarak gönderin.');
+        return;
+      }
+
+      // Görsel mesaj desteği
+      if (msg.type === 'image') {
+        text = '[Görsel alındı - PhotoReel görsel işleme yakında aktif olacak.]';
+        await sendWhatsAppMessage(from, '📸 Görsel işleme yakında! Şimdilik metin komutları kullanın.\n/yardım yazarak komutları görebilirsiniz.');
+        return;
+      }
+
+      // Sadece metin mesajları
+      if (msg.type !== 'text') return;
+      text = msg.text.body;
 
       console.log(`WhatsApp mesaj: ${from} ${isAdmin ? '(ADMIN)' : ''} -> ${text}`);
 
@@ -159,6 +261,74 @@ module.exports = function(io) {
 
         response = `🟢 Gemini:\n${geminiRes}`;
         if (claudeRes) response += `\n\n🔵 Claude:\n${claudeRes}`;
+      }
+      // Dosya listele
+      else if (lowerText === '/dosyalar' || lowerText === '/files') {
+        const files = await listGitHubFiles('');
+        if (files.length > 0) {
+          response = `📁 Proje Dosyaları:\n\n${files.map(f => `• ${f}`).join('\n')}`;
+        } else {
+          response = lang === 'tr' ? '❌ Dosyalar okunamadı.' : '❌ Could not read files.';
+        }
+      }
+      // Kod görüntüle
+      else if (lowerText.startsWith('/kod ') || lowerText.startsWith('/code ')) {
+        const filename = text.split(' ').slice(1).join(' ').trim();
+        const content = await readGitHubFile(filename);
+        if (content) {
+          const preview = content.length > 3000 ? content.substring(0, 3000) + '\n\n... (kısaltıldı)' : content;
+          response = `📄 ${filename}:\n\`\`\`\n${preview}\n\`\`\``;
+        } else {
+          response = lang === 'tr' ? `❌ "${filename}" bulunamadı. /dosyalar ile dosya listesine bakın.` : `❌ "${filename}" not found.`;
+        }
+      }
+      // Kod incele / review
+      else if (lowerText.startsWith('/incele ') || lowerText.startsWith('/review ')) {
+        const filename = text.split(' ').slice(1).join(' ').trim();
+        const content = await readGitHubFile(filename);
+        if (content) {
+          const reviewPrompt = `${langPrompt}\n\nBu kodu incele, hataları ve iyileştirme önerilerini listele:\n\n${content}`;
+          history.push({ sender: 'user', text: `${filename} dosyasını incele` });
+          response = await geminiService.sendMessage(history, reviewPrompt);
+          history.push({ sender: 'gemini', text: response });
+          response = `🔍 ${filename} İnceleme:\n\n${response}`;
+        } else {
+          response = lang === 'tr' ? `❌ "${filename}" bulunamadı.` : `❌ "${filename}" not found.`;
+        }
+      }
+      // Kod düzelt / fix
+      else if (lowerText.startsWith('/düzelt ') || lowerText.startsWith('/fix ')) {
+        const parts = text.split(' ').slice(1);
+        const filename = parts[0];
+        const description = parts.slice(1).join(' ') || 'Hataları düzelt';
+        const content = await readGitHubFile(filename);
+        if (content) {
+          const fixPrompt = `${langPrompt}\n\nBu koddaki sorunu düzelt: ${description}\n\nDosya: ${filename}\n\n${content}\n\nDüzeltilmiş kodu ve ne değiştiğini açıkla.`;
+          history.push({ sender: 'user', text: `${filename}: ${description}` });
+          response = await geminiService.sendMessage(history, fixPrompt);
+          history.push({ sender: 'gemini', text: response });
+          response = `🔧 ${filename} Düzeltme:\n\n${response}`;
+
+          // Admin'e onay gönder
+          if (isAdmin) {
+            response += '\n\n⚠️ Değişikliği uygulamak için "evet" yazın.';
+            pendingApprovals[from] = { filename, fix: response, timestamp: Date.now() };
+          }
+        } else {
+          response = lang === 'tr' ? `❌ "${filename}" bulunamadı.` : `❌ "${filename}" not found.`;
+        }
+      }
+      // Sistem durumu
+      else if (lowerText === '/durum' || lowerText === '/status') {
+        const geminiOk = !!process.env.GEMINI_API_KEY;
+        const claudeOk = claudeService.isAvailable();
+        const waOk = !!WA_TOKEN;
+        response = `📊 Sistem Durumu:\n\n` +
+          `🟢 Gemini: ${geminiOk ? 'Aktif' : 'Pasif'}\n` +
+          `${claudeOk ? '🔵' : '⚪'} Claude: ${claudeOk ? 'Aktif' : 'Kredi gerekli'}\n` +
+          `🟢 WhatsApp: ${waOk ? 'Aktif' : 'Pasif'}\n` +
+          `🟢 Sunucu: Çalışıyor\n` +
+          `📱 Admin: ${isAdmin ? 'Evet (sen)' : 'Hayır'}`;
       }
       // Yardım
       else if (lowerText === '/yardım' || lowerText === '/help') {

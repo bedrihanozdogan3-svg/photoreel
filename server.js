@@ -32,6 +32,11 @@ app.use('/api/chat', chatRoutes(io));
 const whatsappRoutes = require('./routes/api-whatsapp');
 app.use('/webhook/whatsapp', whatsappRoutes(io));
 
+// Health check (Cloud Run için)
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
+});
+
 // Socket.io connection
 io.on('connection', (socket) => {
   console.log('Dashboard bağlandı:', socket.id);
