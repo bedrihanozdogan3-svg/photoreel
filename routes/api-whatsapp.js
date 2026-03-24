@@ -137,6 +137,7 @@ async function sendWhatsAppMessage(to, text) {
         body: chunk
       });
       console.log(`WhatsApp mesaj gonderildi: ${to} (SID: ${msg.sid})`);
+      if (global.trackUsage) global.trackUsage('twilio');
     } catch(err) {
       console.error('Twilio gonderim hatasi:', err.message, err.code, err.status);
     }
@@ -270,6 +271,7 @@ module.exports = function(io) {
         history.push({ sender: 'user', text: question });
         response = await geminiService.sendMessage(history, `${langPrompt}\n\n${question}`);
         history.push({ sender: 'gemini', text: response });
+        if (global.trackUsage) global.trackUsage('gemini');
         response = `🟢 Gemini:\n${response}`;
       }
       // Claude
@@ -281,6 +283,7 @@ module.exports = function(io) {
           history.push({ sender: 'user', text: question });
           response = await claudeService.sendMessage(history, `${langPrompt}\n\n${question}`);
           history.push({ sender: 'claude', text: response });
+          if (global.trackUsage) global.trackUsage('claude');
           response = `🔵 Claude:\n${response}`;
         }
       }
@@ -352,15 +355,25 @@ module.exports = function(io) {
           response = `❌ "${filename}" bulunamadi.`;
         }
       }
+      // Kota durumu
+      else if (lowerText === '/kota' || lowerText === '/quota') {
+        const q = global.quotaTracker || {};
+        response = `📊 Kota Durumu:\n\n` +
+          `🟢 Gemini: ${q.gemini?.used || 0}/${q.gemini?.limit || 1500} mesaj\n` +
+          `🔵 Claude: ${q.claude?.used || 0}/${q.claude?.limit || 500} mesaj\n` +
+          `📱 Twilio: ${q.twilio?.used || 0}/${q.twilio?.limit || 200} mesaj\n\n` +
+          `Limitler aylik sifirlanir.\n%80'de uyari, %100'de bildirim gelir.`;
+      }
       // Durum
       else if (lowerText === '/durum' || lowerText === '/status') {
         const geminiOk = !!process.env.GEMINI_API_KEY;
         const claudeOk = claudeService.isAvailable();
         const twilioOk = !!getTwilio();
+        const q = global.quotaTracker || {};
         response = `📊 Sistem Durumu:\n\n` +
-          `🟢 Gemini: ${geminiOk ? 'Aktif' : 'Pasif'}\n` +
-          `${claudeOk ? '🔵' : '⚪'} Claude: ${claudeOk ? 'Aktif' : 'Kredi gerekli'}\n` +
-          `🟢 WhatsApp (Twilio): ${twilioOk ? 'Aktif' : 'Pasif'}\n` +
+          `🟢 Gemini: ${geminiOk ? 'Aktif' : 'Pasif'} (${q.gemini?.used || 0}/${q.gemini?.limit || 1500})\n` +
+          `${claudeOk ? '🔵' : '⚪'} Claude: ${claudeOk ? 'Aktif' : 'Kredi gerekli'} (${q.claude?.used || 0}/${q.claude?.limit || 500})\n` +
+          `🟢 WhatsApp (Twilio): ${twilioOk ? 'Aktif' : 'Pasif'} (${q.twilio?.used || 0}/${q.twilio?.limit || 200})\n` +
           `🟢 Sunucu: Calisiyor\n` +
           `📱 Admin: ${isAdmin ? 'Evet (sen)' : 'Hayir'}`;
       }
@@ -382,6 +395,7 @@ module.exports = function(io) {
         history.push({ sender: 'user', text: text });
         response = await geminiService.sendMessage(history, `${langPrompt}\n\n${text}`);
         history.push({ sender: 'gemini', text: response });
+        if (global.trackUsage) global.trackUsage('gemini');
         response = `🟢 Gemini:\n${response}`;
       }
 
