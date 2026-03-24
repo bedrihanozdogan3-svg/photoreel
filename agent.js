@@ -6,6 +6,7 @@
 
 const os = require('os');
 const { execSync, exec } = require('child_process');
+const EXEC_OPTS = { encoding: 'utf8', timeout: 8000, windowsHide: true };
 const https = require('https');
 const http = require('http');
 
@@ -22,56 +23,42 @@ function getSystemInfo() {
   const freeMem = os.freemem();
   const usedMem = totalMem - freeMem;
 
-  // CPU kullanımı (PowerShell - Windows 11 uyumlu)
-  let cpuUsage = 0;
-  try {
-    const result = execSync('powershell -command "Get-CimInstance Win32_Processor | Select -Expand LoadPercentage"', { encoding: 'utf8', timeout: 8000 });
-    const val = parseInt(result.trim());
-    if (!isNaN(val)) cpuUsage = val;
-  } catch(e) {
-    // Fallback: os modülü ile hesapla
-    const cpuStart = os.cpus().map(c => ({ idle: c.times.idle, total: Object.values(c.times).reduce((a, b) => a + b) }));
-    cpuUsage = Math.round(cpuStart.reduce((acc, c) => acc + (1 - c.idle / c.total), 0) / cpuStart.length * 100);
-  }
+  // CPU kullanımı (saf Node.js - CMD açmaz)
+  const cpuStart = os.cpus().map(c => ({ idle: c.times.idle, total: Object.values(c.times).reduce((a, b) => a + b) }));
+  let cpuUsage = Math.round(cpuStart.reduce((acc, c) => acc + (1 - c.idle / c.total), 0) / cpuStart.length * 100);
 
-  // Disk bilgisi (PowerShell - Windows 11 uyumlu)
+  // Disk bilgisi (saf Node.js - CMD açmaz)
   let diskInfo = { total: 0, free: 0, used: 0 };
   try {
-    const result = execSync('powershell -command "Get-PSDrive C | Select-Object @{N=\'Used\';E={$_.Used}},@{N=\'Free\';E={$_.Free}} | ConvertTo-Json"', { encoding: 'utf8', timeout: 8000 });
-    const data = JSON.parse(result.trim());
-    const usedBytes = data.Used || 0;
-    const freeBytes = data.Free || 0;
-    diskInfo.total = Math.round((usedBytes + freeBytes) / 1073741824);
-    diskInfo.free = Math.round(freeBytes / 1073741824);
-    diskInfo.used = Math.round(usedBytes / 1073741824);
+    const fs = require('fs');
+    const stats = fs.statfsSync('C:\\');
+    diskInfo.total = Math.round((stats.bsize * stats.blocks) / 1073741824);
+    diskInfo.free = Math.round((stats.bsize * stats.bfree) / 1073741824);
+    diskInfo.used = diskInfo.total - diskInfo.free;
   } catch(e) {}
 
-  // Açık uygulamalar
+  // Açık uygulamalar (saf Node.js - CMD açmaz)
   let apps = [];
   try {
-    const result = execSync('tasklist /fo csv /nh', { encoding: 'utf8', timeout: 5000 });
+    const result = execSync('tasklist /fo csv /nh', { encoding: 'utf8', timeout: 5000, windowsHide: true, shell: false });
     const lines = result.split('\n').filter(l => l.trim());
     const appSet = new Set();
+    const ignore = ['svchost','conhost','csrss','lsass','services','System','Registry','smss','wininit','dwm','fontdrvhost','winlogon','LogonUI','RuntimeBroker','dllhost','sihost','taskhostw','ctfmon','SearchHost','StartMenuExperienceHost','TextInputHost','ShellExperienceHost','SecurityHealthSystray','spoolsv','dasHost','cmd','powershell','tasklist'];
     lines.forEach(line => {
       const match = line.match(/"([^"]+)"/);
       if (match) {
         const name = match[1].replace('.exe', '');
-        if (!['svchost', 'conhost', 'csrss', 'lsass', 'services', 'System', 'Registry', 'smss', 'wininit', 'dwm', 'fontdrvhost', 'winlogon', 'LogonUI', 'RuntimeBroker', 'dllhost', 'sihost', 'taskhostw', 'ctfmon', 'SearchHost', 'StartMenuExperienceHost', 'TextInputHost', 'ShellExperienceHost', 'SecurityHealthSystray', 'spoolsv', 'dasHost'].includes(name)) {
-          appSet.add(name);
-        }
+        if (!ignore.includes(name)) appSet.add(name);
       }
     });
     apps = Array.from(appSet).slice(0, 30);
   } catch(e) {}
 
-  // İnternet hızı (basit ping)
-  let internetStatus = 'bilinmiyor';
+  // İnternet durumu (saf Node.js - CMD açmaz)
+  let internetStatus = 'bağlı';
   try {
-    execSync('ping -n 1 -w 2000 8.8.8.8', { timeout: 5000 });
-    internetStatus = 'bağlı';
-  } catch(e) {
-    internetStatus = 'bağlantı yok';
-  }
+    require('dns').resolve('google.com', (err) => { if(err) internetStatus = 'bağlantı yok'; });
+  } catch(e) { internetStatus = 'bilinmiyor'; }
 
   // Uptime
   const uptimeHours = Math.round(os.uptime() / 3600);
@@ -107,7 +94,7 @@ async function takeScreenshot() {
     const path = require('path');
     const screenshotPath = path.join(os.tmpdir(), 'agent-screenshot.jpg');
     // PowerShell ile ekran görüntüsü
-    execSync(`powershell -command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Screen]::PrimaryScreen | ForEach-Object { $bitmap = New-Object System.Drawing.Bitmap($_.Bounds.Width, $_.Bounds.Height); $graphics = [System.Drawing.Graphics]::FromImage($bitmap); $graphics.CopyFromScreen($_.Bounds.Location, [System.Drawing.Point]::Empty, $_.Bounds.Size); $bitmap.Save('${screenshotPath.replace(/\\/g, '\\\\')}', [System.Drawing.Imaging.ImageFormat]::Jpeg); }"`, { timeout: 10000 });
+    execSync(`powershell -command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Screen]::PrimaryScreen | ForEach-Object { $bitmap = New-Object System.Drawing.Bitmap($_.Bounds.Width, $_.Bounds.Height); $graphics = [System.Drawing.Graphics]::FromImage($bitmap); $graphics.CopyFromScreen($_.Bounds.Location, [System.Drawing.Point]::Empty, $_.Bounds.Size); $bitmap.Save('${screenshotPath.replace(/\\/g, '\\\\')}', [System.Drawing.Imaging.ImageFormat]::Jpeg); }"`, { timeout: 10000, windowsHide: true });
     const fs = require('fs');
     const data = fs.readFileSync(screenshotPath);
     return data.toString('base64');
@@ -121,7 +108,7 @@ async function takeScreenshot() {
 
 function runCommand(cmd) {
   try {
-    const result = execSync(cmd, { encoding: 'utf8', timeout: 30000 });
+    const result = execSync(cmd, { encoding: 'utf8', timeout: 30000, windowsHide: true });
     return { success: true, output: result.substring(0, 2000) };
   } catch(e) {
     return { success: false, output: e.message.substring(0, 500) };
