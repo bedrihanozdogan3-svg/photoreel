@@ -6,7 +6,7 @@
 <title>Kontrol Paneli</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;height:100dvh;overflow:hidden}
+body{background:#0d1117;color:#c9d1d9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;height:100dvh;overflow:hidden;position:fixed;width:100%;top:0;left:0}
 
 /* ANA TABLO DÜZENİ - %40 sol, %60 sağ */
 table#layout{width:100vw;height:100dvh;border-collapse:collapse;table-layout:fixed}
@@ -126,6 +126,9 @@ if(model==='gemini'){ft('/api/chat/gemini','POST',{text:t}).then(function(r){if(
 else{ft('/api/claude-local/send','POST',{text:t}).then(function(){bildir('Claude mesajı gönderildi')}).catch(function(e){bildir('Hata: '+e.message,'err')})}}
 
 inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();gonder()}});
+// Klavye açılınca sayfa kaymasını engelle
+inp.addEventListener('focus',function(){setTimeout(function(){window.scrollTo(0,0);document.body.scrollTop=0},300)});
+window.addEventListener('resize',function(){window.scrollTo(0,0);document.body.scrollTop=0});
 
 function komut(tip){
 if(tip==='message'){var t=prompt('Mesaj:');if(t)ft('/api/agent/command/bedrihan-pc','POST',{type:'message',data:t}).then(function(){bildir('Gönderildi','ok')})}
