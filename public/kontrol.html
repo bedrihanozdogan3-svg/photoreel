@@ -64,7 +64,10 @@ html,body{height:100vh;overflow:hidden;background:#0d1117;color:#c9d1d9;font:11p
   <!-- SOL: SOHBET -->
   <div id="chat">
     <div id="chat-header"><span class="dot"></span>Sohbet</div>
-    <div id="msgs"></div>
+    <div id="msgs">
+      <div><div class="msg g">Merhaba Bedrihan! Gemini burada. Mesaj yazabilirsin.</div><div class="meta">Gemini - şimdi</div></div>
+      <div><div class="msg c">Claude da burada. Sana yardımcı olmaya hazırım.</div><div class="meta">Claude - şimdi</div></div>
+    </div>
     <div id="input-area">
       <button class="btn btn-g" id="tg" onclick="setModel('gemini')">G</button>
       <button class="btn btn-c off" id="tc" onclick="setModel('claude')">C</button>
