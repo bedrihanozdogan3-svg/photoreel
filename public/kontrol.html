@@ -113,12 +113,12 @@ else{ft('/api/agent/command/bedrihan-pc','POST',{type:tip,data:''}).then(functio
 
 function onayla(ok){ft('/api/agent/command/bedrihan-pc','POST',{type:'approval',data:ok?'approved':'rejected'}).then(function(){bildir(ok?'Onaylandı ✅':'Reddedildi ❌',ok?'ok':'err')})}
 
-function ft(url,method,body){return fetch(url,{method:method||'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):null}).then(function(r){return r.json()})}
+function ft(url,method,body){var fullUrl=window.location.origin+url;return fetch(fullUrl,{method:method||'GET',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):null}).then(function(r){return r.json()})}
 
 function bildir(msg,tip){var c=document.getElementById('toast'),d=document.createElement('div');d.className='toast-m '+(tip||'');d.textContent=msg;c.appendChild(d);setTimeout(function(){d.remove()},2500)}
 
 // Claude cevap polling
-setInterval(function(){fetch('/api/claude-local/replies').then(function(r){return r.json()}).then(function(d){if(d.replies&&d.replies.length)d.replies.forEach(function(r){ekle(r.text,'c')})}).catch(function(){})},3000);
+setInterval(function(){fetch(window.location.origin+'/api/claude-local/replies').then(function(r){return r.json()}).then(function(d){if(d.replies&&d.replies.length)d.replies.forEach(function(r){ekle(r.text,'c')})}).catch(function(){})},3000);
 
 // Socket.io
 try{var socket=io();socket.on('claude_reply',function(d){if(d.text)ekle(d.text,'c')});socket.on('terminal_output',function(d){if(d){sag.textContent+=d+'\n';sag.scrollTop=sag.scrollHeight}})}catch(e){}
