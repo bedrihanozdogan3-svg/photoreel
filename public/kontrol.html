@@ -3,31 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bedrihan Uzaktan Çalışma Hub</title>
+    <title>Bedrihan Uzaktan Çalışma Merkezi</title>
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0d1117">
     <style>
+        /* CSS Variables for Colors */
         :root {
-            --github-dark-bg: #0d1117;
-            --github-dark-fg: #c9d1d9;
-            --panel-bg: #161b22;
+            --bg-color: #0d1117;
+            --panel-bg-color: #161b22;
             --border-color: #30363d;
-            --button-bg: #21262d;
-            --button-hover-bg: #30363d;
-            --button-active-bg: #272c34;
-            --button-text: #c9d1d9;
-            --input-bg: #0d1117;
-            --input-border: #30363d;
-            --input-text: #c9d1d9;
-
-            --gemini-bubble-bg: #34c759; /* Green */
-            --claude-bubble-bg: #007aff; /* Blue */
-            --user-bubble-bg: #21262d;   /* Dark for user */
-            --bubble-text: #ffffff;
-            --user-bubble-text: #c9d1d9;
-            --terminal-text: #00ff00;
+            --text-color: #c9d1d9;
+            --gemini-color: #3fb950;
+            --claude-color: #58a6ff;
+            --user-color: #8b949e;
+            --accent-color: #1f6feb;
+            --red-dot: #f85149;
+            --green-dot: #3fb950;
+            --font-size-sm: 12px;
+            --font-size-md: 13px;
+            --padding-sm: 4px;
+            --padding-md: 6px;
         }
 
+        /* Base Styles */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -37,464 +34,797 @@
         html, body {
             height: 100%;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-            color: var(--github-dark-fg);
-            background-color: var(--github-dark-bg);
-            overflow: hidden; /* Prevent body scroll */
+            font-size: var(--font-size-md);
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            overflow: hidden; /* Prevent scrollbars on body */
         }
 
-        #app-container {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            padding: 10px;
-            gap: 10px;
-        }
-
-        #main-content {
-            flex-grow: 1;
+        /* Layout Grid */
+        body {
             display: grid;
-            grid-template-columns: 1fr 2fr 1fr;
-            gap: 10px;
+            grid-template-rows: 40px 1fr 36px;
+            grid-template-areas:
+                "header"
+                "main"
+                "footer";
+        }
+
+        /* Top Bar */
+        #top-bar {
+            grid-area: header;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 var(--padding-md);
+            background-color: var(--panel-bg-color);
+            border-bottom: 1px solid var(--border-color);
+            font-size: var(--font-size-md);
+        }
+
+        #top-bar .logo {
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+
+        #connection-status {
+            display: flex;
+            align-items: center;
+            gap: var(--padding-sm);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--red-dot);
+        }
+        .status-dot.connected {
+            background-color: var(--green-dot);
+        }
+
+        /* Main Content Area */
+        #main-content {
+            grid-area: main;
+            display: grid;
+            grid-template-columns: 1fr 4px 2fr 4px 1fr; /* 25% | resizer | 50% | resizer | 25% */
+            height: 100%;
             overflow: hidden; /* Ensure panels don't overflow */
         }
 
         .panel {
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            padding: 10px;
+            background-color: var(--panel-bg-color);
+            border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* For scrolling content within panels */
+            overflow: hidden; /* For inner scrolling */
+        }
+        .panel:last-child {
+            border-right: none;
         }
 
-        /* Chat Panel */
+        .resize-handle {
+            width: 4px;
+            cursor: ew-resize;
+            background-color: var(--border-color);
+            transition: background-color 0.1s ease-in-out;
+        }
+        .resize-handle:hover {
+            background-color: var(--accent-color);
+        }
+
+        /* Left Panel - AI Chat */
         #chat-panel {
-            grid-column: 1;
+            grid-column: 1 / 2;
         }
-
         #chat-messages {
             flex-grow: 1;
+            padding: var(--padding-md);
             overflow-y: auto;
-            padding-right: 5px; /* For scrollbar */
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: var(--padding-sm);
+            font-size: var(--font-size-sm);
         }
 
         .chat-message {
             display: flex;
-            flex-direction: column;
-            max-width: 80%;
+            align-items: flex-start;
         }
 
         .chat-bubble {
-            padding: 10px 15px;
-            border-radius: 1.5em; /* Material Design style */
-            font-size: 0.9em;
-            word-wrap: break-word;
+            max-width: 80%;
+            padding: var(--padding-sm) var(--padding-md);
+            border-radius: 8px;
             line-height: 1.4;
-            position: relative;
         }
 
-        .chat-bubble.gemini {
-            background-color: var(--gemini-bubble-bg);
-            color: var(--bubble-text);
-            align-self: flex-start;
-            border-bottom-left-radius: 0.5em; /* Pointy bottom-left */
+        .chat-message.gemini .chat-bubble {
+            background-color: var(--gemini-color);
+            color: #fff;
+            margin-right: auto;
         }
 
-        .chat-bubble.claude {
-            background-color: var(--claude-bubble-bg);
-            color: var(--bubble-text);
-            align-self: flex-start;
-            border-bottom-left-radius: 0.5em; /* Pointy bottom-left */
+        .chat-message.claude .chat-bubble {
+            background-color: var(--claude-color);
+            color: #fff;
+            margin-right: auto;
         }
 
-        .chat-bubble.user {
-            background-color: var(--user-bubble-bg);
-            color: var(--user-bubble-text);
-            align-self: flex-end;
-            border-bottom-right-radius: 0.5em; /* Pointy bottom-right */
+        .chat-message.user {
+            justify-content: flex-end;
+        }
+        .chat-message.user .chat-bubble {
+            background-color: var(--user-color);
+            color: #fff;
+            margin-left: auto;
         }
 
-        .chat-meta {
-            font-size: 0.7em;
-            margin-top: 2px;
-            opacity: 0.7;
-        }
-
-        .chat-message.gemini .chat-meta,
-        .chat-message.claude .chat-meta {
-            align-self: flex-start;
-            padding-left: 10px;
-        }
-
-        .chat-message.user .chat-meta {
-            align-self: flex-end;
-            padding-right: 10px;
-        }
-
-        #chat-input-area {
+        #chat-input-container {
+            border-top: 1px solid var(--border-color);
+            padding: var(--padding-sm);
             display: flex;
-            gap: 5px;
-            margin-top: 10px;
+            gap: var(--padding-sm);
         }
 
         #chat-input {
             flex-grow: 1;
-            padding: 8px 12px;
-            border: 1px solid var(--input-border);
-            border-radius: 6px;
-            background-color: var(--input-bg);
-            color: var(--input-text);
-            font-size: 0.9em;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: var(--padding-sm);
+            color: var(--text-color);
+            font-size: var(--font-size-sm);
+            resize: none;
+            overflow-y: hidden; /* Hide scrollbar for single line, expand if needed */
         }
-
         #chat-input:focus {
             outline: none;
-            border-color: #007bff; /* Focus highlight */
-            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+            border-color: var(--accent-color);
         }
 
-        /* Terminal Panel */
+        #chat-send-btn {
+            background-color: var(--accent-color);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: var(--padding-sm) var(--padding-md);
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            white-space: nowrap;
+        }
+        #chat-send-btn:hover {
+            opacity: 0.9;
+        }
+
+        /* Middle Panel - Terminal/Code */
         #terminal-panel {
-            grid-column: 2;
+            grid-column: 3 / 4;
+            background-color: var(--bg-color); /* Terminal specific background */
+            padding: var(--padding-md);
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+            font-size: var(--font-size-md);
+            line-height: 1.5;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            display: flex; /* To align line numbers */
         }
 
+        #terminal-line-numbers {
+            color: #6a737d; /* Lighter grey for line numbers */
+            text-align: right;
+            padding-right: var(--padding-sm);
+            user-select: none;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
         #terminal-output {
+            color: var(--green-dot); /* Green monospace text */
             flex-grow: 1;
-            background-color: black;
-            color: var(--terminal-text);
-            font-family: 'Cascadia Code', 'Fira Code', 'Roboto Mono', monospace;
-            font-size: 0.85em;
-            padding: 10px;
-            border-radius: 6px;
+        }
+        #terminal-line-numbers > div, #terminal-output > div {
+            height: 1.5em; /* Match line height */
+        }
+
+
+        /* Right Panel - Commands + Notifications */
+        #commands-panel {
+            grid-column: 5 / 6;
+            padding: var(--padding-md);
+        }
+
+        .commands-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: var(--padding-sm);
+            margin-bottom: var(--padding-md);
+        }
+
+        .command-btn {
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: var(--padding-sm);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .command-btn:hover {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .notifications-header {
+            font-weight: bold;
+            margin-bottom: var(--padding-sm);
+            font-size: var(--font-size-md);
+        }
+
+        #notification-list {
+            flex-grow: 1;
             overflow-y: auto;
-            white-space: pre-wrap; /* Preserve whitespace and wrap */
-            word-break: break-all;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--bg-color);
+            padding: var(--padding-sm);
+            font-size: var(--font-size-sm);
+        }
+
+        .notification-item {
+            padding: var(--padding-sm) 0;
+            border-bottom: 1px solid var(--border-color);
             line-height: 1.4;
         }
-
-        /* Commands Panel */
-        #commands-panel {
-            grid-column: 3;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+        .notification-item:last-child {
+            border-bottom: none;
         }
-
-        /* Buttons */
-        button {
-            padding: 10px 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            background-color: var(--button-bg);
-            color: var(--button-text);
-            font-size: 0.9em;
-            cursor: pointer;
-            transition: background-color 0.2s ease, border-color 0.2s ease;
-        }
-
-        button:hover {
-            background-color: var(--button-hover-bg);
-            border-color: var(--button-hover-bg);
-        }
-
-        button:active {
-            background-color: var(--button-active-bg);
-            border-color: var(--button-active-bg);
-        }
-
-        button:focus {
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.3); /* GitHub focus blue */
+        .notification-item strong {
+            color: var(--accent-color);
         }
 
         /* Bottom Bar */
         #bottom-bar {
+            grid-area: footer;
             display: flex;
-            justify-content: space-around;
             align-items: center;
-            padding: 10px;
-            background-color: var(--panel-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            margin-top: 10px; /* Gap from main-content */
-            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+            justify-content: space-between;
+            padding: 0 var(--padding-md);
+            background-color: var(--panel-bg-color);
+            border-top: 1px solid var(--border-color);
+            font-size: var(--font-size-md);
         }
 
-        #bottom-bar button {
-            flex: 1;
-            margin: 0 5px;
-            max-width: 150px;
+        #tab-buttons {
+            display: flex;
+            gap: var(--padding-sm);
         }
 
-        #bottom-bar button.active {
-            background-color: #007bff; /* Highlight active tab */
-            border-color: #007bff;
-            color: white;
+        .tab-btn {
+            background-color: transparent;
+            border: 1px solid transparent;
+            color: var(--text-color);
+            padding: var(--padding-sm) var(--padding-md);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: var(--font-size-sm);
+        }
+        .tab-btn:hover {
+            background-color: var(--border-color);
+        }
+        .tab-btn.active {
+            border-color: var(--accent-color);
+            background-color: var(--accent-color);
+            color: #fff;
         }
 
-        /* Utility classes for panel visibility */
+        #system-info {
+            display: flex;
+            gap: var(--padding-md);
+            font-size: var(--font-size-sm);
+        }
+
+        /* Utility classes for display */
         .hidden {
             display: none !important;
+        }
+
+        /* Scrollbar styling for Webkit browsers */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-color);
         }
     </style>
 </head>
 <body>
-    <div id="app-container">
-        <div id="main-content">
-            <div id="chat-panel" class="panel">
-                <div id="chat-messages">
-                    <!-- Chat bubbles will be appended here -->
-                </div>
-                <div id="chat-input-area">
-                    <input type="text" id="chat-input" placeholder="Mesaj yaz...">
-                    <button id="send-chat-gemini">Gemini</button>
-                    <button id="send-chat-claude">Claude</button>
-                </div>
-            </div>
 
-            <div id="terminal-panel" class="panel">
-                <pre id="terminal-output"></pre>
-            </div>
+    <header id="top-bar">
+        <div class="logo">Bedrihan Hub</div>
+        <div id="connection-status">
+            <span id="status-dot" class="status-dot"></span>
+            <span id="status-text">Bağlantı Yok</span>
+        </div>
+        <div id="current-time"></div>
+    </header>
 
-            <div id="commands-panel" class="panel">
-                <button id="btn-screenshot">Ekran Görüntüsü Çek</button>
-                <button id="btn-send-message">Mesaj Gönder (Bedrihan'a)</button>
-                <button id="btn-approve">Onay Ver</button>
-                <button id="btn-reject">Reddet</button>
-                <button id="btn-send-idea">Fikir Gönder</button>
+    <main id="main-content">
+        <div id="chat-panel" class="panel">
+            <div id="chat-messages">
+                <!-- Chat messages will be appended here -->
+                <div class="chat-message claude"><div class="chat-bubble">Merhaba Bedrihan, nasıl yardımcı olabilirim?</div></div>
+                <div class="chat-message user"><div class="chat-bubble">Sistem durumunu kontrol et.</div></div>
+                <div class="chat-message gemini"><div class="chat-bubble">Sistem durumu kontrol ediliyor...</div></div>
+            </div>
+            <div id="chat-input-container">
+                <textarea id="chat-input" placeholder="Mesaj yaz..." rows="1"></textarea>
+                <button id="chat-send-btn">Gönder</button>
             </div>
         </div>
 
-        <div id="bottom-bar">
-            <button id="tab-chat">Sohbet</button>
-            <button id="tab-terminal">Terminal</button>
-            <button id="tab-commands">Komutlar</button>
-            <button id="tab-all" class="active">Hepsi</button>
+        <div class="resize-handle" data-panel="chat"></div>
+
+        <div id="terminal-panel" class="panel">
+            <div id="terminal-line-numbers">
+                <div>1</div>
+                <div>2</div>
+                <div>3</div>
+            </div>
+            <div id="terminal-output">
+                <div>&gt; Bağlantı kuruluyor...</div>
+                <div>&gt; Bedrihan PC agent başlatıldı.</div>
+                <div>&gt; Hazır.</div>
+            </div>
         </div>
-    </div>
+
+        <div class="resize-handle" data-panel="terminal"></div>
+
+        <div id="commands-panel" class="panel">
+            <div class="commands-grid">
+                <button class="command-btn" data-command="screenshot">Ekran Görüntüsü</button>
+                <button class="command-btn" data-command="lock">Kilitle</button>
+                <button class="command-btn" data-command="message">Mesaj Gönder</button>
+                <button class="command-btn" data-command="approve">Onayla</button>
+                <button class="command-btn" data-command="idea">Fikir</button>
+            </div>
+            <div class="notifications-header">Bildirimler</div>
+            <div id="notification-list">
+                <!-- Notifications will be appended here -->
+                <div class="notification-item"><strong>Sistem:</strong> Yeni güncelleme mevcut.</div>
+                <div class="notification-item"><strong>Claude:</strong> Görev tamamlandı.</div>
+                <div class="notification-item"><strong>Gemini:</strong> Yeni bir yanıt geldi.</div>
+            </div>
+        </div>
+    </main>
+
+    <footer id="bottom-bar">
+        <div id="tab-buttons">
+            <button class="tab-btn active" data-tab="all">All</button>
+            <button class="tab-btn" data-tab="chat">Chat</button>
+            <button class="tab-btn" data-tab="terminal">Terminal</button>
+            <button class="tab-btn" data-tab="commands">Cmd</button>
+        </div>
+        <div id="system-info">
+            <span>CPU: <span id="cpu-usage">--%</span></span>
+            <span>RAM: <span id="ram-usage">--%</span></span>
+        </div>
+    </footer>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
-        // PWA Service Worker Registration
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(registration => {
-                        console.log('SW registered: ', registration);
-                    })
-                    .catch(registrationError => {
-                        console.log('SW registration failed: ', registrationError);
-                    });
-            });
-        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const socket = io();
 
-        const socket = io();
+            // --- DOM Elements ---
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+            const currentTimeElem = document.getElementById('current-time');
 
-        const chatMessages = document.getElementById('chat-messages');
-        const chatInput = document.getElementById('chat-input');
-        const sendChatGeminiBtn = document.getElementById('send-chat-gemini');
-        const sendChatClaudeBtn = document.getElementById('send-chat-claude');
-        const terminalOutput = document.getElementById('terminal-output');
+            const chatPanel = document.getElementById('chat-panel');
+            const chatMessages = document.getElementById('chat-messages');
+            const chatInput = document.getElementById('chat-input');
+            const chatSendBtn = document.getElementById('chat-send-btn');
 
-        const btnScreenshot = document.getElementById('btn-screenshot');
-        const btnSendMessage = document.getElementById('btn-send-message');
-        const btnApprove = document.getElementById('btn-approve');
-        const btnReject = document.getElementById('btn-reject');
-        const btnSendIdea = document.getElementById('btn-send-idea');
+            const terminalPanel = document.getElementById('terminal-panel');
+            const terminalLineNumbers = document.getElementById('terminal-line-numbers');
+            const terminalOutput = document.getElementById('terminal-output');
 
-        const tabChat = document.getElementById('tab-chat');
-        const tabTerminal = document.getElementById('tab-terminal');
-        const tabCommands = document.getElementById('tab-commands');
-        const tabAll = document.getElementById('tab-all');
+            const commandsPanel = document.getElementById('commands-panel');
+            const commandButtons = document.querySelectorAll('.command-btn');
+            const notificationList = document.getElementById('notification-list');
 
-        const chatPanel = document.getElementById('chat-panel');
-        const terminalPanel = document.getElementById('terminal-panel');
-        const commandsPanel = document.getElementById('commands-panel');
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const cpuUsageElem = document.getElementById('cpu-usage');
+            const ramUsageElem = document.getElementById('ram-usage');
 
-        function addChatMessage(sender, text, timestamp = new Date()) {
-            const messageDiv = document.createElement('div');
-            messageDiv.classList.add('chat-message');
+            const mainContent = document.getElementById('main-content');
+            const resizeHandles = document.querySelectorAll('.resize-handle');
 
-            const bubbleDiv = document.createElement('div');
-            bubbleDiv.classList.add('chat-bubble');
-            bubbleDiv.classList.add(sender); // 'gemini', 'claude', 'user'
-            bubbleDiv.textContent = text;
+            let currentTerminalLine = 3; // Initialize with existing lines
 
-            const metaDiv = document.createElement('div');
-            metaDiv.classList.add('chat-meta');
-            const timeString = timestamp.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
-            metaDiv.textContent = `${sender.charAt(0).toUpperCase() + sender.slice(1)} - ${timeString}`;
+            // --- Utility Functions ---
+            function updateClock() {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                currentTimeElem.textContent = timeString;
+            }
+            setInterval(updateClock, 1000);
+            updateClock(); // Initial call
 
-            messageDiv.appendChild(bubbleDiv);
-            messageDiv.appendChild(metaDiv);
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll
-        }
+            function autoScroll(element) {
+                element.scrollTop = element.scrollHeight;
+            }
 
-        function appendTerminalOutput(output) {
-            terminalOutput.textContent += output;
-            terminalOutput.scrollTop = terminalOutput.scrollHeight; // Auto-scroll
-        }
-
-        // Initial welcome messages
-        addChatMessage('gemini', 'Merhaba Bedrihan! Sana nasıl yardımcı olabilirim?', new Date(Date.now() - 30000));
-        addChatMessage('claude', 'Hazırım. Bir komut bekliyorum.', new Date(Date.now() - 15000));
-
-        // Chat functionality
-        async function sendChat(aiType) {
-            const message = chatInput.value.trim();
-            if (message) {
-                addChatMessage('user', message);
-                chatInput.value = '';
-
+            async function fetchData(url, method = 'GET', data = null) {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                };
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
                 try {
-                    const response = await fetch(`/api/chat/${aiType}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message })
-                    });
-                    const data = await response.json();
-                    if (data.reply) {
-                        addChatMessage(aiType, data.reply);
-                    } else if (data.error) {
-                        addChatMessage(aiType, `Hata: ${data.error}`);
+                    const response = await fetch(url, options);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
                     }
+                    return await response.json();
                 } catch (error) {
-                    addChatMessage(aiType, `Bağlantı hatası: ${error.message}`);
+                    console.error('Fetch error:', error);
+                    return null;
                 }
             }
-        }
 
-        sendChatGeminiBtn.addEventListener('click', () => sendChat('gemini'));
-        sendChatClaudeBtn.addEventListener('click', () => sendChat('claude'));
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                // For simplicity, Enter sends to Gemini by default, or could prompt for choice
-                sendChat('gemini');
-            }
-        });
-
-        // Socket.io listeners
-        socket.on('terminal-output', (data) => {
-            appendTerminalOutput(data.output);
-        });
-
-        socket.on('agent-status', (status) => {
-            console.log('Agent Status:', status);
-            // Optionally update a status indicator in the UI
-        });
-
-        socket.on('chat-reply-gemini', (data) => {
-            addChatMessage('gemini', data.reply);
-        });
-
-        socket.on('chat-reply-claude', (data) => {
-            addChatMessage('claude', data.reply);
-        });
-
-        // Quick Commands functionality
-        async function sendAgentCommand(commandType, payload = {}) {
-            try {
-                const response = await fetch('/api/agent/command/bedrihan-pc', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ command: commandType, ...payload })
-                });
-                const data = await response.json();
-                if (data.success) {
-                    addChatMessage('system', `Komut "${commandType}" başarıyla gönderildi.`);
+            // --- Connection Status ---
+            let isConnected = false;
+            function updateConnectionStatus(connected) {
+                isConnected = connected;
+                if (connected) {
+                    statusDot.classList.add('connected');
+                    statusText.textContent = 'Bağlı';
                 } else {
-                    addChatMessage('system', `Komut "${commandType}" gönderilirken hata: ${data.error || 'Bilinmeyen hata'}`);
+                    statusDot.classList.remove('connected');
+                    statusText.textContent = 'Bağlantı Yok';
                 }
-            } catch (error) {
-                addChatMessage('system', `Komut "${commandType}" için bağlantı hatası: ${error.message}`);
             }
-        }
 
-        btnScreenshot.addEventListener('click', () => {
-            sendAgentCommand('screenshot');
-        });
+            // Polling for initial status and fallback
+            async function pollAgentStatus() {
+                const status = await fetchData('/api/agent/status/bedrihan-pc');
+                if (status && status.connected !== undefined) {
+                    updateConnectionStatus(status.connected);
+                    if (status.cpu !== undefined) cpuUsageElem.textContent = `${status.cpu}%`;
+                    if (status.ram !== undefined) ramUsageElem.textContent = `${status.ram}%`;
+                } else {
+                    updateConnectionStatus(false);
+                    cpuUsageElem.textContent = '--%';
+                    ramUsageElem.textContent = '--%';
+                }
+            }
+            setInterval(pollAgentStatus, 5000); // Poll every 5 seconds
+            pollAgentStatus(); // Initial call
 
-        btnSendMessage.addEventListener('click', () => {
-            const message = prompt('Bedrihan\'a göndermek istediğiniz mesajı girin:');
-            if (message) {
-                sendAgentCommand('send_message', { message });
+            // --- Chat Panel Logic ---
+            function renderMessage(sender, text) {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('chat-message', sender);
+                const bubbleDiv = document.createElement('div');
+                bubbleDiv.classList.add('chat-bubble');
+                bubbleDiv.textContent = text;
+                messageDiv.appendChild(bubbleDiv);
+                chatMessages.appendChild(messageDiv);
+                autoScroll(chatMessages);
+            }
+
+            chatInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            chatSendBtn.addEventListener('click', sendMessage);
+
+            async function sendMessage() {
+                const text = chatInput.value.trim();
+                if (!text) return;
+
+                renderMessage('user', text);
+                chatInput.value = '';
+                chatInput.style.height = 'auto'; // Reset textarea height
+
+                // Simulate sending to Gemini for now
+                const geminiResponse = await fetchData('/api/chat/gemini', 'POST', { text });
+                if (geminiResponse && geminiResponse.response) {
+                    renderMessage('gemini', geminiResponse.response);
+                } else {
+                    renderMessage('gemini', 'Üzgünüm, Gemini ile bağlantı kurulamadı.');
+                }
+
+                // Also send to Claude (simulated polling)
+                const claudeSendResult = await fetchData('/api/claude-local/send', 'POST', { text });
+                if (claudeSendResult && claudeSendResult.status === 'sent') {
+                    startClaudePolling();
+                } else {
+                    renderMessage('claude', 'Üzgünüm, Claude ile bağlantı kurulamadı.');
+                }
+            }
+
+            let claudePollingInterval = null;
+            function startClaudePolling() {
+                if (claudePollingInterval) clearInterval(claudePollingInterval);
+                claudePollingInterval = setInterval(async () => {
+                    const replies = await fetchData('/api/claude-local/replies');
+                    if (replies && replies.length > 0) {
+                        replies.forEach(reply => {
+                            renderMessage('claude', reply.text);
+                        });
+                        // Assume replies are consumed, stop polling or clear on backend
+                        clearInterval(claudePollingInterval);
+                        claudePollingInterval = null;
+                    }
+                }, 3000); // Poll every 3 seconds
+            }
+
+            // Auto-resize chat input
+            chatInput.addEventListener('input', () => {
+                chatInput.style.height = 'auto';
+                chatInput.style.height = chatInput.scrollHeight + 'px';
+            });
+
+            // --- Terminal Panel Logic ---
+            function appendTerminalOutput(text, sender = 'system') {
+                currentTerminalLine++;
+                const lineNumDiv = document.createElement('div');
+                lineNumDiv.textContent = currentTerminalLine;
+                terminalLineNumbers.appendChild(lineNumDiv);
+
+                const outputDiv = document.createElement('div');
+                outputDiv.textContent = `> ${text}`;
+                terminalOutput.appendChild(outputDiv);
+
+                autoScroll(terminalPanel);
+            }
+
+            // --- Commands Panel Logic ---
+            commandButtons.forEach(button => {
+                button.addEventListener('click', async () => {
+                    const commandType = button.dataset.command;
+                    appendTerminalOutput(`Komut gönderiliyor: ${commandType}...`);
+                    const result = await fetchData('/api/agent/command/bedrihan-pc', 'POST', { type: commandType, data: {} });
+                    if (result && result.status === 'success') {
+                        appendTerminalOutput(`${commandType} komutu başarıyla gönderildi.`);
+                        addNotification(`<strong>Komut:</strong> ${commandType} başarıyla gönderildi.`);
+                    } else {
+                        appendTerminalOutput(`${commandType} komutu gönderilemedi.`, 'error');
+                        addNotification(`<strong>Hata:</strong> ${commandType} komutu gönderilemedi.`);
+                    }
+                });
+            });
+
+            function addNotification(text) {
+                const notificationDiv = document.createElement('div');
+                notificationDiv.classList.add('notification-item');
+                notificationDiv.innerHTML = text;
+                notificationList.prepend(notificationDiv); // Add to top
+                if (notificationList.children.length > 10) { // Keep max 10 notifications
+                    notificationList.removeChild(notificationList.lastChild);
+                }
+            }
+
+            // --- Tab Switching Logic ---
+            let activeTab = 'all';
+
+            function showPanel(panelElem, show) {
+                if (show) {
+                    panelElem.classList.remove('hidden');
+                } else {
+                    panelElem.classList.add('hidden');
+                }
+            }
+
+            function updatePanelVisibility() {
+                const isChatVisible = (activeTab === 'all' || activeTab === 'chat');
+                const isTerminalVisible = (activeTab === 'all' || activeTab === 'terminal');
+                const isCommandsVisible = (activeTab === 'all' || activeTab === 'commands');
+
+                showPanel(chatPanel, isChatVisible);
+                showPanel(terminalPanel, isTerminalVisible);
+                showPanel(commandsPanel, isCommandsVisible);
+
+                // Adjust grid columns based on active panels
+                let gridTemplate = '';
+                if (isChatVisible) gridTemplate += '1fr ';
+                if (isChatVisible && isTerminalVisible) gridTemplate += '4px ';
+                if (isTerminalVisible) gridTemplate += '2fr ';
+                if (isTerminalVisible && isCommandsVisible) gridTemplate += '4px ';
+                if (isCommandsVisible) gridTemplate += '1fr ';
+
+                // If only one panel is visible, it takes full width
+                if (gridTemplate.trim() === '1fr' || gridTemplate.trim() === '2fr') {
+                    gridTemplate = '1fr';
+                }
+
+                if (gridTemplate.trim() === '') { // Fallback if somehow nothing is visible
+                    gridTemplate = '1fr';
+                    showPanel(chatPanel, true); // Default to chat
+                }
+
+                mainContent.style.gridTemplateColumns = gridTemplate.trim();
+
+                // Hide/show resize handles based on adjacent panels
+                resizeHandles.forEach(handle => handle.classList.add('hidden'));
+                if (isChatVisible && isTerminalVisible) {
+                    document.querySelector('.resize-handle[data-panel="chat"]').classList.remove('hidden');
+                }
+                if (isTerminalVisible && isCommandsVisible) {
+                    document.querySelector('.resize-handle[data-panel="terminal"]').classList.remove('hidden');
+                }
+
+            }
+
+            tabButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    activeTab = button.dataset.tab;
+                    updatePanelVisibility();
+                });
+            });
+
+            updatePanelVisibility(); // Initial visibility
+
+            // --- Panel Resizing Logic ---
+            let isResizing = false;
+            let currentHandle = null;
+            let startX, startWidthLeft, startWidthMiddle;
+
+            resizeHandles.forEach(handle => {
+                handle.addEventListener('mousedown', (e) => {
+                    isResizing = true;
+                    currentHandle = handle;
+                    startX = e.clientX;
+
+                    const gridColumns = mainContent.style.gridTemplateColumns.split(' ');
+                    // Find the indices of the panels around the handle
+                    let leftPanelIndex = -1, rightPanelIndex = -1;
+                    if (handle.dataset.panel === 'chat') { // Between chat and terminal
+                        leftPanelIndex = 0; // Chat
+                        rightPanelIndex = 2; // Terminal (after handle)
+                    } else if (handle.dataset.panel === 'terminal') { // Between terminal and commands
+                        leftPanelIndex = gridColumns.indexOf('2fr') !== -1 ? gridColumns.indexOf('2fr') : gridColumns.indexOf('1fr'); // Terminal
+                        rightPanelIndex = gridColumns.lastIndexOf('1fr'); // Commands
+                    }
+                    
+                    if (leftPanelIndex !== -1 && rightPanelIndex !== -1) {
+                        startWidthLeft = parseFloat(gridColumns[leftPanelIndex]);
+                        startWidthMiddle = parseFloat(gridColumns[rightPanelIndex]);
+                    }
+
+                    document.body.style.cursor = 'ew-resize';
+                    document.body.style.userSelect = 'none';
+                });
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing || !currentHandle) return;
+
+                const dx = e.clientX - startX;
+                const totalWidth = mainContent.offsetWidth;
+                const minWidth = 100; // Minimum width for a panel
+
+                let newWidthLeft, newWidthMiddle;
+
+                const gridColumns = mainContent.style.gridTemplateColumns.split(' ');
+                let leftPanelIndex = -1, rightPanelIndex = -1;
+
+                if (currentHandle.dataset.panel === 'chat') { // Between chat and terminal
+                    leftPanelIndex = 0;
+                    rightPanelIndex = gridColumns.indexOf('4px') + 1; // Index of terminal panel
+
+                    const currentLeftPx = parseFloat(gridColumns[leftPanelIndex]) / parseFloat(gridColumns.reduce((sum, val) => parseFloat(val) ? sum + parseFloat(val) : sum, 0)) * totalWidth;
+                    const currentMiddlePx = parseFloat(gridColumns[rightPanelIndex]) / parseFloat(gridColumns.reduce((sum, val) => parseFloat(val) ? sum + parseFloat(val) : sum, 0)) * totalWidth;
+
+                    newWidthLeft = currentLeftPx + dx;
+                    newWidthMiddle = currentMiddlePx - dx;
+
+                    if (newWidthLeft < minWidth || newWidthMiddle < minWidth) return;
+
+                    const newLeftFr = newWidthLeft / totalWidth * 100;
+                    const newMiddleFr = newWidthMiddle / totalWidth * 100;
+
+                    gridColumns[leftPanelIndex] = `${newLeftFr}fr`;
+                    gridColumns[rightPanelIndex] = `${newMiddleFr}fr`;
+
+                } else if (currentHandle.dataset.panel === 'terminal') { // Between terminal and commands
+                    leftPanelIndex = gridColumns.indexOf('4px', gridColumns.indexOf('4px') + 1) -1; // Index of terminal panel
+                    rightPanelIndex = gridColumns.length - 1; // Index of commands panel
+
+                    const currentLeftPx = parseFloat(gridColumns[leftPanelIndex]) / parseFloat(gridColumns.reduce((sum, val) => parseFloat(val) ? sum + parseFloat(val) : sum, 0)) * totalWidth;
+                    const currentRightPx = parseFloat(gridColumns[rightPanelIndex]) / parseFloat(gridColumns.reduce((sum, val) => parseFloat(val) ? sum + parseFloat(val) : sum, 0)) * totalWidth;
+
+                    newWidthLeft = currentLeftPx + dx;
+                    newWidthMiddle = currentRightPx - dx; // Renamed for clarity, this is the right panel width
+
+                    if (newWidthLeft < minWidth || newWidthMiddle < minWidth) return;
+
+                    const newLeftFr = newWidthLeft / totalWidth * 100;
+                    const newMiddleFr = newWidthMiddle / totalWidth * 100;
+
+                    gridColumns[leftPanelIndex] = `${newLeftFr}fr`;
+                    gridColumns[rightPanelIndex] = `${newMiddleFr}fr`;
+                }
+                mainContent.style.gridTemplateColumns = gridColumns.join(' ');
+            });
+
+            document.addEventListener('mouseup', () => {
+                isResizing = false;
+                currentHandle = null;
+                document.body.style.cursor = 'default';
+                document.body.style.userSelect = 'auto';
+            });
+
+            // --- Socket.io Events ---
+            socket.on('connect', () => {
+                appendTerminalOutput('Socket.io bağlantısı kuruldu.');
+                updateConnectionStatus(true);
+            });
+
+            socket.on('disconnect', () => {
+                appendTerminalOutput('Socket.io bağlantısı kesildi.', 'error');
+                updateConnectionStatus(false);
+            });
+
+            socket.on('message', (data) => {
+                appendTerminalOutput(`[Socket Mesajı]: ${data.text}`);
+                addNotification(`<strong>Socket:</strong> ${data.text}`);
+            });
+
+            socket.on('agent_update', (data) => {
+                // console.log('Agent Update:', data);
+                if (data.status !== undefined) updateConnectionStatus(data.status);
+                if (data.cpu !== undefined) cpuUsageElem.textContent = `${data.cpu}%`;
+                if (data.ram !== undefined) ramUsageElem.textContent = `${data.ram}%`;
+                if (data.message) {
+                    appendTerminalOutput(`[Agent]: ${data.message}`);
+                    addNotification(`<strong>Agent:</strong> ${data.message}`);
+                }
+            });
+
+            socket.on('claude_reply', (data) => {
+                // This event might be used if Claude pushes replies directly
+                if (data.text) {
+                    renderMessage('claude', data.text);
+                    addNotification(`<strong>Claude:</strong> Yeni yanıt geldi.`);
+                    // If using this, you might not need polling, or stop polling here
+                    if (claudePollingInterval) clearInterval(claudePollingInterval);
+                    claudePollingInterval = null;
+                }
+            });
+
+            // --- PWA Service Worker Registration ---
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js').then(registration => {
+                        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+                    }).catch(err => {
+                        console.log('ServiceWorker registration failed: ', err);
+                    });
+                });
             }
         });
-
-        btnApprove.addEventListener('click', () => {
-            sendAgentCommand('approve');
-        });
-
-        btnReject.addEventListener('click', () => {
-            sendAgentCommand('reject');
-        });
-
-        btnSendIdea.addEventListener('click', () => {
-            const idea = prompt('Gondermek istediginiz fikri girin:');
-            if (idea) {
-                sendAgentCommand('send_idea', { idea });
-            }
-        });
-
-        // Tab Navigation
-        const panels = [chatPanel, terminalPanel, commandsPanel];
-        const tabs = [tabChat, tabTerminal, tabCommands, tabAll];
-
-        function hideAllPanels() {
-            panels.forEach(panel => panel.classList.add('hidden'));
-        }
-
-        function setActiveTab(activeTab) {
-            tabs.forEach(tab => tab.classList.remove('active'));
-            activeTab.classList.add('active');
-        }
-
-        tabChat.addEventListener('click', () => {
-            hideAllPanels();
-            chatPanel.classList.remove('hidden');
-            setActiveTab(tabChat);
-            document.getElementById('main-content').style.gridTemplateColumns = '1fr';
-        });
-
-        tabTerminal.addEventListener('click', () => {
-            hideAllPanels();
-            terminalPanel.classList.remove('hidden');
-            setActiveTab(tabTerminal);
-            document.getElementById('main-content').style.gridTemplateColumns = '1fr';
-        });
-
-        tabCommands.addEventListener('click', () => {
-            hideAllPanels();
-            commandsPanel.classList.remove('hidden');
-            setActiveTab(tabCommands);
-            document.getElementById('main-content').style.gridTemplateColumns = '1fr';
-        });
-
-        tabAll.addEventListener('click', () => {
-            panels.forEach(panel => panel.classList.remove('hidden'));
-            setActiveTab(tabAll);
-            document.getElementById('main-content').style.gridTemplateColumns = '1fr 2fr 1fr';
-        });
-
-        // Initialize with "All" panels visible
-        tabAll.click();
-
-        // Periodically fetch agent status (for demonstration, in a real app this would be socket-driven or event-driven)
-        setInterval(async () => {
-            try {
-                const response = await fetch('/api/agent/status/bedrihan-pc');
-                const status = await response.json();
-                console.log('Fetched Agent Status:', status);
-                // Update UI based on status if needed
-            } catch (error) {
-                console.error('Failed to fetch agent status:', error);
-            }
-        }, 30000); // Every 30 seconds
     </script>
 </body>
 </html>
