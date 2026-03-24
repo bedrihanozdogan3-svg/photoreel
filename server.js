@@ -33,12 +33,23 @@ app.use('/api/chat', chatRoutes(io));
 const whatsappRoutes = require('./routes/api-whatsapp');
 app.use('/webhook/whatsapp', whatsappRoutes(io));
 
+// Agent API (tablet uzaktan kontrol)
+const agentRoutes = require('./routes/api-agent');
+app.use('/api/agent', agentRoutes);
+
+// Tablet kontrol paneli
+app.get('/kontrol', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'kontrol.html'));
+});
+
 // Health check (Cloud Run için)
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
 });
 
 // Socket.io connection
+global.io = io;
+
 io.on('connection', (socket) => {
   console.log('Dashboard bağlandı:', socket.id);
   socket.emit('status', { state: 'idle', message: 'Bağlantı kuruldu' });
