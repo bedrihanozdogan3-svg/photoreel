@@ -1,604 +1,500 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0a0a1a">
-<title>PhotoReel Kontrol Merkezi</title>
-<link rel="manifest" href="/manifest.json">
-<style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0a0a1a;--card:#12122a;--card-border:#1e1e3a;
-  --accent:#4361ee;--green:#2ec4b0;--red:#e63946;--yellow:#f4a261;
-  --text:#e0e0e0;--text-dim:#8888aa;--glow:rgba(67,97,238,.25);
-}
-html,body{height:100%;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;-webkit-tap-highlight-color:transparent}
-body{display:flex;flex-direction:column}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bedrihan Uzaktan Çalışma Hub</title>
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0d1117">
+    <style>
+        :root {
+            --github-dark-bg: #0d1117;
+            --github-dark-fg: #c9d1d9;
+            --panel-bg: #161b22;
+            --border-color: #30363d;
+            --button-bg: #21262d;
+            --button-hover-bg: #30363d;
+            --button-active-bg: #272c34;
+            --button-text: #c9d1d9;
+            --input-bg: #0d1117;
+            --input-border: #30363d;
+            --input-text: #c9d1d9;
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar{width:6px}
-::-webkit-scrollbar-track{background:var(--bg)}
-::-webkit-scrollbar-thumb{background:var(--card-border);border-radius:3px}
+            --gemini-bubble-bg: #34c759; /* Green */
+            --claude-bubble-bg: #007aff; /* Blue */
+            --user-bubble-bg: #21262d;   /* Dark for user */
+            --bubble-text: #ffffff;
+            --user-bubble-text: #c9d1d9;
+            --terminal-text: #00ff00;
+        }
 
-/* ── Top Bar ── */
-.topbar{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:12px 20px;
-  background:linear-gradient(135deg,#0d0d24,#141436);
-  border-bottom:1px solid var(--card-border);
-  position:sticky;top:0;z-index:100;
-  box-shadow:0 2px 20px rgba(0,0,0,.5);
-}
-.topbar h1{font-size:1.15rem;font-weight:600;letter-spacing:.5px;display:flex;align-items:center;gap:8px}
-.conn-status{display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--text-dim)}
-.conn-dot{width:10px;height:10px;border-radius:50%;transition:background .3s}
-.conn-dot.online{background:var(--green);box-shadow:0 0 8px var(--green)}
-.conn-dot.offline{background:var(--red);box-shadow:0 0 8px var(--red)}
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
-/* ── Main Layout ── */
-.main{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px;flex:1;overflow-y:auto}
-@media(max-width:700px){.main{grid-template-columns:1fr}}
+        html, body {
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            color: var(--github-dark-fg);
+            background-color: var(--github-dark-bg);
+            overflow: hidden; /* Prevent body scroll */
+        }
 
-/* ── Cards ── */
-.card{
-  background:var(--card);border:1px solid var(--card-border);border-radius:14px;
-  padding:16px;
-  transition:box-shadow .3s;
-}
-.card:hover{box-shadow:0 0 20px var(--glow)}
-.card-title{font-size:.85rem;text-transform:uppercase;letter-spacing:1.2px;color:var(--text-dim);margin-bottom:12px;display:flex;align-items:center;gap:6px}
+        #app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 10px;
+            gap: 10px;
+        }
 
-/* ── Status Grid ── */
-.status-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.stat-item{background:rgba(255,255,255,.03);border-radius:10px;padding:12px}
-.stat-label{font-size:.72rem;text-transform:uppercase;letter-spacing:.8px;color:var(--text-dim);margin-bottom:4px}
-.stat-value{font-size:1.05rem;font-weight:600}
-.stat-value.online{color:var(--green)}
-.stat-value.offline{color:var(--red)}
+        #main-content {
+            flex-grow: 1;
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 10px;
+            overflow: hidden; /* Ensure panels don't overflow */
+        }
 
-/* ── Progress Bar ── */
-.pbar-wrap{height:8px;background:rgba(255,255,255,.06);border-radius:4px;margin-top:6px;overflow:hidden}
-.pbar{height:100%;border-radius:4px;transition:width .6s ease}
-.pbar.green{background:linear-gradient(90deg,#2ec4b0,#20e3a0)}
-.pbar.yellow{background:linear-gradient(90deg,#f4a261,#e9c46a)}
-.pbar.red{background:linear-gradient(90deg,#e63946,#ff6b6b)}
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* For scrolling content within panels */
+        }
 
-/* ── Badge ── */
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:.75rem;font-weight:600}
-.badge.online{background:rgba(46,196,176,.15);color:var(--green)}
-.badge.offline{background:rgba(230,57,70,.15);color:var(--red)}
+        /* Chat Panel */
+        #chat-panel {
+            grid-column: 1;
+        }
 
-/* ── Apps Grid ── */
-.apps-grid{display:flex;flex-wrap:wrap;gap:8px}
-.app-chip{
-  background:rgba(67,97,238,.12);border:1px solid rgba(67,97,238,.25);
-  color:var(--accent);padding:8px 14px;border-radius:20px;
-  font-size:.82rem;cursor:pointer;transition:all .2s;
-  display:flex;align-items:center;gap:6px;
-  min-height:44px;
-}
-.app-chip:active{transform:scale(.95);background:rgba(67,97,238,.25)}
-.app-chip .close-x{display:none;color:var(--red);font-weight:700;margin-left:4px}
-.app-chip.selected .close-x{display:inline}
-.no-apps{color:var(--text-dim);font-size:.85rem;font-style:italic}
+        #chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 5px; /* For scrollbar */
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
 
-/* ── Command Grid ── */
-.cmd-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.cmd-btn{
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  padding:14px 10px;border:1px solid var(--card-border);border-radius:12px;
-  background:rgba(255,255,255,.03);color:var(--text);
-  font-size:.9rem;font-weight:500;cursor:pointer;
-  transition:all .2s;min-height:52px;
-  -webkit-user-select:none;user-select:none;
-}
-.cmd-btn:active{transform:scale(.96);background:rgba(67,97,238,.15);border-color:var(--accent)}
-.cmd-btn.danger{border-color:rgba(230,57,70,.3)}
-.cmd-btn.danger:active{background:rgba(230,57,70,.15);border-color:var(--red)}
+        .chat-message {
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+        }
 
-/* ── Input Row ── */
-.input-row{display:flex;gap:8px;margin-top:10px}
-.input-row input{
-  flex:1;padding:12px;border-radius:10px;border:1px solid var(--card-border);
-  background:rgba(255,255,255,.05);color:var(--text);font-size:.9rem;
-  min-height:44px;outline:none;
-}
-.input-row input:focus{border-color:var(--accent);box-shadow:0 0 8px var(--glow)}
-.input-row button{
-  padding:12px 18px;border-radius:10px;border:none;
-  background:var(--accent);color:#fff;font-weight:600;cursor:pointer;
-  min-width:44px;min-height:44px;transition:all .2s;font-size:.85rem;
-}
-.input-row button:active{transform:scale(.95)}
+        .chat-bubble {
+            padding: 10px 15px;
+            border-radius: 1.5em; /* Material Design style */
+            font-size: 0.9em;
+            word-wrap: break-word;
+            line-height: 1.4;
+            position: relative;
+        }
 
-/* ── Screenshot Area ── */
-.ss-area{text-align:center;margin-top:10px}
-.ss-area img{max-width:100%;border-radius:10px;border:1px solid var(--card-border)}
-.ss-placeholder{color:var(--text-dim);font-size:.85rem;padding:30px 0}
+        .chat-bubble.gemini {
+            background-color: var(--gemini-bubble-bg);
+            color: var(--bubble-text);
+            align-self: flex-start;
+            border-bottom-left-radius: 0.5em; /* Pointy bottom-left */
+        }
 
-/* ── Chat ── */
-.chat-toggle{display:flex;gap:0;margin-bottom:10px}
-.chat-toggle button{
-  flex:1;padding:10px;border:1px solid var(--card-border);
-  background:transparent;color:var(--text-dim);font-size:.82rem;font-weight:600;
-  cursor:pointer;transition:all .2s;min-height:44px;
-}
-.chat-toggle button:first-child{border-radius:10px 0 0 10px}
-.chat-toggle button:last-child{border-radius:0 10px 10px 0}
-.chat-toggle button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-.chat-msgs{
-  max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;
-  padding:8px 0;margin-bottom:10px;
-}
-.chat-msg{padding:10px 14px;border-radius:12px;font-size:.85rem;line-height:1.45;max-width:85%;word-wrap:break-word}
-.chat-msg.user{background:rgba(67,97,238,.18);align-self:flex-end;border-bottom-right-radius:4px}
-.chat-msg.ai{background:rgba(255,255,255,.06);align-self:flex-start;border-bottom-left-radius:4px}
-.chat-msg .ai-name{font-size:.7rem;color:var(--text-dim);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px}
+        .chat-bubble.claude {
+            background-color: var(--claude-bubble-bg);
+            color: var(--bubble-text);
+            align-self: flex-start;
+            border-bottom-left-radius: 0.5em; /* Pointy bottom-left */
+        }
 
-/* ── Toast ── */
-.toast-container{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:8px}
-.toast{
-  padding:12px 18px;border-radius:10px;font-size:.85rem;
-  color:#fff;box-shadow:0 4px 20px rgba(0,0,0,.4);
-  animation:slideIn .3s ease;min-width:200px;
-}
-.toast.success{background:linear-gradient(135deg,#1b8a6b,#2ec4b0)}
-.toast.error{background:linear-gradient(135deg,#a82835,#e63946)}
-.toast.info{background:linear-gradient(135deg,#2d47b0,#4361ee)}
-@keyframes slideIn{from{transform:translateX(100px);opacity:0}to{transform:translateX(0);opacity:1}}
-@keyframes slideOut{from{opacity:1}to{transform:translateX(100px);opacity:0}}
+        .chat-bubble.user {
+            background-color: var(--user-bubble-bg);
+            color: var(--user-bubble-text);
+            align-self: flex-end;
+            border-bottom-right-radius: 0.5em; /* Pointy bottom-right */
+        }
 
-/* ── Confirm Dialog ── */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:200;display:none;align-items:center;justify-content:center}
-.overlay.show{display:flex}
-.dialog{background:var(--card);border:1px solid var(--card-border);border-radius:16px;padding:24px;max-width:340px;width:90%;text-align:center}
-.dialog h3{margin-bottom:10px;font-size:1.05rem}
-.dialog p{color:var(--text-dim);font-size:.88rem;margin-bottom:20px}
-.dialog-btns{display:flex;gap:10px;justify-content:center}
-.dialog-btns button{padding:12px 24px;border-radius:10px;border:none;font-weight:600;cursor:pointer;min-height:44px;font-size:.9rem;transition:all .2s}
-.dialog-btns .cancel{background:rgba(255,255,255,.08);color:var(--text)}
-.dialog-btns .confirm{background:var(--red);color:#fff}
-.dialog-btns button:active{transform:scale(.95)}
+        .chat-meta {
+            font-size: 0.7em;
+            margin-top: 2px;
+            opacity: 0.7;
+        }
 
-/* ── Pulse glow ── */
-@keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}
-.pulse{animation:pulse 2s infinite}
+        .chat-message.gemini .chat-meta,
+        .chat-message.claude .chat-meta {
+            align-self: flex-start;
+            padding-left: 10px;
+        }
 
-/* ── Loading Spinner ── */
-.spinner{display:inline-block;width:18px;height:18px;border:2px solid var(--text-dim);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-</style>
+        .chat-message.user .chat-meta {
+            align-self: flex-end;
+            padding-right: 10px;
+        }
+
+        #chat-input-area {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        #chat-input {
+            flex-grow: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--input-border);
+            border-radius: 6px;
+            background-color: var(--input-bg);
+            color: var(--input-text);
+            font-size: 0.9em;
+        }
+
+        #chat-input:focus {
+            outline: none;
+            border-color: #007bff; /* Focus highlight */
+            box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        }
+
+        /* Terminal Panel */
+        #terminal-panel {
+            grid-column: 2;
+        }
+
+        #terminal-output {
+            flex-grow: 1;
+            background-color: black;
+            color: var(--terminal-text);
+            font-family: 'Cascadia Code', 'Fira Code', 'Roboto Mono', monospace;
+            font-size: 0.85em;
+            padding: 10px;
+            border-radius: 6px;
+            overflow-y: auto;
+            white-space: pre-wrap; /* Preserve whitespace and wrap */
+            word-break: break-all;
+            line-height: 1.4;
+        }
+
+        /* Commands Panel */
+        #commands-panel {
+            grid-column: 3;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* Buttons */
+        button {
+            padding: 10px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: background-color 0.2s ease, border-color 0.2s ease;
+        }
+
+        button:hover {
+            background-color: var(--button-hover-bg);
+            border-color: var(--button-hover-bg);
+        }
+
+        button:active {
+            background-color: var(--button-active-bg);
+            border-color: var(--button-active-bg);
+        }
+
+        button:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(3, 102, 214, 0.3); /* GitHub focus blue */
+        }
+
+        /* Bottom Bar */
+        #bottom-bar {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 10px;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-top: 10px; /* Gap from main-content */
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        #bottom-bar button {
+            flex: 1;
+            margin: 0 5px;
+            max-width: 150px;
+        }
+
+        #bottom-bar button.active {
+            background-color: #007bff; /* Highlight active tab */
+            border-color: #007bff;
+            color: white;
+        }
+
+        /* Utility classes for panel visibility */
+        .hidden {
+            display: none !important;
+        }
+    </style>
 </head>
 <body>
+    <div id="app-container">
+        <div id="main-content">
+            <div id="chat-panel" class="panel">
+                <div id="chat-messages">
+                    <!-- Chat bubbles will be appended here -->
+                </div>
+                <div id="chat-input-area">
+                    <input type="text" id="chat-input" placeholder="Mesaj yaz...">
+                    <button id="send-chat-gemini">Gemini</button>
+                    <button id="send-chat-claude">Claude</button>
+                </div>
+            </div>
 
-<!-- Top Bar -->
-<div class="topbar">
-  <h1>PhotoReel Kontrol Merkezi</h1>
-  <div class="conn-status">
-    <span id="connLabel">Baglaniyor...</span>
-    <span class="conn-dot offline" id="connDot"></span>
-  </div>
-</div>
+            <div id="terminal-panel" class="panel">
+                <pre id="terminal-output"></pre>
+            </div>
 
-<!-- Main -->
-<div class="main">
+            <div id="commands-panel" class="panel">
+                <button id="btn-screenshot">Ekran Görüntüsü Çek</button>
+                <button id="btn-send-message">Mesaj Gönder (Bedrihan'a)</button>
+                <button id="btn-approve">Onay Ver</button>
+                <button id="btn-reject">Reddet</button>
+                <button id="btn-send-idea">Fikir Gönder</button>
+            </div>
+        </div>
 
-  <!-- LEFT COLUMN -->
-  <div class="left-col">
-
-    <!-- System Status -->
-    <div class="card" style="margin-bottom:14px">
-      <div class="card-title">Sistem Durumu</div>
-      <div class="status-grid">
-        <div class="stat-item">
-          <div class="stat-label">Durum</div>
-          <div class="stat-value" id="sysStatus"><span class="badge offline">Bilinmiyor</span></div>
+        <div id="bottom-bar">
+            <button id="tab-chat">Sohbet</button>
+            <button id="tab-terminal">Terminal</button>
+            <button id="tab-commands">Komutlar</button>
+            <button id="tab-all" class="active">Hepsi</button>
         </div>
-        <div class="stat-item">
-          <div class="stat-label">Kullanici</div>
-          <div class="stat-value" id="sysUser">-</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">CPU</div>
-          <div class="stat-value" id="cpuVal">-%</div>
-          <div class="pbar-wrap"><div class="pbar green" id="cpuBar" style="width:0%"></div></div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">RAM</div>
-          <div class="stat-value" id="ramVal">- / - GB</div>
-          <div class="pbar-wrap"><div class="pbar green" id="ramBar" style="width:0%"></div></div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Disk</div>
-          <div class="stat-value" id="diskVal">- / - GB</div>
-          <div class="pbar-wrap"><div class="pbar green" id="diskBar" style="width:0%"></div></div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Internet</div>
-          <div class="stat-value" id="sysNet">-</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Uptime</div>
-          <div class="stat-value" id="sysUptime">-</div>
-        </div>
-        <div class="stat-item">
-          <div class="stat-label">Son Gorulme</div>
-          <div class="stat-value" id="sysLastSeen">-</div>
-        </div>
-      </div>
     </div>
 
-    <!-- Open Apps -->
-    <div class="card" style="margin-bottom:14px">
-      <div class="card-title">Acik Uygulamalar</div>
-      <div class="apps-grid" id="appsGrid">
-        <div class="no-apps">Veri bekleniyor...</div>
-      </div>
-    </div>
-
-    <!-- Screenshot -->
-    <div class="card">
-      <div class="card-title">Ekran Goruntusu</div>
-      <div class="ss-area" id="ssArea">
-        <div class="ss-placeholder">Henuz ekran goruntusu yok</div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- RIGHT COLUMN -->
-  <div class="right-col">
-
-    <!-- Commands -->
-    <div class="card" style="margin-bottom:14px">
-      <div class="card-title">Komut Paneli</div>
-      <div class="cmd-grid">
-        <button class="cmd-btn" onclick="sendCmd('screenshot')">Ekran Goruntusu</button>
-        <button class="cmd-btn" onclick="sendCmd('lock')">Kilitle</button>
-        <button class="cmd-btn danger" onclick="confirmAction('restart')">Yeniden Baslat</button>
-        <button class="cmd-btn danger" onclick="confirmAction('shutdown')">Kapat</button>
-      </div>
-
-      <!-- Message -->
-      <div style="margin-top:14px">
-        <div class="stat-label" style="margin-bottom:6px">Mesaj Gonder</div>
-        <div class="input-row">
-          <input type="text" id="msgInput" placeholder="Bilgisayara mesaj gonder...">
-          <button onclick="sendMessage()">Gonder</button>
-        </div>
-      </div>
-
-      <!-- Shell Command -->
-      <div style="margin-top:14px">
-        <div class="stat-label" style="margin-bottom:6px">Komut Calistir</div>
-        <div class="input-row">
-          <input type="text" id="cmdInput" placeholder="Shell komutu...">
-          <button onclick="sendShellCmd()">Calistir</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Chat -->
-    <div class="card">
-      <div class="card-title">AI Sohbet</div>
-      <div class="chat-toggle">
-        <button class="active" id="btnGemini" onclick="switchAI('gemini')">Gemini</button>
-        <button id="btnClaude" onclick="switchAI('claude')">Claude</button>
-      </div>
-      <div class="chat-msgs" id="chatMsgs"></div>
-      <div class="input-row">
-        <input type="text" id="chatInput" placeholder="Mesajinizi yazin...">
-        <button onclick="sendChat()" id="chatSendBtn">Gonder</button>
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- Confirm Overlay -->
-<div class="overlay" id="confirmOverlay">
-  <div class="dialog">
-    <h3 id="confirmTitle">Emin misiniz?</h3>
-    <p id="confirmMsg">Bu islem geri alinamaz.</p>
-    <div class="dialog-btns">
-      <button class="cancel" onclick="closeConfirm()">Iptal</button>
-      <button class="confirm" id="confirmBtn" onclick="execConfirm()">Onayla</button>
-    </div>
-  </div>
-</div>
-
-<!-- Toasts -->
-<div class="toast-container" id="toasts"></div>
-
-<script>
-// ── Config ──
-const DEVICE = 'bedrihan-pc';
-const STATUS_URL = `/api/agent/status/${DEVICE}`;
-const CMD_URL = `/api/agent/command/${DEVICE}`;
-const RESULTS_URL = `/api/agent/results/${DEVICE}`;
-const CHAT_GEMINI_URL = '/api/chat/gemini';
-const CHAT_CLAUDE_URL = '/api/chat/claude';
-
-let currentAI = 'gemini';
-let pendingConfirm = null;
-let chatHistory = { gemini: [], claude: [] };
-let selectedApp = null;
-let lastScreenshot = null;
-
-// ── Toast ──
-function toast(msg, type = 'info') {
-  const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  t.textContent = msg;
-  document.getElementById('toasts').appendChild(t);
-  setTimeout(() => { t.style.animation = 'slideOut .3s ease forwards'; setTimeout(() => t.remove(), 300); }, 3000);
-}
-
-// ── Time Ago ──
-function timeAgo(ts) {
-  if (!ts) return '-';
-  const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
-  if (diff < 5) return 'simdi';
-  if (diff < 60) return diff + ' sn once';
-  if (diff < 3600) return Math.floor(diff / 60) + ' dk once';
-  if (diff < 86400) return Math.floor(diff / 3600) + ' saat once';
-  return Math.floor(diff / 86400) + ' gun once';
-}
-
-// ── Progress Bar Color ──
-function pbarClass(pct) {
-  if (pct < 60) return 'green';
-  if (pct < 80) return 'yellow';
-  return 'red';
-}
-
-function setBar(barId, pct) {
-  const bar = document.getElementById(barId);
-  bar.style.width = pct + '%';
-  bar.className = 'pbar ' + pbarClass(pct);
-}
-
-// ── Fetch Status ──
-async function fetchStatus() {
-  try {
-    const res = await fetch(STATUS_URL);
-    if (!res.ok) throw new Error('Status error');
-    const d = await res.json();
-    const data = d.data || d;
-
-    // Online check
-    const lastSeen = new Date(data.lastSeen || data.last_seen);
-    const isOnline = (Date.now() - lastSeen.getTime()) < 30000;
-
-    document.getElementById('connDot').className = 'conn-dot ' + (isOnline ? 'online' : 'offline');
-    document.getElementById('connLabel').textContent = isOnline ? 'Bagli' : 'Cevrimdisi';
-    document.getElementById('sysStatus').innerHTML = isOnline
-      ? '<span class="badge online">Cevrimici</span>'
-      : '<span class="badge offline">Cevrimdisi</span>';
-
-    // CPU
-    const cpu = data.cpu || 0;
-    document.getElementById('cpuVal').textContent = cpu + '%';
-    setBar('cpuBar', cpu);
-
-    // RAM
-    const ramUsed = data.ramUsed || data.ram?.used || 0;
-    const ramTotal = data.ramTotal || data.ram?.total || 0;
-    const ramPct = ramTotal ? Math.round((ramUsed / ramTotal) * 100) : 0;
-    document.getElementById('ramVal').textContent = ramUsed.toFixed(1) + ' / ' + ramTotal.toFixed(1) + ' GB';
-    setBar('ramBar', ramPct);
-
-    // Disk
-    const diskUsed = data.diskUsed || data.disk?.used || 0;
-    const diskTotal = data.diskTotal || data.disk?.total || 0;
-    const diskPct = diskTotal ? Math.round((diskUsed / diskTotal) * 100) : 0;
-    document.getElementById('diskVal').textContent = Math.round(diskUsed) + ' / ' + Math.round(diskTotal) + ' GB';
-    setBar('diskBar', diskPct);
-
-    // Others
-    document.getElementById('sysNet').innerHTML = data.internet !== false
-      ? '<span style="color:var(--green)">Bagli</span>'
-      : '<span style="color:var(--red)">Bagli Degil</span>';
-    const uptimeH = data.uptime ? (data.uptime / 3600).toFixed(1) : '-';
-    document.getElementById('sysUptime').textContent = uptimeH + ' saat';
-    document.getElementById('sysUser').textContent = data.username || data.user || '-';
-    document.getElementById('sysLastSeen').textContent = timeAgo(data.lastSeen || data.last_seen);
-
-    // Apps
-    renderApps(data.apps || []);
-
-  } catch (e) {
-    document.getElementById('connDot').className = 'conn-dot offline';
-    document.getElementById('connLabel').textContent = 'Baglanti Hatasi';
-  }
-}
-
-// ── Apps ──
-function renderApps(apps) {
-  const grid = document.getElementById('appsGrid');
-  if (!apps.length) {
-    grid.innerHTML = '<div class="no-apps">Acik uygulama yok</div>';
-    return;
-  }
-  grid.innerHTML = apps.map(a => {
-    const name = typeof a === 'string' ? a : a.name || a.title || a;
-    const sel = selectedApp === name ? ' selected' : '';
-    return `<div class="app-chip${sel}" onclick="toggleApp(this, '${name.replace(/'/g, "\\'")}')">${name}<span class="close-x" onclick="event.stopPropagation();closeApp('${name.replace(/'/g, "\\'")}')">X</span></div>`;
-  }).join('');
-}
-
-function toggleApp(el, name) {
-  if (selectedApp === name) { selectedApp = null; el.classList.remove('selected'); }
-  else { document.querySelectorAll('.app-chip').forEach(c => c.classList.remove('selected')); selectedApp = name; el.classList.add('selected'); }
-}
-
-async function closeApp(name) {
-  try {
-    await fetch(CMD_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'close_app', data: name }) });
-    toast(name + ' kapatma komutu gonderildi', 'success');
-    selectedApp = null;
-  } catch { toast('Komut gonderilemedi', 'error'); }
-}
-
-// ── Commands ──
-async function sendCmd(type, data) {
-  try {
-    const body = { type };
-    if (data !== undefined) body.data = data;
-    await fetch(CMD_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    toast('Komut gonderildi: ' + type, 'success');
-  } catch { toast('Komut gonderilemedi', 'error'); }
-}
-
-function sendMessage() {
-  const input = document.getElementById('msgInput');
-  const text = input.value.trim();
-  if (!text) return;
-  sendCmd('message', text);
-  input.value = '';
-}
-
-function sendShellCmd() {
-  const input = document.getElementById('cmdInput');
-  const text = input.value.trim();
-  if (!text) return;
-  sendCmd('run', text);
-  input.value = '';
-}
-
-// ── Confirm Dialog ──
-function confirmAction(type) {
-  pendingConfirm = type;
-  const titles = { restart: 'Yeniden Baslat', shutdown: 'Bilgisayari Kapat' };
-  const msgs = { restart: 'Bilgisayar yeniden baslatilacak. Emin misiniz?', shutdown: 'Bilgisayar kapatilacak. Emin misiniz?' };
-  document.getElementById('confirmTitle').textContent = titles[type] || 'Emin misiniz?';
-  document.getElementById('confirmMsg').textContent = msgs[type] || 'Bu islem geri alinamaz.';
-  document.getElementById('confirmOverlay').classList.add('show');
-}
-
-function closeConfirm() {
-  pendingConfirm = null;
-  document.getElementById('confirmOverlay').classList.remove('show');
-}
-
-function execConfirm() {
-  if (pendingConfirm) sendCmd(pendingConfirm);
-  closeConfirm();
-}
-
-// ── Fetch Results (screenshots, command outputs) ──
-async function fetchResults() {
-  try {
-    const res = await fetch(RESULTS_URL);
-    if (!res.ok) return;
-    const d = await res.json();
-    const results = d.data || d.results || d;
-    if (!Array.isArray(results)) return;
-
-    results.forEach(r => {
-      if (r.type === 'screenshot' && r.data) {
-        const src = r.data.startsWith('data:') ? r.data : r.data.startsWith('/') ? r.data : 'data:image/png;base64,' + r.data;
-        if (src !== lastScreenshot) {
-          lastScreenshot = src;
-          document.getElementById('ssArea').innerHTML = `<img src="${src}" alt="Ekran Goruntusu" onclick="window.open(this.src)">`;
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
         }
-      } else if (r.type === 'command_result' || r.type === 'run_result') {
-        toast('Komut sonucu: ' + (r.data || '').substring(0, 100), 'info');
-      }
-    });
-  } catch {}
-}
 
-// ── Chat ──
-function switchAI(ai) {
-  currentAI = ai;
-  document.getElementById('btnGemini').className = ai === 'gemini' ? 'active' : '';
-  document.getElementById('btnClaude').className = ai === 'claude' ? 'active' : '';
-  renderChat();
-}
+        const socket = io();
 
-function renderChat() {
-  const container = document.getElementById('chatMsgs');
-  const msgs = chatHistory[currentAI] || [];
-  container.innerHTML = msgs.map(m =>
-    `<div class="chat-msg ${m.role}">` +
-    (m.role === 'ai' ? `<div class="ai-name">${currentAI}</div>` : '') +
-    m.text + '</div>'
-  ).join('');
-  container.scrollTop = container.scrollHeight;
-}
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const sendChatGeminiBtn = document.getElementById('send-chat-gemini');
+        const sendChatClaudeBtn = document.getElementById('send-chat-claude');
+        const terminalOutput = document.getElementById('terminal-output');
 
-async function sendChat() {
-  const input = document.getElementById('chatInput');
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
+        const btnScreenshot = document.getElementById('btn-screenshot');
+        const btnSendMessage = document.getElementById('btn-send-message');
+        const btnApprove = document.getElementById('btn-approve');
+        const btnReject = document.getElementById('btn-reject');
+        const btnSendIdea = document.getElementById('btn-send-idea');
 
-  chatHistory[currentAI].push({ role: 'user', text });
-  renderChat();
+        const tabChat = document.getElementById('tab-chat');
+        const tabTerminal = document.getElementById('tab-terminal');
+        const tabCommands = document.getElementById('tab-commands');
+        const tabAll = document.getElementById('tab-all');
 
-  const url = currentAI === 'gemini' ? CHAT_GEMINI_URL : CHAT_CLAUDE_URL;
-  const btn = document.getElementById('chatSendBtn');
-  btn.innerHTML = '<span class="spinner"></span>';
-  btn.disabled = true;
+        const chatPanel = document.getElementById('chat-panel');
+        const terminalPanel = document.getElementById('terminal-panel');
+        const commandsPanel = document.getElementById('commands-panel');
 
-  try {
-    const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }) });
-    const d = await res.json();
-    const reply = d.reply || d.response || d.text || d.message || JSON.stringify(d);
-    chatHistory[currentAI].push({ role: 'ai', text: reply });
-  } catch {
-    chatHistory[currentAI].push({ role: 'ai', text: 'Hata: Yanit alinamadi.' });
-  }
+        function addChatMessage(sender, text, timestamp = new Date()) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('chat-message');
 
-  btn.textContent = 'Gonder';
-  btn.disabled = false;
-  renderChat();
-}
+            const bubbleDiv = document.createElement('div');
+            bubbleDiv.classList.add('chat-bubble');
+            bubbleDiv.classList.add(sender); // 'gemini', 'claude', 'user'
+            bubbleDiv.textContent = text;
 
-// ── Enter key support ──
-document.getElementById('chatInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
-document.getElementById('msgInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendMessage(); });
-document.getElementById('cmdInput').addEventListener('keydown', e => { if (e.key === 'Enter') sendShellCmd(); });
+            const metaDiv = document.createElement('div');
+            metaDiv.classList.add('chat-meta');
+            const timeString = timestamp.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+            metaDiv.textContent = `${sender.charAt(0).toUpperCase() + sender.slice(1)} - ${timeString}`;
 
-// ── Socket.io (optional) ──
-function initSocket() {
-  try {
-    if (typeof io === 'undefined') return;
-    const socket = io();
-    socket.on('status:' + DEVICE, data => {
-      // Real-time status update — will be picked up by next render cycle
-    });
-    socket.on('result:' + DEVICE, data => {
-      if (data.type === 'screenshot' && data.data) {
-        const src = data.data.startsWith('data:') ? data.data : 'data:image/png;base64,' + data.data;
-        lastScreenshot = src;
-        document.getElementById('ssArea').innerHTML = `<img src="${src}" alt="Ekran Goruntusu">`;
-        toast('Ekran goruntusu alindi', 'success');
-      }
-    });
-  } catch {}
-}
+            messageDiv.appendChild(bubbleDiv);
+            messageDiv.appendChild(metaDiv);
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight; // Auto-scroll
+        }
 
-// ── Init ──
-fetchStatus();
-setInterval(fetchStatus, 10000);
-setInterval(fetchResults, 5000);
+        function appendTerminalOutput(output) {
+            terminalOutput.textContent += output;
+            terminalOutput.scrollTop = terminalOutput.scrollHeight; // Auto-scroll
+        }
 
-// Load socket.io dynamically
-const sioScript = document.createElement('script');
-sioScript.src = '/socket.io/socket.io.js';
-sioScript.onload = initSocket;
-document.head.appendChild(sioScript);
+        // Initial welcome messages
+        addChatMessage('gemini', 'Merhaba Bedrihan! Sana nasıl yardımcı olabilirim?', new Date(Date.now() - 30000));
+        addChatMessage('claude', 'Hazırım. Bir komut bekliyorum.', new Date(Date.now() - 15000));
 
-// ── PWA Service Worker ──
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').catch(() => {});
-}
-</script>
+        // Chat functionality
+        async function sendChat(aiType) {
+            const message = chatInput.value.trim();
+            if (message) {
+                addChatMessage('user', message);
+                chatInput.value = '';
+
+                try {
+                    const response = await fetch(`/api/chat/${aiType}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ message })
+                    });
+                    const data = await response.json();
+                    if (data.reply) {
+                        addChatMessage(aiType, data.reply);
+                    } else if (data.error) {
+                        addChatMessage(aiType, `Hata: ${data.error}`);
+                    }
+                } catch (error) {
+                    addChatMessage(aiType, `Bağlantı hatası: ${error.message}`);
+                }
+            }
+        }
+
+        sendChatGeminiBtn.addEventListener('click', () => sendChat('gemini'));
+        sendChatClaudeBtn.addEventListener('click', () => sendChat('claude'));
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                // For simplicity, Enter sends to Gemini by default, or could prompt for choice
+                sendChat('gemini');
+            }
+        });
+
+        // Socket.io listeners
+        socket.on('terminal-output', (data) => {
+            appendTerminalOutput(data.output);
+        });
+
+        socket.on('agent-status', (status) => {
+            console.log('Agent Status:', status);
+            // Optionally update a status indicator in the UI
+        });
+
+        socket.on('chat-reply-gemini', (data) => {
+            addChatMessage('gemini', data.reply);
+        });
+
+        socket.on('chat-reply-claude', (data) => {
+            addChatMessage('claude', data.reply);
+        });
+
+        // Quick Commands functionality
+        async function sendAgentCommand(commandType, payload = {}) {
+            try {
+                const response = await fetch('/api/agent/command/bedrihan-pc', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ command: commandType, ...payload })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    addChatMessage('system', `Komut "${commandType}" başarıyla gönderildi.`);
+                } else {
+                    addChatMessage('system', `Komut "${commandType}" gönderilirken hata: ${data.error || 'Bilinmeyen hata'}`);
+                }
+            } catch (error) {
+                addChatMessage('system', `Komut "${commandType}" için bağlantı hatası: ${error.message}`);
+            }
+        }
+
+        btnScreenshot.addEventListener('click', () => {
+            sendAgentCommand('screenshot');
+        });
+
+        btnSendMessage.addEventListener('click', () => {
+            const message = prompt('Bedrihan\'a göndermek istediğiniz mesajı girin:');
+            if (message) {
+                sendAgentCommand('send_message', { message });
+            }
+        });
+
+        btnApprove.addEventListener('click', () => {
+            sendAgentCommand('approve');
+        });
+
+        btnReject.addEventListener('click', () => {
+            sendAgentCommand('reject');
+        });
+
+        btnSendIdea.addEventListener('click', () => {
+            const idea = prompt('Gondermek istediginiz fikri girin:');
+            if (idea) {
+                sendAgentCommand('send_idea', { idea });
+            }
+        });
+
+        // Tab Navigation
+        const panels = [chatPanel, terminalPanel, commandsPanel];
+        const tabs = [tabChat, tabTerminal, tabCommands, tabAll];
+
+        function hideAllPanels() {
+            panels.forEach(panel => panel.classList.add('hidden'));
+        }
+
+        function setActiveTab(activeTab) {
+            tabs.forEach(tab => tab.classList.remove('active'));
+            activeTab.classList.add('active');
+        }
+
+        tabChat.addEventListener('click', () => {
+            hideAllPanels();
+            chatPanel.classList.remove('hidden');
+            setActiveTab(tabChat);
+            document.getElementById('main-content').style.gridTemplateColumns = '1fr';
+        });
+
+        tabTerminal.addEventListener('click', () => {
+            hideAllPanels();
+            terminalPanel.classList.remove('hidden');
+            setActiveTab(tabTerminal);
+            document.getElementById('main-content').style.gridTemplateColumns = '1fr';
+        });
+
+        tabCommands.addEventListener('click', () => {
+            hideAllPanels();
+            commandsPanel.classList.remove('hidden');
+            setActiveTab(tabCommands);
+            document.getElementById('main-content').style.gridTemplateColumns = '1fr';
+        });
+
+        tabAll.addEventListener('click', () => {
+            panels.forEach(panel => panel.classList.remove('hidden'));
+            setActiveTab(tabAll);
+            document.getElementById('main-content').style.gridTemplateColumns = '1fr 2fr 1fr';
+        });
+
+        // Initialize with "All" panels visible
+        tabAll.click();
+
+        // Periodically fetch agent status (for demonstration, in a real app this would be socket-driven or event-driven)
+        setInterval(async () => {
+            try {
+                const response = await fetch('/api/agent/status/bedrihan-pc');
+                const status = await response.json();
+                console.log('Fetched Agent Status:', status);
+                // Update UI based on status if needed
+            } catch (error) {
+                console.error('Failed to fetch agent status:', error);
+            }
+        }, 30000); // Every 30 seconds
+    </script>
 </body>
 </html>
