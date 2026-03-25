@@ -92,11 +92,49 @@ router.post('/reply', (req, res) => {
   res.json({ ok: true });
 });
 
-// Tablet cevapları okur
+// Tablet cevapları okur (son 20 reply her zaman döner — read flag kaldırıldı)
 router.get('/replies', (req, res) => {
-  const unread = responseQueue.filter(r => !r.read);
-  unread.forEach(r => r.read = true);
-  res.json({ replies: unread });
+  const since = req.query.since || '0';
+  const newer = responseQueue.filter(r => r.id > since);
+  res.json({ replies: newer.slice(-20) });
+});
+
+// SSE stream — tablet bağlanır, gerçek zamanlı mesaj alır
+router.get('/stream', (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*'
+  });
+  res.write('data: {"type":"connected"}\n\n');
+
+  // Yeni reply gelince gönder
+  const onReply = (reply) => {
+    res.write(`data: ${JSON.stringify({type:'reply', ...reply})}\n\n`);
+  };
+  // Yeni mesaj gelince gönder (tablet→claude bildirim)
+  const onMessage = (msg) => {
+    res.write(`data: ${JSON.stringify({type:'message', ...msg})}\n\n`);
+  };
+
+  if (global.io) {
+    global.io.on('claude_reply', onReply);
+    global.io.on('claude_message_received', onMessage);
+  }
+
+  // Keepalive
+  const keepalive = setInterval(() => {
+    res.write(': keepalive\n\n');
+  }, 15000);
+
+  req.on('close', () => {
+    clearInterval(keepalive);
+    if (global.io) {
+      global.io.removeListener('claude_reply', onReply);
+      global.io.removeListener('claude_message_received', onMessage);
+    }
+  });
 });
 
 // Tüm geçmiş

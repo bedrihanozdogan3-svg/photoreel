@@ -176,16 +176,41 @@ function ft(url,method,body){var u=window.location.origin+url;return fetch(u,{me
 
 function bildir(msg,tip){var c=document.getElementById('toast'),d=document.createElement('div');d.className='toast-m '+(tip||'');d.textContent=msg;c.appendChild(d);setTimeout(function(){d.remove()},2500)}
 
-// CLAUDE CEVAP - ID bazlı duplicate engeli (polling)
+// CLAUDE CEVAP - SSE + polling hybrid (mesaj asla kaçmaz)
+var lastReplyId='0';
+
+// SSE stream - gerçek zamanlı
+function startSSE(){
+  try{
+    var es=new EventSource(window.location.origin+'/api/claude-local/stream');
+    es.onmessage=function(e){
+      try{
+        var d=JSON.parse(e.data);
+        if(d.type==='reply'&&d.id&&!seenClaudeIds[d.id]){
+          seenClaudeIds[d.id]=true;
+          if(d.id>lastReplyId)lastReplyId=d.id;
+          ekle(d.text,'c',d.id);
+          if(navigator.vibrate)navigator.vibrate(100);
+        }
+      }catch(ex){}
+    };
+    es.onerror=function(){es.close();setTimeout(startSSE,3000)};
+    bildir('SSE baglandi','ok');
+  }catch(ex){bildir('SSE hata','err')}
+}
+startSSE();
+
+// Polling yedek - SSE kaçırırsa yakalar
 setInterval(function(){
-  fetch(window.location.origin+'/api/claude-local/replies').then(function(r){return r.json()}).then(function(d){
+  fetch(window.location.origin+'/api/claude-local/replies?since='+lastReplyId).then(function(r){return r.json()}).then(function(d){
     if(d.replies&&d.replies.length){
       d.replies.forEach(function(r){
         if(!seenClaudeIds[r.id]){seenClaudeIds[r.id]=true;ekle(r.text,'c',r.id)}
+        if(r.id>lastReplyId)lastReplyId=r.id;
       });
     }
   }).catch(function(){});
-},3000);
+},5000);
 
 // TERMINAL - gelişmiş syntax highlight
 var lineNum=0,termSince=0;
