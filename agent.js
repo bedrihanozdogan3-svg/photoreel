@@ -54,11 +54,12 @@ function getSystemInfo() {
     apps = Array.from(appSet).slice(0, 30);
   } catch(e) {}
 
-  // İnternet durumu (saf Node.js - CMD açmaz)
-  let internetStatus = 'bağlı';
+  // İnternet durumu (senkron kontrol)
+  let internetStatus = 'bilinmiyor';
   try {
-    require('dns').resolve('google.com', (err) => { if(err) internetStatus = 'bağlantı yok'; });
-  } catch(e) { internetStatus = 'bilinmiyor'; }
+    execSync('ping -n 1 -w 2000 8.8.8.8', { timeout: 3000, windowsHide: true, stdio: 'ignore' });
+    internetStatus = 'bağlı';
+  } catch(e) { internetStatus = 'bağlantı yok'; }
 
   // Uptime
   const uptimeHours = Math.round(os.uptime() / 3600);
@@ -106,9 +107,20 @@ async function takeScreenshot() {
 
 // === KOMUT ÇALIŞTIR ===
 
+// Tehlikeli komut kalıpları (komut enjeksiyonu koruması)
+const BLOCKED_PATTERNS = [
+  /rm\s+-rf/i, /del\s+\/[sf]/i, /format\s+[a-z]:/i,
+  /shutdown\s+\/[sfr]/i, /reg\s+delete/i, /net\s+user/i,
+  /&&/, /\|\|/, /;/, /\|/, /`/, /\$\(/, />\s*>/, />\s*\//
+];
+
 function runCommand(cmd) {
+  // Güvenlik kontrolü
+  if (BLOCKED_PATTERNS.some(p => p.test(cmd))) {
+    return { success: false, output: 'Güvenlik: Bu komut engellenmiştir' };
+  }
   try {
-    const result = execSync(cmd, { encoding: 'utf8', timeout: 30000, windowsHide: true });
+    const result = execSync(cmd, { encoding: 'utf8', timeout: 30000, windowsHide: true, shell: true });
     return { success: true, output: result.substring(0, 2000) };
   } catch(e) {
     return { success: false, output: e.message.substring(0, 500) };

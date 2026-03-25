@@ -1,10 +1,22 @@
 const express = require('express');
 const router = express.Router();
 
-// Agent durumu ve komut kuyruğu (bellekte)
+// Agent durumu ve komut kuyruğu (bellekte, periyodik temizlik)
 const agentState = {};
 const commandQueues = {};
 const commandResults = {};
+
+// 1 saat önce görülen ajanları temizle (bellek sızıntısı önlemi)
+setInterval(() => {
+  const cutoff = Date.now() - 3600000;
+  for (const id of Object.keys(agentState)) {
+    if (new Date(agentState[id].lastSeen).getTime() < cutoff) {
+      delete agentState[id];
+      delete commandQueues[id];
+      delete commandResults[id];
+    }
+  }
+}, 600000); // 10 dakikada bir kontrol
 
 // Agent rapor al
 router.post('/report', (req, res) => {

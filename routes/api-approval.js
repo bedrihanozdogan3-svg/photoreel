@@ -1,9 +1,20 @@
 const express = require('express');
 const router = express.Router();
 
-// Onay kuyruğu
+// Onay kuyruğu (max 100 kayıt — bellek sızıntısı önlemi)
 const pendingApprovals = [];
 const approvalResults = [];
+
+// Eski onayları temizle (1 saatten eski)
+setInterval(() => {
+  const cutoff = Date.now() - 3600000;
+  while (pendingApprovals.length > 0 && new Date(pendingApprovals[0].timestamp).getTime() < cutoff) {
+    pendingApprovals.shift();
+  }
+  while (approvalResults.length > 100) {
+    approvalResults.shift();
+  }
+}, 300000); // 5 dakikada bir
 
 // Onay isteği gönder (Claude bu endpoint'i çağırır)
 router.post('/request', (req, res) => {

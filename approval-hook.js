@@ -39,8 +39,8 @@ process.stdin.on('end', async () => {
       if (r.status === 'approved') process.exit(0);
       if (r.status === 'rejected') process.exit(1);
     }
-    process.exit(0); // timeout -> auto approve
+    process.exit(1); // timeout -> reddet (güvenlik)
   } catch(e) {
-    process.exit(0); // hata -> engelleme
+    process.exit(1); // hata -> reddet (güvenlik)
   }
 });

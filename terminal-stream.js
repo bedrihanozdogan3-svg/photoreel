@@ -8,8 +8,7 @@ const path = require('path');
 const CLOUD_URL = 'https://photoreel-194617495310.europe-west1.run.app';
 const REPO_PATH = 'C:/Users/ASUS/Desktop/photoreel-repo';
 const WATCH_PATHS = [
-  'C:/Users/ASUS/Desktop/photoreel-repo',
-  'C:/Users/ASUS/Desktop/muhasebe'
+  'C:/Users/ASUS/Desktop/photoreel-repo'
 ];
 const INTERVAL = 3000;
 
@@ -84,7 +83,7 @@ async function init() {
 // Dosya içerik değişikliklerini izle
 let watchedFiles = {};
 async function checkFileContents() {
-  const files = ['public/kontrol.html', 'server.js', 'services/gemini-service.js', 'services/claude-service.js', 'routes/api-whatsapp.js'];
+  const files = ['public/kontrol.html', 'server.js', 'services/gemini-service.js', 'services/claude-service.js'];
   for (const file of files) {
     try {
       const fullPath = path.join(REPO_PATH, file);

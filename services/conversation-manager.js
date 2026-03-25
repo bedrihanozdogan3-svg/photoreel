@@ -120,14 +120,14 @@ class ConversationManager {
     this._logMessage(msg);
   }
 
-  _logMessage(msg) {
+  async _logMessage(msg) {
     try {
       const logFile = path.join(__dirname, '..', 'chat-history.json');
       let history = [];
-      if (fs.existsSync(logFile)) history = JSON.parse(fs.readFileSync(logFile, 'utf8'));
+      try { history = JSON.parse(await fs.promises.readFile(logFile, 'utf8')); } catch(e) {}
       history.push({ from: msg.sender, text: msg.text, timestamp: msg.timestamp });
       if (history.length > 500) history = history.slice(-500);
-      fs.writeFileSync(logFile, JSON.stringify(history, null, 2));
+      await fs.promises.writeFile(logFile, JSON.stringify(history, null, 2));
     } catch(e) {}
   }
 

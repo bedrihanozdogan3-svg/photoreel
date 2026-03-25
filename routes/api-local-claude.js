@@ -1,6 +1,24 @@
 const express = require('express');
 const router = express.Router();
 const { Firestore } = require('@google-cloud/firestore');
+const fs = require('fs');
+const path = require('path');
+
+// Dosya listesini başlangıçta 1 kez oku, önbellekte tut
+let _cachedFileList = null;
+function getCachedFileList() {
+  if (_cachedFileList) return _cachedFileList;
+  try {
+    const baseDir = path.join(__dirname, '..');
+    const files = fs.readdirSync(baseDir).filter(f => !f.startsWith('.') && !f.startsWith('node_'));
+    let list = '\nProje dosyaları: ' + files.join(', ');
+    list += '\npublic/: ' + fs.readdirSync(path.join(baseDir, 'public')).join(', ');
+    list += '\nroutes/: ' + fs.readdirSync(path.join(baseDir, 'routes')).join(', ');
+    list += '\nservices/: ' + fs.readdirSync(path.join(baseDir, 'services')).join(', ');
+    _cachedFileList = list;
+    return list;
+  } catch(e) { return ''; }
+}
 
 const db = new Firestore({ projectId: 'photoreel-491017' });
 const MSG_COL = 'claude-messages';    // Tabletten gelen
@@ -19,7 +37,11 @@ async function autoReply(userText) {
       const replies = snap.docs.map(d => d.data()).reverse();
       const msgSnap = await db.collection(MSG_COL).orderBy('createdAt', 'desc').limit(5).get();
       const msgs = msgSnap.docs.map(d => d.data()).reverse();
-      history = [...msgs.map(m => `Bedrihan: ${m.text}`), ...replies.map(r => `Claude: ${r.text}`)].slice(-8).join('\n');
+      const all = [
+        ...msgs.map(m => ({ text: `Bedrihan: ${m.text}`, ts: m.createdAt?._seconds || 0 })),
+        ...replies.map(r => ({ text: `Claude: ${r.text}`, ts: r.createdAt?._seconds || 0 }))
+      ].sort((a, b) => a.ts - b.ts);
+      history = all.slice(-8).map(a => a.text).join('\n');
     } catch(e) {}
 
     // Firestore context
@@ -29,24 +51,8 @@ async function autoReply(userText) {
       context = await firestoreService.getSystemContext();
     } catch(e) {}
 
-    // Dosya yapısını ekle
-    let fileList = '';
-    try {
-      const fs = require('fs');
-      const path = require('path');
-      const baseDir = path.join(__dirname, '..');
-      const files = fs.readdirSync(baseDir).filter(f => !f.startsWith('.') && !f.startsWith('node_'));
-      fileList = '\nProje dosyaları: ' + files.join(', ');
-      // Public klasörü
-      const pubFiles = fs.readdirSync(path.join(baseDir, 'public'));
-      fileList += '\npublic/: ' + pubFiles.join(', ');
-      // Routes
-      const routeFiles = fs.readdirSync(path.join(baseDir, 'routes'));
-      fileList += '\nroutes/: ' + routeFiles.join(', ');
-      // Services
-      const svcFiles = fs.readdirSync(path.join(baseDir, 'services'));
-      fileList += '\nservices/: ' + svcFiles.join(', ');
-    } catch(e) {}
+    // Dosya yapısını önbellekten al (başlangıçta 1 kez oku)
+    const fileList = getCachedFileList();
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
     const res = await fetch(url, {

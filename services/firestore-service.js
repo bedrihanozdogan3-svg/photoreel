@@ -16,7 +16,7 @@ const COLLECTIONS = {
 
 // === EKLEME ===
 
-async function addItem(collection, text, from = 'whatsapp') {
+async function addItem(collection, text, from = 'dashboard') {
   const doc = {
     text,
     from,
