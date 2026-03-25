@@ -187,7 +187,7 @@ var lastPollResult='';
 
 function pollReplies(){
   pollCount++;
-  fetch(window.location.origin+'/api/claude-local/replies?since='+lastReplyId)
+  fetch(window.location.origin+'/api/claude-local/replies?since=0')
     .then(function(r){return r.json()})
     .then(function(d){
       pollOk++;
@@ -198,8 +198,6 @@ function pollReplies(){
             ekle(r.text,'c',r.id);
             if(navigator.vibrate)navigator.vibrate(100);
           }
-          var nid=Number(r.id)||0;
-          if(nid>lastReplyId)lastReplyId=nid;
         });
       } else {
         lastPollResult='Bos';
