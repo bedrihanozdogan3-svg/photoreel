@@ -102,6 +102,7 @@ button:active{transform:scale(.95)}
         <button onclick="komut('lock')">🔒</button>
         <button class="onay" onclick="onayla(true)">✅</button>
         <button class="red" onclick="onayla(false)">❌</button>
+        <button onclick="bildir('Poll:'+pollCount+' OK:'+pollOk+' ERR:'+pollErr+' Last:'+lastPollResult+' Since:'+lastReplyId)">🔍</button>
       </div>
       <div id="giris-satir">
         <button class="bg" id="tg" onclick="sec('gemini')">G</button>
@@ -176,43 +177,43 @@ function ft(url,method,body){var u=window.location.origin+url;return fetch(u,{me
 
 function bildir(msg,tip){var c=document.getElementById('toast'),d=document.createElement('div');d.className='toast-m '+(tip||'');d.textContent=msg;c.appendChild(d);setTimeout(function(){d.remove()},2500)}
 
-// CLAUDE CEVAP - SSE + polling hybrid (mesaj asla kaçmaz)
+// CLAUDE CEVAP - SADECE POLLING (en güvenilir yöntem)
 var lastReplyId=0;
+var pollCount=0;
+var pollOk=0;
+var pollErr=0;
+var lastPollResult='';
 
-// SSE stream - gerçek zamanlı
-function startSSE(){
-  try{
-    var es=new EventSource(window.location.origin+'/api/claude-local/stream');
-    es.onmessage=function(e){
-      try{
-        var d=JSON.parse(e.data);
-        if(d.type==='reply'&&d.id&&!seenClaudeIds[d.id]){
-          seenClaudeIds[d.id]=true;
-          var nid=Number(d.id)||0;
+function pollReplies(){
+  pollCount++;
+  fetch(window.location.origin+'/api/claude-local/replies?since='+lastReplyId)
+    .then(function(r){return r.json()})
+    .then(function(d){
+      pollOk++;
+      if(d.replies&&d.replies.length){
+        lastPollResult='Bulundu: '+d.replies.length+' mesaj';
+        d.replies.forEach(function(r){
+          if(!seenClaudeIds[r.id]){
+            seenClaudeIds[r.id]=true;
+            ekle(r.text,'c',r.id);
+            if(navigator.vibrate)navigator.vibrate(100);
+          }
+          var nid=Number(r.id)||0;
           if(nid>lastReplyId)lastReplyId=nid;
-          ekle(d.text,'c',d.id);
-          if(navigator.vibrate)navigator.vibrate(100);
-        }
-      }catch(ex){}
-    };
-    es.onerror=function(){es.close();setTimeout(startSSE,3000)};
-    bildir('SSE baglandi','ok');
-  }catch(ex){bildir('SSE hata','err')}
+        });
+      } else {
+        lastPollResult='Bos';
+      }
+    })
+    .catch(function(e){
+      pollErr++;
+      lastPollResult='HATA: '+e.message;
+    });
 }
-startSSE();
-
-// Polling yedek - SSE kaçırırsa yakalar
-setInterval(function(){
-  fetch(window.location.origin+'/api/claude-local/replies?since='+lastReplyId).then(function(r){return r.json()}).then(function(d){
-    if(d.replies&&d.replies.length){
-      d.replies.forEach(function(r){
-        if(!seenClaudeIds[r.id]){seenClaudeIds[r.id]=true;ekle(r.text,'c',r.id)}
-        var nid=Number(r.id)||0;
-        if(nid>lastReplyId)lastReplyId=nid;
-      });
-    }
-  }).catch(function(){});
-},3000);
+// Her 2 saniyede bir polling
+setInterval(pollReplies,2000);
+// İlk açılışta hemen çalıştır
+pollReplies();
 
 // TERMINAL - gelişmiş syntax highlight
 var lineNum=0,termSince=0;
