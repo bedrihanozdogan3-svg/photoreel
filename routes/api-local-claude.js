@@ -6,23 +6,38 @@ const db = new Firestore({ projectId: 'photoreel-491017' });
 const MSG_COL = 'claude-messages';    // Tabletten gelen
 const REPLY_COL = 'claude-replies';   // Claude'un yanıtları
 
-// Gemini auto-reply helper
-async function geminiAutoReply(userText) {
+// Claude API auto-reply helper
+async function claudeAutoReply(userText) {
   try {
-    const key = process.env.GEMINI_API_KEY;
+    const key = process.env.ANTHROPIC_API_KEY;
     if (!key) return null;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
-    const res = await fetch(url, {
+
+    // Son mesaj geçmişini Firestore'dan al
+    let history = '';
+    try {
+      const snap = await db.collection(MSG_COL).orderBy('createdAt', 'desc').limit(5).get();
+      const msgs = snap.docs.map(d => d.data()).reverse();
+      history = msgs.map(m => `${m.from}: ${m.text}`).join('\n');
+    } catch(e) {}
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01'
+      },
       body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: `Bedrihan sana tablet üzerinden yazıyor. Kısa ve Türkçe yanıt ver: ${userText}` }] }]
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        system: `Sen Claude'sun. Bedrihan sana tablet üzerinden yazıyor. PhotoReel AI projesinde çalışıyorsunuz. Türkçe, kısa ve net yanıt ver. Dosya düzenleme veya deploy gibi işler istenirse "Bu işi bilgisayardaki Claude Code oturumundan yapabilirim" de.\n\nSon mesajlar:\n${history}`,
+        messages: [{ role: 'user', content: userText }]
       })
     });
     const data = await res.json();
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+    return data?.content?.[0]?.text || null;
   } catch(e) {
-    console.error('Gemini auto-reply hata:', e.message);
+    console.error('Claude auto-reply hata:', e.message);
     return null;
   }
 }
@@ -48,18 +63,18 @@ router.post('/send', async (req, res) => {
     // Hemen yanıt dön, Gemini arka planda yanıt verecek
     res.json({ ok: true, messageId: id });
 
-    // Arka planda Gemini otomatik yanıt
-    const geminiReply = await geminiAutoReply(text);
-    if (geminiReply) {
+    // Arka planda Claude API otomatik yanıt
+    const claudeReply = await claudeAutoReply(text);
+    if (claudeReply) {
       const replyId = Date.now().toString();
       await db.collection(REPLY_COL).doc(replyId).set({
-        text: geminiReply,
+        text: claudeReply,
         from: 'claude',
         timestamp: new Date().toISOString(),
         createdAt: Firestore.Timestamp.now()
       });
-      if (global.io) global.io.emit('claude_reply', { id: replyId, text: geminiReply });
-      console.log(`\n🤖 [AUTO-REPLY] ${geminiReply}\n`);
+      if (global.io) global.io.emit('claude_reply', { id: replyId, text: claudeReply });
+      console.log(`\n🤖 [AUTO-REPLY] ${claudeReply}\n`);
     }
   } catch(e) {
     console.error('Send hata:', e.message, e.stack);
