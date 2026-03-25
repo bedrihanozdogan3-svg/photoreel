@@ -194,7 +194,6 @@ function pollReplies(){
         lastPollResult='Bulundu: '+d.replies.length+' mesaj';
         d.replies.forEach(function(r){
           if(!seenClaudeIds[r.id]){
-            seenClaudeIds[r.id]=true;
             ekle(r.text,'c',r.id);
             if(navigator.vibrate)navigator.vibrate(100);
           }
