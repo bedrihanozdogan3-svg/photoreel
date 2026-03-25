@@ -30,10 +30,22 @@ router.post('/send', (req, res) => {
 });
 
 // Claude Code bu endpoint'i poll eder — yeni mesajları okur
+// read=true yapmaz, sadece /inbox/ack ile okundu yapılır
 router.get('/inbox', (req, res) => {
   const unread = messageQueue.filter(m => !m.read);
-  unread.forEach(m => m.read = true);
   res.json({ messages: unread });
+});
+
+// Mesajları okundu yap (Claude okuduktan sonra çağırır)
+router.post('/inbox/ack', (req, res) => {
+  const { ids } = req.body;
+  if (ids && ids.length) {
+    ids.forEach(id => {
+      const msg = messageQueue.find(m => m.id === id);
+      if (msg) msg.read = true;
+    });
+  }
+  res.json({ ok: true });
 });
 
 // Claude Code cevap yazar
