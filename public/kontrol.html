@@ -121,11 +121,16 @@ button:active{transform:scale(.95)}
 <script src="/socket.io/socket.io.js"></script>
 <script>
 var model='gemini',mesajlar=document.getElementById('mesajlar'),inp=document.getElementById('inp'),sag=document.getElementById('sag');
-var seenClaudeReplies={};
+var seenClaudeIds={};
+var seenTermLines={};
+var userScrolledTerm=false;
 
 function sec(m){model=m;document.getElementById('tg').className='bg'+(m==='gemini'?'':' off');document.getElementById('tc').className='bc'+(m==='claude'?'':' off');bildir(m==='gemini'?'Gemini seçildi':'Claude seçildi')}
 
-function ekle(t,tip){var d=document.createElement('div');d.className='balon balon-'+tip;d.innerHTML='<div class="balon-ic">'+esc(t)+'</div><div class="zaman">'+(tip==='g'?'Gemini':tip==='c'?'Claude':'Sen')+' - '+saat()+'</div>';mesajlar.appendChild(d);mesajlar.scrollTop=mesajlar.scrollHeight}
+function ekle(t,tip,id){
+  if(tip==='c'&&id){if(seenClaudeIds[id])return;seenClaudeIds[id]=true}
+  var d=document.createElement('div');d.className='balon balon-'+tip;d.innerHTML='<div class="balon-ic">'+esc(t)+'</div><div class="zaman">'+(tip==='g'?'Gemini':tip==='c'?'Claude':'Sen')+' - '+saat()+'</div>';mesajlar.appendChild(d);mesajlar.scrollTop=mesajlar.scrollHeight;
+}
 
 function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
 function saat(){var n=new Date();return ('0'+n.getHours()).slice(-2)+':'+('0'+n.getMinutes()).slice(-2)}
@@ -143,6 +148,12 @@ if(window.visualViewport){
     document.getElementById('sag').style.height=window.visualViewport.height+'px';
   });
 }
+
+// Terminal scroll - kullanıcı yukarı kaydırırsa otomatik scroll durur
+sag.addEventListener('scroll',function(){
+  var atBottom=sag.scrollHeight-sag.scrollTop-sag.clientHeight<50;
+  userScrolledTerm=!atBottom;
+});
 
 function komut(tip){
 if(tip==='message'){var t=prompt('Mesaj:');if(t)ft('/api/agent/command/bedrihan-pc','POST',{type:'message',data:t}).then(function(){bildir('Gönderildi','ok')})}
@@ -165,72 +176,95 @@ function ft(url,method,body){var u=window.location.origin+url;return fetch(u,{me
 
 function bildir(msg,tip){var c=document.getElementById('toast'),d=document.createElement('div');d.className='toast-m '+(tip||'');d.textContent=msg;c.appendChild(d);setTimeout(function(){d.remove()},2500)}
 
-// CLAUDE CEVAP - duplicate engeli
+// CLAUDE CEVAP - ID bazlı duplicate engeli (polling)
 setInterval(function(){
   fetch(window.location.origin+'/api/claude-local/replies').then(function(r){return r.json()}).then(function(d){
     if(d.replies&&d.replies.length){
       d.replies.forEach(function(r){
-        var key=r.text+r.timestamp;
-        if(!seenClaudeReplies[key]){seenClaudeReplies[key]=true;ekle(r.text,'c')}
+        if(!seenClaudeIds[r.id]){seenClaudeIds[r.id]=true;ekle(r.text,'c',r.id)}
       });
     }
   }).catch(function(){});
 },3000);
 
-// TERMINAL - satır satır aşağı akar, son satır sabit görünür
+// TERMINAL - gelişmiş syntax highlight
 var lineNum=0,termSince=0;
-function addTermLine(text){
+function highlightCode(text){
+  var h=esc(text);
+  // Keyword highlight
+  h=h.replace(/\b(function|const|let|var|if|else|return|async|await|try|catch|for|while|import|export|class|new|this|typeof|instanceof|throw|switch|case|break|continue|default|yield|from|of|in|do|void|delete|with|finally|super|extends|static|get|set)\b/g,'<span class="kw">$1</span>');
+  // String highlight (double, single, backtick)
+  h=h.replace(/(&quot;[^&]*&quot;|&#39;[^&]*&#39;|`[^`]*`)/g,'<span class="str">$1</span>');
+  // Number highlight
+  h=h.replace(/\b(\d+\.?\d*)\b/g,'<span class="num">$1</span>');
+  // Comment highlight
+  h=h.replace(/(\/\/.*)/g,'<span class="cm">$1</span>');
+  // Function call highlight
+  h=h.replace(/(\w+)\(/g,'<span class="fn">$1</span>(');
+  // Operator highlight
+  h=h.replace(/(=&gt;|===|!==|==|!=|&amp;&amp;|\|\||&lt;=|&gt;=)/g,'<span class="em">$1</span>');
+  // Emoji/special
+  h=h.replace(/([\u{1F300}-\u{1F9FF}]|---|\*\*\*)/gu,'<span class="em">$1</span>');
+  // Boolean/null
+  h=h.replace(/\b(true|false|null|undefined|NaN|Infinity)\b/g,'<span class="num">$1</span>');
+  return h;
+}
+
+function addTermLine(text,id){
+  if(id&&seenTermLines[id])return;
+  if(id)seenTermLines[id]=true;
   lineNum++;
   var div=document.createElement('div');div.className='t-line';
   var ln=document.createElement('span');ln.className='ln';ln.textContent=lineNum;
   var code=document.createElement('span');code.className='code';
-  var h=esc(text)
-  .replace(/\b(function|const|let|var|if|else|return|async|await|try|catch|for|while|import|export|class|new)\b/g,'<span class="kw">$1</span>')
-  .replace(/(&quot;[^&]*&quot;|&#39;[^&]*&#39;)/g,'<span class="str">$1</span>')
-  .replace(/\b(\d+)\b/g,'<span class="num">$1</span>')
-  .replace(/(\/\/.*)/g,'<span class="cm">$1</span>')
-  .replace(/(\w+)\(/g,'<span class="fn">$1</span>(')
-  .replace(/(📝|📄|🟢|📡|⏰|✏️|---)/g,'<span class="em">$1</span>');
-  code.innerHTML=h;
+  code.innerHTML=highlightCode(text);
   div.appendChild(ln);div.appendChild(code);
   sag.appendChild(div);
-  while(sag.children.length>200)sag.removeChild(sag.firstChild);
-  // SON SATIR HER ZAMAN GÖRÜNSÜN
-  sag.scrollTop=sag.scrollHeight;
+  while(sag.children.length>300)sag.removeChild(sag.firstChild);
+  // Kullanıcı yukarı kaydırmadıysa otomatik aşağı
+  if(!userScrolledTerm){sag.scrollTop=sag.scrollHeight}
 }
 
 // Terminal polling
 setInterval(function(){
   ft('/api/terminal/lines?since='+termSince).then(function(d){
     if(d.lines&&d.lines.length>0){
-      d.lines.forEach(function(l){addTermLine(l.text)});
+      d.lines.forEach(function(l,i){addTermLine(l.text,termSince+i)});
       termSince=d.total;
     }
   }).catch(function(){});
-},3000);
+},2000);
 
-// ONAY polling
+// ONAY polling - daha sık (2sn)
 setInterval(function(){
   ft('/api/approval/pending').then(function(d){
     if(d.approvals&&d.approvals.length>0){
       var a=d.approvals[0];
-      window._pendingApprovalId=a.id;
-      document.getElementById('onay-text').textContent='🔔 '+a.title+': '+(a.description||'');
-      document.getElementById('onay-popup').style.display='flex';
-      bildir('Onay isteği: '+a.title);
+      if(window._pendingApprovalId!==a.id){
+        window._pendingApprovalId=a.id;
+        document.getElementById('onay-text').textContent='🔔 '+a.title+': '+(a.description||'');
+        document.getElementById('onay-popup').style.display='flex';
+        bildir('Onay isteği: '+a.title);
+        // Titreşim (mobil)
+        if(navigator.vibrate)navigator.vibrate([200,100,200]);
+      }
     }
   }).catch(function(){});
-},5000);
+},2000);
 
-// Socket.io
+// Socket.io - ID bazlı duplicate engeli
 try{
-  var socket=io();
-  socket.on('claude_reply',function(d){if(d.text&&!seenClaudeReplies[d.text]){seenClaudeReplies[d.text]=true;ekle(d.text,'c')}});
+  var socket=io({reconnection:true,reconnectionAttempts:Infinity,reconnectionDelay:1000});
+  socket.on('connect',function(){bildir('Socket bağlandı','ok')});
+  socket.on('disconnect',function(){bildir('Socket koptu, yeniden bağlanıyor...','err')});
+  socket.on('claude_reply',function(d){if(d&&d.id&&!seenClaudeIds[d.id]){seenClaudeIds[d.id]=true;ekle(d.text,'c',d.id)}});
   socket.on('terminal_output',function(d){if(d)addTermLine(d)});
   socket.on('approval_request',function(d){
     window._pendingApprovalId=d.id;
     document.getElementById('onay-text').textContent='🔔 '+d.title+': '+(d.description||'');
     document.getElementById('onay-popup').style.display='flex';
+    bildir('🔔 ONAY: '+d.title);
+    if(navigator.vibrate)navigator.vibrate([200,100,200,100,200]);
   });
 }catch(e){}
 </script>
