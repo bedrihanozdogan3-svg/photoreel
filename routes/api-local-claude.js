@@ -25,8 +25,8 @@ router.post('/send', async (req, res) => {
     console.log(`\n💬 [TABLET → CLAUDE] ${text}\n`);
     res.json({ ok: true, messageId: id });
   } catch(e) {
-    console.error('Send hata:', e.message);
-    res.json({ ok: false, error: e.message });
+    console.error('Send hata:', e.message, e.stack);
+    res.json({ ok: false, error: e.message, stack: e.stack });
   }
 });
 
@@ -42,7 +42,7 @@ router.get('/inbox', async (req, res) => {
     res.json({ messages });
   } catch(e) {
     console.error('Inbox hata:', e.message);
-    res.json({ messages: [] });
+    res.json({ messages: [], error: e.message });
   }
 });
 
