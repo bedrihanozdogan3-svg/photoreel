@@ -137,8 +137,9 @@ function esc(s){var d=document.createElement('div');d.textContent=s;return d.inn
 function saat(){var n=new Date();return ('0'+n.getHours()).slice(-2)+':'+('0'+n.getMinutes()).slice(-2)}
 
 function gonder(){var t=inp.value.trim();if(!t)return;inp.value='';ekle(t,'u');
-if(model==='gemini'){ft('/api/chat/gemini','POST',{text:t}).then(function(r){if(r&&r.response)ekle(r.response,'g');else bildir('Gemini hatası','err')}).catch(function(e){bildir('Hata: '+e.message,'err')})}
-else{ft('/api/claude-local/send','POST',{text:t}).then(function(){bildir('Claude mesajı gönderildi')}).catch(function(e){bildir('Hata: '+e.message,'err')})}}
+bildir('Model: '+model);
+if(model==='gemini'){ft('/api/chat/gemini','POST',{text:t}).then(function(r){if(r&&r.response)ekle(r.response,'g');else bildir('Gemini hatası','err')}).catch(function(e){bildir('G-Hata: '+e.message,'err')})}
+else{bildir('Claude gonderiliyor...');ft('/api/claude-local/send','POST',{text:t}).then(function(r){bildir('Claude OK: '+JSON.stringify(r))}).catch(function(e){bildir('C-Hata: '+e.message,'err')})}}
 
 inp.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();gonder()}});
 
