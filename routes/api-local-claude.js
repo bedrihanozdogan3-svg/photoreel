@@ -6,38 +6,61 @@ const db = new Firestore({ projectId: 'photoreel-491017' });
 const MSG_COL = 'claude-messages';    // Tabletten gelen
 const REPLY_COL = 'claude-replies';   // Claude'un yanıtları
 
-// Claude API auto-reply helper
-async function claudeAutoReply(userText) {
+// Gemini auto-reply (Claude gibi davranır)
+async function autoReply(userText) {
   try {
-    const key = process.env.ANTHROPIC_API_KEY;
+    const key = process.env.GEMINI_API_KEY;
     if (!key) return null;
 
     // Son mesaj geçmişini Firestore'dan al
     let history = '';
     try {
-      const snap = await db.collection(MSG_COL).orderBy('createdAt', 'desc').limit(5).get();
-      const msgs = snap.docs.map(d => d.data()).reverse();
-      history = msgs.map(m => `${m.from}: ${m.text}`).join('\n');
+      const snap = await db.collection(REPLY_COL).orderBy('createdAt', 'desc').limit(5).get();
+      const replies = snap.docs.map(d => d.data()).reverse();
+      const msgSnap = await db.collection(MSG_COL).orderBy('createdAt', 'desc').limit(5).get();
+      const msgs = msgSnap.docs.map(d => d.data()).reverse();
+      history = [...msgs.map(m => `Bedrihan: ${m.text}`), ...replies.map(r => `Claude: ${r.text}`)].slice(-8).join('\n');
     } catch(e) {}
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    // Firestore context
+    let context = '';
+    try {
+      const firestoreService = require('../services/firestore-service');
+      context = await firestoreService.getSystemContext();
+    } catch(e) {}
+
+    // Dosya yapısını ekle
+    let fileList = '';
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const baseDir = path.join(__dirname, '..');
+      const files = fs.readdirSync(baseDir).filter(f => !f.startsWith('.') && !f.startsWith('node_'));
+      fileList = '\nProje dosyaları: ' + files.join(', ');
+      // Public klasörü
+      const pubFiles = fs.readdirSync(path.join(baseDir, 'public'));
+      fileList += '\npublic/: ' + pubFiles.join(', ');
+      // Routes
+      const routeFiles = fs.readdirSync(path.join(baseDir, 'routes'));
+      fileList += '\nroutes/: ' + routeFiles.join(', ');
+      // Services
+      const svcFiles = fs.readdirSync(path.join(baseDir, 'services'));
+      fileList += '\nservices/: ' + svcFiles.join(', ');
+    } catch(e) {}
+
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+    const res = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': key,
-        'anthropic-version': '2023-06-01'
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 500,
-        system: `Sen Claude'sun. Bedrihan sana tablet üzerinden yazıyor. PhotoReel AI projesinde çalışıyorsunuz. Türkçe, kısa ve net yanıt ver. Dosya düzenleme veya deploy gibi işler istenirse "Bu işi bilgisayardaki Claude Code oturumundan yapabilirim" de.\n\nSon mesajlar:\n${history}`,
-        messages: [{ role: 'user', content: userText }]
+        systemInstruction: { parts: [{ text: `Sen PhotoReel AI projesinin asistanısın. Bedrihan sana tablet üzerinden yazıyor. Türkçe, kısa ve net yanıt ver. Proje: PhotoReel AI - yapay zeka destekli fotoğraf/video düzenleme uygulaması. Cloud Run (europe-west1) üzerinde çalışıyor. Firestore veritabanı, Express.js server, Socket.io kullanılıyor. Gemini + Claude API entegrasyonu var.\n${fileList}\n\nSon konuşma:\n${history}\n${context}\n\nÖnemli: Dosya düzenleme veya deploy gibi işler istenirse yapamayacağını söyle ama projeyi analiz edebilir, eksikleri bulabilir, önerilerde bulunabilirsin.` }] },
+        contents: [{ role: 'user', parts: [{ text: userText }] }]
       })
     });
     const data = await res.json();
-    return data?.content?.[0]?.text || null;
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
   } catch(e) {
-    console.error('Claude auto-reply hata:', e.message);
+    console.error('Auto-reply hata:', e.message);
     return null;
   }
 }
@@ -63,18 +86,18 @@ router.post('/send', async (req, res) => {
     // Hemen yanıt dön, Gemini arka planda yanıt verecek
     res.json({ ok: true, messageId: id });
 
-    // Arka planda Claude API otomatik yanıt
-    const claudeReply = await claudeAutoReply(text);
-    if (claudeReply) {
+    // Arka planda otomatik yanıt (Gemini + proje context)
+    const aiReply = await autoReply(text);
+    if (aiReply) {
       const replyId = Date.now().toString();
       await db.collection(REPLY_COL).doc(replyId).set({
-        text: claudeReply,
+        text: aiReply,
         from: 'claude',
         timestamp: new Date().toISOString(),
         createdAt: Firestore.Timestamp.now()
       });
-      if (global.io) global.io.emit('claude_reply', { id: replyId, text: claudeReply });
-      console.log(`\n🤖 [AUTO-REPLY] ${claudeReply}\n`);
+      if (global.io) global.io.emit('claude_reply', { id: replyId, text: aiReply });
+      console.log(`\n🤖 [AUTO-REPLY] ${aiReply}\n`);
     }
   } catch(e) {
     console.error('Send hata:', e.message, e.stack);
