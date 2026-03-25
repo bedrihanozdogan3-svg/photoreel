@@ -6,7 +6,28 @@ const db = new Firestore({ projectId: 'photoreel-491017' });
 const MSG_COL = 'claude-messages';    // Tabletten gelen
 const REPLY_COL = 'claude-replies';   // Claude'un yanıtları
 
-// Tablet mesaj gönderir
+// Gemini auto-reply helper
+async function geminiAutoReply(userText) {
+  try {
+    const key = process.env.GEMINI_API_KEY;
+    if (!key) return null;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: `Bedrihan sana tablet üzerinden yazıyor. Kısa ve Türkçe yanıt ver: ${userText}` }] }]
+      })
+    });
+    const data = await res.json();
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+  } catch(e) {
+    console.error('Gemini auto-reply hata:', e.message);
+    return null;
+  }
+}
+
+// Tablet mesaj gönderir + otomatik Gemini yanıtı
 router.post('/send', async (req, res) => {
   try {
     const { text, from } = req.body;
@@ -23,10 +44,26 @@ router.post('/send', async (req, res) => {
 
     if (global.io) global.io.emit('claude_message_received', { id, text });
     console.log(`\n💬 [TABLET → CLAUDE] ${text}\n`);
+
+    // Hemen yanıt dön, Gemini arka planda yanıt verecek
     res.json({ ok: true, messageId: id });
+
+    // Arka planda Gemini otomatik yanıt
+    const geminiReply = await geminiAutoReply(text);
+    if (geminiReply) {
+      const replyId = Date.now().toString();
+      await db.collection(REPLY_COL).doc(replyId).set({
+        text: geminiReply,
+        from: 'claude',
+        timestamp: new Date().toISOString(),
+        createdAt: Firestore.Timestamp.now()
+      });
+      if (global.io) global.io.emit('claude_reply', { id: replyId, text: geminiReply });
+      console.log(`\n🤖 [AUTO-REPLY] ${geminiReply}\n`);
+    }
   } catch(e) {
     console.error('Send hata:', e.message, e.stack);
-    res.json({ ok: false, error: e.message, stack: e.stack });
+    if (!res.headersSent) res.json({ ok: false, error: e.message });
   }
 });
 
