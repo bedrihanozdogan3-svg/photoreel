@@ -35,10 +35,10 @@ router.get('/inbox', async (req, res) => {
   try {
     const snap = await db.collection(MSG_COL)
       .where('read', '==', false)
-      .orderBy('createdAt', 'asc')
       .limit(20)
       .get();
-    const messages = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const messages = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => Number(a.id) - Number(b.id));
     res.json({ messages });
   } catch(e) {
     console.error('Inbox hata:', e.message);
@@ -91,14 +91,15 @@ router.post('/reply', async (req, res) => {
 // Tablet cevapları okur — since timestamp'ten sonrakileri döner
 router.get('/replies', async (req, res) => {
   try {
-    const since = req.query.since || '0';
-    const sinceDate = new Date(Number(since) || 0);
+    const since = Number(req.query.since) || 0;
     const snap = await db.collection(REPLY_COL)
-      .where('createdAt', '>', Firestore.Timestamp.fromDate(sinceDate))
-      .orderBy('createdAt', 'asc')
+      .orderBy('createdAt', 'desc')
       .limit(20)
       .get();
-    const replies = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const replies = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(r => Number(r.id) > since)
+      .sort((a, b) => Number(a.id) - Number(b.id));
     res.json({ replies });
   } catch(e) {
     console.error('Replies hata:', e.message);
