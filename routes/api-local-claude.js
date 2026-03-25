@@ -1,9 +1,26 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 
 // Mesaj kuyruğu — tablet gönderir, Claude Code okur ve cevaplar
 const messageQueue = [];    // Tabletten gelen mesajlar
 const responseQueue = [];   // Claude'un cevapları
+
+// Konuşmaları dosyaya kaydet
+const LOG_FILE = path.join(__dirname, '..', 'chat-history.json');
+function saveToLog(msg) {
+  try {
+    let history = [];
+    if (fs.existsSync(LOG_FILE)) {
+      history = JSON.parse(fs.readFileSync(LOG_FILE, 'utf8'));
+    }
+    history.push(msg);
+    // Son 500 mesajı tut
+    if (history.length > 500) history = history.slice(-500);
+    fs.writeFileSync(LOG_FILE, JSON.stringify(history, null, 2));
+  } catch(e) { console.log('Log kayit hatasi:', e.message); }
+}
 
 // Tablet mesaj gönderir
 router.post('/send', (req, res) => {
@@ -25,6 +42,7 @@ router.post('/send', (req, res) => {
   }
 
   console.log(`\n💬 [TABLET → CLAUDE] ${text}\n`);
+  saveToLog({ from: 'tablet', text, timestamp: msg.timestamp });
 
   res.json({ ok: true, messageId: msg.id });
 });
@@ -69,6 +87,7 @@ router.post('/reply', (req, res) => {
   }
 
   console.log(`\n🔵 [CLAUDE → TABLET] ${text}\n`);
+  saveToLog({ from: 'claude', text, timestamp: reply.timestamp });
 
   res.json({ ok: true });
 });
