@@ -94,8 +94,8 @@ router.post('/reply', (req, res) => {
 
 // Tablet cevapları okur (son 20 reply her zaman döner — read flag kaldırıldı)
 router.get('/replies', (req, res) => {
-  const since = req.query.since || '0';
-  const newer = responseQueue.filter(r => r.id > since);
+  const since = Number(req.query.since) || 0;
+  const newer = responseQueue.filter(r => Number(r.id) > since);
   res.json({ replies: newer.slice(-20) });
 });
 
