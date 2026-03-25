@@ -187,7 +187,7 @@ var lastPollResult='';
 
 function pollReplies(){
   pollCount++;
-  fetch(window.location.origin+'/api/claude-local/replies?since=0')
+  fetch(window.location.origin+'/api/claude-local/replies?since=0&_='+Date.now())
     .then(function(r){return r.json()})
     .then(function(d){
       pollOk++;

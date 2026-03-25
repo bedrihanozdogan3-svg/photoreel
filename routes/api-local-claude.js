@@ -32,6 +32,7 @@ router.post('/send', async (req, res) => {
 
 // Claude Code inbox — okunmamış mesajları döner
 router.get('/inbox', async (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
   try {
     const snap = await db.collection(MSG_COL)
       .where('read', '==', false)
@@ -90,6 +91,7 @@ router.post('/reply', async (req, res) => {
 
 // Tablet cevapları okur — since timestamp'ten sonrakileri döner
 router.get('/replies', async (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
   try {
     const since = Number(req.query.since) || 0;
     const snap = await db.collection(REPLY_COL)
