@@ -129,8 +129,7 @@ var userScrolledTerm=false;
 function sec(m){model=m;document.getElementById('tg').className='bg'+(m==='gemini'?'':' off');document.getElementById('tc').className='bc'+(m==='claude'?'':' off');bildir(m==='gemini'?'Gemini seçildi':'Claude seçildi')}
 
 function ekle(t,tip,id){
-  if(tip==='c'&&id){if(seenClaudeIds[id])return;seenClaudeIds[id]=true}
-  var d=document.createElement('div');d.className='balon balon-'+tip;d.innerHTML='<div class="balon-ic">'+esc(t)+'</div><div class="zaman">'+(tip==='g'?'Gemini':tip==='c'?'Claude':'Sen')+' - '+saat()+'</div>';mesajlar.appendChild(d);mesajlar.scrollTop=mesajlar.scrollHeight;
+  var el=document.createElement('div');el.className='balon balon-'+tip;el.innerHTML='<div class="balon-ic">'+esc(t)+'</div><div class="zaman">'+(tip==='g'?'Gemini':tip==='c'?'Claude':'Sen')+' - '+saat()+'</div>';mesajlar.appendChild(el);mesajlar.scrollTop=mesajlar.scrollHeight;
 }
 
 function esc(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
@@ -195,6 +194,7 @@ function pollReplies(){
         lastPollResult='Bulundu: '+d.replies.length+' mesaj';
         d.replies.forEach(function(r){
           if(!seenClaudeIds[r.id]){
+            seenClaudeIds[r.id]=true;
             ekle(r.text,'c',r.id);
             if(navigator.vibrate)navigator.vibrate(100);
           }
