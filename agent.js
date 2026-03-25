@@ -105,22 +105,35 @@ async function takeScreenshot() {
   }
 }
 
-// === KOMUT ÇALIŞTIR ===
+// === KOMUT ÇALIŞTIR (WHITELIST TABANLI — sadece izin verilenler çalışır) ===
 
-// Tehlikeli komut kalıpları (komut enjeksiyonu koruması)
-const BLOCKED_PATTERNS = [
-  /rm\s+-rf/i, /del\s+\/[sf]/i, /format\s+[a-z]:/i,
-  /shutdown\s+\/[sfr]/i, /reg\s+delete/i, /net\s+user/i,
-  /&&/, /\|\|/, /;/, /\|/, /`/, /\$\(/, />\s*>/, />\s*\//
-];
+const ALLOWED_COMMANDS = {
+  'dir': { cmd: 'dir', safe: true },
+  'ls': { cmd: 'dir', safe: true },
+  'whoami': { cmd: 'whoami', safe: true },
+  'hostname': { cmd: 'hostname', safe: true },
+  'ipconfig': { cmd: 'ipconfig', safe: true },
+  'systeminfo': { cmd: 'systeminfo', safe: true },
+  'tasklist': { cmd: 'tasklist /fo csv /nh', safe: true },
+  'git-status': { cmd: 'git status', cwd: 'C:\\Users\\ASUS\\Desktop\\photoreel-repo', safe: true },
+  'git-log': { cmd: 'git log --oneline -10', cwd: 'C:\\Users\\ASUS\\Desktop\\photoreel-repo', safe: true },
+  'node-version': { cmd: 'node --version', safe: true },
+  'npm-version': { cmd: 'npm --version', safe: true },
+  'disk-usage': { cmd: 'wmic logicaldisk get size,freespace,caption', safe: true },
+};
 
 function runCommand(cmd) {
-  // Güvenlik kontrolü
-  if (BLOCKED_PATTERNS.some(p => p.test(cmd))) {
-    return { success: false, output: 'Güvenlik: Bu komut engellenmiştir' };
+  // Whitelist kontrolü — sadece izin verilen komutlar çalışır
+  const allowed = ALLOWED_COMMANDS[cmd];
+  if (!allowed) {
+    const availableCommands = Object.keys(ALLOWED_COMMANDS).join(', ');
+    return { success: false, output: `Güvenlik: Bu komut izin listesinde değil. İzin verilenler: ${availableCommands}` };
   }
+
   try {
-    const result = execSync(cmd, { encoding: 'utf8', timeout: 30000, windowsHide: true, shell: true });
+    const opts = { encoding: 'utf8', timeout: 15000, windowsHide: true };
+    if (allowed.cwd) opts.cwd = allowed.cwd;
+    const result = execSync(allowed.cmd, opts);
     return { success: true, output: result.substring(0, 2000) };
   } catch(e) {
     return { success: false, output: e.message.substring(0, 500) };
@@ -129,18 +142,32 @@ function runCommand(cmd) {
 
 // === UYGULAMA KONTROL ===
 
+// Uygulama adı sanitizasyon (sadece alfanumerik + tire + nokta)
+function sanitizeAppName(name) {
+  return name.replace(/[^a-zA-Z0-9.\-_]/g, '');
+}
+
 function closeApp(appName) {
+  const safe = sanitizeAppName(appName);
+  if (!safe || safe.length > 50) return { success: false, message: 'Geçersiz uygulama adı' };
   try {
-    execSync(`taskkill /IM "${appName}.exe" /F`, { timeout: 5000 });
-    return { success: true, message: `${appName} kapatıldı` };
+    execSync(`taskkill /IM "${safe}.exe" /F`, { timeout: 5000, windowsHide: true });
+    return { success: true, message: `${safe} kapatıldı` };
   } catch(e) {
     return { success: false, message: e.message };
   }
 }
 
+// Uygulama açma — sadece whitelist'teki uygulamalar
+const ALLOWED_APPS = ['notepad', 'calc', 'explorer', 'code', 'chrome', 'firefox', 'msedge'];
+
 function openApp(appPath) {
+  const name = appPath.split(/[/\\]/).pop().replace('.exe', '').toLowerCase();
+  if (!ALLOWED_APPS.includes(name)) {
+    return { success: false, message: `Güvenlik: ${name} izin listesinde değil. İzin: ${ALLOWED_APPS.join(', ')}` };
+  }
   try {
-    exec(`start "" "${appPath}"`);
+    exec(`start "" "${sanitizeAppName(appPath)}"`);
     return { success: true, message: `Uygulama açıldı` };
   } catch(e) {
     return { success: false, message: e.message };
@@ -234,13 +261,15 @@ async function processCommands(commands) {
         result = { type: 'lock', message: 'Bilgisayar kilitlendi' };
         break;
       case 'message':
-        // Mesajı göster
+        // Mesajı göster (sanitize edilmiş — RCE koruması)
+        const safeMsg = (cmd.data || '').replace(/[^a-zA-Z0-9\sğüşıöçĞÜŞİÖÇ.,!?:\-()]/g, '').substring(0, 200);
         try {
-          execSync(`msg * "${cmd.data}"`, { timeout: 5000 });
+          execSync(`msg * "${safeMsg}"`, { timeout: 5000, windowsHide: true });
         } catch(e) {
-          // msg komutu çalışmazsa PowerShell ile
           try {
-            execSync(`powershell -command "[System.Windows.Forms.MessageBox]::Show('${cmd.data}', 'PhotoReel - Tablet Mesajı')"`, { timeout: 5000 });
+            // PowerShell — Base64 encode ile injection önleme
+            const b64 = Buffer.from(safeMsg, 'utf16le').toString('base64');
+            execSync(`powershell -encodedCommand ${Buffer.from(`Add-Type -AssemblyName System.Windows.Forms;[System.Windows.Forms.MessageBox]::Show('${safeMsg.replace(/'/g, "''")}', 'Fenix AI')`, 'utf16le').toString('base64')}`, { timeout: 5000, windowsHide: true });
           } catch(e2) {}
         }
         result = { type: 'message', message: 'Mesaj gösterildi' };

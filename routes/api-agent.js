@@ -1,67 +1,48 @@
 const express = require('express');
 const router = express.Router();
-
-// Agent durumu ve komut kuyruğu (bellekte, periyodik temizlik)
-const agentState = {};
-const commandQueues = {};
-const commandResults = {};
-
-// 1 saat önce görülen ajanları temizle (bellek sızıntısı önlemi)
-setInterval(() => {
-  const cutoff = Date.now() - 3600000;
-  for (const id of Object.keys(agentState)) {
-    if (new Date(agentState[id].lastSeen).getTime() < cutoff) {
-      delete agentState[id];
-      delete commandQueues[id];
-      delete commandResults[id];
-    }
-  }
-}, 600000); // 10 dakikada bir kontrol
+const { validate, schemas } = require('../middlewares/validate');
+const stateService = require('../services/state-service');
+const logger = require('../utils/logger');
 
 // Agent rapor al
-router.post('/report', (req, res) => {
+router.post('/report', async (req, res) => {
   const data = req.body;
   const agentId = data.agentId;
   if (!agentId) return res.json({ ok: false });
 
   // Komut sonucu mu?
   if (data.commandResult) {
-    if (!commandResults[agentId]) commandResults[agentId] = [];
-    commandResults[agentId].push({ ...data.commandResult, timestamp: new Date().toISOString() });
-    // Max 50 sonuç tut
-    if (commandResults[agentId].length > 50) commandResults[agentId] = commandResults[agentId].slice(-50);
+    await stateService.pushCommandResult(agentId, data.commandResult);
     return res.json({ ok: true });
   }
 
   // Sistem raporu
-  agentState[agentId] = { ...data, lastSeen: new Date().toISOString() };
+  await stateService.setAgentState(agentId, data);
 
-  // Socket.io ile dashboard'a bildir
   if (global.io) {
-    global.io.emit('agent_update', agentState[agentId]);
+    global.io.emit('agent_update', { ...data, lastSeen: new Date().toISOString() });
   }
 
   res.json({ ok: true });
 });
 
 // Agent durumunu getir
-router.get('/status/:agentId?', (req, res) => {
+router.get('/status/:agentId?', async (req, res) => {
   const agentId = req.params.agentId;
   if (agentId) {
-    res.json(agentState[agentId] || { offline: true });
+    res.json(await stateService.getAgentState(agentId));
   } else {
-    res.json(agentState);
+    res.json(await stateService.getAllAgentStates());
   }
 });
 
 // Agent'a komut gönder
-router.post('/command/:agentId', (req, res) => {
+router.post('/command/:agentId', validate(schemas.agentCommand), async (req, res) => {
   const agentId = req.params.agentId;
   const { type, data } = req.body;
 
-  if (!commandQueues[agentId]) commandQueues[agentId] = [];
   const cmd = { id: Date.now().toString(), type, data, timestamp: new Date().toISOString() };
-  commandQueues[agentId].push(cmd);
+  await stateService.pushCommand(agentId, cmd);
 
   if (global.io) {
     global.io.emit('agent_command_sent', { agentId, command: cmd });
@@ -70,26 +51,16 @@ router.post('/command/:agentId', (req, res) => {
   res.json({ ok: true, commandId: cmd.id });
 });
 
-// Agent bekleyen komutları al (agent tarafından çağrılır)
-router.get('/commands/:agentId', (req, res) => {
-  const agentId = req.params.agentId;
-  const commands = commandQueues[agentId] || [];
-  commandQueues[agentId] = []; // temizle
+// Agent bekleyen komutları al
+router.get('/commands/:agentId', async (req, res) => {
+  const commands = await stateService.getAndClearCommands(req.params.agentId);
   res.json({ commands });
 });
 
 // Komut sonuçlarını getir
-router.get('/results/:agentId', (req, res) => {
-  const agentId = req.params.agentId;
-  const results = commandResults[agentId] || [];
+router.get('/results/:agentId', async (req, res) => {
+  const results = await stateService.getCommandResults(req.params.agentId);
   res.json({ results });
-});
-
-// Komut sonuçlarını temizle
-router.delete('/results/:agentId', (req, res) => {
-  const agentId = req.params.agentId;
-  commandResults[agentId] = [];
-  res.json({ ok: true });
 });
 
 module.exports = router;

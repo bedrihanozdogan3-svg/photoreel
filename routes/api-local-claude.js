@@ -3,6 +3,7 @@ const router = express.Router();
 const { Firestore } = require('@google-cloud/firestore');
 const fs = require('fs');
 const path = require('path');
+const { validate, schemas } = require('../middlewares/validate');
 
 // Dosya listesini başlangıçta 1 kez oku, önbellekte tut
 let _cachedFileList = null;
@@ -72,7 +73,7 @@ async function autoReply(userText) {
 }
 
 // Tablet mesaj gönderir + otomatik Gemini yanıtı
-router.post('/send', async (req, res) => {
+router.post('/send', validate(schemas.sendToTablet), async (req, res) => {
   try {
     const { text, from } = req.body;
     if (!text) return res.json({ ok: false, error: 'Mesaj boş' });
@@ -129,7 +130,7 @@ router.get('/inbox', async (req, res) => {
 });
 
 // Mesajları okundu yap
-router.post('/inbox/ack', async (req, res) => {
+router.post('/inbox/ack', validate(schemas.ackMessages), async (req, res) => {
   try {
     const { ids } = req.body;
     if (ids && ids.length) {
@@ -147,7 +148,7 @@ router.post('/inbox/ack', async (req, res) => {
 });
 
 // Claude cevap yazar
-router.post('/reply', async (req, res) => {
+router.post('/reply', validate(schemas.replyMessage), async (req, res) => {
   try {
     const { text, replyTo } = req.body;
     if (!text) return res.json({ ok: false });

@@ -2,451 +2,608 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PhotoReel AI Kontrol Merkezi</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PhotoReel AI Studio</title>
 <style>
-:root {
-  --cream:#f5f0e8; --warm:#faf8f4; --gold:#c9a84c; --gold-l:#e8d49a;
-  --gold-d:#9a7a2e; --coal:#1c1c1c; --mid:#5a5550; --soft:#9a9490;
-  --border:#e0d8cc; --bg:#f8f5ef;
-  --claude-bg:#e8f0fe; --claude-border:#4285f4;
-  --gemini-bg:#e8f5e9; --gemini-border:#34a853;
-  --user-bg:#fff8e1; --user-border:#f9a825;
+:root{
+  --bg:#0c0c14;--surface:#161622;--panel:#1c1c2e;--card:#232340;
+  --border:#2a2a4a;--text:#e8e8f0;--text2:#7878a0;--text3:#4a4a6a;
+  --accent:#ff6b35;--accent2:#ff9f1c;--fire1:#ff4500;--fire2:#ff6b35;--fire3:#ffa500;--fire4:#ffd700;
+  --blue:#4a9eff;--green:#4caf50;--purple:#9c5cff;--pink:#ff5ca0;
+  --radius:8px;
 }
-* { box-sizing:border-box; margin:0; padding:0; }
-body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--coal); min-height:100vh; display:flex; flex-direction:column; }
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column}
 
-header {
-  background:var(--coal); color:var(--cream); padding:10px 20px;
-  display:flex; align-items:center; justify-content:space-between;
-}
-.logo { font-size:18px; font-weight:600; }
-.logo span { color:var(--gold); }
-.header-btns { display:flex; gap:8px; align-items:center; }
-.status-badge {
-  padding:4px 10px; border-radius:12px; font-size:10px; font-weight:500;
-  background:#333; color:#999;
-}
-.status-badge.running { background:#1b5e20; color:#a5d6a7; }
-.status-badge.paused { background:#e65100; color:#ffcc80; }
-.tab-btn {
-  padding:6px 12px; border:1px solid #444; border-radius:6px; font-size:11px;
-  cursor:pointer; background:transparent; color:#999; transition:all .2s;
-}
-.tab-btn.active { background:var(--gold); color:#fff; border-color:var(--gold); }
+/* === TOP BAR === */
+.topbar{height:48px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 12px;gap:12px;flex-shrink:0;z-index:50}
+.topbar-logo{display:flex;align-items:center;gap:8px;cursor:pointer}
+.topbar-logo svg{width:32px;height:32px;filter:drop-shadow(0 0 6px rgba(255,107,53,.5))}
+.topbar-brand{font-size:15px;font-weight:700;background:linear-gradient(135deg,var(--fire2),var(--fire4));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.topbar-sep{width:1px;height:24px;background:var(--border)}
+.topbar-tabs{display:flex;gap:2px}
+.topbar-tab{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;background:transparent;border:none;color:var(--text2);transition:all .2s}
+.topbar-tab:hover{background:rgba(255,255,255,.05);color:var(--text)}
+.topbar-tab.active{background:var(--accent);color:#fff}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.topbar-btn{padding:6px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);transition:all .2s}
+.topbar-btn:hover{border-color:var(--accent);color:var(--accent)}
+.topbar-btn.primary{background:linear-gradient(135deg,var(--fire1),var(--fire3));color:#fff;border:none}
+.topbar-btn.primary:hover{filter:brightness(1.1)}
+.status-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-.main-area { flex:1; display:flex; overflow:hidden; }
+/* === WORKSPACE === */
+.workspace{flex:1;display:flex;overflow:hidden}
 
-/* CHAT PANEL */
-.chat-panel { flex:1; display:flex; flex-direction:column; min-width:0; }
-.controls {
-  background:var(--warm); border-bottom:1px solid var(--border);
-  padding:8px 12px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;
-}
-.controls input[type=text] {
-  flex:1; min-width:120px; padding:8px 10px; border:1px solid var(--border);
-  border-radius:6px; font-size:13px; outline:none; background:#fff;
-}
-.controls input:focus { border-color:var(--gold); }
-.btn {
-  padding:8px 14px; border:none; border-radius:6px; font-size:12px;
-  font-weight:500; cursor:pointer; transition:all .2s;
-}
-.btn-start { background:var(--coal); color:var(--cream); }
-.btn-stop { background:#c62828; color:#fff; }
-.btn-pause { background:var(--gold); color:#fff; }
-.btn-send { background:var(--gold-d); color:#fff; }
+/* === LEFT TOOLBAR === */
+.toolbar{width:56px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:2px;overflow-y:auto;flex-shrink:0}
+.tool-group{width:100%;padding:4px 0;border-bottom:1px solid var(--border)}
+.tool-group:last-child{border-bottom:none}
+.tool-btn{width:42px;height:42px;border:none;border-radius:var(--radius);background:transparent;color:var(--text2);font-size:18px;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;margin:1px auto;position:relative}
+.tool-btn:hover{background:rgba(255,107,53,.1);color:var(--text)}
+.tool-btn.active{background:rgba(255,107,53,.2);color:var(--accent)}
+.tool-btn .tip{position:absolute;left:54px;top:50%;transform:translateY(-50%);background:var(--card);color:var(--text);padding:4px 10px;border-radius:6px;font-size:11px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .15s;z-index:100;border:1px solid var(--border)}
+.tool-btn:hover .tip{opacity:1}
 
-.chat-area {
-  flex:1; overflow-y:auto; padding:10px 12px; display:flex;
-  flex-direction:column; gap:8px;
-}
-.msg {
-  max-width:80%; padding:12px 16px; border-radius:16px;
-  font-size:14px; line-height:1.5; border:none;
-  word-wrap:break-word; white-space:pre-wrap;
-  box-shadow:0 1px 3px rgba(0,0,0,0.1);
-  position:relative;
-  margin:4px 0;
-}
-.msg.claude {
-  background:linear-gradient(135deg, #e8f0fe 0%, #d4e4fd 100%);
-  align-self:flex-start;
-  border-bottom-left-radius:4px;
-  margin-left:8px;
-}
-.msg.gemini {
-  background:linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-  align-self:flex-end;
-  border-bottom-right-radius:4px;
-  margin-right:8px;
-}
-.msg.user {
-  background:linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
-  align-self:flex-end;
-  border-bottom-right-radius:4px;
-  margin-right:8px;
-}
-.msg.system {
-  background:linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%);
-  align-self:center;
-  font-size:12px;
-  max-width:60%;
-  text-align:center;
-  border-radius:20px;
-  padding:8px 16px;
-}
-.msg-sender {
-  font-size:11px; font-weight:700; text-transform:uppercase;
-  letter-spacing:0.5px; margin-bottom:4px; display:flex;
-  align-items:center; gap:6px;
-}
-.msg.claude .msg-sender { color:#1a73e8; }
-.msg.claude .msg-sender::before { content:'🔵'; font-size:8px; }
-.msg.gemini .msg-sender { color:#1e8e3e; }
-.msg.gemini .msg-sender::before { content:'🟢'; font-size:8px; }
-.msg.user .msg-sender { color:#e37400; }
-.msg.user .msg-sender::before { content:'👤'; font-size:10px; }
-.msg-time {
-  font-size:10px; color:var(--soft); margin-top:6px;
-  text-align:right;
-}
+/* === CENTER AREA === */
+.center{flex:1;display:flex;flex-direction:column;min-width:0}
 
-.input-bar {
-  background:var(--warm); border-top:1px solid var(--border);
-  padding:8px 12px; display:flex; gap:8px; align-items:center;
-}
-.input-bar input {
-  flex:1; padding:8px 10px; border:1px solid var(--border);
-  border-radius:6px; font-size:13px; outline:none; background:#fff;
-}
-.input-bar select {
-  padding:8px; border:1px solid var(--border); border-radius:6px;
-  font-size:11px; background:#fff;
-}
+/* Canvas area */
+.canvas-area{flex:1;display:flex;align-items:center;justify-content:center;background:var(--bg);position:relative;overflow:hidden}
+.canvas-frame{width:270px;height:480px;background:#1a1a2e;border-radius:12px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.canvas-frame .placeholder{text-align:center;color:var(--text3);padding:20px}
+.canvas-frame .placeholder .big{font-size:48px;margin-bottom:8px}
+.canvas-frame .placeholder p{font-size:12px;line-height:1.5}
+.canvas-frame img{width:100%;height:100%;object-fit:cover}
+.canvas-overlay{position:absolute;top:8px;left:8px;display:flex;gap:4px}
+.canvas-badge{padding:3px 8px;border-radius:4px;font-size:9px;font-weight:600;background:rgba(0,0,0,.6);color:var(--text2);backdrop-filter:blur(4px)}
+.canvas-controls{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:6px;align-items:center}
+.canvas-ctrl{width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.1);color:#fff;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);transition:all .2s}
+.canvas-ctrl:hover{background:rgba(255,107,53,.5);border-color:var(--accent)}
+.canvas-ctrl.play{width:44px;height:44px;font-size:18px;background:linear-gradient(135deg,var(--fire1),var(--fire3))}
+.upload-zone{position:absolute;inset:0;border:2px dashed var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color .2s}
+.upload-zone:hover{border-color:var(--accent)}
+.upload-zone input{display:none}
 
-.empty-state {
-  flex:1; display:flex; align-items:center; justify-content:center;
-  flex-direction:column; color:var(--soft); gap:6px;
-}
-.empty-state .icon { font-size:40px; }
-.empty-state p { font-size:13px; }
+/* === RIGHT PANEL === */
+.right-panel{width:280px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.panel-header{padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
+.panel-body{flex:1;overflow-y:auto;padding:12px}
+.panel-section{margin-bottom:16px}
+.panel-section h4{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
 
-/* CODE PANEL */
-.code-panel {
-  width:50%; border-left:2px solid var(--border); display:flex;
-  flex-direction:column; background:#1e1e1e;
-}
-.code-panel.hidden { display:none; }
-.code-panel .chat-panel { flex:1; }
-.code-header {
-  background:#252526; padding:8px 12px; display:flex; align-items:center;
-  justify-content:space-between; border-bottom:1px solid #333;
-}
-.code-header span { color:#ccc; font-size:12px; font-weight:500; }
-.code-tabs { display:flex; gap:4px; }
-.code-tab {
-  padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer;
-  background:#333; color:#999; border:none; transition:all .2s;
-}
-.code-tab.active { background:var(--gold); color:#fff; }
-.code-area {
-  flex:1; overflow-y:auto; padding:12px; font-family:'Consolas','Courier New',monospace;
-  font-size:12px; line-height:1.6; color:#d4d4d4; white-space:pre-wrap;
-}
-.code-input-bar {
-  background:#252526; padding:8px 12px; display:flex; gap:8px;
-  border-top:1px solid #333;
-}
-.code-input-bar input {
-  flex:1; padding:8px 10px; border:1px solid #444; border-radius:6px;
-  font-size:12px; outline:none; background:#1e1e1e; color:#d4d4d4;
-}
-.code-input-bar button {
-  padding:8px 14px; border:none; border-radius:6px; font-size:11px;
-  cursor:pointer; background:var(--gold); color:#fff;
-}
+/* Sliders */
+.slider-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.slider-row label{font-size:11px;color:var(--text2);width:70px;flex-shrink:0}
+.slider-row input[type=range]{flex:1;height:4px;-webkit-appearance:none;background:var(--border);border-radius:2px;outline:none}
+.slider-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer}
+.slider-row .val{font-size:10px;color:var(--text3);width:28px;text-align:right}
 
-.bottom-nav {
-  background:var(--coal); padding:8px 20px; display:flex;
-  justify-content:center; gap:16px;
-}
-.bottom-nav a {
-  color:var(--soft); text-decoration:none; font-size:11px;
-  padding:4px 10px; border-radius:6px; transition:all .2s;
-}
-.bottom-nav a:hover, .bottom-nav a.active { color:var(--gold); background:rgba(201,168,76,.1); }
+/* Filter grid */
+.filter-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.filter-item{border-radius:8px;border:2px solid transparent;cursor:pointer;text-align:center;padding:6px;transition:all .15s;background:var(--card)}
+.filter-item:hover,.filter-item.active{border-color:var(--accent)}
+.filter-item .preview{height:40px;border-radius:4px;background:linear-gradient(135deg,#333,#555);margin-bottom:4px}
+.filter-item span{font-size:9px;color:var(--text2)}
 
-/* MOBILE */
-@media (max-width:768px) {
-  .main-area { flex-direction:column; }
-  .code-panel { width:100%; height:50%; border-left:none; border-top:2px solid var(--border); }
-  .controls { flex-direction:column; }
-  .controls input[type=text] { min-width:auto; }
+/* Transition grid */
+.transition-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.transition-item{padding:10px 8px;border-radius:8px;background:var(--card);border:2px solid transparent;cursor:pointer;text-align:center;transition:all .15s}
+.transition-item:hover,.transition-item.active{border-color:var(--accent);background:rgba(255,107,53,.1)}
+.transition-item .icon{font-size:20px;display:block;margin-bottom:2px}
+.transition-item span{font-size:10px;color:var(--text2)}
+
+/* === TIMELINE === */
+.timeline{height:140px;background:var(--surface);border-top:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.timeline-header{display:flex;align-items:center;padding:6px 12px;gap:8px;border-bottom:1px solid var(--border)}
+.timeline-header span{font-size:11px;font-weight:600}
+.timeline-controls{display:flex;gap:4px;margin-left:auto}
+.tl-btn{padding:3px 8px;border-radius:4px;font-size:10px;cursor:pointer;background:var(--card);border:1px solid var(--border);color:var(--text2);transition:all .15s}
+.tl-btn:hover{border-color:var(--accent);color:var(--accent)}
+.timeline-tracks{flex:1;display:flex;flex-direction:column;overflow-x:auto;padding:8px 12px;gap:6px}
+.track{display:flex;align-items:center;gap:6px;height:32px}
+.track-label{width:60px;font-size:10px;color:var(--text2);flex-shrink:0;text-align:right;padding-right:8px;border-right:1px solid var(--border)}
+.track-clips{flex:1;display:flex;gap:3px;position:relative;height:100%}
+.clip{height:100%;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;cursor:pointer;transition:all .15s;padding:0 8px;white-space:nowrap;min-width:60px}
+.clip:hover{filter:brightness(1.2)}
+.clip.scene{background:linear-gradient(135deg,#2a3a5a,#1e3050);color:var(--blue);border:1px solid rgba(74,158,255,.3)}
+.clip.transition{background:linear-gradient(135deg,#3a2a4a,#2e1e40);color:var(--purple);border:1px solid rgba(156,92,255,.3);min-width:40px}
+.clip.music{background:linear-gradient(135deg,#2a3a2a,#1e4030);color:var(--green);border:1px solid rgba(76,175,80,.3);flex:1}
+.clip.empty{background:var(--card);border:1px dashed var(--border);color:var(--text3);cursor:default}
+.playhead{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--accent);z-index:10;left:30%}
+.playhead::before{content:'';position:absolute;top:-4px;left:-4px;width:10px;height:10px;background:var(--accent);border-radius:50%}
+
+/* === AI CHAT PANEL (sağ alt) === */
+.ai-fab{position:fixed;bottom:160px;right:16px;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--fire1),var(--fire3));color:#fff;border:none;font-size:20px;cursor:pointer;box-shadow:0 4px 16px rgba(255,69,0,.4);z-index:60;display:flex;align-items:center;justify-content:center;transition:transform .2s}
+.ai-fab:hover{transform:scale(1.1)}
+.ai-chat{position:fixed;bottom:160px;right:16px;width:340px;height:400px;background:var(--panel);border:1px solid var(--border);border-radius:12px;z-index:60;display:none;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.ai-chat.open{display:flex}
+.ai-chat-head{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.ai-chat-head h4{font-size:13px;display:flex;align-items:center;gap:6px}
+.ai-chat-close{background:none;border:none;color:var(--text2);font-size:16px;cursor:pointer}
+.ai-chat-messages{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px}
+.ai-msg{max-width:85%;padding:8px 12px;border-radius:12px;font-size:12px;line-height:1.5;animation:msgIn .2s}
+@keyframes msgIn{from{opacity:0;transform:translateY(4px)}to{opacity:1}}
+.ai-msg.bot{background:var(--card);align-self:flex-start;border-bottom-left-radius:2px}
+.ai-msg.user{background:rgba(255,107,53,.15);align-self:flex-end;border-bottom-right-radius:2px}
+.ai-chat-input{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--border)}
+.ai-chat-input input{flex:1;background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 12px;border-radius:20px;font-size:12px;outline:none}
+.ai-chat-input input:focus{border-color:var(--accent)}
+.ai-chat-input button{background:var(--accent);color:#fff;border:none;border-radius:50%;width:32px;height:32px;font-size:12px;cursor:pointer}
+
+/* === TOAST === */
+.toast-box{position:fixed;top:56px;right:16px;z-index:200;display:flex;flex-direction:column;gap:4px}
+.toast{padding:8px 14px;border-radius:8px;font-size:11px;animation:toastIn .25s;box-shadow:0 4px 12px rgba(0,0,0,.4)}
+@keyframes toastIn{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+.toast.ok{background:var(--green);color:#fff}
+.toast.err{background:var(--fire1);color:#fff}
+.toast.info{background:var(--card);color:var(--text);border:1px solid var(--border)}
+
+/* === SCROLLBAR === */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+/* === RESPONSIVE === */
+@media(max-width:900px){
+  .right-panel{width:220px}
+  .canvas-frame{width:216px;height:384px}
+}
+@media(max-width:700px){
+  .right-panel{display:none}
+  .toolbar{width:44px}
+  .tool-btn{width:36px;height:36px;font-size:15px}
+  .canvas-frame{width:180px;height:320px}
 }
 </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">Photo<span>Reel</span> AI</div>
-  <div class="header-btns">
-    <button class="tab-btn active" onclick="toggleView('chat')">Sohbet</button>
-    <button class="tab-btn" onclick="toggleView('code')">Kod</button>
-    <button class="tab-btn" onclick="toggleView('both')">Her İkisi</button>
-    <div class="status-badge" id="statusBadge">Bağlanıyor...</div>
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="gb" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#FFD700"/><stop offset="100%" stop-color="#FF4500"/></linearGradient>
+        <linearGradient id="gt" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stop-color="#FF4500"/><stop offset="100%" stop-color="#FFD700"/></linearGradient>
+        <linearGradient id="gw" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#FFBF00"/><stop offset="100%" stop-color="#FF4500"/></linearGradient>
+        <radialGradient id="gh" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#FFD700"/><stop offset="100%" stop-color="#FF4500"/></radialGradient>
+        <radialGradient id="gc" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#FFF080"/><stop offset="100%" stop-color="#FFA500"/></radialGradient>
+      </defs>
+      <g>
+        <g transform="translate(0,5)">
+          <path d="M42 65Q38 80 40 95Q42 105 45 95Q48 80 44 65Z" fill="url(#gt)"><animateTransform attributeName="transform" type="rotate" values="0 42 70;5 42 70;-5 42 70;0 42 70" dur="2.8s" repeatCount="indefinite"/></path>
+          <path d="M46 68Q42 83 44 98Q46 108 49 98Q52 83 48 68Z" fill="url(#gt)"><animateTransform attributeName="transform" type="rotate" values="0 46 73;-7 46 73;7 46 73;0 46 73" dur="3s" begin=".2s" repeatCount="indefinite"/></path>
+          <path d="M50 71Q46 86 48 101Q50 111 53 101Q56 86 52 71Z" fill="url(#gt)"><animateTransform attributeName="transform" type="rotate" values="0 50 76;8 50 76;-8 50 76;0 50 76" dur="3.2s" begin=".4s" repeatCount="indefinite"/></path>
+        </g>
+        <path d="M55 80L52 95Q53 98 58 95L55 80Z" fill="#FF8C00"/><path d="M60 82L57 97Q58 100 63 97L60 82Z" fill="#FF8C00"/>
+        <path d="M45 55Q55 45 70 60Q60 70 45 55Z" fill="url(#gw)"/><path d="M55 55Q65 45 80 60Q70 70 55 55Z" fill="url(#gw)"/>
+        <path d="M40 60Q30 35 55 28T80 55Q85 75 60 88L40 60Z" fill="url(#gb)"/>
+        <path d="M45 50Q30 40 40 25Q50 15 60 25Q70 35 60 50Z" fill="url(#gc)"/>
+        <path d="M55 25Q65 10 75 20Q80 30 70 35Q60 40 55 25Z" fill="url(#gh)"/>
+        <path d="M73 28L85 25L75 30Z" fill="#FF8C00"/><path d="M73 28L85 25L75 25Z" fill="#FFD700"/>
+        <circle cx="68" cy="27" r="3" fill="#FFF"/><circle cx="70" cy="28" r="1.5" fill="#000"/>
+        <path d="M65 24Q68 22 72 23" fill="none" stroke="#FF4500" stroke-width="1.5" stroke-linecap="round"/>
+      </g>
+      <circle cx="50" cy="70" r="2" fill="#FFD700" opacity="0"><animate attributeName="cy" values="70;30" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;1;0" dur="2s" repeatCount="indefinite"/></circle>
+      <circle cx="65" cy="75" r="1.5" fill="#FFA500" opacity="0"><animate attributeName="cy" values="75;35" dur="2.2s" begin=".5s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.8;0" dur="2.2s" begin=".5s" repeatCount="indefinite"/></circle>
+      <circle cx="40" cy="60" r="1" fill="#FF4500" opacity="0"><animate attributeName="cy" values="60;20" dur="1.8s" begin="1s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;.7;0" dur="1.8s" begin="1s" repeatCount="indefinite"/></circle>
+    </svg>
+    <span class="topbar-brand">PhotoReel AI</span>
   </div>
-</header>
+  <div class="topbar-sep"></div>
+  <div class="topbar-tabs">
+    <button class="topbar-tab active" onclick="switchMode('edit')">Düzenle</button>
+    <button class="topbar-tab" onclick="switchMode('transitions')">Geçişler</button>
+    <button class="topbar-tab" onclick="switchMode('effects')">Efektler</button>
+    <button class="topbar-tab" onclick="switchMode('text')">Metin</button>
+    <button class="topbar-tab" onclick="switchMode('audio')">Müzik</button>
+    <button class="topbar-tab" onclick="switchMode('ai')">AI</button>
+  </div>
+  <div class="topbar-right">
+    <span class="status-dot" id="statusDot"></span>
+    <button class="topbar-btn" onclick="toggleChat()">&#x1F4AC; AI Asistan</button>
+    <button class="topbar-btn primary" id="btnExport" onclick="exportVideo()">&#x1F3AC; Video Oluştur</button>
+  </div>
+</div>
 
-<div class="main-area">
-  <!-- CHAT PANEL -->
-  <div class="chat-panel" id="chatPanel">
-    <div class="controls">
-      <input type="text" id="topicInput" placeholder="Konu girin... (ör: PhotoReel v10 mimarisini tartışın)">
-      <button class="btn btn-start" id="btnStart" onclick="startConversation()">Başlat</button>
-      <button class="btn btn-pause" id="btnPause" onclick="pauseConversation()" style="display:none">Duraklat</button>
-      <button class="btn btn-stop" id="btnStop" onclick="stopConversation()" style="display:none">Durdur</button>
+<!-- WORKSPACE -->
+<div class="workspace">
+
+  <!-- LEFT TOOLBAR -->
+  <div class="toolbar" id="toolbar">
+    <!-- Fotoğraf Düzeltme -->
+    <div class="tool-group" id="tools-edit">
+      <button class="tool-btn active" onclick="selectTool('parlaklik')" title="Parlaklık">&#x2600;&#xFE0F;<span class="tip">Parlaklık</span></button>
+      <button class="tool-btn" onclick="selectTool('kontrast')" title="Kontrast">&#x1F313;<span class="tip">Kontrast</span></button>
+      <button class="tool-btn" onclick="selectTool('doygunluk')" title="Doygunluk">&#x1F308;<span class="tip">Doygunluk</span></button>
+      <button class="tool-btn" onclick="selectTool('keskinlik')" title="Keskinlik">&#x1F52A;<span class="tip">Keskinlik</span></button>
+      <button class="tool-btn" onclick="selectTool('sicaklik')" title="Beyaz Dengesi">&#x1F321;&#xFE0F;<span class="tip">Beyaz Dengesi</span></button>
     </div>
-    <div class="chat-area" id="chatArea">
-      <div class="empty-state" id="emptyState">
-        <div class="icon">🤖</div>
-        <p>Claude ve Gemini'yi konuşturmak için bir konu girin</p>
-        <p style="font-size:11px">İki AI birbirleriyle tartışacak, siz izleyeceksiniz</p>
+    <!-- Fotoğraf Düzenleme -->
+    <div class="tool-group">
+      <button class="tool-btn" onclick="selectTool('kirp')" title="Kırp">&#x2702;&#xFE0F;<span class="tip">Kırp</span></button>
+      <button class="tool-btn" onclick="selectTool('dondur')" title="Döndür">&#x1F504;<span class="tip">Döndür</span></button>
+      <button class="tool-btn" onclick="selectTool('bg_sil')" title="Arka Plan Sil">&#x1FA84;<span class="tip">Arka Plan Sil</span></button>
+      <button class="tool-btn" onclick="selectTool('filtre')" title="Filtre">&#x1F3A8;<span class="tip">Filtre</span></button>
+    </div>
+    <!-- AI -->
+    <div class="tool-group">
+      <button class="tool-btn" onclick="selectTool('ai_auto')" title="AI Oto Düzenle">&#x1F916;<span class="tip">AI Otomatik</span></button>
+      <button class="tool-btn" onclick="selectTool('ai_bg')" title="AI Arka Plan">&#x1F5BC;&#xFE0F;<span class="tip">AI Arka Plan</span></button>
+      <button class="tool-btn" onclick="selectTool('ai_sahne')" title="Sahne Öner">&#x1F4AD;<span class="tip">Sahne Öner</span></button>
+    </div>
+  </div>
+
+  <!-- CENTER: CANVAS -->
+  <div class="center">
+    <div class="canvas-area">
+      <div class="canvas-frame" id="canvasFrame">
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()">
+          <input type="file" id="fileInput" accept="image/*" multiple onchange="handleUpload(this.files)">
+          <div class="placeholder">
+            <div class="big">&#x1F4F7;</div>
+            <p>Ürün fotoğraflarını<br>sürükle veya tıkla</p>
+            <p style="font-size:10px;margin-top:8px;color:var(--text3)">JPG, PNG, WEBP</p>
+          </div>
+        </div>
+        <div class="canvas-overlay">
+          <span class="canvas-badge">9:16</span>
+          <span class="canvas-badge" id="sceneBadge" style="display:none">Sahne 1</span>
+        </div>
+        <div class="canvas-controls" id="canvasControls" style="display:none">
+          <button class="canvas-ctrl" onclick="prevScene()">&#x23EE;</button>
+          <button class="canvas-ctrl play" onclick="playPreview()">&#x25B6;</button>
+          <button class="canvas-ctrl" onclick="nextScene()">&#x23ED;</button>
+        </div>
       </div>
     </div>
-    <div class="input-bar">
-      <select id="targetSelect">
-        <option value="both">Her İkisine</option>
-        <option value="gemini">Gemini'ye</option>
-        <option value="claude">Claude'a</option>
-      </select>
-      <input type="text" id="msgInput" placeholder="Mesaj yazın..." onkeypress="if(event.key==='Enter')sendMessage()">
-      <button class="btn btn-send" onclick="sendMessage()">Gönder</button>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel" id="rightPanel">
+    <div class="panel-header">&#x2699;&#xFE0F; Ayarlar</div>
+    <div class="panel-body">
+
+      <!-- Fotoğraf Düzeltme Ayarları -->
+      <div class="panel-section" id="panel-adjust">
+        <h4>Fotoğraf Düzeltme</h4>
+        <div class="slider-row"><label>Parlaklık</label><input type="range" min="-100" max="100" value="0" oninput="adjustPhoto('brightness',this.value)"><span class="val">0</span></div>
+        <div class="slider-row"><label>Kontrast</label><input type="range" min="-100" max="100" value="0" oninput="adjustPhoto('contrast',this.value)"><span class="val">0</span></div>
+        <div class="slider-row"><label>Doygunluk</label><input type="range" min="-100" max="100" value="0" oninput="adjustPhoto('saturate',this.value)"><span class="val">0</span></div>
+        <div class="slider-row"><label>Keskinlik</label><input type="range" min="0" max="100" value="0" oninput="adjustPhoto('sharpen',this.value)"><span class="val">0</span></div>
+        <div class="slider-row"><label>Sıcaklık</label><input type="range" min="-100" max="100" value="0" oninput="adjustPhoto('temperature',this.value)"><span class="val">0</span></div>
+      </div>
+
+      <!-- Filtreler -->
+      <div class="panel-section" id="panel-filters" style="display:none">
+        <h4>Filtreler</h4>
+        <div class="filter-grid">
+          <div class="filter-item active" onclick="applyFilter('none')"><div class="preview"></div><span>Orijinal</span></div>
+          <div class="filter-item" onclick="applyFilter('cinematic')"><div class="preview" style="background:linear-gradient(135deg,#1a2a3a,#2a1a3a)"></div><span>Sinematik</span></div>
+          <div class="filter-item" onclick="applyFilter('warm')"><div class="preview" style="background:linear-gradient(135deg,#3a2a1a,#4a3a1a)"></div><span>Sıcak</span></div>
+          <div class="filter-item" onclick="applyFilter('cool')"><div class="preview" style="background:linear-gradient(135deg,#1a2a3a,#1a3a4a)"></div><span>Soğuk</span></div>
+          <div class="filter-item" onclick="applyFilter('vintage')"><div class="preview" style="background:linear-gradient(135deg,#3a3a2a,#2a2a1a)"></div><span>Vintage</span></div>
+          <div class="filter-item" onclick="applyFilter('bw')"><div class="preview" style="background:linear-gradient(135deg,#333,#666)"></div><span>S/B</span></div>
+        </div>
+      </div>
+
+      <!-- Geçişler -->
+      <div class="panel-section" id="panel-transitions" style="display:none">
+        <h4>Video Geçişleri</h4>
+        <div class="transition-grid">
+          <div class="transition-item active"><span class="icon">&#x1F32B;&#xFE0F;</span><span>Soluklaşma</span></div>
+          <div class="transition-item"><span class="icon">&#x27A1;&#xFE0F;</span><span>Kaydırma</span></div>
+          <div class="transition-item"><span class="icon">&#x1F50D;</span><span>Yakınlaştır</span></div>
+          <div class="transition-item"><span class="icon">&#x1F300;</span><span>Döndür</span></div>
+          <div class="transition-item"><span class="icon">&#x1F47E;</span><span>Glitch</span></div>
+          <div class="transition-item"><span class="icon">&#x1F4A7;</span><span>Çözülme</span></div>
+          <div class="transition-item"><span class="icon">&#x1F4A5;</span><span>Flash</span></div>
+          <div class="transition-item"><span class="icon">&#x1F48E;</span><span>Elmas</span></div>
+          <div class="transition-item"><span class="icon">&#x1F32A;&#xFE0F;</span><span>Tornado</span></div>
+          <div class="transition-item"><span class="icon">&#x2B50;</span><span>Yıldız</span></div>
+        </div>
+      </div>
+
+      <!-- Video Efektleri -->
+      <div class="panel-section" id="panel-effects" style="display:none">
+        <h4>Video Efektleri</h4>
+        <div class="transition-grid">
+          <div class="transition-item"><span class="icon">&#x1F422;</span><span>Yavaş Çekim</span></div>
+          <div class="transition-item"><span class="icon">&#x1F407;</span><span>Hızlandır</span></div>
+          <div class="transition-item"><span class="icon">&#x1F50E;</span><span>Dinamik Zoom</span></div>
+          <div class="transition-item"><span class="icon">&#x1F4A1;</span><span>Flaş</span></div>
+        </div>
+        <h4 style="margin-top:12px">Hız</h4>
+        <div class="slider-row"><label>Hız</label><input type="range" min="25" max="400" value="100"><span class="val">1x</span></div>
+      </div>
+
+      <!-- Metin -->
+      <div class="panel-section" id="panel-text" style="display:none">
+        <h4>Metin Ekle</h4>
+        <input type="text" placeholder="Başlık yazın..." style="width:100%;padding:8px;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:6px;font-size:12px;margin-bottom:8px">
+        <div class="slider-row"><label>Boyut</label><input type="range" min="12" max="72" value="24"><span class="val">24</span></div>
+        <div style="display:flex;gap:4px;margin-bottom:8px">
+          <button style="flex:1;padding:6px;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:4px;cursor:pointer;font-size:11px">&#x1F170;&#xFE0F; Başlık</button>
+          <button style="flex:1;padding:6px;background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:4px;cursor:pointer;font-size:11px">&#x1F4AC; Altyazı</button>
+        </div>
+      </div>
+
+      <!-- Müzik -->
+      <div class="panel-section" id="panel-audio" style="display:none">
+        <h4>Müzik</h4>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="padding:8px;background:var(--card);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;border:1px solid var(--border)">
+            <span style="font-size:16px">&#x1F3B5;</span><div><div style="font-size:11px;font-weight:600">Energetic Beat</div><div style="font-size:9px;color:var(--text2)">128 BPM - Instrumental</div></div>
+          </div>
+          <div style="padding:8px;background:var(--card);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;border:1px solid var(--border)">
+            <span style="font-size:16px">&#x1F3B6;</span><div><div style="font-size:11px;font-weight:600">Chill Vibes</div><div style="font-size:9px;color:var(--text2)">90 BPM - Lo-Fi</div></div>
+          </div>
+          <div style="padding:8px;background:var(--card);border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:8px;border:1px solid var(--border)">
+            <span style="font-size:16px">&#x1F3BC;</span><div><div style="font-size:11px;font-weight:600">Fashion Walk</div><div style="font-size:9px;color:var(--text2)">110 BPM - Trendy</div></div>
+          </div>
+        </div>
+        <h4 style="margin-top:12px">Ses Ayarları</h4>
+        <div class="slider-row"><label>Ses</label><input type="range" min="0" max="100" value="80"><span class="val">80</span></div>
+        <div class="slider-row"><label>Fade In</label><input type="range" min="0" max="3000" value="500"><span class="val">0.5s</span></div>
+        <div class="slider-row"><label>Fade Out</label><input type="range" min="0" max="3000" value="500"><span class="val">0.5s</span></div>
+      </div>
+
+      <!-- AI -->
+      <div class="panel-section" id="panel-ai" style="display:none">
+        <h4>AI Araçları</h4>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <button style="width:100%;padding:12px;background:linear-gradient(135deg,var(--fire1),var(--fire3));color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">&#x1F916; Otomatik Video Oluştur</button>
+          <button style="width:100%;padding:12px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px">&#x1F5BC;&#xFE0F; AI Arka Plan Oluştur</button>
+          <button style="width:100%;padding:12px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px">&#x1F4AD; Sahne Önerisi Al</button>
+          <button style="width:100%;padding:12px;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px">&#x1F3AC; Trend Analizi</button>
+        </div>
+      </div>
+
     </div>
   </div>
 
-  <!-- CODE PANEL -->
-  <div class="code-panel hidden" id="codePanel">
-    <div class="code-header">
-      <span>Kod Paneli</span>
-      <div class="code-tabs">
-        <button class="code-tab active" onclick="loadFile('photoreel_v9.html')">v9.html</button>
-        <button class="code-tab" onclick="loadFile('server.js')">server.js</button>
-        <button class="code-tab" onclick="loadFile('services/gemini-service.js')">gemini</button>
-        <button class="code-tab" onclick="loadFile('services/claude-service.js')">claude</button>
+</div>
+
+<!-- TIMELINE -->
+<div class="timeline">
+  <div class="timeline-header">
+    <span>&#x1F3AC; Timeline</span>
+    <button class="tl-btn" onclick="addScene()">+ Sahne</button>
+    <button class="tl-btn" onclick="addTransition()">+ Geçiş</button>
+    <div class="timeline-controls">
+      <button class="tl-btn">0:00</button>
+      <button class="tl-btn" id="tlDuration">/ 0:00</button>
+    </div>
+  </div>
+  <div class="timeline-tracks">
+    <div class="track">
+      <div class="track-label">Video</div>
+      <div class="track-clips" id="videoTrack">
+        <div class="clip empty">Sahne ekle...</div>
+        <div class="playhead" id="playhead"></div>
       </div>
     </div>
-    <div class="code-area" id="codeArea">Dosya seçin veya Gemini'ye kod sorun...</div>
-    <div class="code-input-bar">
-      <input type="text" id="codeInput" placeholder="Gemini'ye kod hakkında sorun..." onkeypress="if(event.key==='Enter')askCodeQuestion()">
-      <button onclick="askCodeQuestion()">Sor</button>
+    <div class="track">
+      <div class="track-label">Geçişler</div>
+      <div class="track-clips" id="transTrack">
+        <div class="clip empty" style="flex:1">Geçiş ekle...</div>
+      </div>
+    </div>
+    <div class="track">
+      <div class="track-label">Müzik</div>
+      <div class="track-clips" id="musicTrack">
+        <div class="clip empty" style="flex:1">Müzik seç...</div>
+      </div>
     </div>
   </div>
 </div>
 
-<div class="bottom-nav">
-  <a href="/" class="active">Dashboard</a>
-  <a href="/app" target="_blank">PhotoReel App</a>
+<!-- AI CHAT FAB -->
+<button class="ai-fab" id="aiFab" onclick="toggleChat()">&#x1F916;</button>
+
+<!-- AI CHAT PANEL -->
+<div class="ai-chat" id="aiChat">
+  <div class="ai-chat-head">
+    <h4>&#x1F525; AI Asistan</h4>
+    <button class="ai-chat-close" onclick="toggleChat()">&#x2715;</button>
+  </div>
+  <div class="ai-chat-messages" id="aiMessages">
+    <div class="ai-msg bot">Merhaba! Fotoğraf ve video düzenleme konusunda yardımcı olabilirim. Ne yapmak istiyorsun?</div>
+  </div>
+  <div class="ai-chat-input">
+    <select id="aiModel" style="background:var(--bg);border:1px solid var(--border);color:var(--text2);padding:4px;border-radius:6px;font-size:10px">
+      <option value="gemini">Gemini</option>
+      <option value="claude">Claude</option>
+    </select>
+    <input type="text" id="aiInput" placeholder="Sor..." onkeypress="if(event.key==='Enter')sendAI()">
+    <button onclick="sendAI()">&#x27A4;</button>
+  </div>
 </div>
+
+<!-- TOAST -->
+<div class="toast-box" id="toastBox"></div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
-const chatArea = document.getElementById('chatArea');
-const emptyState = document.getElementById('emptyState');
-const statusBadge = document.getElementById('statusBadge');
-const codeArea = document.getElementById('codeArea');
-let isRunning = false;
-let currentView = 'chat';
+let currentMode = 'edit';
+let scenes = [];
+let currentScene = 0;
 
-// VIEW TOGGLE
-function toggleView(view) {
-  currentView = view;
-  const chatPanel = document.getElementById('chatPanel');
-  const codePanel = document.getElementById('codePanel');
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+// === MODE SWITCHING ===
+function switchMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.topbar-tab').forEach(t => t.classList.remove('active'));
   event.target.classList.add('active');
-
-  if (view === 'chat') {
-    chatPanel.style.display = 'flex';
-    codePanel.classList.add('hidden');
-  } else if (view === 'code') {
-    chatPanel.style.display = 'none';
-    codePanel.classList.remove('hidden');
-    codePanel.style.width = '100%';
-  } else {
-    chatPanel.style.display = 'flex';
-    codePanel.classList.remove('hidden');
-    codePanel.style.width = '50%';
-  }
+  // Panelleri gizle/göster
+  const panels = {edit:'panel-adjust',transitions:'panel-transitions',effects:'panel-effects',text:'panel-text',audio:'panel-audio',ai:'panel-ai'};
+  Object.values(panels).forEach(id => { const el=document.getElementById(id); if(el)el.style.display='none'; });
+  const target = panels[mode];
+  if(target) document.getElementById(target).style.display = '';
+  // Filtre özel durum
+  if(mode === 'edit') document.getElementById('panel-filters').style.display = '';
+  else document.getElementById('panel-filters').style.display = 'none';
 }
 
-// FILE LOADING
-async function loadFile(filename) {
-  document.querySelectorAll('.code-tab').forEach(t => t.classList.remove('active'));
-  event.target.classList.add('active');
-  codeArea.textContent = 'Yükleniyor...';
-  try {
-    const res = await fetch('/api/chat/gemini', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: `${filename} dosyasının içeriğini kısaca analiz et. Ne yapıyor, kaç satır, ana fonksiyonlar neler?` })
-    });
-    const data = await res.json();
-    if (data.ok) {
-      codeArea.textContent = `📄 ${filename}\n${'─'.repeat(40)}\n\n${data.response}`;
-    } else {
-      codeArea.textContent = 'Hata: ' + (data.error || 'Bilinmeyen hata');
-    }
-  } catch(e) {
-    codeArea.textContent = 'Bağlantı hatası: ' + e.message;
-  }
+// === TOOL SELECTION ===
+function selectTool(tool) {
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  if(event.target.closest('.tool-btn')) event.target.closest('.tool-btn').classList.add('active');
+  toast(tool + ' seçildi', 'info');
 }
 
-// CODE QUESTION
-async function askCodeQuestion() {
-  const input = document.getElementById('codeInput');
-  const text = input.value.trim();
-  if (!text) return;
-  input.value = '';
-  codeArea.textContent += `\n\n💬 Sen: ${text}\n⏳ Gemini düşünüyor...`;
-  codeArea.scrollTop = codeArea.scrollHeight;
-  try {
-    const res = await fetch('/api/chat/gemini', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
-    });
-    const data = await res.json();
-    if (data.ok) {
-      codeArea.textContent += `\n\n🟢 Gemini:\n${data.response}`;
-    } else {
-      codeArea.textContent += `\n\n❌ Hata: ${data.error}`;
-    }
-  } catch(e) {
-    codeArea.textContent += `\n\n❌ Bağlantı hatası: ${e.message}`;
-  }
-  codeArea.scrollTop = codeArea.scrollHeight;
+// === PHOTO ADJUSTMENTS ===
+function adjustPhoto(type, val) {
+  const slider = event.target;
+  slider.nextElementSibling.textContent = val;
+  // Canvas üzerinde CSS filter uygula
+  applyFilters();
 }
 
-// SOCKET EVENTS
-socket.on('connect', () => {
-  statusBadge.textContent = 'Bağlı';
-  statusBadge.className = 'status-badge';
-});
-
-socket.on('disconnect', () => {
-  statusBadge.textContent = 'Bağlantı Kesildi';
-  statusBadge.className = 'status-badge';
-});
-
-socket.on('message', (msg) => {
-  addMessage(msg.sender, msg.text, msg.timestamp);
-  // Kod panelinde de göster
-  if (msg.sender !== 'user' && currentView !== 'chat') {
-    const label = msg.sender === 'claude' ? '🔵 Claude' : '🟢 Gemini';
-    codeArea.textContent += `\n\n${label}:\n${msg.text}`;
-    codeArea.scrollTop = codeArea.scrollHeight;
-  }
-});
-
-socket.on('status', (data) => {
-  if (data.state === 'running') {
-    statusBadge.textContent = 'Çalışıyor...';
-    statusBadge.className = 'status-badge running';
-    isRunning = true;
-    document.getElementById('btnStart').style.display = 'none';
-    document.getElementById('btnPause').style.display = '';
-    document.getElementById('btnStop').style.display = '';
-  } else if (data.state === 'paused') {
-    statusBadge.textContent = 'Duraklatıldı';
-    statusBadge.className = 'status-badge paused';
-    document.getElementById('btnPause').textContent = 'Devam Et';
-    document.getElementById('btnPause').onclick = resumeConversation;
-  } else {
-    statusBadge.textContent = 'Hazır';
-    statusBadge.className = 'status-badge';
-    isRunning = false;
-    document.getElementById('btnStart').style.display = '';
-    document.getElementById('btnPause').style.display = 'none';
-    document.getElementById('btnStop').style.display = 'none';
-    document.getElementById('btnPause').textContent = 'Duraklat';
-    document.getElementById('btnPause').onclick = pauseConversation;
-  }
-});
-
-socket.on('error', (data) => {
-  addMessage('system', 'Hata: ' + data.message);
-});
-
-function addMessage(sender, text, timestamp) {
-  emptyState.style.display = 'none';
-  const div = document.createElement('div');
-  div.className = `msg ${sender}`;
-  const time = timestamp ? new Date(timestamp).toLocaleTimeString('tr-TR') : new Date().toLocaleTimeString('tr-TR');
-  const names = { claude: 'CLAUDE', gemini: 'GEMINI', user: 'SEN', system: 'SİSTEM' };
-  div.innerHTML = `<div class="msg-sender">${names[sender] || sender}</div>${escapeHtml(text)}<div class="msg-time">${time}</div>`;
-  chatArea.appendChild(div);
-  chatArea.scrollTop = chatArea.scrollHeight;
+function applyFilters() {
+  const sliders = document.querySelectorAll('#panel-adjust input[type=range]');
+  const vals = Array.from(sliders).map(s => parseInt(s.value));
+  const img = document.querySelector('#canvasFrame img');
+  if(!img) return;
+  const b = 100 + vals[0]; // brightness
+  const c = 100 + vals[1]; // contrast
+  const s = 100 + vals[2]; // saturate
+  const t = vals[4]; // temperature (hue-rotate)
+  img.style.filter = `brightness(${b}%) contrast(${c}%) saturate(${s}%) hue-rotate(${t * 0.5}deg)`;
 }
 
-function escapeHtml(text) {
-  const d = document.createElement('div');
-  d.textContent = text;
-  return d.innerHTML;
+function applyFilter(name) {
+  document.querySelectorAll('.filter-item').forEach(f => f.classList.remove('active'));
+  if(event.target.closest('.filter-item')) event.target.closest('.filter-item').classList.add('active');
 }
 
-async function startConversation() {
-  const topic = document.getElementById('topicInput').value.trim();
-  if (!topic) return alert('Lütfen bir konu girin');
-  await fetch('/api/chat/start', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ topic, maxTurns: 20 })
+// === FILE UPLOAD ===
+function handleUpload(files) {
+  if(!files.length) return;
+  const frame = document.getElementById('canvasFrame');
+  document.getElementById('uploadZone').style.display = 'none';
+  document.getElementById('canvasControls').style.display = 'flex';
+  document.getElementById('sceneBadge').style.display = '';
+
+  Array.from(files).forEach((file, i) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      scenes.push({ src: e.target.result, name: file.name });
+      if(i === 0) showScene(0);
+      updateTimeline();
+    };
+    reader.readAsDataURL(file);
   });
+  toast(files.length + ' fotoğraf yüklendi', 'ok');
 }
 
-async function stopConversation() {
-  await fetch('/api/chat/stop', { method: 'POST' });
-}
-
-async function pauseConversation() {
-  await fetch('/api/chat/pause', { method: 'POST' });
-}
-
-async function resumeConversation() {
-  await fetch('/api/chat/resume', { method: 'POST' });
-}
-
-async function sendMessage() {
-  const input = document.getElementById('msgInput');
-  const text = input.value.trim();
-  if (!text) return;
-  const target = document.getElementById('targetSelect').value;
-  input.value = '';
-
-  // Mesajlar socket üzerinden gelecek (user + AI cevabı), burada tekrar ekleme
-  try {
-    if (target === 'gemini') {
-      const res = await fetch('/api/chat/gemini', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text}) });
-      const data = await res.json();
-      if (!data.ok) addMessage('system', 'Gemini hatası: ' + (data.error || 'Bilinmeyen'));
-    } else if (target === 'claude') {
-      const res = await fetch('/api/chat/claude', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text}) });
-      const data = await res.json();
-      if (!data.ok) addMessage('system', 'Claude hatası: ' + (data.error || 'Bilinmeyen'));
-    } else {
-      // Her ikisine — sırayla gönder (paralel gönderim user mesajını 2 kez ekler)
-      addMessage('system', '⏳ Gemini ve Claude düşünüyor...');
-      const geminiRes = await fetch('/api/chat/gemini', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text}) }).then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
-      if (!geminiRes.ok) addMessage('system', '❌ Gemini yanıt veremedi');
-      const claudeRes = await fetch('/api/chat/claude', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text}) }).then(r => r.json()).catch(e => ({ ok: false, error: e.message }));
-      if (!claudeRes.ok) addMessage('system', '❌ Claude yanıt veremedi (API kredi gerekli olabilir)');
-    }
-  } catch(e) {
-    addMessage('system', '❌ Bağlantı hatası: ' + e.message);
+function showScene(idx) {
+  if(idx < 0 || idx >= scenes.length) return;
+  currentScene = idx;
+  let img = document.querySelector('#canvasFrame img');
+  if(!img) {
+    img = document.createElement('img');
+    document.getElementById('canvasFrame').insertBefore(img, document.querySelector('.canvas-overlay'));
   }
+  img.src = scenes[idx].src;
+  document.getElementById('sceneBadge').textContent = 'Sahne ' + (idx + 1) + '/' + scenes.length;
+  applyFilters();
 }
+
+function prevScene() { showScene(currentScene - 1); }
+function nextScene() { showScene(currentScene + 1); }
+function playPreview() { toast('Önizleme başlatılıyor...', 'info'); }
+
+// === TIMELINE ===
+function updateTimeline() {
+  const track = document.getElementById('videoTrack');
+  track.innerHTML = '';
+  scenes.forEach((s, i) => {
+    const clip = document.createElement('div');
+    clip.className = 'clip scene';
+    clip.textContent = 'Sahne ' + (i + 1);
+    clip.style.width = (100 / Math.max(scenes.length, 1)) + '%';
+    clip.onclick = () => showScene(i);
+    track.appendChild(clip);
+  });
+  const ph = document.createElement('div');
+  ph.className = 'playhead';
+  ph.id = 'playhead';
+  track.appendChild(ph);
+  document.getElementById('tlDuration').textContent = '/ ' + (scenes.length * 2) + ':00';
+}
+
+function addScene() { document.getElementById('fileInput').click(); }
+function addTransition() { switchMode('transitions'); toast('Geçiş türü seçin', 'info'); }
+function exportVideo() { toast('Video oluşturuluyor...', 'info'); }
+
+// === AI CHAT ===
+let chatOpen = false;
+function toggleChat() {
+  chatOpen = !chatOpen;
+  document.getElementById('aiChat').classList.toggle('open', chatOpen);
+  document.getElementById('aiFab').style.display = chatOpen ? 'none' : 'flex';
+}
+
+async function sendAI() {
+  const input = document.getElementById('aiInput');
+  const text = input.value.trim();
+  if(!text) return;
+  input.value = '';
+  addAIMsg(text, 'user');
+  const model = document.getElementById('aiModel').value;
+  try {
+    let url = model === 'gemini' ? '/api/chat/gemini' : '/api/claude-local/send';
+    const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({text}) });
+    const d = await r.json();
+    if(model === 'gemini' && d.response) addAIMsg(d.response, 'bot');
+    else if(model === 'claude') addAIMsg('Claude düşünüyor...', 'bot');
+  } catch(e) { addAIMsg('Bağlantı hatası', 'bot'); }
+}
+
+function addAIMsg(text, type) {
+  const el = document.createElement('div');
+  el.className = 'ai-msg ' + type;
+  el.textContent = text;
+  document.getElementById('aiMessages').appendChild(el);
+  document.getElementById('aiMessages').scrollTop = 999999;
+}
+
+// Claude reply polling
+let seenIds = {};
+setInterval(() => {
+  fetch('/api/claude-local/replies?since=0&_=' + Date.now()).then(r=>r.json()).then(d => {
+    if(d.replies) d.replies.forEach(r => {
+      if(!seenIds[r.id]) { seenIds[r.id]=true; addAIMsg(r.text, 'bot'); }
+    });
+  }).catch(()=>{});
+}, 3000);
+
+// === SOCKET ===
+socket.on('connect', () => { document.getElementById('statusDot').style.background = 'var(--green)'; });
+socket.on('disconnect', () => { document.getElementById('statusDot').style.background = 'var(--fire1)'; });
+socket.on('claude_reply', d => { if(d && d.id && !seenIds[d.id]) { seenIds[d.id]=true; addAIMsg(d.text,'bot'); } });
+
+// === UTILS ===
+function toast(msg, type) {
+  const d = document.createElement('div');
+  d.className = 'toast ' + (type||'info');
+  d.textContent = msg;
+  document.getElementById('toastBox').appendChild(d);
+  setTimeout(() => d.remove(), 3000);
+}
+
+// Slider value display
+document.querySelectorAll('.slider-row input[type=range]').forEach(s => {
+  s.addEventListener('input', () => { s.nextElementSibling.textContent = s.value; });
+});
+
+// Drag & drop
+const frame = document.getElementById('canvasFrame');
+frame.addEventListener('dragover', e => { e.preventDefault(); frame.style.borderColor = 'var(--accent)'; });
+frame.addEventListener('dragleave', () => { frame.style.borderColor = 'var(--border)'; });
+frame.addEventListener('drop', e => { e.preventDefault(); frame.style.borderColor = 'var(--border)'; handleUpload(e.dataTransfer.files); });
 </script>
 </body>
 </html>

@@ -1,23 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const { validate, schemas } = require('../middlewares/validate');
+const stateService = require('../services/state-service');
+const logger = require('../utils/logger');
 
-// Onay kuyruğu (max 100 kayıt — bellek sızıntısı önlemi)
-const pendingApprovals = [];
-const approvalResults = [];
-
-// Eski onayları temizle (1 saatten eski)
-setInterval(() => {
-  const cutoff = Date.now() - 3600000;
-  while (pendingApprovals.length > 0 && new Date(pendingApprovals[0].timestamp).getTime() < cutoff) {
-    pendingApprovals.shift();
-  }
-  while (approvalResults.length > 100) {
-    approvalResults.shift();
-  }
-}, 300000); // 5 dakikada bir
-
-// Onay isteği gönder (Claude bu endpoint'i çağırır)
-router.post('/request', (req, res) => {
+// Onay isteği gönder
+router.post('/request', validate(schemas.approvalRequest), async (req, res) => {
   const { title, description, type } = req.body;
   const approval = {
     id: Date.now().toString(),
@@ -27,47 +15,41 @@ router.post('/request', (req, res) => {
     timestamp: new Date().toISOString(),
     status: 'pending'
   };
-  pendingApprovals.push(approval);
+  await stateService.pushApproval(approval);
 
-  // Socket ile tablete bildir
   if (global.io) {
     global.io.emit('approval_request', approval);
   }
 
-  console.log(`\n🔔 ONAY İSTEĞİ: ${title}\n   ${description}\n`);
+  logger.info('Onay isteği', { title, id: approval.id });
   res.json({ ok: true, approvalId: approval.id });
 });
 
-// Bekleyen onayları getir (tablet poll eder)
-router.get('/pending', (req, res) => {
-  const pending = pendingApprovals.filter(a => a.status === 'pending');
-  res.json({ approvals: pending });
+// Bekleyen onayları getir
+router.get('/pending', async (req, res) => {
+  const approvals = await stateService.getPendingApprovals();
+  res.json({ approvals });
 });
 
-// Onay ver veya reddet (tabletten gelir)
-router.post('/respond/:id', (req, res) => {
+// Onay ver veya reddet
+router.post('/respond/:id', validate(schemas.approvalResponse), async (req, res) => {
   const { id } = req.params;
-  const { decision } = req.body; // 'approved' veya 'rejected'
+  const { decision } = req.body;
 
-  const approval = pendingApprovals.find(a => a.id === id);
+  const approval = await stateService.respondApproval(id, decision);
   if (!approval) return res.json({ ok: false, error: 'Onay bulunamadı' });
-
-  approval.status = decision;
-  approval.respondedAt = new Date().toISOString();
-
-  approvalResults.push(approval);
 
   if (global.io) {
     global.io.emit('approval_response', approval);
   }
 
-  console.log(`\n${decision === 'approved' ? '✅' : '❌'} ONAY SONUCU: ${approval.title} → ${decision}\n`);
+  logger.info('Onay yanıtlandı', { id, decision });
   res.json({ ok: true, approval });
 });
 
-// Son onay sonucunu kontrol et (Claude poll eder)
-router.get('/result/:id', (req, res) => {
-  const approval = pendingApprovals.find(a => a.id === req.params.id);
+// Onay durumunu kontrol et
+router.get('/result/:id', async (req, res) => {
+  const approval = await stateService.getApprovalById(req.params.id);
   if (!approval) return res.json({ status: 'not_found' });
   res.json({ status: approval.status, approval });
 });
