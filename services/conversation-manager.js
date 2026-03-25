@@ -117,6 +117,18 @@ class ConversationManager {
     const msg = { sender, text, timestamp: new Date().toISOString() };
     this.messages.push(msg);
     this._emit('message', msg);
+    this._logMessage(msg);
+  }
+
+  _logMessage(msg) {
+    try {
+      const logFile = path.join(__dirname, '..', 'chat-history.json');
+      let history = [];
+      if (fs.existsSync(logFile)) history = JSON.parse(fs.readFileSync(logFile, 'utf8'));
+      history.push({ from: msg.sender, text: msg.text, timestamp: msg.timestamp });
+      if (history.length > 500) history = history.slice(-500);
+      fs.writeFileSync(logFile, JSON.stringify(history, null, 2));
+    } catch(e) {}
   }
 
   _emit(event, data) {
