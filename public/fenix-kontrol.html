@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>FENIX — Kontrol Paneli</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--mor:#a855f7;--buz:#a0fbff;--turuncu:#ff6600;--yesil:#4ade80;--kirmizi:#f87171;--bg:#0a0510;--card:#110820}
+html,body{width:100vw;height:100vh;overflow:hidden;background:var(--bg);color:#fff;font-family:'Rajdhani',sans-serif}
+
+.kontrol-root{display:flex;flex-direction:column;height:100vh;width:100vw}
+
+/* HEADER */
+.k-header{height:clamp(48px,4vw,64px);background:linear-gradient(90deg,#0d0520,#1a0830);border-bottom:2px solid var(--mor);display:flex;align-items:center;padding:0 clamp(12px,1.5vw,24px);gap:clamp(8px,1vw,16px);flex-shrink:0}
+.k-logo{font-family:'Orbitron',sans-serif;font-size:clamp(14px,1.2vw,22px);font-weight:900;letter-spacing:clamp(3px,0.4vw,8px);background:linear-gradient(135deg,#c084fc,#a855f7,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.k-sub{font-size:clamp(8px,0.6vw,11px);color:rgba(168,85,247,.5);letter-spacing:2px;text-transform:uppercase}
+.k-status{margin-left:auto;display:flex;gap:clamp(8px,1vw,16px);align-items:center}
+.k-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
+.k-dot.on{background:var(--yesil);box-shadow:0 0 8px var(--yesil)}
+.k-dot.off{background:var(--kirmizi);box-shadow:0 0 8px var(--kirmizi)}
+.k-status span{font-size:clamp(8px,0.6vw,11px);font-family:'Orbitron',sans-serif;letter-spacing:1px;color:rgba(255,255,255,.6)}
+
+/* BODY */
+.k-body{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr;gap:clamp(8px,0.8vw,16px);padding:clamp(8px,0.8vw,16px);min-height:0}
+
+/* KARTLAR */
+.k-card{background:var(--card);border:1px solid rgba(168,85,247,.2);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;transition:border-color .3s}
+.k-card:hover{border-color:var(--mor)}
+.k-card-hdr{padding:clamp(8px,0.6vw,14px) clamp(10px,0.8vw,16px);border-bottom:1px solid rgba(168,85,247,.1);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.k-card-hdr .k-icon{font-size:clamp(14px,1.2vw,22px)}
+.k-card-hdr .k-title{font-family:'Orbitron',sans-serif;font-size:clamp(9px,0.7vw,13px);letter-spacing:clamp(1px,0.15vw,3px);color:var(--mor)}
+.k-card-body{flex:1;padding:clamp(8px,0.6vw,14px) clamp(10px,0.8vw,16px);overflow-y:auto;display:flex;flex-direction:column;gap:clamp(6px,0.5vw,12px)}
+
+/* İSTATİSTİK SATIRI */
+.k-stat{display:flex;justify-content:space-between;align-items:center;padding:clamp(6px,0.4vw,10px) 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.k-stat-label{font-size:clamp(9px,0.6vw,12px);color:rgba(255,255,255,.5)}
+.k-stat-value{font-family:'Orbitron',sans-serif;font-size:clamp(10px,0.7vw,14px);color:var(--buz);letter-spacing:1px}
+.k-stat-value.green{color:var(--yesil)}
+.k-stat-value.red{color:var(--kirmizi)}
+.k-stat-value.orange{color:var(--turuncu)}
+
+/* BÜYüK SAYI */
+.k-big{text-align:center;padding:clamp(8px,0.8vw,16px) 0}
+.k-big-num{font-family:'Orbitron',sans-serif;font-size:clamp(24px,2.5vw,48px);font-weight:900;color:var(--mor);text-shadow:0 0 20px rgba(168,85,247,.4)}
+.k-big-label{font-size:clamp(8px,0.55vw,11px);color:rgba(255,255,255,.3);letter-spacing:2px;text-transform:uppercase;margin-top:4px}
+
+/* PROGRESS BAR */
+.k-bar-wrap{width:100%;height:clamp(6px,0.5vw,10px);background:rgba(255,255,255,.06);border-radius:5px;overflow:hidden}
+.k-bar-fill{height:100%;border-radius:5px;transition:width .5s ease}
+
+/* BUTONLAR */
+.k-btn{border:1px solid rgba(168,85,247,.3);background:rgba(168,85,247,.08);color:var(--mor);font-family:'Orbitron',sans-serif;font-size:clamp(8px,0.55vw,11px);letter-spacing:1px;padding:clamp(6px,0.45vw,10px) clamp(10px,0.8vw,16px);border-radius:6px;cursor:pointer;transition:all .2s;text-align:center}
+.k-btn:hover{background:rgba(168,85,247,.2);border-color:var(--mor)}
+.k-btn.fire{background:linear-gradient(135deg,rgba(168,85,247,.2),rgba(124,58,237,.3));border-color:var(--mor)}
+
+/* LOG */
+.k-log{font-family:monospace;font-size:clamp(8px,0.5vw,10px);color:rgba(255,255,255,.4);padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.k-log .k-log-time{color:var(--mor);margin-right:6px}
+
+/* OTURUM LİSTESİ */
+.k-session{display:flex;align-items:center;gap:8px;padding:clamp(5px,0.4vw,8px);background:rgba(168,85,247,.04);border-radius:6px;border:1px solid rgba(168,85,247,.08)}
+.k-session-icon{font-size:14px}
+.k-session-info{flex:1}
+.k-session-name{font-size:clamp(8px,0.6vw,11px);color:rgba(255,255,255,.7)}
+.k-session-date{font-size:clamp(7px,0.5vw,9px);color:rgba(255,255,255,.3)}
+.k-session-badge{font-family:'Orbitron',sans-serif;font-size:7px;padding:2px 6px;border-radius:3px;letter-spacing:1px}
+.k-session-badge.liked{background:rgba(74,222,128,.15);color:var(--yesil)}
+.k-session-badge.disliked{background:rgba(248,113,113,.15);color:var(--kirmizi)}
+
+/* TABLET responsive */
+@media(max-width:900px){
+  .k-body{grid-template-columns:1fr 1fr;grid-template-rows:auto}
+}
+@media(max-width:600px){
+  .k-body{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="kontrol-root">
+
+  <!-- HEADER -->
+  <div class="k-header">
+    <div>
+      <div class="k-logo">FENIX KONTROL</div>
+      <div class="k-sub">v34.1 · Living Engine · Kontrol Paneli</div>
+    </div>
+    <div class="k-status">
+      <span><span class="k-dot" id="kd-claude"></span>CLAUDE</span>
+      <span><span class="k-dot" id="kd-gemini"></span>GEMINI</span>
+      <span><span class="k-dot on"></span>SİSTEM</span>
+    </div>
+  </div>
+
+  <!-- BODY -->
+  <div class="k-body">
+
+    <!-- 1. SİSTEM DURUMU -->
+    <div class="k-card">
+      <div class="k-card-hdr"><span class="k-icon">🔥</span><span class="k-title">SİSTEM DURUMU</span></div>
+      <div class="k-card-body">
+        <div class="k-stat"><span class="k-stat-label">Versiyon</span><span class="k-stat-value">v34.1</span></div>
+        <div class="k-stat"><span class="k-stat-label">Mod</span><span class="k-stat-value" id="ks-mode">—</span></div>
+        <div class="k-stat"><span class="k-stat-label">Claude API</span><span class="k-stat-value" id="ks-claude">—</span></div>
+        <div class="k-stat"><span class="k-stat-label">Gemini API</span><span class="k-stat-value" id="ks-gemini">—</span></div>
+        <div class="k-stat"><span class="k-stat-label">Uptime</span><span class="k-stat-value" id="ks-uptime">0s</span></div>
+        <div class="k-stat"><span class="k-stat-label">LocalStorage</span><span class="k-stat-value" id="ks-storage">—</span></div>
+        <div style="margin-top:auto;display:flex;flex-direction:column;gap:4px">
+          <button class="k-btn fire" onclick="window.open('fenix.html','_blank')">🔥 FENIX AÇ</button>
+          <button class="k-btn" onclick="testAPIs()">🧪 API TEST</button>
+          <button class="k-btn" onclick="window.open('https://photoreel-194617495310.europe-west1.run.app/kontrol.html','_blank')">☁️ CLOUD KONTROL</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. BEĞENİ İSTATİSTİKLERİ -->
+    <div class="k-card">
+      <div class="k-card-hdr"><span class="k-icon">📊</span><span class="k-title">BEĞENİ ANALİZİ</span></div>
+      <div class="k-card-body">
+        <div class="k-big">
+          <div class="k-big-num" id="kb-total">0</div>
+          <div class="k-big-label">Toplam Etkileşim</div>
+        </div>
+        <div class="k-stat"><span class="k-stat-label">👍 Beğenilen</span><span class="k-stat-value green" id="kb-liked">0</span></div>
+        <div class="k-stat"><span class="k-stat-label">👎 Beğenilmeyen</span><span class="k-stat-value red" id="kb-disliked">0</span></div>
+        <div class="k-stat"><span class="k-stat-label">Beğeni Oranı</span><span class="k-stat-value" id="kb-ratio">—</span></div>
+        <div class="k-bar-wrap"><div class="k-bar-fill" id="kb-bar" style="width:0%;background:linear-gradient(90deg,var(--mor),var(--buz))"></div></div>
+        <div class="k-stat"><span class="k-stat-label">Hızlı Mod</span><span class="k-stat-value" id="kb-hizli">0</span></div>
+        <div class="k-stat"><span class="k-stat-label">Pro Mod</span><span class="k-stat-value" id="kb-pro">0</span></div>
+        <div class="k-stat"><span class="k-stat-label">360° Mod</span><span class="k-stat-value" id="kb-360">0</span></div>
+      </div>
+    </div>
+
+    <!-- 3. SHADOW LEARNING -->
+    <div class="k-card">
+      <div class="k-card-hdr"><span class="k-icon">🧠</span><span class="k-title">SHADOW LEARNING</span></div>
+      <div class="k-card-body">
+        <div class="k-stat"><span class="k-stat-label">Öğrenme Seviyesi</span><span class="k-stat-value" id="kl-level">Çırak</span></div>
+        <div class="k-bar-wrap"><div class="k-bar-fill" id="kl-bar" style="width:0%;background:linear-gradient(90deg,#7c3aed,#c084fc)"></div></div>
+        <div class="k-stat"><span class="k-stat-label">Toplam Veri</span><span class="k-stat-value" id="kl-data">0</span></div>
+        <div class="k-stat"><span class="k-stat-label">Tercih Profili</span><span class="k-stat-value" id="kl-profile">Oluşturulacak</span></div>
+        <div id="kl-prefs" style="display:flex;flex-direction:column;gap:4px"></div>
+        <div style="margin-top:auto;display:flex;gap:6px">
+          <button class="k-btn" onclick="resetLearning()">🗑 SIFIRLA</button>
+          <button class="k-btn fire" onclick="exportLearning()">📤 AKTAR</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. OTURUM GEÇMİŞİ -->
+    <div class="k-card">
+      <div class="k-card-hdr"><span class="k-icon">📋</span><span class="k-title">OTURUM GEÇMİŞİ</span></div>
+      <div class="k-card-body" id="k-sessions">
+        <div style="text-align:center;color:rgba(255,255,255,.2);font-size:10px;padding:20px">Oturum verisi yükleniyor...</div>
+      </div>
+    </div>
+
+    <!-- 5. EĞİTİM VERİSİ -->
+    <div class="k-card">
+      <div class="k-card-hdr"><span class="k-icon">🎓</span><span class="k-title">EĞİTİM VERİSİ</span></div>
+      <div class="k-card-body">
+        <div class="k-stat"><span class="k-stat-label">Kayıtlı Oturum</span><span class="k-stat-value" id="kt-sessions">0</span></div>
+        <div class="k-stat"><span class="k-stat-label">Kayıtlı Proje</span><span class="k-stat-value" id="kt-projects">0</span></div>
+        <div class="k-stat"><span class="k-stat-label">Medya Sayısı</span><span class="k-stat-value" id="kt-media">0</span></div>
+        <div class="k-stat"><span class="k-stat-label">Son Aktivite</span><span class="k-stat-value" id="kt-last">—</span></div>
+        <div style="margin-top:auto;display:flex;gap:6px">
+          <button class="k-btn" onclick="clearAllData()">🗑 HEPSİNİ SİL</button>
+          <button class="k-btn fire" onclick="exportAllData()">📦 JSON AKTAR</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. LOG -->
+    <div class="k-card">
+      <div class="k-card-hdr"><span class="k-icon">📜</span><span class="k-title">SİSTEM LOG</span></div>
+      <div class="k-card-body" id="k-logs">
+        <div class="k-log"><span class="k-log-time">—</span>Kontrol paneli başlatıldı</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="fenix-config.js"></script>
+<script>
+var startTime = Date.now();
+
+function kLog(msg){
+  var el = document.getElementById('k-logs');
+  if(!el) return;
+  var now = new Date().toLocaleTimeString('tr-TR');
+  var div = document.createElement('div');
+  div.className = 'k-log';
+  div.innerHTML = '<span class="k-log-time">['+now+']</span> '+msg;
+  el.insertBefore(div, el.firstChild);
+  if(el.children.length > 50) el.removeChild(el.lastChild);
+}
+
+function refresh(){
+  /* Sistem durumu */
+  var cfg = (typeof FENIX_CONFIG !== 'undefined') ? FENIX_CONFIG : null;
+  var claudeOk = cfg && cfg.claude.enabled && cfg.claude.api_key !== 'BURAYA_CLAUDE_API_ANAHTARINI_YAZ';
+  var geminiOk = cfg && cfg.gemini.enabled && cfg.gemini.api_key !== 'BURAYA_GEMINI_API_ANAHTARINI_YAZ';
+
+  document.getElementById('kd-claude').className = 'k-dot ' + (claudeOk ? 'on' : 'off');
+  document.getElementById('kd-gemini').className = 'k-dot ' + (geminiOk ? 'on' : 'off');
+  document.getElementById('ks-claude').textContent = claudeOk ? '✅ Aktif' : '❌ Key Yok';
+  document.getElementById('ks-claude').className = 'k-stat-value ' + (claudeOk ? 'green' : 'red');
+  document.getElementById('ks-gemini').textContent = geminiOk ? '✅ Aktif' : '❌ Key Yok';
+  document.getElementById('ks-gemini').className = 'k-stat-value ' + (geminiOk ? 'green' : 'red');
+  document.getElementById('ks-mode').textContent = cfg ? cfg.mode : '—';
+
+  /* Uptime */
+  var sec = Math.floor((Date.now() - startTime) / 1000);
+  var min = Math.floor(sec/60); sec = sec%60;
+  document.getElementById('ks-uptime').textContent = min + 'dk ' + sec + 'sn';
+
+  /* Storage */
+  var used = 0;
+  for(var k in localStorage) { if(localStorage.hasOwnProperty(k)) used += localStorage[k].length; }
+  document.getElementById('ks-storage').textContent = (used/1024).toFixed(1) + ' KB';
+
+  /* Beğeni istatistikleri */
+  var feedback = JSON.parse(localStorage.getItem('fenix_feedback') || '[]');
+  var liked = feedback.filter(function(f){ return f.liked === true; }).length;
+  var disliked = feedback.filter(function(f){ return f.liked === false; }).length;
+  var total = liked + disliked;
+  var ratio = total > 0 ? Math.round(liked/total*100) : 0;
+
+  document.getElementById('kb-total').textContent = total;
+  document.getElementById('kb-liked').textContent = liked;
+  document.getElementById('kb-disliked').textContent = disliked;
+  document.getElementById('kb-ratio').textContent = ratio + '%';
+  document.getElementById('kb-bar').style.width = ratio + '%';
+
+  var hizli = feedback.filter(function(f){ return f.mode === 'hizli'; }).length;
+  var pro = feedback.filter(function(f){ return f.mode === 'pro'; }).length;
+  var m360 = feedback.filter(function(f){ return f.mode === '360'; }).length;
+  document.getElementById('kb-hizli').textContent = hizli;
+  document.getElementById('kb-pro').textContent = pro;
+  document.getElementById('kb-360').textContent = m360;
+
+  /* Shadow Learning */
+  var prefs = JSON.parse(localStorage.getItem('fenix_preferences') || '{}');
+  var dataCount = feedback.length;
+  var level = dataCount < 10 ? 'Çırak' : dataCount < 50 ? 'Kalfa' : 'Usta';
+  var levelPct = Math.min(100, Math.round(dataCount / 100 * 100));
+  document.getElementById('kl-level').textContent = level + ' (' + dataCount + '/100)';
+  document.getElementById('kl-bar').style.width = levelPct + '%';
+  document.getElementById('kl-data').textContent = dataCount + ' kayıt';
+  document.getElementById('kl-profile').textContent = dataCount > 0 ? '✅ Aktif' : 'Oluşturulacak';
+
+  /* Mod tercihleri */
+  var prefsEl = document.getElementById('kl-prefs');
+  prefsEl.innerHTML = '';
+  if(prefs.modes){
+    Object.keys(prefs.modes).forEach(function(m){
+      var mp = prefs.modes[m];
+      var div = document.createElement('div');
+      div.className = 'k-stat';
+      div.innerHTML = '<span class="k-stat-label">' + m.toUpperCase() + '</span><span class="k-stat-value">👍' + (mp.liked||0) + ' 👎' + (mp.disliked||0) + '</span>';
+      prefsEl.appendChild(div);
+    });
+  }
+
+  /* Eğitim verisi */
+  var training = JSON.parse(localStorage.getItem('fenix_training') || '[]');
+  var projects = JSON.parse(localStorage.getItem('fenix_projects') || '[]');
+  document.getElementById('kt-sessions').textContent = training.length;
+  document.getElementById('kt-projects').textContent = projects.length;
+  document.getElementById('kt-media').textContent = feedback.length;
+  var lastAct = feedback.length > 0 ? new Date(feedback[feedback.length-1].timestamp).toLocaleString('tr-TR') : '—';
+  document.getElementById('kt-last').textContent = lastAct;
+
+  /* Oturum geçmişi */
+  var sessEl = document.getElementById('k-sessions');
+  sessEl.innerHTML = '';
+  var allItems = feedback.slice(-20).reverse();
+  if(allItems.length === 0){
+    sessEl.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,.2);font-size:10px;padding:20px">Henüz etkileşim yok</div>';
+  } else {
+    allItems.forEach(function(item){
+      var div = document.createElement('div');
+      div.className = 'k-session';
+      var icon = item.liked ? '👍' : '👎';
+      var badge = item.liked ? 'liked' : 'disliked';
+      var badgeText = item.liked ? 'BEĞENDİ' : 'BEĞENMEDİ';
+      div.innerHTML = '<span class="k-session-icon">'+icon+'</span><div class="k-session-info"><div class="k-session-name">'+item.id+'</div><div class="k-session-date">'+new Date(item.timestamp).toLocaleString('tr-TR')+' · '+item.mode+'</div></div><span class="k-session-badge '+badge+'">'+badgeText+'</span>';
+      sessEl.appendChild(div);
+    });
+  }
+}
+
+function resetLearning(){
+  if(confirm('Shadow Learning verilerini sıfırla?')){
+    localStorage.removeItem('fenix_feedback');
+    localStorage.removeItem('fenix_preferences');
+    kLog('🗑 Shadow Learning sıfırlandı');
+    refresh();
+  }
+}
+
+function exportLearning(){
+  var data = {
+    feedback: JSON.parse(localStorage.getItem('fenix_feedback') || '[]'),
+    preferences: JSON.parse(localStorage.getItem('fenix_preferences') || '{}'),
+    exported: new Date().toISOString()
+  };
+  var blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  var a = document.createElement('a');
+  a.download = 'fenix-learning-'+Date.now()+'.json';
+  a.href = URL.createObjectURL(blob);
+  a.click();
+  kLog('📤 Learning verisi aktarıldı');
+}
+
+function clearAllData(){
+  if(confirm('TÜM Fenix verilerini sil? Bu işlem geri alınamaz!')){
+    localStorage.removeItem('fenix_feedback');
+    localStorage.removeItem('fenix_preferences');
+    localStorage.removeItem('fenix_training');
+    localStorage.removeItem('fenix_projects');
+    kLog('🗑 TÜM VERİLER SİLİNDİ');
+    refresh();
+  }
+}
+
+function exportAllData(){
+  var data = {
+    feedback: JSON.parse(localStorage.getItem('fenix_feedback') || '[]'),
+    preferences: JSON.parse(localStorage.getItem('fenix_preferences') || '{}'),
+    training: JSON.parse(localStorage.getItem('fenix_training') || '[]'),
+    projects: JSON.parse(localStorage.getItem('fenix_projects') || '[]'),
+    exported: new Date().toISOString(),
+    version: 'Fenix v34.1'
+  };
+  var blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  var a = document.createElement('a');
+  a.download = 'fenix-all-data-'+Date.now()+'.json';
+  a.href = URL.createObjectURL(blob);
+  a.click();
+  kLog('📦 Tüm veriler aktarıldı');
+}
+
+/* API Test */
+async function testAPIs(){
+  kLog('🧪 API testleri başlatılıyor...');
+  var cfg = (typeof FENIX_CONFIG !== 'undefined') ? FENIX_CONFIG : null;
+  if(!cfg){ kLog('❌ Config bulunamadı'); return; }
+
+  /* Claude test */
+  if(cfg.claude.enabled && cfg.claude.api_key !== 'BURAYA_CLAUDE_API_ANAHTARINI_YAZ'){
+    try {
+      kLog('🧠 Claude test ediliyor...');
+      var r = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST', headers:{'Content-Type':'application/json','x-api-key':cfg.claude.api_key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:cfg.claude.model,max_tokens:10,messages:[{role:'user',content:'Merhaba'}]})
+      });
+      if(r.ok){ kLog('✅ Claude API çalışıyor!'); document.getElementById('ks-claude').textContent='✅ Aktif'; document.getElementById('ks-claude').className='k-stat-value green'; }
+      else { kLog('❌ Claude API hata: ' + r.status); }
+    } catch(e){ kLog('❌ Claude bağlantı hatası: ' + e.message); }
+  } else { kLog('⚠️ Claude API key girilmemiş'); }
+
+  /* Gemini test */
+  if(cfg.gemini.enabled && cfg.gemini.api_key !== 'BURAYA_GEMINI_API_ANAHTARINI_YAZ'){
+    try {
+      kLog('🔮 Gemini test ediliyor...');
+      var r2 = await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+cfg.gemini.model+':generateContent?key='+cfg.gemini.api_key, {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{parts:[{text:'Merhaba'}]}],generationConfig:{maxOutputTokens:10}})
+      });
+      if(r2.ok){ kLog('✅ Gemini API çalışıyor!'); document.getElementById('ks-gemini').textContent='✅ Aktif'; document.getElementById('ks-gemini').className='k-stat-value green'; }
+      else { kLog('❌ Gemini API hata: ' + r2.status); }
+    } catch(e){ kLog('❌ Gemini bağlantı hatası: ' + e.message); }
+  } else { kLog('⚠️ Gemini API key girilmemiş'); }
+
+  /* Cloud test */
+  try {
+    kLog('☁️ Cloud Run kontrol ediliyor...');
+    var r3 = await fetch('https://photoreel-194617495310.europe-west1.run.app/api/claude-local/inbox');
+    if(r3.ok){ kLog('✅ Cloud Run aktif!'); }
+    else { kLog('❌ Cloud Run hata: ' + r3.status); }
+  } catch(e){ kLog('⚠️ Cloud Run erişilemedi (CORS olabilir)'); }
+
+  kLog('🧪 API testleri tamamlandı');
+}
+
+/* Başlat */
+kLog('🔥 Kontrol paneli başlatıldı');
+refresh();
+setInterval(refresh, 5000);
+setInterval(function(){
+  var sec = Math.floor((Date.now() - startTime) / 1000);
+  var min = Math.floor(sec/60); sec = sec%60;
+  document.getElementById('ks-uptime').textContent = min + 'dk ' + sec + 'sn';
+}, 1000);
+</script>
+</body>
+</html>
