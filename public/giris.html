@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fenix — Giriş</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@300;400;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#050508;color:#F0E6D3;
+  font-family:'Inter',sans-serif;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 20px;overflow:hidden;
+}
+
+canvas#fire{position:fixed;inset:0;pointer-events:none;z-index:0}
+
+.wrap{position:relative;z-index:1;width:100%;max-width:360px;text-align:center}
+
+/* Phoenix kuşu SVG alanı */
+.phoenix-wrap{
+  margin-bottom:20px;
+  display:flex;justify-content:center;
+  filter:drop-shadow(0 0 24px rgba(255,100,0,0.5));
+  animation:float 4s ease-in-out infinite;
+}
+@keyframes float{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-8px)}
+}
+
+.logo{
+  font-family:'Cinzel',serif;font-size:34px;font-weight:900;
+  letter-spacing:10px;color:#C4A882;
+  text-shadow:0 0 40px rgba(255,106,0,0.6),0 0 80px rgba(255,69,0,0.2);
+  margin-bottom:4px;
+}
+.sub{font-size:9px;letter-spacing:4px;color:rgba(196,168,130,0.35);margin-bottom:36px}
+
+.form-box{
+  background:rgba(8,6,4,0.88);
+  border:1px solid rgba(255,69,0,0.12);
+  border-radius:6px;padding:32px 28px;
+  backdrop-filter:blur(16px);
+}
+
+.field{margin-bottom:18px;text-align:left}
+.field label{
+  display:block;font-size:9px;letter-spacing:3px;
+  color:rgba(255,106,0,0.45);margin-bottom:7px;
+}
+.field input{
+  width:100%;background:rgba(255,69,0,0.03);
+  border:1px solid rgba(255,69,0,0.12);border-radius:4px;
+  padding:12px 15px;font-size:14px;color:#F0E6D3;
+  font-family:'Inter',sans-serif;outline:none;
+  transition:border-color .3s,box-shadow .3s;letter-spacing:0.5px;
+}
+.field input:focus{
+  border-color:rgba(255,106,0,0.35);
+  box-shadow:0 0 18px rgba(255,69,0,0.08);
+}
+.field input::placeholder{color:rgba(196,168,130,0.18);font-size:13px}
+
+.btn{
+  width:100%;padding:14px;margin-top:6px;
+  background:rgba(255,69,0,0.08);
+  border:1px solid rgba(255,106,0,0.25);border-radius:4px;
+  font-family:'Cinzel',serif;font-size:11px;letter-spacing:4px;
+  color:rgba(255,150,0,0.75);cursor:pointer;
+  transition:all .3s;
+}
+.btn:hover{background:rgba(255,69,0,0.18);color:#FFAA00;box-shadow:0 0 28px rgba(255,69,0,0.18)}
+.btn:active{transform:scale(0.98)}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+
+.err{
+  margin-top:14px;padding:9px 13px;
+  background:rgba(255,0,0,0.07);border:1px solid rgba(255,0,0,0.18);
+  border-radius:4px;font-size:12px;color:rgba(255,80,80,0.75);
+  display:none;letter-spacing:0.5px;
+}
+.err.show{display:block}
+
+.loading{
+  display:inline-block;width:12px;height:12px;
+  border:2px solid rgba(255,106,0,0.2);
+  border-top-color:rgba(255,106,0,0.7);
+  border-radius:50%;animation:spin .6s linear infinite;
+  margin-right:8px;vertical-align:middle;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<canvas id="fire"></canvas>
+
+<div class="wrap">
+
+  <!-- Phoenix kuşu -->
+  <div class="phoenix-wrap">
+    <svg width="90" height="90" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Gövde ateş alevi -->
+      <ellipse cx="50" cy="62" rx="10" ry="16" fill="url(#bodyFire)" opacity="0.9"/>
+      <!-- Sol kanat büyük -->
+      <path d="M50 55 C35 48, 10 42, 5 22 C18 30, 28 36, 38 46 C30 28, 32 8, 45 2 C42 18, 44 36, 50 55Z"
+            fill="url(#wingL)" opacity="0.92"/>
+      <!-- Sağ kanat büyük -->
+      <path d="M50 55 C65 48, 90 42, 95 22 C82 30, 72 36, 62 46 C70 28, 68 8, 55 2 C58 18, 56 36, 50 55Z"
+            fill="url(#wingR)" opacity="0.92"/>
+      <!-- Sol kanat iç tüy detay -->
+      <path d="M50 55 C42 50, 25 46, 15 32 C26 36, 36 40, 45 50Z"
+            fill="rgba(255,200,60,0.35)"/>
+      <!-- Sağ kanat iç tüy detay -->
+      <path d="M50 55 C58 50, 75 46, 85 32 C74 36, 64 40, 55 50Z"
+            fill="rgba(255,200,60,0.35)"/>
+      <!-- Kuyruğun sol alevi -->
+      <path d="M44 74 C40 80, 30 90, 28 100 C36 92, 42 84, 46 78Z"
+            fill="url(#tailFire)" opacity="0.8"/>
+      <!-- Kuyruğun sağ alevi -->
+      <path d="M56 74 C60 80, 70 90, 72 100 C64 92, 58 84, 54 78Z"
+            fill="url(#tailFire)" opacity="0.8"/>
+      <!-- Kuyruğun orta alevi -->
+      <path d="M50 76 C48 84, 46 92, 48 100 C50 92, 52 84, 52 76Z"
+            fill="rgba(255,220,80,0.7)"/>
+      <!-- Baş -->
+      <circle cx="50" cy="42" r="9" fill="url(#headFire)"/>
+      <!-- Tepe alevi / ibik -->
+      <path d="M50 33 C47 24, 44 16, 48 8 C49 14, 50 20, 52 14 C53 20, 52 26, 50 33Z"
+            fill="url(#crestFire)" opacity="0.9"/>
+      <!-- Sol ibik tüy -->
+      <path d="M48 33 C44 22, 38 14, 35 4 C40 10, 43 20, 47 32Z"
+            fill="rgba(255,160,20,0.6)"/>
+      <!-- Sağ ibik tüy -->
+      <path d="M52 33 C56 22, 62 14, 65 4 C60 10, 57 20, 53 32Z"
+            fill="rgba(255,160,20,0.6)"/>
+      <!-- Göz -->
+      <circle cx="50" cy="41" r="2.5" fill="#FF8C00"/>
+      <circle cx="50" cy="41" r="1.2" fill="#FFE44A"/>
+      <circle cx="50.7" cy="40.3" r="0.5" fill="white" opacity="0.8"/>
+      <!-- Gaga -->
+      <path d="M50 47 L47 50 L50 49 L53 50Z" fill="#C4A882"/>
+
+      <!-- Gradients -->
+      <defs>
+        <radialGradient id="wingL" cx="40%" cy="50%">
+          <stop offset="0%" stop-color="#FF8C00"/>
+          <stop offset="50%" stop-color="#FF4500"/>
+          <stop offset="100%" stop-color="#8B1A00"/>
+        </radialGradient>
+        <radialGradient id="wingR" cx="60%" cy="50%">
+          <stop offset="0%" stop-color="#FF8C00"/>
+          <stop offset="50%" stop-color="#FF4500"/>
+          <stop offset="100%" stop-color="#8B1A00"/>
+        </radialGradient>
+        <radialGradient id="headFire" cx="50%" cy="40%">
+          <stop offset="0%" stop-color="#FFCC00"/>
+          <stop offset="60%" stop-color="#FF6A00"/>
+          <stop offset="100%" stop-color="#CC2200"/>
+        </radialGradient>
+        <linearGradient id="crestFire" x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0%" stop-color="#FF6A00"/>
+          <stop offset="100%" stop-color="#FFE044"/>
+        </linearGradient>
+        <linearGradient id="bodyFire" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FF6A00"/>
+          <stop offset="100%" stop-color="#FF2200" stop-opacity="0.5"/>
+        </linearGradient>
+        <linearGradient id="tailFire" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#FF6A00"/>
+          <stop offset="100%" stop-color="#FF2200" stop-opacity="0"/>
+        </linearGradient>
+      </defs>
+    </svg>
+  </div>
+
+  <div class="logo">FENİX</div>
+  <div class="sub">SADECE SEN GİREBİLİRSİN</div>
+
+  <div class="form-box">
+    <div class="field">
+      <label>KULLANICI</label>
+      <input type="text" id="usr" placeholder="kullanıcı adı" autocomplete="username" autocapitalize="none">
+    </div>
+    <div class="field">
+      <label>ŞİFRE</label>
+      <input type="password" id="pwd" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn" id="btn-giris" onclick="giris()">ATEŞİ YAK</button>
+    <div class="err" id="err-msg"></div>
+  </div>
+</div>
+
+<script>
+// Hafif ateş zemini
+(function(){
+  const canvas = document.getElementById('fire');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+
+  function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  window.addEventListener('resize', resize); resize();
+
+  function P(){ this.reset(); }
+  P.prototype.reset = function(){
+    this.x = W * 0.5 + (Math.random()-0.5)*W*0.5;
+    this.y = H + 10;
+    this.vx = (Math.random()-0.5)*1;
+    this.vy = -(Math.random()*1.8+1.2);
+    this.life = 0; this.maxLife = Math.random()*70+50;
+    this.r = Math.random()*2.5+1;
+  };
+  for(let i=0;i<50;i++){const p=new P();p.life=Math.random()*p.maxLife;particles.push(p);}
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    particles.forEach(p=>{
+      p.life++; p.x+=p.vx+Math.sin(p.life*0.04)*0.4; p.y+=p.vy;
+      if(p.life>=p.maxLife){p.reset();return;}
+      const t=p.life/p.maxLife;
+      const a=t<0.2?t/0.2:1-(t-0.2)/0.8;
+      const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.r*3);
+      g.addColorStop(0,`rgba(255,180,50,${a*0.8})`);
+      g.addColorStop(0.5,`rgba(255,80,0,${a*0.4})`);
+      g.addColorStop(1,'transparent');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(p.x,p.y,p.r*3,0,Math.PI*2); ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// Zaten giriş yapmışsa direkt yönlendir
+(function(){
+  const token = localStorage.getItem('fenix_token');
+  if(token){
+    const next = new URLSearchParams(location.search).get('next') || '/satici';
+    // Token geçerliliğini backend'e sor
+    fetch('/api/auth/admin/check', {
+      headers: { 'Authorization': 'Bearer ' + token }
+    }).then(r => {
+      if(r.ok) window.location.href = next;
+      else localStorage.removeItem('fenix_token');
+    }).catch(()=>{});
+  }
+})();
+
+document.addEventListener('keydown', e => { if(e.key==='Enter') giris(); });
+
+async function giris(){
+  const btn = document.getElementById('btn-giris');
+  const errEl = document.getElementById('err-msg');
+  const usr = document.getElementById('usr').value.trim();
+  const pwd = document.getElementById('pwd').value;
+  errEl.classList.remove('show');
+
+  if(!usr || !pwd){
+    errEl.textContent = 'Kullanıcı adı ve şifre gerekli.';
+    errEl.classList.add('show'); return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading"></span>GİRİLİYOR';
+
+  try {
+    const res = await fetch('/api/auth/admin', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ username: usr, password: pwd })
+    });
+    const data = await res.json();
+
+    if(data.ok && data.token){
+      localStorage.setItem('fenix_token', data.token);
+      const next = new URLSearchParams(location.search).get('next') || '/satici';
+      window.location.href = next;
+    } else {
+      errEl.textContent = data.error || 'Hatalı kullanıcı adı veya şifre.';
+      errEl.classList.add('show');
+      btn.disabled = false; btn.innerHTML = 'ATEŞİ YAK';
+    }
+  } catch(e) {
+    errEl.textContent = 'Sunucuya bağlanılamadı.';
+    errEl.classList.add('show');
+    btn.disabled = false; btn.innerHTML = 'ATEŞİ YAK';
+  }
+}
+</script>
+</body>
+</html>

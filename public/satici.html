@@ -141,6 +141,34 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 .logo-upload-hint{font-size:10px;color:var(--soluk);letter-spacing:.5px}
 .logo-clear{position:absolute;top:8px;right:8px;background:rgba(5,5,8,.8);border:1px solid rgba(255,69,0,.2);color:var(--soluk);border-radius:4px;padding:4px 8px;font-size:9px;letter-spacing:1px;cursor:pointer;z-index:2;display:none}
 
+/* LOGO INLINE — adım 1'de görünen logo upload */
+.logo-inline-box{margin-top:20px}
+.logo-inline-label{font-size:9px;letter-spacing:3px;color:rgba(255,106,0,.45);margin-bottom:8px}
+.logo-inline-upload{
+  display:flex;align-items:center;gap:12px;
+  border:1px dashed rgba(255,69,0,.18);border-radius:4px;
+  padding:14px 14px;cursor:pointer;position:relative;
+  background:rgba(255,69,0,.02);transition:border-color .2s;
+}
+.logo-inline-upload:hover{border-color:rgba(255,106,0,.35)}
+.logo-inline-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.logo-inline-preview{
+  width:44px;height:44px;flex-shrink:0;
+  border:1px solid rgba(255,69,0,.18);border-radius:4px;
+  background:rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;
+  overflow:hidden;font-size:18px;color:rgba(196,168,130,.4);
+}
+.logo-inline-text{flex:1}
+.logo-inline-text>div:first-child{font-size:12px;font-weight:600;color:var(--kul);margin-bottom:2px}
+.logo-inline-hint{font-size:10px;color:var(--soluk);letter-spacing:.3px;line-height:1.4}
+.logo-inline-clear{
+  position:absolute;top:8px;right:8px;
+  background:rgba(5,5,8,.85);border:1px solid rgba(255,69,0,.2);
+  color:var(--soluk);border-radius:4px;padding:4px 8px;
+  font-size:9px;letter-spacing:1px;cursor:pointer;z-index:2;
+}
+.logo-inline-clear:hover{color:var(--alev);border-color:rgba(255,106,0,.4)}
+
 /* BUTONLAR */
 .btn-main{width:100%;padding:16px;border:1px solid rgba(255,106,0,.4);border-radius:4px;background:rgba(255,69,0,.12);color:var(--alev);font-size:11px;font-weight:700;font-family:'Cinzel',serif;letter-spacing:4px;cursor:pointer;transition:all .3s;min-height:54px;position:relative;overflow:hidden}
 .btn-main::before{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--ember),transparent);opacity:0;transition:opacity .3s}
@@ -275,6 +303,23 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
   <div class="preview-wrap" id="preview-wrap">
     <img id="preview-img" src="" alt="">
     <button class="preview-reset" onclick="resetPhoto()">✕ DEĞİŞTİR</button>
+  </div>
+
+  <!-- Logo yükleme — opsiyonel, direkt adım 1'de -->
+  <div class="logo-inline-box" id="logo-inline-box">
+    <div class="logo-inline-label">MARKA LOGONUZ <span style="color:rgba(196,168,130,0.35);font-size:9px;letter-spacing:1px">· İSTEĞE BAĞLI</span></div>
+    <label class="logo-inline-upload" id="logo-inline-upload">
+      <input type="file" id="logo-inline-file" accept="image/*" onchange="onLogoInlineUpload(event)">
+      <div class="logo-inline-preview" id="logo-inline-preview">
+        <span id="logo-inline-placeholder">+</span>
+        <img id="logo-inline-img" src="" alt="" style="display:none;width:100%;height:100%;object-fit:contain">
+      </div>
+      <div class="logo-inline-text">
+        <div id="logo-inline-title">Logo Yükle</div>
+        <div class="logo-inline-hint">PNG transparan · Sol alta + bitiş kartına eklenir</div>
+      </div>
+      <button class="logo-inline-clear" id="logo-inline-clear" onclick="clearLogoInline(event)" style="display:none">✕</button>
+    </label>
   </div>
 
   <div class="sp"></div>
@@ -782,6 +827,57 @@ function clearLogo(e){
   document.getElementById('logo-file')._pendingUrl=null;
   document.getElementById('logo-file').value='';
 }
+
+// ── Adım 1 inline logo ──
+function onLogoInlineUpload(e){
+  const f=e.target.files[0]; if(!f) return;
+  if(f.size>3*1024*1024){toast('Logo 3MB sınırını aşıyor');return;}
+  const r=new FileReader();
+  r.onload=ev=>{
+    const url=ev.target.result;
+    // firm'e kaydet + localStorage
+    firm.logoDataUrl=url;
+    localStorage.setItem('fx_logo',url);
+    // UI güncelle
+    const img=document.getElementById('logo-inline-img');
+    img.src=url; img.style.display='block';
+    document.getElementById('logo-inline-placeholder').style.display='none';
+    document.getElementById('logo-inline-title').textContent='Logo yüklendi ✓';
+    document.getElementById('logo-inline-clear').style.display='block';
+    // Ayarlar modalındaki preview da güncelle
+    const mp=document.getElementById('logo-preview');
+    if(mp){mp.src=url;mp.style.display='block';}
+    const ph=document.getElementById('logo-placeholder');
+    if(ph)ph.style.display='none';
+    toast('Logo eklendi — her videoya otomatik girer');
+  };
+  r.readAsDataURL(f);
+}
+function clearLogoInline(e){
+  e.stopPropagation(); e.preventDefault();
+  firm.logoDataUrl=null;
+  localStorage.removeItem('fx_logo');
+  const img=document.getElementById('logo-inline-img');
+  img.src=''; img.style.display='none';
+  document.getElementById('logo-inline-placeholder').style.display='block';
+  document.getElementById('logo-inline-title').textContent='Logo Yükle';
+  document.getElementById('logo-inline-clear').style.display='none';
+  document.getElementById('logo-inline-file').value='';
+  toast('Logo kaldırıldı');
+}
+
+// Sayfa açılırken kayıtlı logo varsa inline göster
+(function initInlineLogo(){
+  if(firm.logoDataUrl){
+    const img=document.getElementById('logo-inline-img');
+    if(img){
+      img.src=firm.logoDataUrl; img.style.display='block';
+      document.getElementById('logo-inline-placeholder').style.display='none';
+      document.getElementById('logo-inline-title').textContent='Logo yüklendi ✓';
+      document.getElementById('logo-inline-clear').style.display='block';
+    }
+  }
+})();
 function saveSettings(){
   firm.sirket=document.getElementById('set-sirket').value.trim();
   firm.slogan=document.getElementById('set-slogan').value.trim();

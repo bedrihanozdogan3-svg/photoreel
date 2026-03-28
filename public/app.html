@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Fenix AI — Ürününü Ateşle</title>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#FF4500">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@300;400;500;600&display=swap');
+
+/* ── TOKENS ── */
+:root{
+  --bg:#050508; --panel:rgba(12,9,6,0.82); --border:rgba(255,69,0,0.13);
+  --ember:#FF4500; --alev:rgba(255,150,0,0.85); --kul:#C4A882; --soluk:rgba(196,168,130,0.4);
+  --glow:rgba(255,69,0,0.18); --radius:8px;
+  --transition: cubic-bezier(0.4,0,0.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:#F0E6D3;
+  font-family:'Inter',sans-serif;min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ── LIQUID BACKGROUND ── */
+.liquid-bg{
+  position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(ellipse 70% 50% at 20% 100%, rgba(255,69,0,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 80% 0%, rgba(255,120,0,0.05) 0%, transparent 50%);
+}
+.liquid-bg::after{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 40% 30% at 50% 110%, rgba(255,69,0,0.12),transparent 70%);
+  animation:breathe 8s ease-in-out infinite;
+}
+@keyframes breathe{0%,100%{opacity:0.6;transform:scale(1)}50%{opacity:1;transform:scale(1.05)}}
+
+canvas#particles{position:fixed;inset:0;pointer-events:none;z-index:0}
+
+/* ── LAYOUT — DESKTOP SPLIT ── */
+.app-wrap{
+  position:relative;z-index:1;
+  min-height:100vh;display:flex;
+}
+
+/* LEFT: branding panel — desktop only */
+.brand-panel{
+  display:none;
+  width:380px;flex-shrink:0;
+  padding:48px 40px;
+  background:rgba(5,5,8,0.6);
+  border-right:1px solid var(--border);
+  backdrop-filter:blur(20px);
+  flex-direction:column;
+  position:sticky;top:0;height:100vh;overflow:hidden;
+}
+@media(min-width:900px){
+  .brand-panel{display:flex}
+}
+
+.brand-logo{
+  font-family:'Cinzel',serif;font-size:28px;font-weight:900;
+  letter-spacing:8px;color:var(--kul);
+  text-shadow:0 0 40px rgba(255,106,0,0.5);
+  margin-bottom:6px;
+}
+.brand-tagline{font-size:9px;letter-spacing:3px;color:var(--soluk);margin-bottom:40px}
+
+/* Animated phoenix on brand panel */
+.phoenix-anim{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.phoenix-anim svg{
+  filter:drop-shadow(0 0 30px rgba(255,100,0,0.4));
+  animation:float 5s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-12px) rotate(2deg)}}
+
+.brand-copy{margin-top:auto}
+.brand-copy h2{font-size:18px;font-weight:600;color:var(--kul);line-height:1.4;margin-bottom:10px}
+.brand-copy p{font-size:12px;color:var(--soluk);line-height:1.7}
+
+.free-badge{
+  margin-top:20px;padding:12px 16px;
+  border:1px solid rgba(255,106,0,0.2);border-radius:6px;
+  background:rgba(255,69,0,0.06);
+  font-size:11px;letter-spacing:1px;color:var(--alev);
+  display:flex;align-items:center;gap:10px;
+}
+.free-badge-icon{font-size:20px}
+
+/* ID TAB */
+.id-tabs{display:flex;gap:8px;margin-bottom:16px}
+.id-tab{
+  flex:1;padding:10px;border:1px solid var(--border);border-radius:4px;
+  background:transparent;color:var(--soluk);font-size:12px;cursor:pointer;
+  transition:all .2s;font-family:'Inter',sans-serif;
+}
+.id-tab.active{border-color:rgba(255,106,0,0.35);background:rgba(255,69,0,0.07);color:var(--alev)}
+.gate-note{
+  margin-top:10px;font-size:10px;color:rgba(196,168,130,0.3);
+  letter-spacing:.3px;line-height:1.6;text-align:left;
+}
+.loading-spin{
+  display:inline-block;width:12px;height:12px;
+  border:2px solid rgba(255,106,0,0.2);border-top-color:rgba(255,106,0,0.7);
+  border-radius:50%;animation:spin .6s linear infinite;margin-right:8px;vertical-align:middle;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* RIGHT: main form */
+.main-panel{
+  flex:1;min-height:100vh;
+  padding:0;display:flex;flex-direction:column;
+}
+
+/* ── TOPBAR ── */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;
+  border-bottom:1px solid var(--border);
+  background:rgba(5,5,8,0.7);backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:50;
+}
+.tb-logo{
+  font-family:'Cinzel',serif;font-size:18px;font-weight:900;
+  letter-spacing:5px;color:var(--kul);
+  text-shadow:0 0 20px rgba(255,106,0,0.4);
+}
+@media(min-width:900px){.tb-logo{display:none}}
+.tb-right{display:flex;align-items:center;gap:10px}
+
+/* Language toggle */
+.lang-toggle{
+  display:flex;border:1px solid var(--border);border-radius:4px;overflow:hidden;
+}
+.lang-btn{
+  padding:6px 12px;font-size:10px;letter-spacing:1px;cursor:pointer;
+  background:transparent;border:none;color:var(--soluk);transition:all .2s;
+  font-family:'Inter',sans-serif;
+}
+.lang-btn.active{background:rgba(255,69,0,0.12);color:var(--alev)}
+
+/* Quota badge */
+.quota-badge{
+  padding:5px 10px;border:1px solid rgba(255,106,0,0.2);
+  border-radius:4px;background:rgba(255,69,0,0.06);
+  font-size:10px;letter-spacing:1px;color:var(--alev);
+  white-space:nowrap;
+}
+.quota-badge b{color:#FFD700}
+
+/* ── PWA BANNER ── */
+.pwa-bar{
+  display:none;align-items:center;gap:12px;
+  padding:10px 20px;background:rgba(255,69,0,0.06);
+  border-bottom:1px solid var(--border);font-size:12px;
+}
+.pwa-bar.show{display:flex}
+.pwa-bar-text b{font-size:13px;color:var(--kul)}
+.pwa-bar-text small{color:var(--soluk)}
+.btn-pwa{
+  margin-left:auto;padding:6px 14px;
+  border:1px solid rgba(255,106,0,0.3);border-radius:4px;
+  background:rgba(255,69,0,0.08);color:var(--alev);
+  font-size:10px;letter-spacing:2px;cursor:pointer;
+  font-family:'Cinzel',serif;white-space:nowrap;
+}
+
+/* ── SCROLL CONTENT ── */
+.scroll-content{
+  flex:1;padding:24px 20px 40px;
+  max-width:560px;margin:0 auto;width:100%;
+}
+@media(min-width:900px){
+  .scroll-content{padding:32px 40px 60px;max-width:600px}
+}
+
+/* ── PHONE GATE ── */
+.phone-gate{
+  text-align:center;padding:32px 0;
+}
+.gate-icon{font-size:40px;margin-bottom:16px}
+.gate-title{font-family:'Cinzel',serif;font-size:20px;color:var(--kul);letter-spacing:3px;margin-bottom:8px}
+.gate-sub{font-size:13px;color:var(--soluk);margin-bottom:28px;line-height:1.6}
+.gate-free{
+  display:inline-block;padding:10px 20px;margin-bottom:24px;
+  border:1px solid rgba(255,215,0,0.25);border-radius:4px;
+  background:rgba(255,215,0,0.05);
+  font-size:12px;letter-spacing:1px;color:#FFD700;
+}
+
+.phone-row{display:flex;gap:8px}
+.phone-prefix{
+  padding:13px 14px;border:1px solid var(--border);border-radius:4px;
+  background:rgba(255,69,0,0.03);color:var(--kul);
+  font-size:14px;min-width:64px;text-align:center;
+  cursor:default;flex-shrink:0;
+}
+.phone-input{
+  flex:1;padding:13px 15px;border:1px solid var(--border);border-radius:4px;
+  background:rgba(255,69,0,0.03);color:#F0E6D3;
+  font-size:14px;font-family:'Inter',sans-serif;outline:none;
+  transition:border-color .3s;
+}
+.phone-input:focus{border-color:rgba(255,106,0,0.3);box-shadow:0 0 16px rgba(255,69,0,0.07)}
+.phone-input::placeholder{color:var(--soluk);font-size:13px}
+
+/* ── STEPS ── */
+.steps-bar{
+  display:flex;align-items:center;margin-bottom:28px;
+}
+.step-item{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  flex:1;opacity:0.3;transition:opacity .4s;
+}
+.step-item.active{opacity:1}
+.step-item.done{opacity:0.6}
+.step-num{
+  width:28px;height:28px;border-radius:50%;
+  border:1px solid var(--border);
+  font-family:'Cinzel',serif;font-size:10px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--soluk);transition:all .4s;
+}
+.step-item.active .step-num{border-color:rgba(255,106,0,0.5);color:var(--alev);box-shadow:0 0 12px var(--glow)}
+.step-item.done .step-num{background:rgba(255,69,0,0.1);color:var(--kul)}
+.step-label{font-size:8px;letter-spacing:2px;color:var(--soluk)}
+.step-sep{height:1px;flex:1;background:var(--border)}
+
+/* ── PANEL (each step) ── */
+.panel{display:none;animation:fadeSlide .4s var(--transition)}
+.panel.active{display:block}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+.sec-lbl{font-size:9px;letter-spacing:3px;color:rgba(255,106,0,0.45);margin-bottom:6px}
+.sec-title{font-family:'Cinzel',serif;font-size:22px;color:var(--kul);margin-bottom:6px;letter-spacing:2px}
+.sec-sub{font-size:13px;color:var(--soluk);margin-bottom:24px;line-height:1.6}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone{
+  border:1px dashed rgba(255,69,0,0.2);border-radius:var(--radius);
+  padding:40px 20px;text-align:center;cursor:pointer;
+  background:rgba(255,69,0,0.02);position:relative;
+  transition:all .3s;
+}
+.upload-zone:hover{border-color:rgba(255,106,0,0.4);background:rgba(255,69,0,0.04)}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-glyph{font-size:32px;display:block;margin-bottom:10px;color:rgba(255,106,0,0.4)}
+.upload-text{font-family:'Cinzel',serif;font-size:13px;letter-spacing:3px;color:var(--kul);margin-bottom:6px}
+.upload-hint{font-size:11px;color:var(--soluk);letter-spacing:.5px}
+
+.preview-wrap{display:none;position:relative;border-radius:var(--radius);overflow:hidden}
+.preview-wrap.show{display:block}
+.preview-wrap img{width:100%;max-height:280px;object-fit:contain;background:#0a0808;border-radius:var(--radius)}
+.preview-reset{
+  position:absolute;top:10px;right:10px;
+  background:rgba(5,5,8,0.85);border:1px solid var(--border);
+  color:var(--soluk);border-radius:4px;padding:5px 10px;
+  font-size:10px;letter-spacing:1px;cursor:pointer;
+}
+
+/* ── LOGO UPLOAD inline ── */
+.logo-box{margin-top:18px}
+.logo-box-label{font-size:9px;letter-spacing:3px;color:rgba(255,106,0,0.4);margin-bottom:8px}
+.logo-row{
+  display:flex;align-items:center;gap:12px;
+  border:1px dashed rgba(255,69,0,0.15);border-radius:6px;
+  padding:12px 14px;cursor:pointer;position:relative;
+  background:rgba(255,69,0,0.02);transition:border-color .2s;
+}
+.logo-row:hover{border-color:rgba(255,106,0,0.3)}
+.logo-row input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.logo-thumb{
+  width:40px;height:40px;flex-shrink:0;border-radius:4px;
+  border:1px solid var(--border);background:rgba(0,0,0,0.3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;color:var(--soluk);overflow:hidden;
+}
+.logo-thumb img{width:100%;height:100%;object-fit:contain}
+.logo-info{flex:1}
+.logo-info-title{font-size:12px;color:var(--kul);font-weight:500;margin-bottom:2px}
+.logo-info-hint{font-size:10px;color:var(--soluk)}
+.logo-del{
+  background:rgba(5,5,8,0.8);border:1px solid var(--border);
+  color:var(--soluk);border-radius:4px;padding:4px 8px;
+  font-size:9px;cursor:pointer;z-index:2;display:none;
+  position:absolute;top:8px;right:8px;
+}
+
+/* ── COMPANY NAME ── */
+.company-box{margin-top:14px}
+.field-label{font-size:9px;letter-spacing:3px;color:rgba(255,106,0,0.4);margin-bottom:7px}
+.field-input{
+  width:100%;padding:12px 14px;
+  border:1px solid var(--border);border-radius:4px;
+  background:rgba(255,69,0,0.02);color:#F0E6D3;
+  font-size:14px;font-family:'Inter',sans-serif;outline:none;
+  transition:border-color .3s;
+}
+.field-input:focus{border-color:rgba(255,106,0,0.3)}
+.field-input::placeholder{color:var(--soluk);font-size:13px}
+
+/* ── CATEGORY GRID ── */
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:8px}
+.cat-btn{
+  border:1px solid var(--border);border-radius:6px;
+  padding:14px 8px;text-align:center;cursor:pointer;
+  background:rgba(255,69,0,0.02);transition:all .2s;
+}
+.cat-btn:hover{border-color:rgba(255,106,0,0.3);background:rgba(255,69,0,0.05)}
+.cat-btn.sel{border-color:rgba(255,106,0,0.5);background:rgba(255,69,0,0.1)}
+.cat-emoji{font-size:22px;margin-bottom:4px}
+.cat-name{font-size:9px;letter-spacing:2px;color:var(--soluk)}
+.cat-btn.sel .cat-name{color:var(--alev)}
+
+/* ── COMMANDS ── */
+.commands-section{margin-top:0}
+.preset-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.preset-btn{
+  padding:7px 12px;border:1px solid var(--border);border-radius:20px;
+  font-size:11px;color:var(--soluk);cursor:pointer;
+  background:rgba(255,69,0,0.02);transition:all .2s;white-space:nowrap;
+}
+.preset-btn:hover,.preset-btn.sel{
+  border-color:rgba(255,106,0,0.4);background:rgba(255,69,0,0.08);color:var(--alev)
+}
+.cmd-input{
+  width:100%;padding:12px 14px;min-height:80px;
+  border:1px solid var(--border);border-radius:4px;
+  background:rgba(255,69,0,0.02);color:#F0E6D3;
+  font-size:13px;font-family:'Inter',sans-serif;outline:none;
+  resize:vertical;transition:border-color .3s;line-height:1.6;
+}
+.cmd-input:focus{border-color:rgba(255,106,0,0.3)}
+.cmd-input::placeholder{color:var(--soluk)}
+
+/* ── BUTTONS ── */
+.btn-main{
+  width:100%;padding:16px;margin-top:16px;
+  border:1px solid rgba(255,106,0,0.35);border-radius:4px;
+  background:rgba(255,69,0,0.1);
+  color:var(--alev);font-family:'Cinzel',serif;font-size:11px;letter-spacing:4px;
+  cursor:pointer;transition:all .3s;min-height:52px;position:relative;overflow:hidden;
+}
+.btn-main::before{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--ember),transparent);
+  opacity:0;transition:opacity .3s;
+}
+.btn-main:hover:not(:disabled)::before{opacity:1}
+.btn-main:hover:not(:disabled){background:rgba(255,69,0,0.18);box-shadow:0 0 30px rgba(255,69,0,0.15);color:#fff}
+.btn-main:disabled{opacity:.3;cursor:not-allowed}
+.btn-back{
+  width:100%;padding:11px;margin-top:8px;
+  border:1px solid var(--border);border-radius:4px;
+  background:transparent;color:var(--soluk);
+  font-size:11px;letter-spacing:2px;cursor:pointer;transition:all .2s;
+}
+.btn-back:hover{border-color:rgba(255,106,0,0.2);color:var(--kul)}
+
+/* ── RESULT ── */
+.result-box{display:none}
+.result-box.show{display:block;animation:fadeSlide .5s var(--transition)}
+.video-canvas-wrap{
+  position:relative;border-radius:var(--radius);overflow:hidden;
+  background:#0a0808;aspect-ratio:9/16;max-height:420px;
+  display:flex;align-items:center;justify-content:center;
+}
+.video-canvas-wrap canvas{width:100%;height:100%;object-fit:contain;display:block}
+
+.result-actions{display:flex;gap:8px;margin-top:12px}
+.btn-dl{
+  flex:1;padding:13px;border:1px solid rgba(255,106,0,0.3);border-radius:4px;
+  background:rgba(255,69,0,0.1);color:var(--alev);
+  font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;cursor:pointer;
+  text-decoration:none;text-align:center;transition:all .3s;display:block;
+}
+.btn-dl:hover{background:rgba(255,69,0,0.2)}
+.btn-new{
+  flex:1;padding:13px;border:1px solid var(--border);border-radius:4px;
+  background:transparent;color:var(--soluk);
+  font-size:10px;letter-spacing:2px;cursor:pointer;transition:all .2s;
+}
+.btn-new:hover{border-color:rgba(255,106,0,0.2);color:var(--kul)}
+
+.result-meta{margin-top:10px;font-size:11px;color:var(--soluk);letter-spacing:.5px;text-align:center}
+.result-quota{
+  margin-top:10px;padding:10px 14px;
+  border:1px solid rgba(255,215,0,0.15);border-radius:4px;
+  background:rgba(255,215,0,0.04);
+  font-size:11px;color:rgba(255,215,0,0.6);text-align:center;letter-spacing:.5px;
+}
+
+/* ── PRODUCING ── */
+.producing{display:none;text-align:center;padding:32px 0}
+.producing.show{display:block;animation:fadeSlide .3s var(--transition)}
+.prod-anim{font-size:36px;animation:pulse 1.2s ease-in-out infinite;display:block;margin-bottom:16px}
+@keyframes pulse{0%,100%{opacity:0.4;transform:scale(0.95)}50%{opacity:1;transform:scale(1.05)}}
+.prod-title{font-family:'Cinzel',serif;font-size:16px;color:var(--kul);letter-spacing:3px;margin-bottom:8px}
+.prod-sub{font-size:12px;color:var(--soluk);letter-spacing:.5px}
+.prod-bar{height:2px;background:rgba(255,69,0,0.08);border-radius:1px;margin-top:20px;overflow:hidden}
+.prod-bar-fill{height:100%;background:linear-gradient(90deg,var(--ember),#FFD700);border-radius:1px;width:0;transition:width 0.5s ease}
+
+/* ── TOAST ── */
+.toast{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:rgba(12,9,6,0.95);border:1px solid var(--border);
+  padding:10px 18px;border-radius:4px;font-size:12px;letter-spacing:.5px;
+  color:var(--kul);z-index:999;transition:transform .35s var(--transition);
+  pointer-events:none;white-space:nowrap;backdrop-filter:blur(8px);
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ── MOBILE ONLY ── */
+@media(max-width:899px){
+  .scroll-content{padding-bottom:env(safe-area-inset-bottom, 20px)}
+}
+</style>
+</head>
+<body>
+<div class="liquid-bg"></div>
+<canvas id="particles"></canvas>
+
+<div class="app-wrap">
+
+  <!-- DESKTOP BRAND PANEL -->
+  <div class="brand-panel">
+    <div class="brand-logo">FENİX</div>
+    <div class="brand-tagline" id="bp-tagline">ÜRÜNÜNÜ ATEŞLE · REELS'E DÖNÜŞTÜR</div>
+
+    <div class="phoenix-anim">
+      <svg width="160" height="160" viewBox="0 0 100 100" fill="none">
+        <ellipse cx="50" cy="62" rx="10" ry="16" fill="url(#bFire)"/>
+        <path d="M50 55 C35 48,10 42,5 22 C18 30,28 36,38 46 C30 28,32 8,45 2 C42 18,44 36,50 55Z" fill="url(#bWL)"/>
+        <path d="M50 55 C65 48,90 42,95 22 C82 30,72 36,62 46 C70 28,68 8,55 2 C58 18,56 36,50 55Z" fill="url(#bWR)"/>
+        <path d="M50 55 C42 50,25 46,15 32 C26 36,36 40,45 50Z" fill="rgba(255,200,60,0.3)"/>
+        <path d="M50 55 C58 50,75 46,85 32 C74 36,64 40,55 50Z" fill="rgba(255,200,60,0.3)"/>
+        <path d="M44 74 C40 80,30 90,28 100 C36 92,42 84,46 78Z" fill="url(#bTail)" opacity="0.8"/>
+        <path d="M56 74 C60 80,70 90,72 100 C64 92,58 84,54 78Z" fill="url(#bTail)" opacity="0.8"/>
+        <path d="M50 76 C48 84,46 92,48 100 C50 92,52 84,52 76Z" fill="rgba(255,220,80,0.7)"/>
+        <circle cx="50" cy="42" r="9" fill="url(#bHead)"/>
+        <path d="M50 33 C47 24,44 16,48 8 C49 14,50 20,52 14 C53 20,52 26,50 33Z" fill="url(#bCrest)"/>
+        <path d="M48 33 C44 22,38 14,35 4 C40 10,43 20,47 32Z" fill="rgba(255,160,20,0.55)"/>
+        <path d="M52 33 C56 22,62 14,65 4 C60 10,57 20,53 32Z" fill="rgba(255,160,20,0.55)"/>
+        <circle cx="50" cy="41" r="2.5" fill="#FF8C00"/>
+        <circle cx="50" cy="41" r="1.2" fill="#FFE44A"/>
+        <circle cx="50.7" cy="40.3" r="0.5" fill="white" opacity="0.8"/>
+        <path d="M50 47 L47 50 L50 49 L53 50Z" fill="#C4A882"/>
+        <defs>
+          <radialGradient id="bWL" cx="40%" cy="50%"><stop offset="0%" stop-color="#FF8C00"/><stop offset="50%" stop-color="#FF4500"/><stop offset="100%" stop-color="#8B1A00"/></radialGradient>
+          <radialGradient id="bWR" cx="60%" cy="50%"><stop offset="0%" stop-color="#FF8C00"/><stop offset="50%" stop-color="#FF4500"/><stop offset="100%" stop-color="#8B1A00"/></radialGradient>
+          <radialGradient id="bHead" cx="50%" cy="40%"><stop offset="0%" stop-color="#FFCC00"/><stop offset="60%" stop-color="#FF6A00"/><stop offset="100%" stop-color="#CC2200"/></radialGradient>
+          <linearGradient id="bCrest" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#FF6A00"/><stop offset="100%" stop-color="#FFE044"/></linearGradient>
+          <linearGradient id="bFire" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF6A00"/><stop offset="100%" stop-color="#FF2200" stop-opacity="0.4"/></linearGradient>
+          <linearGradient id="bTail" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF6A00"/><stop offset="100%" stop-color="#FF2200" stop-opacity="0"/></linearGradient>
+        </defs>
+      </svg>
+    </div>
+
+    <div class="brand-copy">
+      <h2 id="bp-copy-h">Ürününüzü Ateşleyin, Reels'e Dönüştürün</h2>
+      <p id="bp-copy-p">Fotoğrafı yükle — yapay zeka arka planı üretir, müziği ekler, markanı koyar. 30 saniye. Hazır.</p>
+      <div class="free-badge">
+        <span class="free-badge-icon">🔥</span>
+        <span id="bp-free">İlk 5 video tamamen ücretsiz</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN FORM PANEL -->
+  <div class="main-panel">
+    <div class="topbar">
+      <div class="tb-logo">FENİX</div>
+      <div class="tb-right">
+        <div class="lang-toggle">
+          <button class="lang-btn active" id="btn-tr" onclick="setLang('tr')">TR</button>
+          <button class="lang-btn" id="btn-en" onclick="setLang('en')">EN</button>
+        </div>
+        <div class="quota-badge" id="quota-badge" style="display:none">
+          🔥 <b id="quota-num">5</b> <span id="quota-label">video kaldı</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="pwa-bar" id="pwa-bar">
+      <span>📲</span>
+      <div class="pwa-bar-text">
+        <b id="pwa-title">Ana Ekrana Ekle</b><br>
+        <small id="pwa-sub">Uygulama gibi aç, her zaman hazır</small>
+      </div>
+      <button class="btn-pwa" id="btn-pwa" onclick="installPWA()">YÜKLE</button>
+    </div>
+
+    <div class="scroll-content">
+
+      <!-- PHONE GATE -->
+      <div id="phone-gate" class="phone-gate">
+        <div class="gate-icon">🔥</div>
+        <div class="gate-title" id="gate-title">ÜRÜNÜNÜ ATEŞLE</div>
+        <p class="gate-sub" id="gate-sub">Fenix AI ile ürün fotoğrafını yükle — saniyeler içinde profesyonel Reels videona dönüştür.</p>
+        <div class="gate-free" id="gate-free">🎁 İlk 5 video tamamen ücretsiz</div>
+
+        <!-- Tab seçimi: Telefon / E-posta -->
+        <div class="id-tabs">
+          <button class="id-tab active" id="tab-phone" onclick="switchTab('phone')">📱 <span id="tab-phone-lbl">Telefon</span></button>
+          <button class="id-tab" id="tab-email" onclick="switchTab('email')">✉ <span id="tab-email-lbl">E-posta</span></button>
+        </div>
+
+        <!-- Telefon -->
+        <div id="field-phone">
+          <div class="field-label" id="phone-label">TELEFON NUMARASI</div>
+          <div class="phone-row">
+            <div class="phone-prefix">+90</div>
+            <input type="tel" class="phone-input" id="phone-input"
+              placeholder="5XX XXX XX XX" maxlength="15"
+              inputmode="numeric" oninput="onIdentityInput()">
+          </div>
+        </div>
+
+        <!-- E-posta -->
+        <div id="field-email" style="display:none">
+          <div class="field-label" id="email-label">E-POSTA ADRESİ</div>
+          <input type="email" class="phone-input" id="email-input"
+            placeholder="ornek@sirket.com" style="width:100%;border-radius:4px"
+            oninput="onIdentityInput()">
+        </div>
+
+        <div class="gate-note" id="gate-note">
+          Aynı telefon/e-posta tekrar girilirse mevcut hakkın görünür — yeni 5 hak verilmez.
+        </div>
+
+        <button class="btn-main" id="btn-start" onclick="startApp()" style="margin-top:16px" disabled>
+          <span class="loading-spin" id="start-spin" style="display:none"></span>
+          <span id="btn-start-text">DEVAM</span>
+        </button>
+      </div>
+
+      <!-- STEP BAR -->
+      <div class="steps-bar" id="steps-bar" style="display:none">
+        <div class="step-item active" id="sbar-1">
+          <div class="step-num">I</div>
+          <div class="step-label" id="sl-1">ÜRÜN</div>
+        </div>
+        <div class="step-sep"></div>
+        <div class="step-item" id="sbar-2">
+          <div class="step-num">II</div>
+          <div class="step-label" id="sl-2">KATEGORİ</div>
+        </div>
+        <div class="step-sep"></div>
+        <div class="step-item" id="sbar-3">
+          <div class="step-num">III</div>
+          <div class="step-label" id="sl-3">KOMUTLAR</div>
+        </div>
+        <div class="step-sep"></div>
+        <div class="step-item" id="sbar-4">
+          <div class="step-num">IV</div>
+          <div class="step-label" id="sl-4">VİDEO</div>
+        </div>
+      </div>
+
+      <!-- PANEL 1: ÜRÜN -->
+      <div class="panel" id="panel-1">
+        <div class="sec-lbl">ADIM I</div>
+        <div class="sec-title" id="p1-title">Ürünü Getir</div>
+        <div class="sec-sub" id="p1-sub">Ürün fotoğrafını yükle.</div>
+
+        <div class="upload-zone" id="upload-zone">
+          <input type="file" id="file-input" accept="image/*" onchange="onPhoto(event)">
+          <span class="upload-glyph">🜂</span>
+          <div class="upload-text" id="upload-text">DOSYAYI BIRAK</div>
+          <div class="upload-hint" id="upload-hint">PNG · JPG · WEBP · max 10MB</div>
+        </div>
+        <div class="preview-wrap" id="preview-wrap">
+          <img id="preview-img" src="" alt="">
+          <button class="preview-reset" id="preview-reset" onclick="resetPhoto()">✕</button>
+        </div>
+
+        <!-- LOGO INLINE -->
+        <div class="logo-box">
+          <div class="logo-box-label" id="logo-label">MARKA LOGONUZ <span style="font-size:8px;color:rgba(196,168,130,0.28)">· İSTEĞE BAĞLI</span></div>
+          <label class="logo-row" id="logo-row">
+            <input type="file" id="logo-file" accept="image/*" onchange="onLogo(event)">
+            <div class="logo-thumb" id="logo-thumb">
+              <span id="logo-plus">+</span>
+              <img id="logo-img" src="" alt="" style="display:none">
+            </div>
+            <div class="logo-info">
+              <div class="logo-info-title" id="logo-info-title">Logo Yükle</div>
+              <div class="logo-info-hint" id="logo-info-hint">PNG transparan · Bitiş kartına eklenir</div>
+            </div>
+            <button class="logo-del" id="logo-del" onclick="clearLogo(event)">✕</button>
+          </label>
+        </div>
+
+        <!-- COMPANY NAME -->
+        <div class="company-box">
+          <div class="field-label" id="company-label">ŞİRKET / MARKA ADI</div>
+          <input type="text" class="field-input" id="company-input"
+            placeholder="örn: TechStore" maxlength="40"
+            oninput="onCompanyInput()">
+        </div>
+
+        <button class="btn-main" id="btn-next-1" onclick="goStep(2)" disabled>
+          <span id="btn-next-1-text">İLERİ →</span>
+        </button>
+      </div>
+
+      <!-- PANEL 2: KATEGORİ -->
+      <div class="panel" id="panel-2">
+        <div class="sec-lbl">ADIM II</div>
+        <div class="sec-title" id="p2-title">Ateşin Rengi</div>
+        <div class="sec-sub" id="p2-sub">Kategorine göre efekt ve müzik otomatik seçilir.</div>
+
+        <div class="cat-grid">
+          <div class="cat-btn" onclick="selectCat(this,'gida')"><div class="cat-emoji">🍕</div><div class="cat-name" id="cat-gida">GIDA</div></div>
+          <div class="cat-btn" onclick="selectCat(this,'kozmetik')"><div class="cat-emoji">💄</div><div class="cat-name" id="cat-kozmetik">KOZMETİK</div></div>
+          <div class="cat-btn" onclick="selectCat(this,'giyim')"><div class="cat-emoji">👗</div><div class="cat-name" id="cat-giyim">GİYİM</div></div>
+          <div class="cat-btn" onclick="selectCat(this,'elektronik')"><div class="cat-emoji">📱</div><div class="cat-name" id="cat-elektronik">ELEKTRONİK</div></div>
+          <div class="cat-btn" onclick="selectCat(this,'mobilya')"><div class="cat-emoji">🛋️</div><div class="cat-name" id="cat-mobilya">MOBİLYA</div></div>
+          <div class="cat-btn" onclick="selectCat(this,'oyuncak')"><div class="cat-emoji">🧸</div><div class="cat-name" id="cat-oyuncak">OYUNCAK</div></div>
+          <div class="cat-btn" onclick="selectCat(this,'spor')"><div class="cat-emoji">⚽</div><div class="cat-name" id="cat-spor">SPOR</div></div>
+          <div class="cat-btn" onclick="selectCat(this,'motor')"><div class="cat-emoji">🏍️</div><div class="cat-name" id="cat-motor">MOTOR</div></div>
+          <div class="cat-btn" onclick="selectCat(this,'diger')"><div class="cat-emoji">📦</div><div class="cat-name" id="cat-diger">DİĞER</div></div>
+        </div>
+        <button class="btn-main" id="btn-next-2" onclick="goStep(3)" disabled><span id="btn-next-2-text">İLERİ →</span></button>
+        <button class="btn-back" onclick="goStep(1)"><span id="btn-back-2">← GERİ</span></button>
+      </div>
+
+      <!-- PANEL 3: KOMUTLAR -->
+      <div class="panel" id="panel-3">
+        <div class="sec-lbl">ADIM III</div>
+        <div class="sec-title" id="p3-title">Komutlar</div>
+        <div class="sec-sub" id="p3-sub">Videon nasıl olsun? İstersen boş bırak, Fenix halleder.</div>
+
+        <div class="commands-section">
+          <div class="field-label" id="preset-label">HIZLI SEÇIM</div>
+          <div class="preset-row" id="preset-row">
+            <button class="preset-btn" onclick="togglePreset(this,'Arka plan sade ve minimal olsun')">🏔 Sade arka plan</button>
+            <button class="preset-btn" onclick="togglePreset(this,'Lüks ve sofistike hissiyat')">✦ Lüks hissiyat</button>
+            <button class="preset-btn" onclick="togglePreset(this,'Ürünü ön plana çıkar')">🎯 Ürünü öne çıkar</button>
+            <button class="preset-btn" onclick="togglePreset(this,'Hızlı geçişler ve dinamik ritim')">⚡ Dinamik geçişler</button>
+            <button class="preset-btn" onclick="togglePreset(this,'Doğal ve samimi atmosfer')">🌿 Doğal atmosfer</button>
+            <button class="preset-btn" onclick="togglePreset(this,'Stüdyo arka planı, temiz görünüm')">📸 Stüdyo arka planı</button>
+          </div>
+          <div class="field-label" id="custom-cmd-label" style="margin-top:12px">ÖZEL KOMUT <span style="font-size:8px;color:rgba(196,168,130,0.28)">· İSTEĞE BAĞLI</span></div>
+          <textarea class="cmd-input" id="cmd-input" id="cmd-input"
+            placeholder="örn: Arka planı deniz kenarı yap, renkleri sıcak tut..." maxlength="300"></textarea>
+        </div>
+
+        <button class="btn-main" onclick="startProduction()"><span id="btn-fire">🜂 ATEŞE VER</span></button>
+        <button class="btn-back" onclick="goStep(2)"><span id="btn-back-3">← GERİ</span></button>
+      </div>
+
+      <!-- PRODUCING -->
+      <div class="producing" id="producing">
+        <span class="prod-anim">🔥</span>
+        <div class="prod-title" id="prod-title">KÜLDEN DOĞUYOR</div>
+        <div class="prod-sub" id="prod-sub">Fenix videonuzu üretiyor...</div>
+        <div class="prod-bar"><div class="prod-bar-fill" id="prod-fill"></div></div>
+      </div>
+
+      <!-- RESULT -->
+      <div class="result-box" id="result-box">
+        <div class="sec-lbl">ADIM IV</div>
+        <div class="sec-title" id="p4-title">Hazır</div>
+        <div class="video-canvas-wrap">
+          <canvas id="result-canvas" width="270" height="480"></canvas>
+        </div>
+        <div class="result-meta" id="result-meta"></div>
+        <div class="result-quota" id="result-quota" style="display:none"></div>
+        <div class="result-actions">
+          <a href="#" class="btn-dl" id="btn-dl" download="fenix-video.png"><span id="dl-text">⬇ İNDİR</span></a>
+          <button class="btn-new" onclick="newVideo()"><span id="new-text">YENİ VİDEO +</span></button>
+        </div>
+      </div>
+
+    </div><!-- /scroll-content -->
+  </div><!-- /main-panel -->
+</div><!-- /app-wrap -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── STATE ──
+const S = {
+  lang: localStorage.getItem('fx_lang') || 'tr',
+  phone: localStorage.getItem('fx_phone') || '',
+  quota: parseInt(localStorage.getItem('fx_quota') || '5'),
+  photo: null,
+  photoHash: null,
+  logoDataUrl: localStorage.getItem('fx_logo') || null,
+  company: localStorage.getItem('fx_sirket') || '',
+  category: null,
+  presets: [],
+  customCmd: ''
+};
+
+// ── I18N ──
+const T = {
+  tr: {
+    tagline:'ÜRÜNÜNÜ ATEŞLE · REELS\'E DÖNÜŞTÜR',
+    bp_h:'Ürününüzü Ateşleyin, Reels\'e Dönüştürün',
+    bp_p:'Fotoğrafı yükle — yapay zeka arka planı üretir, müziği ekler, markanı koyar. 30 saniye. Hazır.',
+    bp_free:'İlk 5 video tamamen ücretsiz',
+    gate_title:'ÜRÜNÜNÜ ATEŞLE',
+    gate_sub:'Fenix AI ile ürün fotoğrafını yükle — saniyeler içinde profesyonel Reels videona dönüştür.',
+    gate_free:'🎁 İlk 5 video tamamen ücretsiz',
+    phone_label:'TELEFON NUMARASI',
+    phone_ph:'5XX XXX XX XX',
+    btn_devam:'DEVAM',
+    p1_title:'Ürünü Getir', p1_sub:'Ürün fotoğrafını yükle.',
+    upload_text:'DOSYAYI BIRAK',
+    upload_hint:'PNG · JPG · WEBP · max 10MB',
+    logo_label:'MARKA LOGONUZ',
+    logo_opt:'· İSTEĞE BAĞLI',
+    logo_title:'Logo Yükle',
+    logo_hint:'PNG transparan · Bitiş kartına eklenir',
+    logo_done:'Logo yüklendi ✓',
+    company_label:'ŞİRKET / MARKA ADI',
+    company_ph:'örn: TechStore',
+    btn_ileri:'İLERİ →',
+    p2_title:'Ateşin Rengi', p2_sub:'Kategorine göre efekt ve müzik otomatik seçilir.',
+    p3_title:'Komutlar', p3_sub:'Videon nasıl olsun? İstersen boş bırak, Fenix halleder.',
+    preset_label:'HIZLI SEÇİM',
+    custom_label:'ÖZEL KOMUT',
+    custom_ph:'örn: Arka planı deniz kenarı yap...',
+    btn_fire:'🜂 ATEŞE VER',
+    btn_geri:'← GERİ',
+    prod_title:'KÜLDEN DOĞUYOR', prod_sub:'Fenix videonuzu üretiyor...',
+    p4_title:'Hazır',
+    dl_text:'⬇ İNDİR',
+    new_text:'YENİ VİDEO +',
+    quota_label:'video kaldı',
+    quota_msg:'kalan hakkın',
+    pwa_title:'Ana Ekrana Ekle',
+    pwa_sub:'Uygulama gibi aç, her zaman hazır',
+    pwa_btn:'YÜKLE',
+    toast_dup:'Bu fotoğraf zaten işlemde. Farklı bir fotoğraf dene.',
+    toast_quota:'5 ücretsiz videon doldu. Abonelik için iletişime geç.',
+    toast_logo:'Logo eklendi ✓',
+    toast_logo_clear:'Logo kaldırıldı',
+    endcard_powered:'FENİX AI ile üretildi',
+    cats:{gida:'GIDA',kozmetik:'KOZMETİK',giyim:'GİYİM',elektronik:'ELEKTRONİK',mobilya:'MOBİLYA',oyuncak:'OYUNCAK',spor:'SPOR',motor:'MOTOR',diger:'DİĞER'},
+    presets:['🏔 Sade arka plan','✦ Lüks hissiyat','🎯 Ürünü öne çıkar','⚡ Dinamik geçişler','🌿 Doğal atmosfer','📸 Stüdyo arka planı'],
+    preset_vals:['Arka plan sade ve minimal olsun','Lüks ve sofistike hissiyat','Ürünü ön plana çıkar','Hızlı geçişler ve dinamik ritim','Doğal ve samimi atmosfer','Stüdyo arka planı, temiz görünüm'],
+  },
+  en: {
+    tagline:'IGNITE YOUR PRODUCT · TRANSFORM TO REELS',
+    bp_h:'Ignite Your Product, Transform into Reels',
+    bp_p:'Upload your photo — AI generates backgrounds, adds music, places your brand. 30 seconds. Done.',
+    bp_free:'First 5 videos completely free',
+    gate_title:'IGNITE YOUR PRODUCT',
+    gate_sub:'Upload your product photo with Fenix AI — transform into professional Reels in seconds.',
+    gate_free:'🎁 First 5 videos completely free',
+    phone_label:'PHONE NUMBER',
+    phone_ph:'5XX XXX XX XX',
+    btn_devam:'CONTINUE',
+    p1_title:'Your Product', p1_sub:'Upload your product photo.',
+    upload_text:'DROP FILE HERE',
+    upload_hint:'PNG · JPG · WEBP · max 10MB',
+    logo_label:'YOUR BRAND LOGO',
+    logo_opt:'· OPTIONAL',
+    logo_title:'Upload Logo',
+    logo_hint:'Transparent PNG · Added to end card',
+    logo_done:'Logo uploaded ✓',
+    company_label:'COMPANY / BRAND NAME',
+    company_ph:'e.g. TechStore',
+    btn_ileri:'NEXT →',
+    p2_title:'Flame Color', p2_sub:'Effects and music are auto-selected by category.',
+    p3_title:'Commands', p3_sub:'How should your video look? Leave blank and Fenix decides.',
+    preset_label:'QUICK SELECT',
+    custom_label:'CUSTOM COMMAND',
+    custom_ph:'e.g. Ocean background, warm colors...',
+    btn_fire:'🜂 IGNITE',
+    btn_geri:'← BACK',
+    prod_title:'RISING FROM ASH', prod_sub:'Fenix is creating your video...',
+    p4_title:'Ready',
+    dl_text:'⬇ DOWNLOAD',
+    new_text:'NEW VIDEO +',
+    quota_label:'videos left',
+    quota_msg:'remaining',
+    pwa_title:'Add to Home Screen',
+    pwa_sub:'Opens like an app, always ready',
+    pwa_btn:'INSTALL',
+    toast_dup:'This photo is already processing. Try a different photo.',
+    toast_quota:'Your 5 free videos are used. Contact us for a subscription.',
+    toast_logo:'Logo added ✓',
+    toast_logo_clear:'Logo removed',
+    endcard_powered:'Powered by FENIX AI',
+    cats:{gida:'FOOD',kozmetik:'COSMETIC',giyim:'FASHION',elektronik:'ELECTRONIC',mobilya:'FURNITURE',oyuncak:'TOY',spor:'SPORTS',motor:'MOTOR',diger:'OTHER'},
+    presets:['🏔 Simple background','✦ Luxury feel','🎯 Highlight product','⚡ Dynamic cuts','🌿 Natural atmosphere','📸 Studio background'],
+    preset_vals:['Background should be simple and minimal','Luxury and sophisticated feel','Bring the product to the foreground','Fast transitions and dynamic rhythm','Natural and authentic atmosphere','Studio background, clean look'],
+  }
+};
+
+function t(key){ return T[S.lang][key] || key; }
+
+// ── LANGUAGE ──
+function setLang(l){
+  S.lang = l;
+  localStorage.setItem('fx_lang', l);
+  document.getElementById('btn-tr').classList.toggle('active', l==='tr');
+  document.getElementById('btn-en').classList.toggle('active', l==='en');
+  applyLang();
+}
+function applyLang(){
+  const L = T[S.lang];
+  // brand panel
+  const bpTag = document.getElementById('bp-tagline'); if(bpTag) bpTag.textContent = L.tagline;
+  const bpH = document.getElementById('bp-copy-h'); if(bpH) bpH.textContent = L.bp_h;
+  const bpP = document.getElementById('bp-copy-p'); if(bpP) bpP.textContent = L.bp_p;
+  const bpFr = document.getElementById('bp-free'); if(bpFr) bpFr.textContent = L.bp_free;
+  // gate
+  setText('gate-title', L.gate_title);
+  setText('gate-sub', L.gate_sub);
+  setText('gate-free', L.gate_free);
+  setText('phone-label', L.phone_label);
+  document.getElementById('phone-input').placeholder = L.phone_ph;
+  setText('btn-start-text', L.btn_devam);
+  // steps
+  setText('sl-1', L.cats ? 'I' : 'ÜRÜN');
+  // p1
+  setText('p1-title', L.p1_title);
+  setText('p1-sub', L.p1_sub);
+  setText('upload-text', L.upload_text);
+  setText('upload-hint', L.upload_hint);
+  setText('logo-label', L.logo_label);
+  setText('logo-info-title', S.logoDataUrl ? L.logo_done : L.logo_title);
+  setText('logo-info-hint', L.logo_hint);
+  setText('company-label', L.company_label);
+  document.getElementById('company-input').placeholder = L.company_ph;
+  setText('btn-next-1-text', L.btn_ileri);
+  // p2
+  setText('p2-title', L.p2_title);
+  setText('p2-sub', L.p2_sub);
+  setText('btn-next-2-text', L.btn_ileri);
+  setText('btn-back-2', L.btn_geri);
+  // categories
+  Object.keys(L.cats).forEach(k=>{
+    const el = document.getElementById('cat-'+k); if(el) el.textContent = L.cats[k];
+  });
+  // p3
+  setText('p3-title', L.p3_title);
+  setText('p3-sub', L.p3_sub);
+  setText('preset-label', L.preset_label);
+  document.getElementById('cmd-input').placeholder = L.custom_ph;
+  setText('custom-cmd-label', L.custom_label);
+  setText('btn-fire', L.btn_fire);
+  setText('btn-back-3', L.btn_geri);
+  // preset buttons
+  const presetBtns = document.querySelectorAll('#preset-row .preset-btn');
+  presetBtns.forEach((b,i)=>{ if(L.presets[i]) b.innerHTML = L.presets[i]; });
+  // producing
+  setText('prod-title', L.prod_title);
+  setText('prod-sub', L.prod_sub);
+  // result
+  setText('p4-title', L.p4_title);
+  setText('dl-text', L.dl_text);
+  setText('new-text', L.new_text);
+  // quota
+  const qLabel = document.getElementById('quota-label'); if(qLabel) qLabel.textContent = L.quota_label;
+  // pwa
+  setText('pwa-title', L.pwa_title);
+  setText('pwa-sub', L.pwa_sub);
+  const pwaBtn = document.getElementById('btn-pwa'); if(pwaBtn) pwaBtn.textContent = L.pwa_btn;
+}
+function setText(id,val){ const e=document.getElementById(id); if(e) e.textContent=val; }
+
+// ── PARTICLES ──
+(function(){
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let W,H,pts=[];
+  function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
+  window.addEventListener('resize',resize);resize();
+  function P(){this.r();}
+  P.prototype.r=function(){
+    this.x=W*Math.random(); this.y=H+10;
+    this.vx=(Math.random()-.5)*.8; this.vy=-(Math.random()*1.5+1);
+    this.life=0; this.max=Math.random()*80+60; this.sz=Math.random()*2+.8;
+  };
+  for(let i=0;i<40;i++){const p=new P();p.life=Math.random()*p.max;pts.push(p);}
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    pts.forEach(p=>{
+      p.life++;p.x+=p.vx+Math.sin(p.life*.05)*.4;p.y+=p.vy;
+      if(p.life>=p.max){p.r();return;}
+      const t=p.life/p.max,a=t<.2?t/.2:1-(t-.2)/.8;
+      const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.sz*3);
+      g.addColorStop(0,`rgba(255,160,40,${a*.7})`);
+      g.addColorStop(1,'transparent');
+      ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,p.sz*3,0,Math.PI*2);ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── IDENTITY TAB ──
+let activeTab = 'phone';
+function switchTab(tab){
+  activeTab = tab;
+  document.getElementById('field-phone').style.display = tab==='phone'?'block':'none';
+  document.getElementById('field-email').style.display = tab==='email'?'block':'none';
+  document.getElementById('tab-phone').classList.toggle('active', tab==='phone');
+  document.getElementById('tab-email').classList.toggle('active', tab==='email');
+  document.getElementById('btn-start').disabled = true;
+}
+function onIdentityInput(){
+  if(activeTab==='phone'){
+    const v = document.getElementById('phone-input').value.replace(/\D/g,'');
+    document.getElementById('btn-start').disabled = v.length < 10;
+  } else {
+    const v = document.getElementById('email-input').value.trim();
+    document.getElementById('btn-start').disabled = !v.includes('@') || v.length < 5;
+  }
+}
+
+async function startApp(){
+  const btn = document.getElementById('btn-start');
+  const spin = document.getElementById('start-spin');
+  btn.disabled = true;
+  spin.style.display = 'inline-block';
+
+  let body = {};
+  if(activeTab === 'phone'){
+    const phone = document.getElementById('phone-input').value.replace(/\D/g,'');
+    if(phone.length < 10){
+      toast(S.lang==='tr'?'Geçerli bir numara girin':'Enter a valid number');
+      btn.disabled=false; spin.style.display='none'; return;
+    }
+    body = { phone: '+90'+phone };
+  } else {
+    const email = document.getElementById('email-input').value.trim();
+    if(!email.includes('@')){
+      toast(S.lang==='tr'?'Geçerli bir e-posta girin':'Enter a valid email');
+      btn.disabled=false; spin.style.display='none'; return;
+    }
+    body = { email };
+  }
+
+  try {
+    const res = await fetch('/api/customer/register', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+
+    spin.style.display = 'none';
+
+    if(!data.ok){
+      toast(data.error || 'Hata oluştu');
+      btn.disabled=false; return;
+    }
+
+    S.customerId = data.customerId;
+    S.quota = data.remaining;
+    localStorage.setItem('fx_customerId', S.customerId);
+    localStorage.setItem('fx_quota', S.quota);
+
+    if(S.quota <= 0){
+      // Hak bitti → abonelik mesajı
+      showNoQuota();
+      btn.disabled=false; return;
+    }
+
+    if(!data.isNew){
+      toast(S.lang==='tr'
+        ? `Hoş geldin! ${S.quota} video hakkın kaldı.`
+        : `Welcome back! ${S.quota} videos remaining.`);
+    }
+
+    showQuota();
+    document.getElementById('phone-gate').style.display='none';
+    document.getElementById('steps-bar').style.display='flex';
+    goStep(1);
+
+  } catch(e){
+    spin.style.display='none';
+    btn.disabled=false;
+    // Offline fallback — localStorage
+    S.customerId = 'local_' + Date.now();
+    S.quota = 5;
+    showQuota();
+    document.getElementById('phone-gate').style.display='none';
+    document.getElementById('steps-bar').style.display='flex';
+    goStep(1);
+  }
+}
+
+function showNoQuota(){
+  const gate = document.getElementById('phone-gate');
+  gate.innerHTML = `
+    <div style="text-align:center;padding:20px 0">
+      <div style="font-size:36px;margin-bottom:16px">🔥</div>
+      <div style="font-family:'Cinzel',serif;font-size:18px;color:#C4A882;letter-spacing:3px;margin-bottom:12px">
+        ${S.lang==='tr'?'ÜCRETSİZ HAKKIN BİTTİ':'FREE VIDEOS USED UP'}
+      </div>
+      <p style="font-size:13px;color:rgba(196,168,130,0.5);margin-bottom:24px;line-height:1.6">
+        ${S.lang==='tr'
+          ?'5 ücretsiz videon tamamlandı. Sınırsız video için bize ulaş.'
+          :'Your 5 free videos are complete. Contact us for unlimited videos.'}
+      </p>
+      <a href="https://wa.me/905309070098?text=Fenix%20abonelik%20istiyorum"
+         target="_blank"
+         style="display:inline-block;padding:14px 28px;border:1px solid rgba(255,106,0,0.3);border-radius:4px;background:rgba(255,69,0,0.1);color:rgba(255,150,0,0.8);font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;text-decoration:none">
+        ${S.lang==='tr'?'ABONELİK İÇİN YAZI →':'GET SUBSCRIPTION →'}
+      </a>
+    </div>
+  `;
+}
+
+// ── QUOTA ──
+function showQuota(){
+  const badge = document.getElementById('quota-badge');
+  document.getElementById('quota-num').textContent = S.quota;
+  document.getElementById('quota-label').textContent = t('quota_label');
+  badge.style.display='flex';
+}
+
+// ── PHOTO ──
+function onPhoto(e){
+  const f = e.target.files[0]; if(!f) return;
+  if(f.size > 10*1024*1024){ toast(S.lang==='tr'?'Max 10MB':'Max 10MB'); return; }
+  S.photoHash = f.name+'_'+f.size+'_'+f.lastModified;
+  const r = new FileReader();
+  r.onload = ev=>{
+    S.photo = ev.target.result;
+    document.getElementById('preview-img').src = S.photo;
+    document.getElementById('preview-wrap').classList.add('show');
+    document.getElementById('upload-zone').style.display='none';
+    document.getElementById('btn-next-1').disabled = false;
+  };
+  r.readAsDataURL(f);
+}
+function resetPhoto(){
+  S.photo=null; S.photoHash=null;
+  document.getElementById('preview-wrap').classList.remove('show');
+  document.getElementById('upload-zone').style.display='block';
+  document.getElementById('file-input').value='';
+  document.getElementById('btn-next-1').disabled=true;
+}
+
+// ── LOGO ──
+function onLogo(e){
+  const f=e.target.files[0]; if(!f) return;
+  if(f.size>3*1024*1024){ toast('Logo max 3MB'); return; }
+  const r=new FileReader();
+  r.onload=ev=>{
+    S.logoDataUrl=ev.target.result;
+    localStorage.setItem('fx_logo',S.logoDataUrl);
+    const img=document.getElementById('logo-img');
+    img.src=S.logoDataUrl;img.style.display='block';
+    document.getElementById('logo-plus').style.display='none';
+    document.getElementById('logo-info-title').textContent=t('logo_done');
+    document.getElementById('logo-del').style.display='block';
+    toast(t('toast_logo'));
+  };
+  r.readAsDataURL(f);
+}
+function clearLogo(e){
+  e.stopPropagation();e.preventDefault();
+  S.logoDataUrl=null;
+  localStorage.removeItem('fx_logo');
+  document.getElementById('logo-img').style.display='none';
+  document.getElementById('logo-plus').style.display='block';
+  document.getElementById('logo-info-title').textContent=t('logo_title');
+  document.getElementById('logo-del').style.display='none';
+  document.getElementById('logo-file').value='';
+  toast(t('toast_logo_clear'));
+}
+
+// ── COMPANY ──
+function onCompanyInput(){
+  S.company = document.getElementById('company-input').value;
+  localStorage.setItem('fx_sirket', S.company);
+}
+
+// ── CATEGORY ──
+function selectCat(el,cat){
+  document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel');
+  S.category=cat;
+  document.getElementById('btn-next-2').disabled=false;
+}
+
+// ── PRESET COMMANDS ──
+function togglePreset(btn,val){
+  const L = T[S.lang];
+  // find actual preset value (language-aware)
+  const btns = Array.from(document.querySelectorAll('#preset-row .preset-btn'));
+  const idx = btns.indexOf(btn);
+  const actualVal = L.preset_vals[idx] || val;
+
+  btn.classList.toggle('sel');
+  if(btn.classList.contains('sel')){
+    if(!S.presets.includes(actualVal)) S.presets.push(actualVal);
+  } else {
+    S.presets = S.presets.filter(v=>v!==actualVal);
+  }
+  // sync to textarea
+  const ta = document.getElementById('cmd-input');
+  if(S.presets.length>0 && !ta.value.trim()){
+    // don't overwrite custom
+  }
+}
+
+// ── STEPS ──
+function goStep(n){
+  [1,2,3].forEach(i=>{
+    document.getElementById('panel-'+i).classList.toggle('active',i===n);
+    const sb=document.getElementById('sbar-'+i);
+    sb.classList.remove('active','done');
+    if(i===n) sb.classList.add('active');
+    else if(i<n) sb.classList.add('done');
+  });
+  document.getElementById('result-box').classList.remove('show');
+  document.getElementById('producing').classList.remove('show');
+}
+
+// ── PRODUCTION ──
+async function startProduction(){
+  if(S.quota<=0){ toast(t('toast_quota')); return; }
+
+  // Duplicate guard — store hash
+  if(S.photoHash){
+    const dupKey='fx_dup_'+S.phone+'_'+S.photoHash;
+    localStorage.setItem(dupKey, Date.now().toString());
+    // expire after 30 min (cleaned on next visit)
+    setTimeout(()=>localStorage.removeItem(dupKey), 30*60*1000);
+  }
+
+  // Collect commands
+  const ta = document.getElementById('cmd-input').value.trim();
+  const allCmds = [...S.presets];
+  if(ta) allCmds.push(ta);
+  S.customCmd = allCmds.join('. ');
+
+  // Show producing
+  [1,2,3].forEach(i=>document.getElementById('panel-'+i).classList.remove('active'));
+  document.getElementById('steps-bar').querySelectorAll('.step-item').forEach(s=>s.classList.add('done'));
+  document.getElementById('sbar-4').classList.remove('done');
+  document.getElementById('sbar-4').classList.add('active');
+  document.getElementById('producing').classList.add('show');
+
+  // Progress bar animation
+  let pct=0;
+  const fill=document.getElementById('prod-fill');
+  const pInterval=setInterval(()=>{
+    pct=Math.min(pct+Math.random()*8,90);
+    fill.style.width=pct+'%';
+  },400);
+
+  try {
+    // Önce sunucudan quota düş
+    if(S.customerId){
+      const qRes = await fetch('/api/customer/use-quota', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ customerId: S.customerId })
+      });
+      const qData = await qRes.json();
+      if(!qData.ok){
+        clearInterval(pInterval);
+        document.getElementById('producing').classList.remove('show');
+        goStep(1);
+        if(qData.remaining===0) showNoQuota();
+        else toast(qData.error||'Hata');
+        return;
+      }
+      S.quota = qData.remaining;
+      localStorage.setItem('fx_quota', S.quota);
+      showQuota();
+    }
+
+    // Video üret
+    const res = await fetch('/api/generate', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        category:S.category,
+        productImageUrl:S.photo,
+        style:'auto',
+        companyName:S.company||'Fenix',
+        hookText:S.customCmd||null,
+        customerId:S.customerId
+      })
+    });
+    const data = await res.json();
+    clearInterval(pInterval);fill.style.width='100%';
+    setTimeout(()=>showResult(data.videoUrl||S.photo, data), 400);
+  } catch(e){
+    clearInterval(pInterval);
+    // Demo mode — render on canvas
+    showResult(null, {});
+  }
+}
+
+function showResult(videoUrl, data){
+  document.getElementById('producing').classList.remove('show');
+  const rb=document.getElementById('result-box');
+  rb.classList.add('show');
+
+  // Quota zaten sunucuda düşüldü — sadece badge güncelle
+  showQuota();
+
+  // Draw on canvas
+  const canvas=document.getElementById('result-canvas');
+  const cx=canvas.getContext('2d');
+  drawVideoFrame(cx, canvas, videoUrl);
+
+  // Result meta
+  document.getElementById('result-meta').textContent =
+    (S.company||'Fenix').toUpperCase()+' · '+(S.category||'').toUpperCase()+' · REELS';
+
+  // Quota warning
+  const rq=document.getElementById('result-quota');
+  if(S.quota<=2 && S.quota>0){
+    rq.style.display='block';
+    rq.textContent = S.lang==='tr'
+      ? `⚠ ${S.quota} ücretsiz video hakkın kaldı`
+      : `⚠ ${S.quota} free videos remaining`;
+  } else if(S.quota<=0){
+    rq.style.display='block';
+    rq.textContent = t('toast_quota');
+  }
+
+  // Download link
+  setupDownload(canvas);
+}
+
+function drawVideoFrame(cx, canvas, videoUrl){
+  const W=canvas.width, H=canvas.height;
+  const img=new Image();
+  img.onload=()=>{
+    // Background
+    cx.fillStyle='#0a0808';cx.fillRect(0,0,W,H);
+    // Product image
+    const ratio=Math.min(W/img.width,(H*0.7)/img.height);
+    const iw=img.width*ratio,ih=img.height*ratio;
+    cx.drawImage(img,(W-iw)/2,(H*0.08),iw,ih);
+    // Overlay gradient bottom
+    const grd=cx.createLinearGradient(0,H*0.65,0,H);
+    grd.addColorStop(0,'transparent');
+    grd.addColorStop(1,'rgba(5,5,8,0.92)');
+    cx.fillStyle=grd;cx.fillRect(0,0,W,H);
+    // Company name bottom-left
+    cx.fillStyle='rgba(196,168,130,0.9)';
+    cx.font='bold 13px Inter,sans-serif';
+    cx.textAlign='left';
+    const cn=(S.company||'').toUpperCase();
+    if(cn) cx.fillText(cn,16,H-16);
+    // Category badge
+    cx.fillStyle='rgba(255,69,0,0.5)';
+    cx.fillRect(W-76,H-32,72,20);
+    cx.fillStyle='rgba(255,200,150,0.9)';
+    cx.font='bold 9px Inter,sans-serif';
+    cx.textAlign='center';
+    cx.fillText((S.category||'').toUpperCase(),W-40,H-19);
+    // End card — draw after logo
+    if(S.logoDataUrl){
+      const logo=new Image();
+      logo.onload=()=>{drawEndCard(cx,W,H,logo);setupDownload(canvas);};
+      logo.src=S.logoDataUrl;
+    } else {
+      drawEndCard(cx,W,H,null);
+      setupDownload(canvas);
+    }
+  };
+  img.onerror=()=>{
+    // fallback — just draw gradient
+    const grd=cx.createLinearGradient(0,0,0,H);
+    grd.addColorStop(0,'#0a0808');grd.addColorStop(1,'#150a04');
+    cx.fillStyle=grd;cx.fillRect(0,0,W,H);
+    // Fenix glyph
+    cx.fillStyle='rgba(255,100,0,0.2)';
+    cx.font='80px Inter';cx.textAlign='center';
+    cx.fillText('🔥',W/2,H/2);
+    drawEndCard(cx,W,H,null);
+    setupDownload(canvas);
+  };
+  img.src = videoUrl || S.photo || '';
+}
+
+// ── END CARD (Fenix + marka birleşik) ──
+function drawEndCard(cx,W,H,logoImg){
+  // End card area — alt %25
+  const ecY=H*0.75, ecH=H*0.25;
+  // Dark overlay
+  cx.fillStyle='rgba(5,5,8,0.88)';
+  cx.fillRect(0,ecY,W,ecH);
+  // Top separator line
+  const sep=cx.createLinearGradient(0,0,W,0);
+  sep.addColorStop(0,'transparent');
+  sep.addColorStop(0.3,'rgba(255,69,0,0.4)');
+  sep.addColorStop(0.7,'rgba(255,69,0,0.4)');
+  sep.addColorStop(1,'transparent');
+  cx.strokeStyle=sep;cx.lineWidth=1;
+  cx.beginPath();cx.moveTo(0,ecY);cx.lineTo(W,ecY);cx.stroke();
+
+  const midY=ecY+ecH/2;
+
+  // Seller logo (left)
+  if(logoImg){
+    const maxS=48;
+    const lr=Math.min(maxS/logoImg.width,maxS/logoImg.height);
+    const lw=logoImg.width*lr,lh=logoImg.height*lr;
+    cx.drawImage(logoImg,16,midY-lh/2,lw,lh);
+  }
+
+  // Company name + category (center)
+  cx.textAlign='center';
+  cx.fillStyle='rgba(196,168,130,0.9)';
+  cx.font='bold 14px Cinzel,serif';
+  cx.fillText((S.company||'').toUpperCase()||'FENIX',W/2,midY-6);
+
+  cx.fillStyle='rgba(196,168,130,0.4)';
+  cx.font='9px Inter,sans-serif';
+  cx.letterSpacing='2px';
+  cx.fillText((T[S.lang].cats[S.category]||S.category||'').toUpperCase(),W/2,midY+10);
+
+  // Fenix powered (right)
+  cx.textAlign='right';
+  cx.fillStyle='rgba(255,100,0,0.45)';
+  cx.font='bold 8px Cinzel,serif';
+  cx.fillText('FENİX AI',W-12,midY-4);
+  cx.fillStyle='rgba(196,168,130,0.25)';
+  cx.font='7px Inter,sans-serif';
+  cx.fillText('ile üretildi',W-12,midY+8);
+}
+
+function setupDownload(canvas){
+  const link=document.getElementById('btn-dl');
+  link.href=canvas.toDataURL('image/png');
+  link.download='fenix-'+(S.company||'video').toLowerCase().replace(/\s+/g,'-')+'.png';
+}
+
+function newVideo(){
+  S.photo=null;S.photoHash=null;S.presets=[];S.customCmd='';S.category=null;
+  document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('sel'));
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('cmd-input').value='';
+  document.getElementById('result-box').classList.remove('show');
+  resetPhoto();
+  document.getElementById('steps-bar').style.display='flex';
+  document.getElementById('steps-bar').querySelectorAll('.step-item').forEach(s=>{ s.classList.remove('done','active'); });
+  if(S.quota<=0){ toast(t('toast_quota')); return; }
+  goStep(1);
+}
+
+// ── PWA ──
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredPrompt=e;
+  document.getElementById('pwa-bar').classList.add('show');
+});
+function installPWA(){
+  if(deferredPrompt){
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(()=>{
+      deferredPrompt=null;
+      document.getElementById('pwa-bar').classList.remove('show');
+    });
+  }
+}
+
+// ── TOAST ──
+let toastTimer;
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+// ── INIT ──
+(function init(){
+  // Apply lang
+  applyLang();
+  // Restore logo
+  if(S.logoDataUrl){
+    const img=document.getElementById('logo-img');
+    img.src=S.logoDataUrl;img.style.display='block';
+    document.getElementById('logo-plus').style.display='none';
+    document.getElementById('logo-info-title').textContent=t('logo_done');
+    document.getElementById('logo-del').style.display='block';
+  }
+  // Restore company
+  if(S.company){
+    document.getElementById('company-input').value=S.company;
+  }
+  // Kayıtlı customerId varsa sunucudan quota al
+  const savedId = localStorage.getItem('fx_customerId');
+  if(savedId){
+    S.customerId = savedId;
+    fetch('/api/customer/quota/'+encodeURIComponent(savedId))
+      .then(r=>r.json())
+      .then(data=>{
+        if(data.ok){
+          S.quota = data.remaining;
+          if(S.quota > 0){
+            document.getElementById('phone-gate').style.display='none';
+            document.getElementById('steps-bar').style.display='flex';
+            goStep(1);
+            showQuota();
+          } else {
+            showNoQuota();
+          }
+        }
+      }).catch(()=>{});
+  }
+  // Service worker
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  }
+})();
+</script>
+</body>
+</html>

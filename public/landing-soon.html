@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fenix AI — Yakında</title>
+<meta name="description" content="Ürün fotoğrafından 30 saniyede profesyonel Reels. Fenix AI yakında hizmetinizde.">
+<meta property="og:title" content="Fenix AI — Yakında">
+<meta property="og:description" content="Ürün fotoğrafından 30 saniyede profesyonel Reels videou. Yapay zeka arka plan, müzik, marka logosu.">
+<meta property="og:image" content="/fenix-og.png">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@300;400;500&display=swap');
+
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+
+body{
+  background:#050508;color:#F0E6D3;
+  font-family:'Inter',sans-serif;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  min-height:100vh;overflow:hidden;
+  padding:20px;
+}
+
+/* ── FIRE CANVAS ── */
+canvas{position:fixed;inset:0;z-index:0;pointer-events:none}
+
+/* ── GLOW ZEMINI ── */
+.glow-base{
+  position:fixed;bottom:0;left:0;right:0;height:40vh;
+  background:radial-gradient(ellipse 80% 60% at 50% 100%,rgba(255,69,0,0.18),transparent 70%);
+  pointer-events:none;z-index:0;
+  animation:glowPulse 6s ease-in-out infinite;
+}
+@keyframes glowPulse{0%,100%{opacity:0.7}50%{opacity:1}}
+
+/* ── WRAP ── */
+.wrap{
+  position:relative;z-index:1;
+  text-align:center;
+  max-width:520px;width:100%;
+  padding:0 16px;
+}
+
+/* ── PHOENIX ── */
+.phoenix-wrap{
+  margin-bottom:28px;
+  display:flex;justify-content:center;
+  filter:drop-shadow(0 0 40px rgba(255,100,0,0.55));
+  animation:phoenixFloat 5s ease-in-out infinite;
+}
+@keyframes phoenixFloat{
+  0%,100%{transform:translateY(0) scale(1)}
+  50%{transform:translateY(-10px) scale(1.02)}
+}
+
+/* ── LOGO ── */
+.logo{
+  font-family:'Cinzel',serif;font-size:clamp(32px,8vw,52px);
+  font-weight:900;letter-spacing:12px;
+  color:#C4A882;
+  text-shadow:0 0 60px rgba(255,106,0,0.6),0 0 120px rgba(255,69,0,0.2);
+  margin-bottom:8px;
+  animation:logoGlow 3s ease-in-out infinite alternate;
+}
+@keyframes logoGlow{
+  from{text-shadow:0 0 40px rgba(255,106,0,0.5),0 0 80px rgba(255,69,0,0.15)}
+  to{text-shadow:0 0 80px rgba(255,106,0,0.8),0 0 160px rgba(255,69,0,0.3)}
+}
+
+/* ── YAKINDA ── */
+.yakinda{
+  display:inline-block;
+  font-family:'Cinzel',serif;font-size:clamp(9px,2.5vw,11px);
+  letter-spacing:6px;color:rgba(255,106,0,0.6);
+  border:1px solid rgba(255,69,0,0.2);
+  padding:6px 18px;border-radius:2px;
+  margin-bottom:28px;
+  background:rgba(255,69,0,0.04);
+}
+
+/* ── BAŞLIK ── */
+.headline{
+  font-size:clamp(16px,4vw,22px);
+  font-weight:300;color:#C4A882;
+  line-height:1.5;margin-bottom:10px;
+  letter-spacing:.5px;
+}
+.headline b{font-weight:600;color:#F0E6D3}
+
+.sub{
+  font-size:clamp(12px,3vw,14px);
+  color:rgba(196,168,130,0.45);
+  line-height:1.8;margin-bottom:36px;
+  letter-spacing:.3px;
+}
+
+/* ── EMAIL FORM ── */
+.form-wrap{
+  display:flex;gap:8px;max-width:400px;margin:0 auto 16px;
+}
+.email-input{
+  flex:1;padding:13px 16px;
+  border:1px solid rgba(255,69,0,0.18);border-radius:4px;
+  background:rgba(255,69,0,0.03);
+  color:#F0E6D3;font-size:13px;
+  font-family:'Inter',sans-serif;outline:none;
+  transition:border-color .3s,box-shadow .3s;
+  min-width:0;
+}
+.email-input:focus{
+  border-color:rgba(255,106,0,0.4);
+  box-shadow:0 0 20px rgba(255,69,0,0.08);
+}
+.email-input::placeholder{color:rgba(196,168,130,0.25);font-size:12px}
+
+.btn-notify{
+  padding:13px 20px;
+  border:1px solid rgba(255,106,0,0.35);border-radius:4px;
+  background:rgba(255,69,0,0.1);
+  color:rgba(255,150,0,0.85);
+  font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;
+  cursor:pointer;transition:all .3s;white-space:nowrap;
+  flex-shrink:0;
+}
+.btn-notify:hover{background:rgba(255,69,0,0.2);color:#FFD700;box-shadow:0 0 24px rgba(255,69,0,0.15)}
+.btn-notify:disabled{opacity:.5;cursor:not-allowed}
+
+.form-note{
+  font-size:10px;color:rgba(196,168,130,0.25);
+  letter-spacing:.5px;margin-bottom:36px;
+}
+
+/* ── ÖZELLİKLER ── */
+.features{
+  display:flex;gap:20px;justify-content:center;
+  flex-wrap:wrap;margin-bottom:36px;
+}
+.feat{
+  display:flex;align-items:center;gap:7px;
+  font-size:11px;color:rgba(196,168,130,0.4);letter-spacing:.5px;
+}
+.feat-dot{
+  width:5px;height:5px;border-radius:50%;
+  background:rgba(255,100,0,0.5);flex-shrink:0;
+}
+
+/* ── LANG ── */
+.lang-row{
+  display:flex;gap:8px;justify-content:center;
+  margin-bottom:0;
+}
+.lang-btn{
+  padding:5px 12px;border:1px solid rgba(255,69,0,0.1);
+  border-radius:3px;background:transparent;
+  color:rgba(196,168,130,0.3);font-size:10px;
+  letter-spacing:1px;cursor:pointer;transition:all .2s;
+}
+.lang-btn.active{border-color:rgba(255,69,0,0.25);color:rgba(255,150,0,0.6)}
+
+/* ── SUCCESS ── */
+.success-msg{
+  display:none;padding:12px 20px;
+  border:1px solid rgba(255,150,0,0.2);border-radius:4px;
+  background:rgba(255,100,0,0.06);
+  font-size:13px;color:rgba(255,150,0,0.7);
+  letter-spacing:.5px;max-width:400px;margin:0 auto 16px;
+  animation:fadeIn .4s ease;
+}
+.success-msg.show{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── MOBILE ── */
+@media(max-height:680px){
+  .phoenix-wrap{margin-bottom:16px}
+  .phoenix-wrap svg{width:70px;height:70px}
+  .sub{margin-bottom:20px}
+  .features{margin-bottom:20px}
+}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+<div class="glow-base"></div>
+
+<div class="wrap">
+
+  <!-- Phoenix kuşu -->
+  <div class="phoenix-wrap">
+    <svg width="90" height="90" viewBox="0 0 100 100" fill="none">
+      <ellipse cx="50" cy="62" rx="10" ry="16" fill="url(#lFire)"/>
+      <path d="M50 55 C35 48,10 42,5 22 C18 30,28 36,38 46 C30 28,32 8,45 2 C42 18,44 36,50 55Z" fill="url(#lWL)"/>
+      <path d="M50 55 C65 48,90 42,95 22 C82 30,72 36,62 46 C70 28,68 8,55 2 C58 18,56 36,50 55Z" fill="url(#lWR)"/>
+      <path d="M50 55 C42 50,25 46,15 32 C26 36,36 40,45 50Z" fill="rgba(255,200,60,0.3)"/>
+      <path d="M50 55 C58 50,75 46,85 32 C74 36,64 40,55 50Z" fill="rgba(255,200,60,0.3)"/>
+      <path d="M44 74 C40 80,30 90,28 100 C36 92,42 84,46 78Z" fill="url(#lTail)" opacity="0.85"/>
+      <path d="M56 74 C60 80,70 90,72 100 C64 92,58 84,54 78Z" fill="url(#lTail)" opacity="0.85"/>
+      <path d="M50 76 C48 84,46 92,48 100 C50 92,52 84,52 76Z" fill="rgba(255,220,80,0.75)"/>
+      <circle cx="50" cy="42" r="9" fill="url(#lHead)"/>
+      <path d="M50 33 C47 24,44 16,48 8 C49 14,50 20,52 14 C53 20,52 26,50 33Z" fill="url(#lCrest)"/>
+      <path d="M48 33 C44 22,38 14,35 4 C40 10,43 20,47 32Z" fill="rgba(255,160,20,0.6)"/>
+      <path d="M52 33 C56 22,62 14,65 4 C60 10,57 20,53 32Z" fill="rgba(255,160,20,0.6)"/>
+      <circle cx="50" cy="41" r="2.5" fill="#FF8C00"/>
+      <circle cx="50" cy="41" r="1.2" fill="#FFE44A"/>
+      <circle cx="50.7" cy="40.3" r="0.5" fill="white" opacity="0.9"/>
+      <path d="M50 47 L47 50 L50 49 L53 50Z" fill="#C4A882"/>
+      <defs>
+        <radialGradient id="lWL" cx="40%" cy="50%"><stop offset="0%" stop-color="#FF8C00"/><stop offset="50%" stop-color="#FF4500"/><stop offset="100%" stop-color="#8B1A00"/></radialGradient>
+        <radialGradient id="lWR" cx="60%" cy="50%"><stop offset="0%" stop-color="#FF8C00"/><stop offset="50%" stop-color="#FF4500"/><stop offset="100%" stop-color="#8B1A00"/></radialGradient>
+        <radialGradient id="lHead" cx="50%" cy="40%"><stop offset="0%" stop-color="#FFCC00"/><stop offset="60%" stop-color="#FF6A00"/><stop offset="100%" stop-color="#CC2200"/></radialGradient>
+        <linearGradient id="lCrest" x1="0" y1="1" x2="0" y2="0"><stop offset="0%" stop-color="#FF6A00"/><stop offset="100%" stop-color="#FFE044"/></linearGradient>
+        <linearGradient id="lFire" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF6A00"/><stop offset="100%" stop-color="#FF2200" stop-opacity="0.4"/></linearGradient>
+        <linearGradient id="lTail" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FF6A00"/><stop offset="100%" stop-color="#FF2200" stop-opacity="0"/></linearGradient>
+      </defs>
+    </svg>
+  </div>
+
+  <div class="logo">FENİX</div>
+
+  <div class="yakinda" id="yakinda-badge">YAKINDA · COMING SOON</div>
+
+  <div class="headline" id="headline">
+    <b>Ürün fotoğrafından 30 saniyede</b><br>profesyonel Reels videosu.
+  </div>
+  <div class="sub" id="sub">
+    Yapay zeka arka plan üretir · Müzik ekler · Marka logonuzu koyar.<br>
+    Hiç video bilgisi gerekmez.
+  </div>
+
+  <!-- Email kayıt -->
+  <div class="form-wrap">
+    <input type="email" class="email-input" id="email-input"
+      placeholder="e-posta adresiniz" autocomplete="email">
+    <button class="btn-notify" id="btn-notify" onclick="notify()">
+      <span id="notify-text">HABER VER</span>
+    </button>
+  </div>
+  <div class="success-msg" id="success-msg">🔥 Haberdar edeceğiz — ateş yakında!</div>
+  <div class="form-note" id="form-note">Açılışta bildirim alın · Spam yok · İstediğinizde çıkın</div>
+
+  <!-- Özellikler -->
+  <div class="features">
+    <div class="feat"><div class="feat-dot"></div><span id="f1">30 sn video üretimi</span></div>
+    <div class="feat"><div class="feat-dot"></div><span id="f2">AI arka plan</span></div>
+    <div class="feat"><div class="feat-dot"></div><span id="f3">BPM senkron müzik</span></div>
+    <div class="feat"><div class="feat-dot"></div><span id="f4">Marka logosu</span></div>
+    <div class="feat"><div class="feat-dot"></div><span id="f5">Türkçe · İngilizce</span></div>
+  </div>
+
+  <!-- Dil -->
+  <div class="lang-row">
+    <button class="lang-btn active" onclick="setLang('tr')">TR</button>
+    <button class="lang-btn" onclick="setLang('en')">EN</button>
+  </div>
+
+</div>
+
+<script>
+// ── FIRE PARTICLES ──
+(function(){
+  const c=document.getElementById('c');
+  const ctx=c.getContext('2d');
+  let W,H,pts=[];
+  function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;}
+  window.addEventListener('resize',resize);resize();
+
+  function P(){this.r();}
+  P.prototype.r=function(){
+    this.x=W*(0.3+Math.random()*0.4);
+    this.y=H+20;
+    this.vx=(Math.random()-.5)*1.4;
+    this.vy=-(Math.random()*2.5+1.8);
+    this.life=0;this.max=Math.random()*90+70;
+    this.sz=Math.random()*4+1.5;
+    this.ember=Math.random()<0.35;
+  };
+  for(let i=0;i<80;i++){const p=new P();p.life=Math.random()*p.max;pts.push(p);}
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    pts.forEach(p=>{
+      p.life++;
+      p.x+=p.vx+Math.sin(p.life*.04+p.sz)*.6;
+      p.y+=p.vy;p.vy-=.008;
+      if(p.life>=p.max){p.r();return;}
+      const t=p.life/p.max;
+      const a=t<.15?t/.15:1-(t-.15)/.85;
+      if(p.ember){
+        const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.sz*2.5);
+        g.addColorStop(0,`rgba(255,230,120,${a*.95})`);
+        g.addColorStop(.5,`rgba(255,100,0,${a*.5})`);
+        g.addColorStop(1,'transparent');
+        ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,p.sz*2.5,0,Math.PI*2);ctx.fill();
+      } else {
+        const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.sz*7);
+        g.addColorStop(0,`rgba(255,120,0,${a*.1})`);
+        g.addColorStop(1,'transparent');
+        ctx.fillStyle=g;ctx.beginPath();ctx.arc(p.x,p.y,p.sz*7,0,Math.PI*2);ctx.fill();
+      }
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── I18N ──
+const LANG = {
+  tr:{
+    badge:'YAKINDA · COMING SOON',
+    headline:'<b>Ürün fotoğrafından 30 saniyede</b><br>profesyonel Reels videosu.',
+    sub:'Yapay zeka arka plan üretir · Müzik ekler · Marka logonuzu koyar.<br>Hiç video bilgisi gerekmez.',
+    ph:'e-posta adresiniz',
+    btn:'HABER VER',
+    note:'Açılışta bildirim alın · Spam yok · İstediğinizde çıkın',
+    success:'🔥 Haberdar edeceğiz — ateş yakında!',
+    f1:'30 sn video üretimi',f2:'AI arka plan',f3:'BPM senkron müzik',f4:'Marka logosu',f5:'Türkçe · İngilizce'
+  },
+  en:{
+    badge:'COMING SOON · YAKINDA',
+    headline:'<b>30-second professional Reels</b><br>from a product photo.',
+    sub:'AI generates backgrounds · Adds music · Places your brand logo.<br>Zero video expertise needed.',
+    ph:'your email address',
+    btn:'NOTIFY ME',
+    note:'Get notified at launch · No spam · Unsubscribe anytime',
+    success:'🔥 We\'ll let you know — fire is coming!',
+    f1:'30s video generation',f2:'AI background',f3:'BPM-synced music',f4:'Brand logo',f5:'Turkish · English'
+  }
+};
+let lang='tr';
+function setLang(l){
+  lang=l;
+  document.querySelectorAll('.lang-btn').forEach((b,i)=>b.classList.toggle('active',i===(l==='tr'?0:1)));
+  const L=LANG[l];
+  document.getElementById('yakinda-badge').textContent=L.badge;
+  document.getElementById('headline').innerHTML=L.headline;
+  document.getElementById('sub').innerHTML=L.sub;
+  document.getElementById('email-input').placeholder=L.ph;
+  document.getElementById('notify-text').textContent=L.btn;
+  document.getElementById('form-note').textContent=L.note;
+  ['f1','f2','f3','f4','f5'].forEach(k=>{ document.getElementById(k).textContent=L[k]; });
+}
+
+// ── NOTIFY ──
+async function notify(){
+  const email=document.getElementById('email-input').value.trim();
+  if(!email.includes('@')){ shake(); return; }
+  const btn=document.getElementById('btn-notify');
+  btn.disabled=true;
+  btn.textContent='...';
+  try {
+    await fetch('/api/waitlist',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({email,lang})
+    });
+  } catch(e){}
+  document.querySelector('.form-wrap').style.display='none';
+  document.getElementById('form-note').style.display='none';
+  document.getElementById('success-msg').classList.add('show');
+}
+
+function shake(){
+  const el=document.getElementById('email-input');
+  el.style.borderColor='rgba(255,60,60,0.5)';
+  el.style.animation='shake .3s ease';
+  setTimeout(()=>{el.style.borderColor='';el.style.animation='';},400);
+}
+</script>
+<style>
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+</style>
+</body>
+</html>

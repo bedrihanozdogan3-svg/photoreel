@@ -61,6 +61,7 @@ if (config.isProd) {
     hsts: false, // localhost'u HTTPS'e zorlama
   }));
 }
+app.use(require('cookie-parser')()); // httpOnly cookie desteği
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
@@ -74,9 +75,25 @@ if (config.env === 'production') {
   app.use('/api/', limiter);
 }
 
-// Landing page (ana sayfa)
+// Landing page — "Yakında" sayfası
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'landing.html'));
+  res.sendFile(path.join(__dirname, 'public', 'landing-soon.html'));
+});
+
+// Waitlist kayıt
+app.post('/api/waitlist', async (req, res) => {
+  const { email, lang } = req.body || {};
+  if (!email || !email.includes('@')) return res.status(400).json({ ok: false });
+  try {
+    const admin = require('firebase-admin');
+    await admin.firestore().collection('fenix-waitlist').add({
+      email: email.toLowerCase().trim(),
+      lang: lang || 'tr',
+      createdAt: new Date().toISOString()
+    });
+  } catch(e) { /* Firestore yoksa sessizce geç */ }
+  require('./utils/logger').info('Waitlist kaydı', { email });
+  res.json({ ok: true });
 });
 
 // Dashboard (admin)
@@ -84,8 +101,8 @@ app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
-// PhotoReel v9 app (eski)
-app.get('/app', (req, res) => {
+// PhotoReel v9 app (eski) — /legacy olarak taşındı
+app.get('/legacy', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'photoreel_v9.html'));
 });
 
@@ -127,8 +144,13 @@ app.use('/api/claude-local', localClaudeRoutes);
 const codeRoutes = require('./routes/api-gemini-code');
 app.use('/api/code', codeRoutes);
 
-// Tablet kontrol paneli
-app.get('/kontrol', (req, res) => {
+// Fenix Kontrol Paneli v2 (ember tasarım)
+app.get('/kontrol', requireAdmin, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'kontrol2.html'));
+});
+
+// Eski kontrol paneli — arşiv
+app.get('/kontrol-v1', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'kontrol.html'));
 });
 
@@ -137,9 +159,68 @@ app.get('/analytics', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'fenix-analytics.html'));
 });
 
-// Satıcı portalı (temiz 4 adım arayüzü)
-app.get('/satici', (req, res) => {
+// Admin auth kontrolü — httpOnly cookie veya Authorization header
+const jwt = require('jsonwebtoken');
+function requireAdmin(req, res, next) {
+  const jwtSecret = process.env.JWT_SECRET || 'fenix-dev-secret';
+  // Cookie kontrolü
+  const cookie = req.cookies && req.cookies.fenix_admin;
+  // Header kontrolü (Bearer token)
+  const header = req.headers.authorization && req.headers.authorization.replace('Bearer ', '');
+  const token = cookie || header;
+  if (!token) return res.redirect('/giris?next=' + encodeURIComponent(req.originalUrl));
+  try {
+    const payload = jwt.verify(token, jwtSecret);
+    if (payload.role !== 'admin') throw new Error('Yetersiz yetki');
+    req.adminUser = payload;
+    next();
+  } catch {
+    res.clearCookie('fenix_admin');
+    return res.redirect('/giris?next=' + encodeURIComponent(req.originalUrl));
+  }
+}
+
+// Giriş sayfası (herkese açık)
+app.get('/giris', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'giris.html'));
+});
+
+// Müşteri portalı — herkese açık (5 ücretsiz video)
+app.get('/app', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'app.html'));
+});
+
+// Müşteri kayıt & quota API
+const customerRoutes = require('./routes/api-customer');
+app.use('/api/customer', customerRoutes);
+
+// Satıcı portalı — sadece admin girebilir
+app.get('/satici', requireAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'satici.html'));
+});
+
+// QR sayfası — sadece admin
+app.get('/qr', requireAdmin, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'qr.html'));
+});
+
+// Versiyon & sistem sağlığı (kontrol paneli için)
+app.get('/api/version', (req, res) => {
+  const pkg = (() => { try { return require('./package.json'); } catch { return {}; } })();
+  res.json({
+    ok: true,
+    version: pkg.version || '1.0.0',
+    name: pkg.name || 'fenix-ai',
+    env: config.env || 'production',
+    uptime: Math.floor(process.uptime()),
+    nodeVersion: process.version,
+    timestamp: new Date().toISOString(),
+    services: {
+      firestore: !!process.env.GOOGLE_APPLICATION_CREDENTIALS || !!process.env.FIREBASE_PROJECT_ID,
+      gemini: !!process.env.GEMINI_API_KEY,
+      fal: !!process.env.FAL_KEY
+    }
+  });
 });
 
 // Kod Review API (Gemini denetçi)
@@ -485,7 +566,7 @@ app.post('/api/fenix/feedback', async (req, res) => {
 const fenixTrainer = require('./services/fenix-trainer');
 
 // MAKSİMUM bütçe kilidi — hiçbir şekilde $10 üstü harcama yapılamaz
-const MAX_TRAIN_BUDGET = 10;
+const MAX_TRAIN_BUDGET = 20;
 
 app.post('/api/fenix/train', async (req, res) => {
   const requested = parseFloat(req.body?.budget) || 5;

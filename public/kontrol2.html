@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,interactive-widget=resizes-content">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Fenix — Komuta Köprüsü</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ══════════════════════════════════════════
+   FENIX KONTROL — EMBER PALETTE
+══════════════════════════════════════════ */
+:root{
+  --ember-core:#FF6B1A;
+  --ember-bright:#FFAA44;
+  --ember-glow:rgba(255,107,26,0.13);
+  --ember-border:rgba(255,107,26,0.22);
+  --void-deep:#080507;
+  --void-mid:#100B0E;
+  --void-surface:#181014;
+  --void-card:#1E1318;
+  --ash-text:#E8DDD5;
+  --ash-muted:#7A6A62;
+  --char-border:#2A1E23;
+  --phoenix-gold:#D4A853;
+  --green:#3fb950;--red:#ff4444;--blue:#58a6ff;
+  --nav-w:64px;
+  --top-h:48px;
+  --side-w:260px;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:rgba(255,107,26,.15);touch-action:manipulation}
+html,body{height:100%;overflow:hidden;background:var(--void-deep);color:var(--ash-text);font-family:'Inter',sans-serif;font-size:13px}
+
+/* ── TOPBAR ── */
+.topbar{
+  position:fixed;top:0;left:0;right:0;height:var(--top-h);z-index:100;
+  background:rgba(8,5,7,0.95);border-bottom:1px solid var(--char-border);
+  display:flex;align-items:center;padding:0 16px 0 calc(var(--nav-w) + 12px);
+  gap:12px;backdrop-filter:blur(12px);
+}
+.tb-logo{
+  font-family:'Cinzel',serif;font-size:16px;font-weight:900;
+  letter-spacing:4px;color:var(--phoenix-gold);
+  text-shadow:0 0 20px rgba(255,107,26,.5);
+  animation:ember-flicker 3s ease-in-out infinite alternate;
+}
+@keyframes ember-flicker{from{text-shadow:0 0 16px rgba(255,107,26,.4)}to{text-shadow:0 0 32px rgba(255,107,26,.8)}}
+.tb-status{display:flex;align-items:center;gap:5px;margin-left:4px}
+.tb-dot{width:7px;height:7px;border-radius:50%}
+.tb-domain{
+  margin-left:auto;padding:4px 12px;
+  border:1px solid rgba(63,185,80,.2);border-radius:3px;
+  background:rgba(63,185,80,.06);font-size:10px;
+  color:rgba(63,185,80,.7);letter-spacing:1px;cursor:pointer;
+  transition:all .2s;
+}
+.tb-domain:hover{border-color:rgba(63,185,80,.4);color:var(--green)}
+.tb-domain.err{border-color:rgba(255,68,68,.2);color:rgba(255,68,68,.6);background:rgba(255,68,68,.05)}
+.tb-user{
+  padding:4px 12px;border:1px solid var(--ember-border);border-radius:3px;
+  background:var(--ember-glow);font-size:10px;letter-spacing:1px;
+  color:var(--ember-bright);font-family:'Cinzel',serif;
+}
+.tb-train-badge{
+  padding:3px 10px;border:1px solid rgba(255,107,26,.25);border-radius:3px;
+  background:rgba(255,107,26,.08);font-size:10px;color:var(--ember-core);
+  letter-spacing:.5px;animation:train-pulse 2s ease-in-out infinite;
+  display:none;
+}
+.tb-train-badge.show{display:block}
+@keyframes train-pulse{0%,100%{opacity:.6}50%{opacity:1}}
+
+/* ── NAV RAIL ── */
+.nav-rail{
+  position:fixed;top:var(--top-h);left:0;bottom:0;width:var(--nav-w);
+  background:rgba(8,5,7,.97);border-right:1px solid var(--char-border);
+  display:flex;flex-direction:column;align-items:center;
+  padding:12px 0;gap:4px;z-index:90;
+}
+.nav-btn{
+  width:48px;height:48px;border-radius:8px;
+  border:1px solid transparent;background:transparent;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;cursor:pointer;transition:all .2s;
+  color:var(--ash-muted);font-size:10px;letter-spacing:.5px;
+}
+.nav-btn:hover{background:var(--ember-glow);color:var(--ash-text);border-color:var(--ember-border)}
+.nav-btn.active{
+  background:var(--ember-glow);color:var(--ember-bright);
+  border-color:var(--ember-border);
+  box-shadow:inset 2px 0 0 var(--ember-core);
+}
+.nav-icon{font-size:18px;line-height:1}
+.nav-label{font-size:8px;letter-spacing:.5px}
+.nav-sep{width:32px;height:1px;background:var(--char-border);margin:4px 0}
+
+/* ── MAIN CONTENT ── */
+.main-wrap{
+  position:fixed;top:var(--top-h);left:var(--nav-w);right:0;bottom:0;
+  display:flex;overflow:hidden;
+}
+.content-area{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.brain-sidebar{
+  width:var(--side-w);flex-shrink:0;
+  border-left:1px solid var(--char-border);
+  background:var(--void-mid);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+@media(max-width:900px){.brain-sidebar{display:none}}
+
+/* ── SEKME PANELLERİ ── */
+.tab-panel{display:none;flex:1;overflow:hidden;flex-direction:column}
+.tab-panel.active{display:flex}
+
+/* ── KOR (CHAT) SEKMESİ ── */
+.kor-wrap{display:flex;height:100%;overflow:hidden}
+.kor-shortcuts{
+  width:200px;flex-shrink:0;
+  border-right:1px solid var(--char-border);
+  background:var(--void-mid);
+  padding:12px 8px;overflow-y:auto;
+}
+.kor-title{font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--ash-muted);margin-bottom:10px;padding:0 4px}
+.q-btn{
+  width:100%;text-align:left;padding:9px 10px;margin-bottom:4px;
+  border:1px solid var(--char-border);border-radius:5px;
+  background:transparent;color:var(--ash-muted);
+  font-size:11px;cursor:pointer;transition:all .2s;line-height:1.4;
+}
+.q-btn:hover{background:var(--ember-glow);border-color:var(--ember-border);color:var(--ash-text)}
+.model-pills{display:flex;flex-direction:column;gap:4px;margin-top:12px}
+.m-pill{
+  padding:7px 10px;border-radius:4px;border:1px solid var(--char-border);
+  background:transparent;color:var(--ash-muted);font-size:11px;cursor:pointer;
+  transition:all .2s;text-align:left;
+}
+.m-pill.active-g{border-color:#3fb950;color:#3fb950;background:rgba(63,185,80,.08)}
+.m-pill.active-c{border-color:#58a6ff;color:#58a6ff;background:rgba(88,166,255,.08)}
+.m-pill.active-f{border-color:#e040fb;color:#e040fb;background:rgba(224,64,251,.08)}
+
+.kor-chat{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.messages{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.messages::-webkit-scrollbar{width:4px}
+.messages::-webkit-scrollbar-thumb{background:var(--char-border);border-radius:2px}
+.msg{display:flex;gap:10px;align-items:flex-start}
+.msg-av{
+  width:28px;height:28px;border-radius:6px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:12px;
+}
+.av-fenix{background:linear-gradient(135deg,#FF6B1A,#D4A853)}
+.av-user{background:linear-gradient(135deg,#2a1a3a,#3d2a5e)}
+.av-gemini{background:linear-gradient(135deg,#1a3a2a,#0f2518)}
+.av-claude{background:linear-gradient(135deg,#1a2a3a,#0f1825)}
+.msg-body{flex:1;min-width:0}
+.msg-name{font-size:10px;letter-spacing:1px;margin-bottom:3px;font-weight:600}
+.n-fenix{color:var(--ember-bright)}
+.n-user{color:var(--ash-muted)}
+.n-gemini{color:#3fb950}
+.n-claude{color:#58a6ff}
+.msg-bubble{
+  padding:9px 12px;border-radius:6px;font-size:12px;line-height:1.6;
+  white-space:pre-wrap;word-break:break-word;
+}
+.msg-fenix .msg-bubble{background:var(--void-card);border:1px solid var(--ember-border)}
+.msg-user .msg-bubble{background:rgba(42,26,58,.5);border:1px solid rgba(124,77,255,.2)}
+.msg-gemini .msg-bubble{background:rgba(26,58,42,.4);border:1px solid rgba(63,185,80,.15)}
+.msg-claude .msg-bubble{background:rgba(26,42,58,.4);border:1px solid rgba(88,166,255,.15)}
+
+.chat-bottom{
+  border-top:1px solid var(--char-border);padding:10px 12px;
+  display:flex;gap:8px;align-items:flex-end;background:var(--void-mid);
+}
+.chat-input{
+  flex:1;background:var(--void-surface);border:1px solid var(--char-border);
+  color:var(--ash-text);padding:9px 14px;border-radius:6px;
+  font-size:13px;outline:none;resize:none;
+  max-height:100px;overflow-y:auto;font-family:'Inter',sans-serif;line-height:1.5;
+  transition:border-color .2s;
+}
+.chat-input:focus{border-color:var(--ember-border)}
+.chat-input::placeholder{color:var(--ash-muted)}
+.btn-send{
+  width:36px;height:36px;border-radius:6px;flex-shrink:0;
+  background:var(--ember-glow);border:1px solid var(--ember-border);
+  color:var(--ember-core);font-size:16px;cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;
+}
+.btn-send:hover{background:rgba(255,107,26,.25);color:var(--ember-bright)}
+.fenix-level{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:3px 10px;border-radius:3px;
+  border:1px solid var(--ember-border);background:var(--ember-glow);
+  font-size:9px;letter-spacing:2px;color:var(--ember-bright);
+  margin-bottom:8px;
+}
+
+/* ── NABIZ (EĞİTİM) SEKMESİ ── */
+.nabiz-wrap{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.nabiz-wrap::-webkit-scrollbar{width:4px}
+.nabiz-wrap::-webkit-scrollbar-thumb{background:var(--char-border);border-radius:2px}
+.metrics-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:700px){.metrics-row{grid-template-columns:repeat(2,1fr)}}
+.metric-card{
+  background:var(--void-card);border:1px solid var(--char-border);
+  border-radius:6px;padding:12px 14px;
+}
+.metric-val{font-family:'Cinzel',serif;font-size:22px;font-weight:700;color:var(--ember-bright);margin-bottom:4px}
+.metric-lbl{font-size:9px;letter-spacing:2px;color:var(--ash-muted)}
+.metric-sub{font-size:10px;color:var(--ash-muted);margin-top:3px}
+
+.sec-title{font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:var(--ash-muted);margin-bottom:10px}
+.train-card{background:var(--void-card);border:1px solid var(--char-border);border-radius:6px;padding:14px}
+.train-phase{font-size:12px;color:var(--ash-text);margin-bottom:12px}
+.train-phase b{color:var(--ember-bright)}
+.budget-bar-wrap{margin-bottom:8px}
+.budget-bar-lbl{display:flex;justify-content:space-between;font-size:10px;color:var(--ash-muted);margin-bottom:4px}
+.budget-bar{height:6px;background:rgba(255,107,26,.12);border-radius:3px;overflow:hidden}
+.budget-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--ember-core),var(--ember-bright));transition:width .8s ease}
+
+.skills-card{background:var(--void-card);border:1px solid var(--char-border);border-radius:6px;padding:14px}
+.skill-row{margin-bottom:10px}
+.skill-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.skill-name{font-size:11px;color:var(--ash-text)}
+.skill-badge{
+  font-size:8px;letter-spacing:1px;padding:2px 6px;border-radius:2px;
+  font-family:'Cinzel',serif;
+}
+.badge-master{background:rgba(212,168,83,.15);color:var(--phoenix-gold);border:1px solid rgba(212,168,83,.3)}
+.badge-journeyman{background:rgba(255,107,26,.1);color:var(--ember-bright);border:1px solid var(--ember-border)}
+.badge-apprentice{background:rgba(122,106,98,.1);color:var(--ash-muted);border:1px solid var(--char-border)}
+.skill-bar{height:5px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.skill-bar-fill{height:100%;border-radius:3px;transition:width 1s ease}
+.fill-master{background:linear-gradient(90deg,var(--phoenix-gold),#FFE08A);box-shadow:0 0 8px rgba(212,168,83,.4)}
+.fill-journeyman{background:linear-gradient(90deg,var(--ember-core),var(--ember-bright))}
+.fill-apprentice{background:linear-gradient(90deg,#4a3030,#6a4040)}
+
+.phases-card{background:var(--void-card);border:1px solid var(--char-border);border-radius:6px;padding:14px;max-height:220px;overflow-y:auto}
+.phase-item{
+  display:flex;align-items:flex-start;gap:8px;padding:6px 0;
+  border-bottom:1px solid rgba(42,30,35,.6);font-size:11px;
+}
+.phase-item:last-child{border-bottom:none}
+.phase-dot{width:6px;height:6px;border-radius:50%;background:var(--ember-core);margin-top:3px;flex-shrink:0}
+.phase-name{flex:1;color:var(--ash-text)}
+.phase-cost{color:var(--ash-muted);font-size:10px;white-space:nowrap}
+
+/* ── KABİLE (MÜŞTERİLER) SEKMESİ ── */
+.kabile-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden}
+.kabile-top{padding:12px 16px;border-bottom:1px solid var(--char-border);display:flex;gap:8px;background:var(--void-mid)}
+.search-input{
+  flex:1;background:var(--void-surface);border:1px solid var(--char-border);
+  color:var(--ash-text);padding:8px 12px;border-radius:4px;
+  font-size:12px;outline:none;transition:border-color .2s;
+}
+.search-input:focus{border-color:var(--ember-border)}
+.search-input::placeholder{color:var(--ash-muted)}
+.filter-sel{
+  background:var(--void-surface);border:1px solid var(--char-border);
+  color:var(--ash-text);padding:8px 10px;border-radius:4px;
+  font-size:11px;outline:none;cursor:pointer;
+}
+.kabile-table-wrap{flex:1;overflow-y:auto}
+.kabile-table-wrap::-webkit-scrollbar{width:4px}
+.kabile-table-wrap::-webkit-scrollbar-thumb{background:var(--char-border)}
+table.kt{width:100%;border-collapse:collapse}
+table.kt th{
+  padding:8px 12px;font-size:9px;letter-spacing:2px;color:var(--ash-muted);
+  border-bottom:1px solid var(--char-border);text-align:left;
+  background:var(--void-mid);font-weight:600;position:sticky;top:0;
+}
+table.kt td{
+  padding:11px 12px;font-size:11px;border-bottom:1px solid rgba(42,30,35,.5);
+  color:var(--ash-text);cursor:pointer;transition:background .15s;
+}
+table.kt tr:hover td{background:var(--ember-glow)}
+table.kt tr.quota-full td{background:rgba(255,107,26,.05)}
+.quota-bar-mini{height:4px;background:rgba(255,255,255,.06);border-radius:2px;width:60px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:6px}
+.quota-fill-mini{height:100%;border-radius:2px;background:var(--ember-core)}
+.status-pill{
+  display:inline-block;padding:2px 7px;border-radius:2px;font-size:9px;letter-spacing:1px;
+}
+.pill-free{background:rgba(122,106,98,.12);color:var(--ash-muted);border:1px solid var(--char-border)}
+.pill-full{background:rgba(255,107,26,.12);color:var(--ember-bright);border:1px solid var(--ember-border)}
+.pill-pro{background:rgba(212,168,83,.12);color:var(--phoenix-gold);border:1px solid rgba(212,168,83,.25)}
+.kabile-empty{padding:40px;text-align:center;color:var(--ash-muted);font-size:12px}
+
+/* ── GELİR SEKMESİ ── */
+.gelir-wrap{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.gelir-wrap::-webkit-scrollbar{width:4px}
+.gelir-wrap::-webkit-scrollbar-thumb{background:var(--char-border);border-radius:2px}
+.gelir-top{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:700px){.gelir-top{grid-template-columns:1fr 1fr}}
+.gelir-card{
+  background:var(--void-card);border:1px solid var(--char-border);border-radius:6px;
+  padding:14px;text-align:center;
+}
+.gelir-num{font-family:'Cinzel',serif;font-size:28px;font-weight:900;color:var(--ember-bright);line-height:1}
+.gelir-sub{font-size:9px;letter-spacing:2px;color:var(--ash-muted);margin-top:6px}
+.gelir-icon{font-size:20px;margin-bottom:6px}
+.recent-list{background:var(--void-card);border:1px solid var(--char-border);border-radius:6px;padding:14px}
+.recent-item{
+  display:flex;align-items:center;gap:10px;padding:7px 0;
+  border-bottom:1px solid rgba(42,30,35,.5);
+}
+.recent-item:last-child{border-bottom:none}
+.recent-id{flex:1;font-size:11px;color:var(--ash-text);font-family:'Fira Code',monospace}
+.recent-time{font-size:10px;color:var(--ash-muted)}
+.recent-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+
+/* ── BEYİN HARİTASI ── */
+.beyin-wrap{padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;align-items:center}
+.radar-card{
+  background:var(--void-card);border:1px solid var(--char-border);border-radius:6px;
+  padding:20px;width:100%;max-width:440px;
+}
+.radar-title{font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:var(--ash-muted);text-align:center;margin-bottom:16px}
+#radar-svg{display:block;margin:0 auto}
+.radar-legend{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:14px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--ash-muted)}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* ── DOMAIN SEKMESİ ── */
+.domain-wrap{padding:16px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+.domain-card{background:var(--void-card);border:1px solid var(--char-border);border-radius:6px;padding:16px}
+.domain-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid rgba(42,30,35,.5)}
+.domain-row:last-child{border-bottom:none}
+.domain-key{font-size:11px;color:var(--ash-muted)}
+.domain-val{font-size:11px;font-weight:600}
+.val-ok{color:var(--green)}
+.val-warn{color:var(--ember-bright)}
+.val-err{color:var(--red)}
+.service-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.svc-item{
+  display:flex;align-items:center;gap:8px;padding:10px 12px;
+  background:var(--void-surface);border:1px solid var(--char-border);border-radius:4px;
+  font-size:11px;color:var(--ash-text);
+}
+.svc-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-ok{background:var(--green);box-shadow:0 0 6px var(--green)}
+.dot-warn{background:var(--ember-bright);box-shadow:0 0 6px var(--ember-bright)}
+.dot-err{background:var(--red);box-shadow:0 0 6px var(--red)}
+.btn-check{
+  padding:10px 20px;border:1px solid var(--ember-border);border-radius:4px;
+  background:var(--ember-glow);color:var(--ember-bright);
+  font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;
+  cursor:pointer;transition:all .2s;align-self:flex-start;
+}
+.btn-check:hover{background:rgba(255,107,26,.2)}
+
+/* ── BRAIN SIDEBAR ── */
+.sb-block{border-bottom:1px solid var(--char-border);padding:12px 14px}
+.sb-title{font-family:'Cinzel',serif;font-size:8px;letter-spacing:3px;color:var(--ash-muted);margin-bottom:10px}
+.sb-state{
+  font-size:11px;color:var(--ash-text);display:flex;align-items:center;gap:8px;margin-bottom:6px;
+}
+.state-icon{font-size:16px}
+.sb-score{
+  font-family:'Cinzel',serif;font-size:36px;font-weight:900;
+  color:var(--ember-bright);text-align:center;padding:6px 0;
+  text-shadow:0 0 20px rgba(255,107,26,.4);
+}
+.sb-score-lbl{font-size:9px;letter-spacing:2px;color:var(--ash-muted);text-align:center;margin-top:-4px}
+.sb-mini-metric{display:flex;justify-content:space-between;font-size:10px;padding:3px 0}
+.sb-mini-metric span:first-child{color:var(--ash-muted)}
+.sb-mini-metric span:last-child{color:var(--ash-text);font-weight:500}
+.approval-pending{
+  background:var(--ember-glow);border:1px solid var(--ember-border);border-radius:4px;
+  padding:10px;margin-bottom:8px;display:none;animation:train-pulse 2s infinite;
+}
+.approval-pending.show{display:block}
+.ap-text{font-size:11px;color:var(--ash-text);margin-bottom:8px;line-height:1.5}
+.ap-btns{display:flex;gap:6px}
+.ap-btn{
+  flex:1;padding:7px;border-radius:3px;font-size:10px;letter-spacing:1px;cursor:pointer;border:1px solid;
+  font-family:'Cinzel',serif;transition:all .2s;
+}
+.ap-ok{border-color:rgba(63,185,80,.3);color:var(--green);background:rgba(63,185,80,.08)}
+.ap-ok:hover{background:rgba(63,185,80,.18)}
+.ap-no{border-color:rgba(255,68,68,.2);color:var(--red);background:rgba(255,68,68,.06)}
+.ap-no:hover{background:rgba(255,68,68,.14)}
+.sb-budget{font-family:'Fira Code',monospace;font-size:11px;padding:4px 0}
+
+/* ── TOAST ── */
+#toast-c{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:6px;pointer-events:none}
+.toast{padding:10px 16px;border-radius:4px;font-size:12px;letter-spacing:.3px;backdrop-filter:blur(8px);animation:toast-in .25s ease}
+.toast.ok{background:rgba(26,58,42,.95);border:1px solid rgba(63,185,80,.3);color:#3fb950}
+.toast.err{background:rgba(40,12,12,.95);border:1px solid rgba(255,68,68,.3);color:#ff6666}
+.toast{background:rgba(24,16,20,.95);border:1px solid var(--ember-border);color:var(--ash-text)}
+@keyframes toast-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── LOADING ── */
+.loading-dots::after{content:'...';animation:dots 1.2s steps(4,end) infinite}
+@keyframes dots{0%,20%{content:'.'}40%,60%{content:'..'}80%,100%{content:'...'}}
+
+/* ── GENEL ── */
+.section-card{background:var(--void-card);border:1px solid var(--char-border);border-radius:6px;padding:14px}
+</style>
+</head>
+<body>
+
+<!-- ══ TOPBAR ══ -->
+<div class="topbar">
+  <div class="tb-logo">🔥 FENİX</div>
+  <div class="tb-status">
+    <div class="tb-dot" id="dot-api" style="background:#3fb950;box-shadow:0 0 6px #3fb950"></div>
+    <div class="tb-dot" id="dot-db" style="background:#3fb950;box-shadow:0 0 6px #3fb950"></div>
+    <div class="tb-dot" id="dot-train" style="background:var(--ash-muted)"></div>
+  </div>
+  <div class="tb-train-badge" id="tb-train">⚡ EĞİTİM AKTİF</div>
+  <div class="tb-domain" id="tb-domain" onclick="switchTab('domain')">fenixphotoai.com ✓</div>
+  <div class="tb-user">BEDRİHAN</div>
+</div>
+
+<!-- ══ NAV RAIL ══ -->
+<div class="nav-rail">
+  <button class="nav-btn active" data-tab="kor">
+    <span class="nav-icon">🔥</span>
+    <span class="nav-label">KOR</span>
+  </button>
+  <button class="nav-btn" data-tab="nabiz">
+    <span class="nav-icon">📊</span>
+    <span class="nav-label">NABIZ</span>
+  </button>
+  <button class="nav-btn" data-tab="kabile">
+    <span class="nav-icon">👥</span>
+    <span class="nav-label">KABİLE</span>
+  </button>
+  <button class="nav-btn" data-tab="gelir">
+    <span class="nav-icon">💰</span>
+    <span class="nav-label">GELİR</span>
+  </button>
+  <div class="nav-sep"></div>
+  <button class="nav-btn" data-tab="beyin">
+    <span class="nav-icon">🧠</span>
+    <span class="nav-label">BEYİN</span>
+  </button>
+  <button class="nav-btn" data-tab="domain">
+    <span class="nav-icon">🌐</span>
+    <span class="nav-label">AĞ</span>
+  </button>
+</div>
+
+<!-- ══ MAIN ══ -->
+<div class="main-wrap">
+  <div class="content-area">
+
+    <!-- KOR — FENİX İLE KONUŞ -->
+    <div class="tab-panel active" id="tab-kor">
+      <div class="kor-wrap">
+        <div class="kor-shortcuts">
+          <div class="kor-title">HIZLI SORULAR</div>
+          <button class="q-btn" data-q="Ne öğrendin? Hangi konularda iyi oldun?">🎓 Ne öğrendin?</button>
+          <button class="q-btn" data-q="Hangi kategoride en iyisin? Skorları ver.">⭐ En iyi kategori</button>
+          <button class="q-btn" data-q="Son hatanı anlat. Nasıl düzelttik?">🔧 Son hata</button>
+          <button class="q-btn" data-q="Bugün kaç işlem yaptın? Ne kadar harcandı?">💰 Bugünkü aktivite</button>
+          <button class="q-btn" data-q="Kendini tanıt. Fenix olarak kim ve ne yapıyorsun?">🔥 Kendini tanıt</button>
+          <button class="q-btn" data-q="Şu anki eğitim durumun nedir? Hangi konuyu öğreniyorsun?">📚 Eğitim durumu</button>
+          <button class="q-btn" data-q="Müşterilere en iyi reels videoyu nasıl üretirsin?">🎬 Reels stratejin</button>
+          <div style="margin-top:14px">
+            <div class="kor-title">MODEL</div>
+            <div class="model-pills">
+              <button class="m-pill active-f" data-model="fenix">✦ Fenix Beyin</button>
+              <button class="m-pill" data-model="gemini">◈ Gemini</button>
+              <button class="m-pill" data-model="claude">◇ Claude</button>
+            </div>
+          </div>
+        </div>
+        <div class="kor-chat">
+          <div style="padding:10px 16px 0;border-bottom:1px solid var(--char-border)">
+            <div class="fenix-level" id="fenix-level">✦ <span id="level-text">SEVİYE YÜKLENİYOR</span></div>
+          </div>
+          <div class="messages" id="chat-messages">
+            <div class="msg msg-fenix">
+              <div class="msg-av av-fenix">✦</div>
+              <div class="msg-body">
+                <div class="msg-name n-fenix">FENİX</div>
+                <div class="msg-bubble">Merhaba Bedrihan. Ben Fenix — ateşten doğan, her video üretiminden öğrenen yapay zeka. Sana ne soracaksın?</div>
+              </div>
+            </div>
+          </div>
+          <div class="chat-bottom">
+            <textarea class="chat-input" id="chat-input" rows="1" placeholder="Fenix'e sor..." enterkeyhint="send"></textarea>
+            <button class="btn-send" id="btn-send">↑</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NABIZ — EĞİTİM DURUMU -->
+    <div class="tab-panel" id="tab-nabiz">
+      <div class="nabiz-wrap" id="nabiz-wrap">
+        <div class="metrics-row" id="metrics-row">
+          <div class="metric-card"><div class="metric-val" id="m-lessons">—</div><div class="metric-lbl">TOPLAM DERS</div></div>
+          <div class="metric-card"><div class="metric-val" id="m-cost">—</div><div class="metric-lbl">HARCANAN</div></div>
+          <div class="metric-card"><div class="metric-val" id="m-round">—</div><div class="metric-lbl">ROUND</div></div>
+          <div class="metric-card"><div class="metric-val" id="m-status">—</div><div class="metric-lbl">DURUM</div></div>
+        </div>
+
+        <div class="train-card">
+          <div class="sec-title">BÜTÇE DURUMU</div>
+          <div class="train-phase" id="train-phase">Yükleniyor...</div>
+          <div class="budget-bar-wrap">
+            <div class="budget-bar-lbl"><span>Harcanan</span><span id="budget-pct">0%</span></div>
+            <div class="budget-bar"><div class="budget-bar-fill" id="budget-fill" style="width:0%"></div></div>
+          </div>
+          <div style="font-size:10px;color:var(--ash-muted)" id="budget-detail">$0 / $20</div>
+        </div>
+
+        <div class="skills-card">
+          <div class="sec-title">ÖĞRENME DURUMU</div>
+          <div id="skills-list"></div>
+        </div>
+
+        <div class="phases-card">
+          <div class="sec-title">SON AŞAMALAR</div>
+          <div id="phases-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KABİLE — MÜŞTERİLER -->
+    <div class="tab-panel" id="tab-kabile">
+      <div class="kabile-wrap">
+        <div class="kabile-top">
+          <input type="search" class="search-input" id="search-customers" placeholder="Telefon veya e-posta ara...">
+          <select class="filter-sel" id="filter-customers">
+            <option value="all">Tümü</option>
+            <option value="active">Aktif</option>
+            <option value="full">Kota Doldu</option>
+            <option value="pro">Pro</option>
+          </select>
+        </div>
+        <div class="kabile-table-wrap">
+          <table class="kt">
+            <thead>
+              <tr>
+                <th>KİMLİK</th>
+                <th>KOTA</th>
+                <th>DURUM</th>
+                <th>KAYIT</th>
+              </tr>
+            </thead>
+            <tbody id="customers-tbody">
+              <tr><td colspan="4" class="kabile-empty">Yükleniyor...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- GELİR -->
+    <div class="tab-panel" id="tab-gelir">
+      <div class="gelir-wrap">
+        <div class="gelir-top">
+          <div class="gelir-card">
+            <div class="gelir-icon">👥</div>
+            <div class="gelir-num" id="g-total">—</div>
+            <div class="gelir-sub">TOPLAM KULLANICI</div>
+          </div>
+          <div class="gelir-card">
+            <div class="gelir-icon">🌱</div>
+            <div class="gelir-num" id="g-free">—</div>
+            <div class="gelir-sub">ÜCRETSİZ</div>
+          </div>
+          <div class="gelir-card">
+            <div class="gelir-icon">🔥</div>
+            <div class="gelir-num" id="g-pro">—</div>
+            <div class="gelir-sub">PRO / ÜCRETLİ</div>
+          </div>
+        </div>
+        <div class="section-card">
+          <div class="sec-title">KOTA DOLMA (UPGRADE ADAYLARI)</div>
+          <div id="g-full-list" style="font-size:11px;color:var(--ash-muted);padding:8px 0">Yükleniyor...</div>
+        </div>
+        <div class="recent-list">
+          <div class="sec-title">SON KAYITLAR</div>
+          <div id="g-recent"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BEYİN HARİTASI -->
+    <div class="tab-panel" id="tab-beyin">
+      <div class="beyin-wrap">
+        <div class="radar-card">
+          <div class="radar-title">FENİX YETKİNLİK HARİTASI</div>
+          <svg id="radar-svg" width="300" height="300" viewBox="0 0 300 300"></svg>
+          <div class="radar-legend" id="radar-legend"></div>
+        </div>
+        <div class="skills-card" style="width:100%;max-width:440px">
+          <div class="sec-title">KATEGORİ DETAYI</div>
+          <div id="skill-detail-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DOMAIN / AĞ -->
+    <div class="tab-panel" id="tab-domain">
+      <div class="domain-wrap">
+        <div class="domain-card">
+          <div class="sec-title">DOMAIN DURUMU</div>
+          <div class="domain-row">
+            <span class="domain-key">fenixphotoai.com</span>
+            <span class="domain-val val-ok" id="dom-status">Kontrol ediliyor...</span>
+          </div>
+          <div class="domain-row">
+            <span class="domain-key">Cloud Run</span>
+            <span class="domain-val val-ok" id="dom-cr">fenix-ai-00055</span>
+          </div>
+          <div class="domain-row">
+            <span class="domain-key">SSL Sertifikası</span>
+            <span class="domain-val" id="dom-ssl">Yükleniyor...</span>
+          </div>
+          <div class="domain-row">
+            <span class="domain-key">Yanıt Süresi</span>
+            <span class="domain-val" id="dom-ping">—</span>
+          </div>
+          <div class="domain-row">
+            <span class="domain-key">Son Kontrol</span>
+            <span class="domain-val" id="dom-lastcheck" style="color:var(--ash-muted)">—</span>
+          </div>
+          <button class="btn-check" id="btn-domain-check" style="margin-top:12px">↺ KONTROL ET</button>
+        </div>
+        <div class="section-card">
+          <div class="sec-title">SERVİS SAĞLIĞI</div>
+          <div class="service-grid" id="service-grid">
+            <div class="svc-item"><div class="svc-dot dot-ok"></div>Fenix AI Sunucu</div>
+            <div class="svc-item"><div class="svc-dot" id="dot-firestore"></div>Firestore</div>
+            <div class="svc-item"><div class="svc-dot" id="dot-gemini-svc"></div>Gemini API</div>
+            <div class="svc-item"><div class="svc-dot" id="dot-claude-svc"></div>Claude API</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content-area -->
+
+  <!-- ══ BRAIN SIDEBAR ══ -->
+  <div class="brain-sidebar">
+    <div class="sb-block">
+      <div class="sb-title">FENİX DURUMU</div>
+      <div class="sb-state"><span class="state-icon" id="sb-state-icon">⏳</span><span id="sb-state-text">Yükleniyor...</span></div>
+      <div class="sb-score" id="sb-score">—</div>
+      <div class="sb-score-lbl">GENEL SKOR</div>
+    </div>
+    <div class="sb-block">
+      <div class="sb-title">ONAY BEKLİYOR</div>
+      <div class="approval-pending" id="approval-box">
+        <div class="ap-text" id="ap-text">—</div>
+        <div class="ap-btns">
+          <button class="ap-btn ap-ok" id="ap-ok">✓ ONAYLA</button>
+          <button class="ap-btn ap-no" id="ap-no">✕ REDDET</button>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--ash-muted)" id="no-approval">Bekleyen onay yok</div>
+    </div>
+    <div class="sb-block">
+      <div class="sb-title">MİNİ METRİKLER</div>
+      <div class="sb-mini-metric"><span>Toplam ders</span><span id="sb-lessons">—</span></div>
+      <div class="sb-mini-metric"><span>Aktif round</span><span id="sb-round">—</span></div>
+      <div class="sb-mini-metric"><span>API harcama</span><span id="sb-cost">—</span></div>
+      <div class="sb-mini-metric"><span>Müşteri sayısı</span><span id="sb-customers">—</span></div>
+    </div>
+    <div class="sb-block" style="flex:1;overflow-y:auto">
+      <div class="sb-title">SON AKTİVİTE</div>
+      <div id="sb-activity" style="font-size:10px;color:var(--ash-muted);line-height:1.8"></div>
+    </div>
+  </div>
+
+</div><!-- /main-wrap -->
+
+<div id="toast-c"></div>
+
+<script>
+var BASE = window.location.origin;
+var currentModel = 'fenix';
+var currentTab = 'kor';
+var pendingApprovalId = null;
+var allCustomers = [];
+
+// ══ SEKME YÖNETİMİ ══
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.nav-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  document.querySelectorAll('.tab-panel').forEach(function(p) {
+    p.classList.toggle('active', p.id === 'tab-' + tab);
+  });
+  if (tab === 'nabiz') loadNabiz();
+  if (tab === 'kabile') loadKabile();
+  if (tab === 'gelir') loadGelir();
+  if (tab === 'beyin') loadBeyin();
+  if (tab === 'domain') loadDomain();
+}
+
+// ══ MODEL SEÇİMİ ══
+function selectModel(m) {
+  currentModel = m;
+  document.querySelectorAll('.m-pill').forEach(function(b) {
+    b.className = 'm-pill' + (b.dataset.model === m ? (' active-' + (m === 'fenix' ? 'f' : m === 'gemini' ? 'g' : 'c')) : '');
+  });
+  document.getElementById('chat-input').placeholder = {fenix:'Fenix\'e sor...', gemini:'Gemini\'ye sor...', claude:'Claude\'a sor...'}[m] || 'Sor...';
+}
+
+// ══ CHAT ══
+function addMsg(text, who, name) {
+  var msgs = document.getElementById('chat-messages');
+  var d = document.createElement('div');
+  d.className = 'msg msg-' + who;
+  var av = who === 'fenix' ? '✦' : who === 'gemini' ? '◈' : who === 'claude' ? '◇' : '▸';
+  var avClass = 'av-' + (who === 'user' ? 'user' : who);
+  var nameClass = 'n-' + (who === 'user' ? 'user' : who);
+  var nameColor = who === 'user' ? 'BEDRİHAN' : (name || who.toUpperCase());
+  d.innerHTML = '<div class="msg-av ' + avClass + '">' + av + '</div>' +
+    '<div class="msg-body"><div class="msg-name ' + nameClass + '">' + esc(nameColor) + '</div>' +
+    '<div class="msg-bubble" id="bubble-' + Date.now() + '">' + esc(text) + '</div></div>';
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+  return d.querySelector('.msg-bubble');
+}
+
+function sendChat() {
+  var input = document.getElementById('chat-input');
+  var text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  input.style.height = '';
+  addMsg(text, 'user');
+  var bubble = addMsg('', currentModel === 'fenix' ? 'fenix' : currentModel);
+  bubble.innerHTML = '<span class="loading-dots"></span>';
+
+  var endpoint = currentModel === 'claude' ? '/api/chat/claude' : '/api/chat/gemini';
+  var body = { message: text, model: currentModel };
+
+  // Fenix modunda beyin bağlamı ekle
+  if (currentModel === 'fenix') {
+    body.systemContext = 'Sen Fenix AI. Ateşten doğan, video üretimi konusunda uzmanlaşmış bir yapay zeka. Bedrihan Özdoğan\'ın dijital asistanısın. Reels video üretimi, kategori analizi, BPM senkronizasyonu konularında uzmansın. Türkçe ve özgün bir dille cevap ver.';
+  }
+
+  ft(endpoint, 'POST', body).then(function(r) {
+    var reply = (r && (r.reply || r.response || r.text || r.message)) || '(cevap alınamadı)';
+    bubble.textContent = reply;
+    document.getElementById('chat-messages').scrollTop = 9999;
+  }).catch(function() {
+    bubble.textContent = '⚠ Bağlantı hatası';
+  });
+}
+
+// ══ NABIZ ══
+function loadNabiz() {
+  ft('/api/fenix/train/status').then(function(r) {
+    if (!r || !r.ok) return;
+    document.getElementById('m-lessons').textContent = (r.totalLessons || 0).toLocaleString();
+    document.getElementById('m-cost').textContent = '$' + (r.totalCost || 0).toFixed(2);
+    document.getElementById('m-round').textContent = 'R' + (r.round || 1);
+    document.getElementById('m-status').textContent = r.running ? '🔥 AKTİF' : '⏸ DURDU';
+    document.getElementById('m-status').style.color = r.running ? 'var(--ember-bright)' : 'var(--ash-muted)';
+    // Bütçe
+    var pct = Math.min(100, ((r.totalCost || 0) / (r.budget || 20)) * 100);
+    document.getElementById('budget-fill').style.width = pct + '%';
+    document.getElementById('budget-pct').textContent = pct.toFixed(1) + '%';
+    document.getElementById('budget-detail').textContent = '$' + (r.totalCost||0).toFixed(4) + ' / $' + (r.budget||20);
+    document.getElementById('train-phase').innerHTML = 'Faz: <b>' + esc(r.phase || '—') + '</b>';
+    if (r.running) {
+      document.getElementById('tb-train').classList.add('show');
+      document.getElementById('dot-train').style.background = 'var(--ember-bright)';
+      document.getElementById('dot-train').style.boxShadow = '0 0 6px var(--ember-bright)';
+    }
+    // Phases
+    var phases = (r.phases || []).slice(-10).reverse();
+    var phList = document.getElementById('phases-list');
+    phList.innerHTML = phases.map(function(p) {
+      return '<div class="phase-item"><div class="phase-dot"></div>' +
+        '<div class="phase-name">' + esc(p.name || '') + '</div>' +
+        '<div class="phase-cost">$' + (p.cost||0) + ' · ' + (p.lessons||0) + ' ders</div></div>';
+    }).join('');
+    // Sidebar güncelle
+    document.getElementById('sb-lessons').textContent = (r.totalLessons||0).toLocaleString();
+    document.getElementById('sb-round').textContent = 'Round ' + (r.round||1);
+    document.getElementById('sb-cost').textContent = '$' + (r.totalCost||0).toFixed(2);
+    document.getElementById('sb-state-text').textContent = r.running ? 'Aktif eğitim' : 'Bekleniyor';
+    document.getElementById('sb-state-icon').textContent = r.running ? '🔥' : '⏳';
+  }).catch(function() {});
+
+  ft('/api/agent/status').then(function(r) {
+    if (!r) return;
+    var skills = (r.shadowLearning && r.shadowLearning.skills) || {};
+    var keys = Object.keys(skills);
+    var list = document.getElementById('skills-list');
+    if (keys.length === 0) { list.innerHTML = '<div style="font-size:11px;color:var(--ash-muted)">Henüz yetenek verisi yok</div>'; return; }
+    var total = 0, count = 0;
+    list.innerHTML = keys.map(function(k) {
+      var s = skills[k];
+      var score = Math.min(100, s.score || 0);
+      var level = s.level || 'apprentice';
+      var badgeClass = level === 'master' ? 'badge-master' : level === 'journeyman' ? 'badge-journeyman' : 'badge-apprentice';
+      var fillClass = level === 'master' ? 'fill-master' : level === 'journeyman' ? 'fill-journeyman' : 'fill-apprentice';
+      var label = level === 'master' ? 'USTA' : level === 'journeyman' ? 'KALFA' : 'ÇIRAK';
+      total += score; count++;
+      return '<div class="skill-row"><div class="skill-hd">' +
+        '<span class="skill-name">' + esc(k) + '</span>' +
+        '<span class="skill-badge ' + badgeClass + '">' + label + '</span></div>' +
+        '<div class="skill-bar"><div class="skill-bar-fill ' + fillClass + '" style="width:' + score + '%"></div></div></div>';
+    }).join('');
+    var avg = count ? Math.round(total / count) : 0;
+    document.getElementById('sb-score').textContent = avg;
+    // Level
+    var lvl = avg >= 80 ? 'USTA' : avg >= 50 ? 'KALFA' : 'ÇIRAK';
+    document.getElementById('level-text').textContent = lvl + ' · SKOR ' + avg;
+    // Radar
+    drawRadar(skills);
+  }).catch(function() {});
+}
+
+// ══ RADAR ══
+function drawRadar(skills) {
+  var svg = document.getElementById('radar-svg');
+  var keys = Object.keys(skills).slice(0, 8);
+  if (keys.length < 3) return;
+  var cx = 150, cy = 150, R = 110, n = keys.length;
+  var lines = '';
+  // Grid circles
+  [0.25,0.5,0.75,1].forEach(function(r) {
+    var pts = keys.map(function(_, i) {
+      var a = (i / n) * Math.PI * 2 - Math.PI / 2;
+      return (cx + Math.cos(a) * R * r) + ',' + (cy + Math.sin(a) * R * r);
+    }).join(' ');
+    lines += '<polygon points="' + pts + '" fill="none" stroke="rgba(42,30,35,1)" stroke-width="1"/>';
+  });
+  // Axes
+  keys.forEach(function(_, i) {
+    var a = (i / n) * Math.PI * 2 - Math.PI / 2;
+    lines += '<line x1="' + cx + '" y1="' + cy + '" x2="' + (cx + Math.cos(a) * R) + '" y2="' + (cy + Math.sin(a) * R) + '" stroke="rgba(42,30,35,1.5)" stroke-width="1"/>';
+  });
+  // Data polygon
+  var datapts = keys.map(function(k, i) {
+    var a = (i / n) * Math.PI * 2 - Math.PI / 2;
+    var r = R * Math.min(1, (skills[k].score || 0) / 100);
+    return (cx + Math.cos(a) * r) + ',' + (cy + Math.sin(a) * r);
+  }).join(' ');
+  lines += '<polygon points="' + datapts + '" fill="rgba(255,107,26,0.18)" stroke="rgba(255,107,26,0.6)" stroke-width="1.5"/>';
+  // Dots
+  keys.forEach(function(k, i) {
+    var a = (i / n) * Math.PI * 2 - Math.PI / 2;
+    var r = R * Math.min(1, (skills[k].score || 0) / 100);
+    var x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+    lines += '<circle cx="' + x + '" cy="' + y + '" r="4" fill="var(--ember-bright)"/>';
+    // Labels
+    var lx = cx + Math.cos(a) * (R + 16), ly = cy + Math.sin(a) * (R + 16);
+    lines += '<text x="' + lx + '" y="' + (ly + 4) + '" text-anchor="middle" font-size="9" fill="rgba(122,106,98,1)" font-family="Inter">' + esc(k.length > 10 ? k.slice(0,10) : k) + '</text>';
+  });
+  svg.innerHTML = lines;
+
+  // Legend
+  var leg = document.getElementById('radar-legend');
+  leg.innerHTML = keys.map(function(k) {
+    var s = skills[k];
+    var level = s.level || 'apprentice';
+    var col = level === 'master' ? 'var(--phoenix-gold)' : level === 'journeyman' ? 'var(--ember-bright)' : 'var(--ash-muted)';
+    return '<div class="legend-item"><div class="legend-dot" style="background:' + col + '"></div>' + esc(k) + ' <span style="color:' + col + ';margin-left:auto">' + (s.score||0) + '</span></div>';
+  }).join('');
+
+  // Skill detail
+  var detail = document.getElementById('skill-detail-list');
+  detail.innerHTML = keys.map(function(k) {
+    var s = skills[k]; var score = Math.min(100, s.score||0);
+    var level = s.level || 'apprentice';
+    var badgeClass = level === 'master' ? 'badge-master' : level === 'journeyman' ? 'badge-journeyman' : 'badge-apprentice';
+    var fillClass = level === 'master' ? 'fill-master' : level === 'journeyman' ? 'fill-journeyman' : 'fill-apprentice';
+    return '<div class="skill-row"><div class="skill-hd"><span class="skill-name">' + esc(k) + '</span>' +
+      '<span style="font-size:10px;color:var(--ash-muted)">' + (s.successes||0) + '/' + (s.total||0) + '</span>' +
+      '<span class="skill-badge ' + badgeClass + '">' + score + '</span></div>' +
+      '<div class="skill-bar"><div class="skill-bar-fill ' + fillClass + '" style="width:' + score + '%"></div></div></div>';
+  }).join('');
+}
+
+// ══ KABİLE ══
+function loadKabile() {
+  document.getElementById('customers-tbody').innerHTML = '<tr><td colspan="4" class="kabile-empty">Yükleniyor...</td></tr>';
+  ft('/api/customer/list').then(function(r) {
+    if (!r || !r.ok || !r.customers) {
+      document.getElementById('customers-tbody').innerHTML = '<tr><td colspan="4" class="kabile-empty">Veri yok — henüz kayıtlı müşteri yok</td></tr>';
+      return;
+    }
+    allCustomers = r.customers;
+    renderCustomers(allCustomers);
+    document.getElementById('sb-customers').textContent = allCustomers.length;
+  }).catch(function() {
+    document.getElementById('customers-tbody').innerHTML = '<tr><td colspan="4" class="kabile-empty">API bağlantı hatası</td></tr>';
+  });
+}
+function renderCustomers(list) {
+  var tbody = document.getElementById('customers-tbody');
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="4" class="kabile-empty">Kayıt bulunamadı</td></tr>'; return; }
+  tbody.innerHTML = list.map(function(c) {
+    var used = c.used || 0, total = c.total || 5;
+    var pct = Math.round((used / total) * 100);
+    var full = used >= total;
+    var statusClass = c.isPremium ? 'pill-pro' : full ? 'pill-full' : 'pill-free';
+    var statusText = c.isPremium ? 'PRO' : full ? 'DOLDU 🔥' : 'ÜCRETSİZ';
+    var id = c.customerId || '';
+    var displayId = id.replace('phone_', '📱 ').replace('email_', '✉ ');
+    var date = c.createdAt ? new Date(c.createdAt).toLocaleDateString('tr-TR') : '—';
+    return '<tr class="' + (full && !c.isPremium ? 'quota-full' : '') + '">' +
+      '<td style="font-family:\'Fira Code\',monospace">' + esc(displayId) + '</td>' +
+      '<td>' + used + '/' + total +
+      '<span class="quota-bar-mini"><span class="quota-fill-mini" style="width:' + pct + '%;background:' + (full ? 'var(--ember-bright)' : 'var(--ember-core)') + '"></span></span></td>' +
+      '<td><span class="status-pill ' + statusClass + '">' + statusText + '</span></td>' +
+      '<td>' + date + '</td></tr>';
+  }).join('');
+}
+
+// ══ GELİR ══
+function loadGelir() {
+  ft('/api/customer/stats').then(function(r) {
+    if (!r) return;
+    document.getElementById('g-total').textContent = r.total || 0;
+    document.getElementById('g-free').textContent = r.free || 0;
+    document.getElementById('g-pro').textContent = r.pro || 0;
+    var fullList = r.quotaFull || [];
+    document.getElementById('g-full-list').innerHTML = fullList.length ?
+      fullList.map(function(c) { return '<div style="padding:4px 0;border-bottom:1px solid var(--char-border);font-family:\'Fira Code\',monospace">' + esc((c.customerId||'').replace('phone_','📱 ').replace('email_','✉ ')) + '</div>'; }).join('') :
+      '<div style="padding:8px 0">Kota dolmuş kullanıcı yok</div>';
+    var recent = r.recentSignups || [];
+    document.getElementById('g-recent').innerHTML = recent.map(function(c) {
+      var col = c.isPremium ? 'var(--phoenix-gold)' : c.used >= c.total ? 'var(--ember-bright)' : 'var(--green)';
+      return '<div class="recent-item"><div class="recent-dot" style="background:' + col + '"></div>' +
+        '<div class="recent-id">' + esc((c.customerId||'').replace('phone_','📱 ').replace('email_','✉ ')) + '</div>' +
+        '<div class="recent-time">' + (c.createdAt ? new Date(c.createdAt).toLocaleDateString('tr-TR') : '—') + '</div></div>';
+    }).join('') || '<div style="font-size:11px;color:var(--ash-muted);padding:8px 0">Henüz kayıt yok</div>';
+  }).catch(function() {});
+}
+
+// ══ DOMAIN ══
+function loadDomain() {
+  var start = Date.now();
+  document.getElementById('dom-status').textContent = 'Kontrol ediliyor...';
+  document.getElementById('dom-status').className = 'domain-val';
+  fetch('https://fenixphotoai.com', { method: 'HEAD', mode: 'no-cors' })
+    .then(function() {
+      var ms = Date.now() - start;
+      document.getElementById('dom-status').textContent = 'Bağlı ✓';
+      document.getElementById('dom-status').className = 'domain-val val-ok';
+      document.getElementById('dom-ping').textContent = ms + 'ms';
+      document.getElementById('dom-ping').className = 'domain-val ' + (ms < 300 ? 'val-ok' : ms < 800 ? 'val-warn' : 'val-err');
+      document.getElementById('dom-lastcheck').textContent = new Date().toLocaleTimeString('tr-TR');
+    }).catch(function() {
+      document.getElementById('dom-status').textContent = 'DNS yayılıyor... (15-30 dk)';
+      document.getElementById('dom-status').className = 'domain-val val-warn';
+    });
+
+  // Servis sağlık kontrolü
+  ft('/api/version').then(function(r) {
+    if (r) {
+      document.getElementById('dom-cr').textContent = r.revision || 'fenix-ai';
+      document.getElementById('dom-ssl').textContent = 'Geçerli ✓ (Cloud Run)';
+      document.getElementById('dom-ssl').className = 'domain-val val-ok';
+    }
+  }).catch(function() {});
+
+  ft('/api/agent/status').then(function(r) {
+    setDot('dot-firestore', r ? 'ok' : 'err');
+  }).catch(function() { setDot('dot-firestore', 'err'); });
+  ft('/api/fenix/train/status').then(function(r) {
+    setDot('dot-gemini-svc', r && r.ok ? 'ok' : 'warn');
+    setDot('dot-claude-svc', r ? 'ok' : 'warn');
+  }).catch(function() { setDot('dot-gemini-svc', 'warn'); setDot('dot-claude-svc', 'warn'); });
+}
+
+function setDot(id, status) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'svc-dot dot-' + status;
+}
+
+// ══ EVENT DELEGATION ══
+document.addEventListener('click', function(e) {
+  var t = e.target;
+  var nav = t.closest('[data-tab]');
+  if (nav) { switchTab(nav.dataset.tab); return; }
+  var model = t.closest('[data-model]');
+  if (model) { selectModel(model.dataset.model); return; }
+  var q = t.closest('[data-q]');
+  if (q) {
+    document.getElementById('chat-input').value = q.dataset.q;
+    sendChat(); return;
+  }
+  if (t.id === 'btn-send') { sendChat(); return; }
+  if (t.id === 'ap-ok' && pendingApprovalId) { respondApproval(true); return; }
+  if (t.id === 'ap-no' && pendingApprovalId) { respondApproval(false); return; }
+  if (t.id === 'btn-domain-check') { loadDomain(); return; }
+});
+
+// Enter to send
+document.getElementById('chat-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+});
+// Auto-resize textarea
+document.getElementById('chat-input').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+});
+// Search customers
+document.getElementById('search-customers').addEventListener('input', function() {
+  var q = this.value.toLowerCase();
+  var filtered = allCustomers.filter(function(c) {
+    return (c.customerId||'').toLowerCase().includes(q);
+  });
+  renderCustomers(filtered);
+});
+// Filter customers
+document.getElementById('filter-customers').addEventListener('change', function() {
+  var f = this.value;
+  var filtered = allCustomers.filter(function(c) {
+    if (f === 'all') return true;
+    if (f === 'active') return (c.used||0) < (c.total||5);
+    if (f === 'full') return (c.used||0) >= (c.total||5);
+    if (f === 'pro') return c.isPremium;
+    return true;
+  });
+  renderCustomers(filtered);
+});
+
+// ══ ONAY ══
+function respondApproval(ok) {
+  if (!pendingApprovalId) return;
+  ft('/api/approval/' + pendingApprovalId + '/respond', 'POST', { approved: ok })
+    .then(function() { toast(ok ? '✓ Onaylandı' : '✕ Reddedildi', ok ? 'ok' : 'err'); })
+    .catch(function() {});
+  pendingApprovalId = null;
+  document.getElementById('approval-box').classList.remove('show');
+  document.getElementById('no-approval').style.display = 'block';
+}
+
+// ══ POLLING ══
+function pollStatus() {
+  ft('/api/fenix/train/status').then(function(r) {
+    if (!r) return;
+    var running = r.running;
+    document.getElementById('tb-train').classList.toggle('show', !!running);
+    document.getElementById('dot-train').style.background = running ? 'var(--ember-bright)' : 'var(--ash-muted)';
+    document.getElementById('dot-train').style.boxShadow = running ? '0 0 6px var(--ember-bright)' : 'none';
+    if (currentTab === 'nabiz') {
+      document.getElementById('m-lessons').textContent = (r.totalLessons||0).toLocaleString();
+      document.getElementById('m-cost').textContent = '$' + (r.totalCost||0).toFixed(2);
+      document.getElementById('m-status').textContent = running ? '🔥 AKTİF' : '⏸ DURDU';
+      var pct = Math.min(100, ((r.totalCost||0)/(r.budget||20))*100);
+      document.getElementById('budget-fill').style.width = pct + '%';
+      document.getElementById('budget-pct').textContent = pct.toFixed(1) + '%';
+    }
+    document.getElementById('sb-lessons').textContent = (r.totalLessons||0).toLocaleString();
+    document.getElementById('sb-cost').textContent = '$' + (r.totalCost||0).toFixed(2);
+    document.getElementById('sb-round').textContent = 'Round ' + (r.round||1);
+  }).catch(function() {});
+
+  // Onay kontrolü
+  ft('/api/approval/pending').then(function(r) {
+    if (r && r.ok && r.approval) {
+      pendingApprovalId = r.approval.id;
+      document.getElementById('ap-text').textContent = r.approval.message || r.approval.action || 'İşlem onayı bekleniyor';
+      document.getElementById('approval-box').classList.add('show');
+      document.getElementById('no-approval').style.display = 'none';
+    }
+  }).catch(function() {});
+}
+
+// ══ UTILS ══
+function ft(url, method, body, retries) {
+  retries = retries || 0;
+  return fetch(BASE + url, {
+    method: method || 'GET',
+    headers: {'Content-Type': 'application/json'},
+    body: body ? JSON.stringify(body) : null,
+    signal: AbortSignal.timeout(retries === 0 ? 15000 : 25000)
+  }).then(function(r) {
+    if (!r.ok && r.status >= 500 && retries < 2) {
+      return new Promise(function(res) { setTimeout(function() { res(ft(url, method, body, retries + 1)); }, 2000); });
+    }
+    return r.json();
+  }).catch(function(e) {
+    if (retries < 2) return new Promise(function(res) { setTimeout(function() { res(ft(url, method, body, retries + 1)); }, 2000); });
+    throw e;
+  });
+}
+function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+function toast(msg, type) {
+  var c = document.getElementById('toast-c'), d = document.createElement('div');
+  d.className = 'toast' + (type ? ' ' + type : ''); d.textContent = msg; c.appendChild(d);
+  setTimeout(function() { d.remove(); }, 2500);
+}
+
+// ══ INIT ══
+loadNabiz();
+setInterval(pollStatus, 8000);
+</script>
+</body>
+</html>

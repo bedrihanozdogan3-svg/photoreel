@@ -1,6 +1,7 @@
 /**
  * Fenix AI — Auth API Routes
  * Email tabanlı kayıt, giriş, profil ve kota kontrolü.
+ * + Admin giriş (ADMIN_USER / ADMIN_PASS env var)
  */
 
 const express = require('express');
@@ -8,6 +9,71 @@ const router = express.Router();
 const authService = require('../services/auth-service');
 const { requireAuth } = require('../middlewares/auth');
 const logger = require('../utils/logger');
+const jwt = require('jsonwebtoken');
+
+/**
+ * POST /api/auth/admin
+ * Body: { username, password }
+ * Sadece env'deki ADMIN_USER / ADMIN_PASS ile giriş — httpOnly cookie döner.
+ */
+router.post('/admin', (req, res) => {
+  const { username, password } = req.body || {};
+  const ADMIN_USER = process.env.ADMIN_USER;
+  const ADMIN_PASS = process.env.ADMIN_PASS;
+
+  if (!ADMIN_USER || !ADMIN_PASS) {
+    return res.status(503).json({ ok: false, error: 'Admin kimlik bilgileri tanımlı değil.' });
+  }
+  if (username !== ADMIN_USER || password !== ADMIN_PASS) {
+    logger.warn('Admin giriş başarısız', { username });
+    return res.status(401).json({ ok: false, error: 'Hatalı kullanıcı adı veya şifre.' });
+  }
+
+  const token = jwt.sign(
+    { role: 'admin', user: ADMIN_USER },
+    process.env.JWT_SECRET || 'fenix-dev-secret',
+    { expiresIn: '30d' }
+  );
+
+  // httpOnly cookie — JS ile okunamaz, güvenli
+  res.cookie('fenix_admin', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: 30 * 24 * 3600 * 1000 // 30 gün
+  });
+
+  logger.info('Admin girişi başarılı', { user: ADMIN_USER });
+  res.json({ ok: true, token }); // token'ı da döndür (localStorage için)
+});
+
+/**
+ * POST /api/auth/admin/logout
+ * Cookie'yi siler.
+ */
+router.post('/admin/logout', (req, res) => {
+  res.clearCookie('fenix_admin');
+  res.json({ ok: true });
+});
+
+/**
+ * GET /api/auth/admin/check
+ * Token geçerli mi kontrol et — giris.html auto-login için kullanır.
+ */
+router.get('/admin/check', (req, res) => {
+  const jwtSecret = process.env.JWT_SECRET || 'fenix-dev-secret';
+  const cookie = req.cookies && req.cookies.fenix_admin;
+  const header = req.headers.authorization && req.headers.authorization.replace('Bearer ', '');
+  const token = cookie || header;
+  if (!token) return res.status(401).json({ ok: false });
+  try {
+    const payload = jwt.verify(token, jwtSecret);
+    if (payload.role !== 'admin') return res.status(401).json({ ok: false });
+    res.json({ ok: true, user: payload.user });
+  } catch {
+    res.status(401).json({ ok: false });
+  }
+});
 
 /**
  * POST /api/auth/register
