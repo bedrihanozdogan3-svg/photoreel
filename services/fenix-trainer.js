@@ -649,8 +649,8 @@ async function runTraining(budget = 20, resume = false) {
           status: `${batch.map(b => b.topic).slice(0,2).join(', ')} işlendi`,
         });
 
-        // Her CHECKPOINT_EVERY derste bir Firestore'a yaz
-        if (state.totalLessons % CHECKPOINT_EVERY === 0 && state.totalLessons > 0) {
+        // Her 10 derste bir Firestore'a yaz (hafıza kaybı önleme — eski: 50)
+        if (state.totalLessons % 10 === 0 && state.totalLessons > 0) {
           await saveCheckpoint();
         }
 
@@ -679,8 +679,15 @@ async function runTraining(budget = 20, resume = false) {
       cost:   state.totalCost.toFixed(4),
       phases: state.phases,
     });
-    await clearCheckpoint();
-    logger.info(`🏁 Fenix eğitimi bitti — ${state.totalLessons} ders, $${state.totalCost.toFixed(4)}`);
+    // Checkpoint'i SADECE normal bitiş veya bütçe aşımında sil
+    // SIGTERM/crash durumunda checkpoint kalır → sonraki başlatmada devam eder
+    if (!state.stopRequested) {
+      await clearCheckpoint();
+      logger.info(`🏁 Fenix eğitimi tamamlandı — ${state.totalLessons} ders, $${state.totalCost.toFixed(4)}`);
+    } else {
+      await saveCheckpoint(); // Manuel durdurma: nerede kaldığını kaydet
+      logger.info(`⏹ Fenix eğitimi durduruldu — ${state.totalLessons} ders, checkpoint kaydedildi`);
+    }
   }
 
   return { ok: true, lessons: state.totalLessons, cost: state.totalCost };

@@ -484,12 +484,20 @@ app.post('/api/fenix/feedback', async (req, res) => {
 // ── Fenix Trainer API ──
 const fenixTrainer = require('./services/fenix-trainer');
 
+// MAKSİMUM bütçe kilidi — hiçbir şekilde $10 üstü harcama yapılamaz
+const MAX_TRAIN_BUDGET = 10;
+
 app.post('/api/fenix/train', async (req, res) => {
-  const budget = parseFloat(req.body?.budget) || 20;
+  const requested = parseFloat(req.body?.budget) || 5;
+  // Güvenlik kilidi: max $10, min $1
+  const budget = Math.min(MAX_TRAIN_BUDGET, Math.max(1, requested));
+
   if (fenixTrainer.getState().running) {
     return res.json({ ok: false, error: 'Eğitim zaten çalışıyor' });
   }
-  res.json({ ok: true, message: `Eğitim başlatıldı ($${budget} bütçe)` });
+
+  logger.info(`🔥 Fenix eğitimi başlatıldı — $${budget} bütçe (istek: $${requested})`);
+  res.json({ ok: true, message: `Eğitim başlatıldı ($${budget} bütçe)`, budget });
   fenixTrainer.runTraining(budget).catch(e =>
     logger.error('Trainer hatası', { error: e.message })
   );
