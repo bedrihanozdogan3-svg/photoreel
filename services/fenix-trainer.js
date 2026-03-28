@@ -61,8 +61,8 @@ async function loadCheckpoint() {
     const doc = await db.collection('fenix-trainer').doc('checkpoint').get();
     if (!doc.exists) return null;
     const d = doc.data();
-    // 6 saatten eski checkpoint'i yoksay
-    if (d.updatedAt && Date.now() - new Date(d.updatedAt).getTime() > 6 * 3600 * 1000) return null;
+    // 7 günden eski checkpoint'i yoksay (eskiden 6 saat — çok kısaydı)
+    if (d.updatedAt && Date.now() - new Date(d.updatedAt).getTime() > 7 * 24 * 3600 * 1000) return null;
     return d;
   } catch(e) { return null; }
 }
@@ -697,20 +697,26 @@ function stop() { state.stopRequested = true; }
 function getState() { return { ...state }; }
 
 // ── Sunucu başlayınca checkpoint varsa otomatik devam ──
+// Güvenli bütçe limiti: checkpoint'teki budget değeri MAX ile sınırlandırılır
+const SAFE_MAX_BUDGET = 10; // Hiçbir zaman $10 üstü harcama yapılamaz
 (async () => {
   try {
     const cp = await loadCheckpoint();
-    if (cp && cp.running && cp.totalCost < (cp.budget || 20)) {
-      const remaining = (cp.budget || 20) - cp.totalCost;
-      logger.info(`🔄 Fenix Trainer: checkpoint bulundu, ${cp.totalLessons} ders sonrasından devam ediyor ($${remaining.toFixed(2)} kaldı)`);
-      // 10sn gecikme — server tam başlasın
+    if (cp && cp.running && cp.totalCost < (cp.budget || 5)) {
+      const safeBudget = Math.min(cp.budget || 5, SAFE_MAX_BUDGET);
+      const remaining = safeBudget - cp.totalCost;
+      if (remaining < 0.01) return; // Bütçe tükenmişse devam etme
+      logger.info(`🔄 Fenix Trainer: checkpoint bulundu — ${cp.totalLessons} ders, $${remaining.toFixed(2)} kaldı, devam ediliyor`);
+      // 15sn gecikme — server ve Firestore tam başlasın
       setTimeout(() => {
-        runTraining(cp.budget || 20, true).catch(e =>
+        runTraining(safeBudget, true).catch(e =>
           logger.error('Auto-resume hatası', { error: e.message })
         );
-      }, 10000);
+      }, 15000);
+    } else if (cp) {
+      logger.info(`📋 Checkpoint bulundu ama devam edilmiyor — lessons:${cp.totalLessons}, cost:$${cp.totalCost}`);
     }
-  } catch(e) { /* sessiz */ }
+  } catch(e) { logger.warn('Checkpoint yüklenemedi', { error: e.message }); }
 })();
 
 module.exports = { runTraining, stop, getState };

@@ -24,9 +24,9 @@ function getDb() {
   } catch(e) { return null; }
 }
 
-// Skill verilerini Firestore'a kaydet (30sn'de bir)
+// Skill verilerini Firestore'a kaydet
 let skillsDirty = false;
-setInterval(async () => {
+async function flushSkills() {
   if (!skillsDirty) return;
   skillsDirty = false;
   const db = getDb();
@@ -38,8 +38,24 @@ setInterval(async () => {
       updatedAt: new Date().toISOString()
     });
     logger.debug('Fenix skills Firestore\'a kaydedildi');
-  } catch(e) { skillsDirty = true; }
-}, 30000);
+  } catch(e) {
+    skillsDirty = true; // Başarısız olunca tekrar dene
+    logger.warn('Skills kayıt hatası', { error: e.message });
+  }
+}
+// Her 10 saniyede kaydet (eskiden 30 — hafıza uçma riski azaltıldı)
+setInterval(flushSkills, 10000);
+// SIGTERM gelince (Cloud Run kapanınca) önce kaydet
+process.once('SIGTERM', async () => {
+  logger.info('🛑 SIGTERM alındı — Fenix hafızası kaydediliyor...');
+  skillsDirty = true;
+  await flushSkills().catch(() => {});
+  logger.info('✅ Fenix hafızası kaydedildi, kapanıyor.');
+});
+process.once('SIGINT', async () => {
+  skillsDirty = true;
+  await flushSkills().catch(() => {});
+});
 
 // Başlangıçta Firestore'dan yükle
 (async () => {
