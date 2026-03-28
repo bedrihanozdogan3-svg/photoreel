@@ -137,6 +137,11 @@ app.get('/analytics', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'fenix-analytics.html'));
 });
 
+// Satıcı portalı (temiz 4 adım arayüzü)
+app.get('/satici', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'satici.html'));
+});
+
 // Kod Review API (Gemini denetçi)
 const codeReviewer = require('./services/code-reviewer');
 app.get('/api/code/review', async (req, res) => {
