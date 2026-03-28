@@ -107,32 +107,6 @@ registerTool('getQuotaStatus', {
   }
 });
 
-registerTool('analyzeProduct', {
-  description: 'Ürün fotoğrafını analiz eder (kategori, renk, yapı)',
-  inputSchema: Joi.object({
-    imageUrl: Joi.string().uri().required(),
-    options: Joi.object({
-      detectCategory: Joi.boolean().default(true),
-      detectColor: Joi.boolean().default(true),
-      detectDefects: Joi.boolean().default(false)
-    }).default()
-  }),
-  handler: async (input) => {
-    // Placeholder — Gemini Vision API entegrasyonu gelecek
-    return { status: 'pending', message: 'Ürün analiz modülü henüz aktif değil', input };
-  }
-});
-
-// Tehlikeli araçlar (onay gerektirir)
-registerTool('executeCommand', {
-  description: 'Sunucuda komut çalıştırır (onay gerektirir)',
-  requiresApproval: true,
-  inputSchema: Joi.object({
-    command: Joi.string().max(500).required()
-  }),
-  handler: async (input) => {
-    return { status: 'blocked', message: 'Bu araç henüz aktif değil' };
-  }
-});
+// analyzeProduct ve executeCommand kaldırıldı — placeholder'dı, karışıklık yaratıyordu
 
 module.exports = { registerTool, callTool, getToolList };

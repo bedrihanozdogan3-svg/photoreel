@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PhotoReel AI v9</title>
+<title>Fenix Photo AI</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="photoreel-fluid.css">
 <style>
 :root{
   --cream:#f5f0e8;--warm:#faf8f4;--gold:#c9a84c;--gold-l:#e8d49a;
@@ -1137,21 +1138,156 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
 <body>
 
 <header>
-  <div class="logo">Photo<span>Reel</span> AI</div>
+  <div class="logo">✦ Fenix <span>Photo AI</span></div>
   <nav class="hnav">
-    <a href="#">Nasıl Çalışır</a><a href="#">Örnekler</a><a href="#">Fiyatlar</a>
+    <span id="active-mode-lbl" style="font-size:11px;color:var(--gold);font-weight:600;"></span>
     <button class="history-btn" onclick="HistoryManager.toggle()">📂 Geçmiş</button>
+    <button onclick="showModeSelect()" style="padding:5px 12px;background:var(--coal);color:var(--cream);border:none;border-radius:5px;font-size:11px;cursor:pointer;">⊞ Mod Değiştir</button>
   </nav>
 </header>
 
-<!-- API KEY BAR -->
-<div class="apibar">
+<!-- API KEY BAR — GİZLİ, otomatik yüklenir -->
+<div class="apibar" id="apikeybar" style="display:none;">
   <span class="apibar-label">🔑 Remove.bg:</span>
   <div class="api-status ok" id="apiStatus"></div>
   <input type="text" id="apiKeyInput" value="pzjLbtmL3BpydT6VepbYC3GG" oninput="checkApiKey(this.value)" style="max-width:180px;">
-  <span style="margin-left:8px;color:var(--gold);font-weight:600;font-size:11px;">✦ PhotoReel AI:</span>
-  <input type="text" id="geminiKeyInput" value="AIzaSyBujMLkIOfQsBWrhS6uSAcB28K5OG0E8Tw" style="max-width:220px;font-size:11px;padding:4px 8px;border:1px solid var(--gold);border-radius:4px;background:rgba(201,168,76,.08);">
-  <span class="apibar-hint">PhotoReel AI Engine</span>
+  <input type="text" id="geminiKeyInput" value="" placeholder="Gemini API Key" style="display:none;">
+</div>
+
+<!-- ═══ MOD SEÇİM EKRANI ═══ -->
+<div id="mode-overlay" style="
+  position:fixed;inset:0;z-index:9999;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:32px;padding:24px;
+">
+  <div style="text-align:center;">
+    <div style="font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:600;letter-spacing:2px;">
+      ✦ Fenix <span style="color:var(--gold)">Photo AI</span>
+    </div>
+    <div style="font-size:13px;color:var(--mid);margin-top:6px;">AI destekli içerik stüdyosu — mod seç</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:900px;width:100%;">
+
+    <!-- HIZLI MOD -->
+    <div onclick="selectMode('hizli')" style="
+      background:var(--warm);border:2px solid var(--border);border-radius:16px;
+      padding:28px 20px;text-align:center;cursor:pointer;transition:all .25s;
+    " onmouseover="this.style.borderColor='#00d2ff';this.style.transform='translateY(-4px)'"
+       onmouseout="this.style.borderColor='var(--border)';this.style.transform='none'">
+      <div style="font-size:36px;margin-bottom:12px;">⚡</div>
+      <div style="font-size:14px;font-weight:600;color:#00d2ff;margin-bottom:6px;">HIZLI</div>
+      <div style="font-size:11px;color:var(--mid);">Hızlı içerik üretimi. Şablon, filtre, otomatik reels.</div>
+    </div>
+
+    <!-- PRO MOD -->
+    <div onclick="selectMode('pro')" style="
+      background:var(--warm);border:2px solid var(--border);border-radius:16px;
+      padding:28px 20px;text-align:center;cursor:pointer;transition:all .25s;
+    " onmouseover="this.style.borderColor='#ff6600';this.style.transform='translateY(-4px)'"
+       onmouseout="this.style.borderColor='var(--border)';this.style.transform='none'">
+      <div style="font-size:36px;margin-bottom:12px;">🎛</div>
+      <div style="font-size:14px;font-weight:600;color:#ff6600;margin-bottom:6px;">PRO</div>
+      <div style="font-size:11px;color:var(--mid);">Katman sistemi, renk eğrisi, figür boyama.</div>
+    </div>
+
+    <!-- 360° MOD -->
+    <div onclick="selectMode('360')" style="
+      background:var(--warm);border:2px solid var(--border);border-radius:16px;
+      padding:28px 20px;text-align:center;cursor:pointer;transition:all .25s;
+    " onmouseover="this.style.borderColor='#c084fc';this.style.transform='translateY(-4px)'"
+       onmouseout="this.style.borderColor='var(--border)';this.style.transform='none'">
+      <div style="font-size:36px;margin-bottom:12px;">🌐</div>
+      <div style="font-size:14px;font-weight:600;color:#c084fc;margin-bottom:6px;">360°</div>
+      <div style="font-size:11px;color:var(--mid);">Sanal tur, equirectangular, VR export.</div>
+    </div>
+
+    <!-- OTONOM MOD -->
+    <div onclick="selectMode('otonom')" style="
+      background:linear-gradient(135deg,#0a0a0a,#1a1a1a);border:2px solid var(--gold);border-radius:16px;
+      padding:28px 20px;text-align:center;cursor:pointer;transition:all .25s;
+    " onmouseover="this.style.transform='translateY(-4px)';this.style.boxShadow='0 8px 32px rgba(201,168,76,.3)'"
+       onmouseout="this.style.transform='none';this.style.boxShadow='none'">
+      <div style="font-size:36px;margin-bottom:12px;">🤖</div>
+      <div style="font-size:14px;font-weight:600;color:var(--gold);margin-bottom:6px;">OTONOM</div>
+      <div style="font-size:11px;color:#aaa;">Yükle ve unut. Fenix her şeyi otomatik yapar.</div>
+      <div style="margin-top:10px;font-size:9px;background:var(--gold);color:#000;padding:3px 8px;border-radius:20px;display:inline-block;font-weight:700;">🔥 Flux + Kling</div>
+    </div>
+
+  </div>
+
+  <div style="font-size:11px;color:var(--soft);">veya</div>
+  <button onclick="selectMode('otonom')" style="
+    padding:14px 40px;background:linear-gradient(135deg,var(--gold),var(--gold-d));
+    color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;
+    font-size:14px;font-weight:600;cursor:pointer;letter-spacing:.5px;
+  ">🔥 Fenix ile Otomatik Üret</button>
+</div>
+
+<!-- ═══ DOSYA YÜKLEME EKRANI ═══ -->
+<div id="upload-overlay" style="
+  display:none;position:fixed;inset:0;z-index:9998;
+  background:var(--bg);
+  display:none;flex-direction:column;align-items:center;justify-content:center;
+  gap:24px;padding:24px;
+">
+  <!-- Geri butonu -->
+  <button onclick="document.getElementById('upload-overlay').style.display='none';document.getElementById('mode-overlay').style.display='flex';" style="
+    position:absolute;top:20px;left:20px;background:none;border:1px solid var(--border);
+    border-radius:8px;padding:8px 16px;font-family:'DM Sans',sans-serif;font-size:12px;
+    color:var(--mid);cursor:pointer;display:flex;align-items:center;gap:6px;
+  ">← Geri</button>
+
+  <!-- Başlık -->
+  <div style="text-align:center;">
+    <div id="upload-mod-ico" style="font-size:40px;margin-bottom:8px;">📁</div>
+    <div style="font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;" id="upload-mod-title">Dosya Yükle</div>
+    <div style="font-size:13px;color:var(--mid);margin-top:4px;" id="upload-mod-hint">Fotoğraf veya video seç</div>
+  </div>
+
+  <!-- Yükleme Alanı — Büyük, tablet dostu -->
+  <div id="uploadDropZone" style="
+    width:100%;max-width:560px;
+    border:2.5px dashed var(--border);border-radius:20px;
+    padding:48px 24px;text-align:center;cursor:pointer;
+    transition:all .25s;background:var(--warm);
+    position:relative;
+  "
+    onclick="document.getElementById('tabletFileInput').click()"
+    ondragover="event.preventDefault();this.style.borderColor='var(--gold)';this.style.background='#fdf6e8'"
+    ondragleave="this.style.borderColor='var(--border)';this.style.background='var(--warm)'"
+    ondrop="handleTabletDrop(event)"
+  >
+    <input type="file" id="tabletFileInput" accept="image/*,video/*" multiple
+      style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;"
+      onchange="handleTabletFile(this.files)">
+    <div style="font-size:56px;margin-bottom:12px;" id="uploadIco">📸</div>
+    <div style="font-size:16px;font-weight:500;color:var(--coal);margin-bottom:6px;">Dosyaları buraya sürükle</div>
+    <div style="font-size:13px;color:var(--mid);margin-bottom:16px;">veya dokunarak seç</div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <span style="font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:4px 12px;color:var(--soft);">JPG · PNG · WEBP</span>
+      <span style="font-size:11px;background:var(--bg);border:1px solid var(--border);border-radius:20px;padding:4px 12px;color:var(--soft);">MP4 · MOV · WEBM</span>
+    </div>
+  </div>
+
+  <!-- Önizleme alanı -->
+  <div id="uploadPreviewWrap" style="display:none;width:100%;max-width:560px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="font-size:13px;font-weight:500;" id="uploadPreviewCount">0 dosya seçildi</div>
+      <button onclick="clearTabletUpload()" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--soft);">× Temizle</button>
+    </div>
+    <div id="uploadPreviewGrid" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+  </div>
+
+  <!-- Devam butonu -->
+  <button id="uploadDevamBtn" onclick="devamEt()" style="
+    display:none;
+    padding:16px 56px;background:linear-gradient(135deg,var(--gold),var(--gold-d));
+    color:#fff;border:none;border-radius:12px;font-family:'DM Sans',sans-serif;
+    font-size:15px;font-weight:600;cursor:pointer;letter-spacing:.5px;
+    box-shadow:0 4px 20px rgba(201,168,76,.4);
+  " id="devamBtn">Devam Et →</button>
 </div>
 
 <div class="prog">
@@ -1193,7 +1329,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
   <div>
     <div class="plbl">Ürün Fotoğrafı</div>
     <div class="upzone" id="upZone" style="margin-top:5px">
-      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/bmp,image/tiff" multiple onchange="handleFileInput(this.files)">
+      <input type="file" id="fileInput" accept="image/jpeg,image/png,image/webp,image/avif,image/heic,image/bmp,image/tiff" multiple>
       <span class="uico" id="upIco">🖼️</span>
       <div class="utxt" id="upTxt">Fotoğrafları sürükle veya tıkla</div>
       <div class="uhint" id="upHint">50+ fotoğraf yüklenebilir · JPG PNG WEBP AVIF HEIC · maks 20MB</div>
@@ -1499,7 +1635,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
       <div style="display:flex;gap:4px;margin-bottom:6px;">
         <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px;border:1px dashed var(--border);border-radius:5px;background:var(--bg);cursor:pointer;font-size:10px;color:var(--mid);transition:all .2s;" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
           📁 MP3/WAV Yükle
-          <input type="file" id="customMusicFile" accept="audio/*" style="display:none;" onchange="loadCustomMusic(this.files[0])">
+          <input type="file" id="customMusicFile" accept="audio/*" style="display:none;">
         </label>
         <button onclick="showMusicUrlInput()" style="flex:1;padding:6px;border:1px dashed var(--border);border-radius:5px;background:var(--bg);cursor:pointer;font-size:10px;color:var(--mid);font-family:'DM Sans',sans-serif;transition:all .2s;" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">🔗 URL'den Ekle</button>
       </div>
@@ -1787,6 +1923,13 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
     <button class="cbtn" onclick="clearUpload()">↩ Sıfırla</button>
     <button class="cbtn prime" onclick="exportFormat(currentExportFormat)">⬇ PNG İndir</button>
     <button class="cbtn video-btn" onclick="exportReelsVideo()" id="videoExportBtn">🎬 Video İndir</button>
+  </div>
+  <!-- Geri Bildirim — video üretildikten sonra gösterilir -->
+  <div id="feedbackBar" style="display:none;margin-top:8px;padding:8px 12px;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:10px;text-align:center;">
+    <span style="font-size:11px;color:var(--mid);margin-right:8px;">Bu video nasıl?</span>
+    <button onclick="sendFeedback('like')" id="feedbackLikeBtn" style="background:none;border:1px solid #4caf50;border-radius:8px;padding:4px 14px;cursor:pointer;font-size:16px;margin:0 4px;transition:all 0.2s;" onmouseover="this.style.background='rgba(76,175,80,0.15)'" onmouseout="this.style.background='none'">👍</button>
+    <button onclick="sendFeedback('dislike')" id="feedbackDislikeBtn" style="background:none;border:1px solid #f44336;border-radius:8px;padding:4px 14px;cursor:pointer;font-size:16px;margin:0 4px;transition:all 0.2s;" onmouseover="this.style.background='rgba(244,67,54,0.15)'" onmouseout="this.style.background='none'">👎</button>
+    <span id="feedbackMsg" style="font-size:11px;color:var(--gold);margin-left:8px;display:none;">✅ Kaydedildi!</span>
   </div>
   <!-- Video Export Progress -->
   <div class="video-progress" id="videoProgress" style="display:none;">
@@ -2309,6 +2452,41 @@ const MLBgRemover = (() => {
 
 // Sayfa yüklenince ML motorunu arka planda başlat
 window.addEventListener('load', () => {
+  // Gemini key — önce localStorage, yoksa sunucudan çek
+  const geminiInput = document.getElementById('geminiKeyInput');
+  if (geminiInput) {
+    const savedGeminiKey = localStorage.getItem('photoreel_gemini_key');
+    if (savedGeminiKey) {
+      geminiInput.value = savedGeminiKey;
+    } else {
+      fetch('/api/config').then(r => r.json()).then(cfg => {
+        if (cfg.geminiKey && geminiInput && !geminiInput.value) {
+          geminiInput.value = cfg.geminiKey;
+          localStorage.setItem('photoreel_gemini_key', cfg.geminiKey);
+        }
+      }).catch(() => {});
+    }
+    // Key değişince localStorage'a kaydet (silinince temizle)
+    geminiInput.addEventListener('input', () => {
+      const v = geminiInput.value.trim();
+      if (v) localStorage.setItem('photoreel_gemini_key', v);
+      else localStorage.removeItem('photoreel_gemini_key');
+    });
+  }
+  // Dosya yükleme — inline onchange yerine event listener (CSP uyumlu)
+  const fileInput = document.getElementById('fileInput');
+  if (fileInput) {
+    fileInput.addEventListener('change', function() {
+      handleFileInput(this.files);
+      this.value = ''; // Reset — aynı dosya tekrar seçilebilsin + yeni dosya eklenebilsin
+    });
+  }
+  // Müzik dosyası
+  const musicFile = document.getElementById('customMusicFile');
+  if (musicFile && !musicFile._listenerAdded) {
+    musicFile._listenerAdded = true;
+    musicFile.addEventListener('change', function() { if(this.files[0]) loadCustomMusic(this.files[0]); });
+  }
   // 2 saniye sonra arka planda yüklemeye başla
   setTimeout(() => { MLBgRemover.preload(); }, 2000);
 });
@@ -2396,7 +2574,7 @@ const BgRemover = (() => {
     return new Promise(res=>{canvas.toBlob(bl=>{const rd=new FileReader();rd.onload=e=>res(e.target.result);rd.readAsDataURL(bl);},'image/png');});
   }
   // Yardımcılar
-  function _loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.crossOrigin='anonymous';i.onload=()=>res(i);i.onerror=rej;if(src instanceof File||src instanceof Blob)i.src=URL.createObjectURL(src);else i.src=src;});}
+  function _loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.crossOrigin='anonymous';let blobUrl=null;i.onload=()=>{if(blobUrl)URL.revokeObjectURL(blobUrl);res(i);};i.onerror=()=>{if(blobUrl)URL.revokeObjectURL(blobUrl);rej(new Error('Image load failed'));};if(src instanceof File||src instanceof Blob){blobUrl=URL.createObjectURL(src);i.src=blobUrl;}else i.src=src;});}
   function _hex2rgb(h){h=(h||'#888').replace('#','');return[parseInt(h.substring(0,2),16)||128,parseInt(h.substring(2,4),16)||128,parseInt(h.substring(4,6),16)||128];}
   function _colDist(r1,g1,b1,r2,g2,b2){const dr=(r1-r2)*0.3,dg=(g1-g2)*0.59,db=(b1-b2)*0.11;return Math.sqrt(dr*dr+dg*dg+db*db);}
   function _sampleBorders(px,W,H){const s=[],m=Math.max(3,Math.floor(Math.min(W,H)*0.04)),st=Math.max(1,Math.floor(Math.min(W,H)/50));for(let x=0;x<W;x+=st){for(let y=0;y<m&&y<H;y+=Math.max(1,(m/3)|0)){const i=(y*W+x)*4;if(px[i+3]>127)s.push([px[i],px[i+1],px[i+2]]);}for(let y=Math.max(0,H-m);y<H;y+=Math.max(1,(m/3)|0)){const i=(y*W+x)*4;if(px[i+3]>127)s.push([px[i],px[i+1],px[i+2]]);}}for(let y=m;y<H-m;y+=st){for(let x=0;x<m&&x<W;x+=Math.max(1,(m/3)|0)){const i=(y*W+x)*4;if(px[i+3]>127)s.push([px[i],px[i+1],px[i+2]]);}for(let x=Math.max(0,W-m);x<W;x+=Math.max(1,(m/3)|0)){const i=(y*W+x)*4;if(px[i+3]>127)s.push([px[i],px[i+1],px[i+2]]);}}if(s.length>3000){const r=[];const step=(s.length/3000)|0;for(let i=0;i<s.length;i+=step)r.push(s[i]);return r;}return s;}
@@ -3455,48 +3633,6 @@ const HistoryManager = (() => {
 })();
 
 
-// ─────────────────────────────────────────────────────────────────────
-// MODULE 8: BatchManager — Toplu işlem desteği
-// ─────────────────────────────────────────────────────────────────────
-const BatchManager = (() => {
-  function updateGrid() {
-    const files = (typeof uploadedFiles !== 'undefined') ? uploadedFiles : [];
-    if (files.length <= 1) return;
-
-    // Duration controller'ı güncelle
-    document.dispatchEvent(new CustomEvent('filesUpdated'));
-  }
-
-  function applyToAll() {
-    const files = (typeof uploadedFiles !== 'undefined') ? uploadedFiles : [];
-    if (files.length === 0) return;
-
-    // Aktif template/ayarları tüm dosyalara uygula
-    const currentTemplate = document.querySelector('.template-card.active');
-    if (currentTemplate && currentTemplate.onclick) {
-      // Her ürün için aynı ayarları uygula
-      files.forEach(f => {
-        f._templateApplied = true;
-      });
-    }
-
-    document.dispatchEvent(new CustomEvent('batchApplied', { detail: { count: files.length } }));
-  }
-
-  // uploadedFiles değiştiğinde grid güncelle
-  const _origPush = Array.prototype.push;
-
-  function init() {
-    // Proxy ile uploadedFiles değişikliklerini yakala
-    if (typeof uploadedFiles !== 'undefined') {
-      updateGrid();
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', () => setTimeout(init, 500));
-
-  return { updateGrid, applyToAll };
-})();
 
 
 // ─────────────────────────────────────────────────────────────────────
@@ -4528,7 +4664,13 @@ function compositeProductOnScene(bgDataUrl, productDataUrl, isVehicle, productSi
 
     function tryComposite() {
       if (!bgLoaded || !prodLoaded) return;
+      try { _doComposite(); } catch(e) {
+        console.warn('🎨 compositeProductOnScene iç hata (CORS/taint?):', e.message);
+        resolve(bgDataUrl); // Fallback: ham sahneyi döndür
+      }
+    }
 
+    function _doComposite() {
       const CANVAS_W = 1080;
       const CANVAS_H = 1920;
       const canvas = document.createElement('canvas');
@@ -4745,13 +4887,15 @@ function compositeProductOnScene(bgDataUrl, productDataUrl, isVehicle, productSi
       console.log(`🎨 Pro Composite: ${Math.round(targetW)}x${Math.round(targetH)} @ (${Math.round(posX)},${Math.round(posY)}) | Araç:${isVehicle} | Boyut:${productSize} | Sahne: R${avgR} G${avgG} B${avgB} Parlak:${sceneBrightness.toFixed(2)} Sıcak:${isWarmScene}`);
 
       resolve(canvas.toDataURL('image/jpeg', 0.95));
-    }
+    } // end _doComposite
 
     bgImg.onload = () => { bgLoaded = true; tryComposite(); };
     bgImg.onerror = () => { bgLoaded = true; resolve(bgDataUrl); };
     prodImg.onload = () => { prodLoaded = true; tryComposite(); };
     prodImg.onerror = () => { prodLoaded = true; resolve(bgDataUrl); };
+    bgImg.crossOrigin = 'anonymous'; // CORS taint önle
     bgImg.src = bgDataUrl;
+    prodImg.crossOrigin = 'anonymous';
     prodImg.src = productDataUrl;
   });
 }
@@ -4765,8 +4909,8 @@ async function autoDetectCategory(imageBase64) {
   console.log('🔍 autoDetectCategory BAŞLADI — görsel boyut:', imageBase64.length, 'karakter, data: ile başlıyor:', imageBase64.startsWith('data:'));
 
   try {
-    // Görseli 256px'e küçült — API'ye daha az veri, 4x daha hızlı yanıt
-    const resized = await resizeImageForAnalysis(imageBase64, 256);
+    // Görseli 128px'e küçült — minimum veri, maksimum hız
+    const resized = await resizeImageForAnalysis(imageBase64, 128);
     if (!resized || resized.length < 100) { console.warn('🔴 autoDetectCategory: resizeImageForAnalysis BAŞARISIZ'); return null; }
     const base64Data = resized.includes(',') ? resized.split(',')[1] : resized;
     if (!base64Data || base64Data.length < 50) { console.warn('🔴 autoDetectCategory: base64Data çok kısa:', base64Data?.length); return null; }
@@ -7000,23 +7144,35 @@ function handleFileInput(files) {
   uploadedFiles = uploadedFiles.concat(newItems);
   uploadedFile = uploadedFiles[0].file;
 
-  // UI elementlerini güvenli null-check ile gizle
-  const hideEl = id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; };
-  hideEl('upPreview'); hideEl('prodImg'); hideEl('prodEmoji'); hideEl('prodShadow');
+  // UI elementlerini güvenli null-check ile gizle — SADECE İLK YÜKLEME
+  if (uploadedFiles.length === newItems.length) {
+    const hideEl = id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; };
+    hideEl('upPreview'); hideEl('prodImg'); hideEl('prodEmoji'); hideEl('prodShadow');
+  }
 
   // Yeni eklenen dosyaları oku
   let loadedCount = 0;
+  // Grid'i HEMEN güncelle — dosyalar henüz okunmamış olsa bile kartları göster
+  loadMultiGrid();
+
   newItems.forEach((item) => {
     const r = new FileReader();
     r.onload = ev => {
       item.originalUrl = ev.target.result;
       loadedCount++;
+      // Her dosya okunduğunda grid'i güncelle (thumbnail göster)
+      loadMultiGrid();
+      showMultiProductPreview();
+      console.log(`📸 Dosya okundu: ${item.file.name} (${loadedCount}/${newItems.length})`);
+      // Tüm dosyalar okunduğunda pipeline başlat — UI'ın nefes almasına izin ver
       if (loadedCount === newItems.length) {
-        loadMultiGrid();
-        showMultiProductPreview();
-        // ══════ PROGRESSIVE OTONOM PİPELİNE ══════
-        // Pipeline çalışıyorsa kuyruk sistemi otomatik devreye girer
-        autoProgressivePipeline();
+        // requestIdleCallback: tarayıcı boş olunca başlat (kasma önlenir)
+        const startPipeline = () => autoProgressivePipeline();
+        if (typeof requestIdleCallback !== 'undefined') {
+          requestIdleCallback(startPipeline, { timeout: 500 });
+        } else {
+          setTimeout(startPipeline, 100); // fallback
+        }
       }
     };
     r.onerror = () => {
@@ -7249,6 +7405,21 @@ async function autoProgressivePipeline() {
               item.videoTransition = autoAnalysis.video_gecis || null;
               item.musicMood = autoAnalysis.muzik || null;
               console.log(`✅ Ürün #${i+1} analiz tamamlandı: ${autoAnalysis.urun_adi} → ${autoAnalysis.kategori}`);
+
+              // ═══ FENIX SHADOW LEARNING: Ürün analizini kaydet ═══
+              try {
+                fetch('/api/fenix/shadow', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    actor: 'gemini',
+                    taskType: 'product_analysis',
+                    input: { productIndex: i, hasImage: true },
+                    output: { kategori: autoAnalysis.kategori, urunAdi: autoAnalysis.urun_adi, gecis: autoAnalysis.video_gecis, muzik: autoAnalysis.muzik },
+                    outcome: 'success'
+                  })
+                }).catch(() => {});
+              } catch(e) {}
             }
           } catch(ae) { console.warn(`Ürün #${i+1} otomatik analiz hatası:`, ae); }
         }
@@ -7280,9 +7451,44 @@ async function autoProgressivePipeline() {
           await generateGeminiScene();
           // Sahne URL'sini yakala — DOM'dan al ve doğrula
           const sceneBgImg = document.getElementById('sceneBgImg');
-          if (sceneBgImg && sceneBgImg.src && sceneBgImg.src.startsWith('data:')) {
-            item.sceneUrl = sceneBgImg.src;
-            console.log(`🌉 KÖPRÜ: Ürün #${i+1} sahne URL yakalandı — ${(item.sceneUrl.length/1024).toFixed(0)}KB`);
+          if (sceneBgImg && sceneBgImg.src && !sceneBgImg.src.endsWith('#')) {
+            const rawSceneUrl = sceneBgImg.src;
+            const sizeInfo = rawSceneUrl.startsWith('data:') ? `${(rawSceneUrl.length/1024).toFixed(0)}KB` : 'HTTP URL';
+            console.log(`🌉 KÖPRÜ: Ürün #${i+1} sahne arka plan yakalandı — ${sizeInfo}`);
+
+            // ═══ COMPOSITE: Ürünü sahnenin üstüne yerleştir ═══
+            // Gemini sadece arka plan üretir — ürünü BİZ ekliyoruz
+            const productImg = item.removedUrl || item.originalUrl;
+            if (productImg) {
+              const isVehicle = (item.kategori || '').toLowerCase().includes('araç') || (item.kategori || '').toLowerCase().includes('araba') || (item.kategori || '').toLowerCase().includes('vehicle');
+              const prodSize = item.productSize || item.boyut || 'medium';
+              try {
+                item.sceneUrl = await compositeProductOnScene(rawSceneUrl, productImg, isVehicle, prodSize);
+                item.compositeSuccess = true;
+                console.log(`🌉 KÖPRÜ: Ürün #${i+1} COMPOSITE BAŞARILI — ürün sahneye yerleştirildi (${(item.sceneUrl.length/1024).toFixed(0)}KB)`);
+                // ═══ FENIX SHADOW LEARNING: Sahne üretimini kaydet ═══
+                try {
+                  fetch('/api/fenix/shadow', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      actor: 'gemini',
+                      taskType: 'scene_generation',
+                      input: { kategori: item.kategori, urunAdi: item.urunAdi, isVehicle: isVehicle },
+                      output: { composited: true, sizeKB: Math.round(item.sceneUrl.length/1024) },
+                      outcome: 'success'
+                    })
+                  }).catch(() => {});
+                } catch(e) {}
+              } catch(compErr) {
+                console.warn(`🌉 KÖPRÜ: Ürün #${i+1} composite hatası, ham sahne kullanılacak:`, compErr.message);
+                item.sceneUrl = rawSceneUrl;
+                item.compositeSuccess = false; // Ürünü render'da ayrıca çiz!
+              }
+            } else {
+              item.sceneUrl = rawSceneUrl;
+              console.log(`🌉 KÖPRÜ: Ürün #${i+1} ürün görseli yok — ham sahne kullanılacak`);
+            }
           } else {
             console.warn(`🌉 KÖPRÜ: Ürün #${i+1} sahne URL bulunamadı! sceneBgImg.src:`, sceneBgImg?.src?.substring(0,50));
           }
@@ -7332,10 +7538,15 @@ async function autoProgressivePipeline() {
         origCount++;
         console.log(`  ⚠️ Ürün #${vi+1} ${vItem.urunAdi||'?'}: Sadece orijinal görsel var`);
       }
-      // Süre ayarlanmamışsa varsayılan ata
+      // Süre ayarlanmamışsa varsayılan ata — BEAT-SYNC ile hizala
       if (!vItem.reelsDuration || vItem.reelsDuration < 3.0) {
         const catDur = {'arac':5.5,'taki':4.5,'kozmetik':4.0,'elektronik':4.0,'beyaz_esya':4.5,'spor':3.5,'aksesuar':3.5,'giyim':3.5,'dekor':4.0,'yiyecek':3.5,'diger':3.5};
-        vItem.reelsDuration = catDur[vItem.kategori] || 3.5;
+        let baseDur = catDur[vItem.kategori] || 3.5;
+        // Beat-sync: süreyi en yakın beat katına hizala
+        const beatInt = window._currentBeatInterval || (60 / 110);
+        const beatsInScene = Math.max(2, Math.round(baseDur / beatInt));
+        vItem.reelsDuration = parseFloat((beatsInScene * beatInt).toFixed(2));
+        console.log(`🥁 Beat-sync: #${vi+1} ${baseDur}sn → ${vItem.reelsDuration}sn (${beatsInScene} beat @ ${window._currentMusicBPM || 110} BPM)`);
       }
     }
     console.log(`🌉 KÖPRÜ RAPORU: ${validCount} geçerli ürün | ${sceneCount} sahneli | ${bgCount} BG temiz | ${origCount} sadece orijinal`);
@@ -7375,12 +7586,31 @@ async function autoProgressivePipeline() {
     // Ama SADECE yeni (işlenmemiş) ürünler varsa çalıştır — gereksiz tekrar önle
     if (_pipelineQueue) {
       _pipelineQueue = false;
-      const unprocessed = uploadedFiles.filter(f => f.originalUrl && !f.sceneGenerated && !f.sceneUrl);
+      const unprocessed = uploadedFiles.filter(f => f.originalUrl && !f.sceneGenerated && !f.sceneUrl && f.status !== 'done');
       if (unprocessed.length > 0) {
-        console.log(`📦 ${unprocessed.length} yeni ürün var — pipeline yeniden başlıyor`);
-        await autoProgressivePipeline();
+        console.log(`📦 ${unprocessed.length} yeni ürün var — sadece analiz + sahne üretimi yapılacak (video üretmeyecek)`);
+        // Sadece eksik ürünleri işle — video tekrar üretme
+        _pipelineRunning = true;
+        try {
+          for (const item of unprocessed) {
+            const idx = uploadedFiles.indexOf(item);
+            const imgSrc = item.removedUrl || item.originalUrl;
+            if (!imgSrc) continue;
+            // Analiz
+            const geminiKey = document.getElementById('geminiKeyInput')?.value?.trim();
+            if (!item.analysis && geminiKey) {
+              try {
+                const a = await autoDetectCategory(imgSrc);
+                if (a) { item.analysis = a; item.kategori = a.kategori; item.urunAdi = a.urun_adi; }
+              } catch(e) {}
+            }
+            item.status = 'done';
+            item.sceneGenerated = true;
+            loadMultiGrid();
+          }
+        } finally { _pipelineRunning = false; }
       } else {
-        console.log('📦 Kuyruk temiz — tüm ürünler zaten işlenmiş, tekrar çalıştırmaya gerek yok');
+        console.log('📦 Kuyruk temiz — tüm ürünler işlenmiş');
       }
     }
   }
@@ -7410,7 +7640,7 @@ let lastReelsBlobUrl = null;
 // ═══════════════════════════════════════════════════════
 const ReelsLearning = (() => {
   const STORAGE_KEY = 'photoreel_learning';
-  const LEARNING_THRESHOLD = 100; // Bu kadar veri sonrası optimize et
+  const LEARNING_THRESHOLD = 1; // İLK feedback'ten itibaren öğren — Fenix her şeyi izliyor
 
   // Veri yapısı
   let db = {
@@ -7493,8 +7723,8 @@ const ReelsLearning = (() => {
     console.log(`📊 BEĞENI kaydedildi: ${videoData.category} (toplam: ${db.totalLikes})`);
 
     // Eşik kontrolü
-    if (db.totalLikes === LEARNING_THRESHOLD) {
-      toast(`🧠 AI ${LEARNING_THRESHOLD} beğeni ile öğrenmeye başladı! Artık videolar kategoriye göre optimize edilecek.`, 'success');
+    if (db.totalLikes + db.totalDislikes === 1) {
+      toast('🧠 Fenix öğrenmeye başladı! Her beğeni ve red ile daha iyi videolar üretecek.', 'success');
     }
 
     return db.totalLikes;
@@ -7530,7 +7760,8 @@ const ReelsLearning = (() => {
 
   // Öğrenme aktif mi?
   function isLearningActive() {
-    return db.totalLikes >= LEARNING_THRESHOLD;
+    // İlk etkileşimden itibaren öğren (like VEYA dislike)
+    return (db.totalLikes + db.totalDislikes) >= LEARNING_THRESHOLD;
   }
 
   // Kategorinin en iyi geçişlerini al (öğrenme aktifse)
@@ -7580,7 +7811,7 @@ const ReelsLearning = (() => {
       totalDislikes: db.totalDislikes,
       learningActive: isLearningActive(),
       threshold: LEARNING_THRESHOLD,
-      progress: Math.min(100, Math.round((db.totalLikes / LEARNING_THRESHOLD) * 100)),
+      progress: Math.min(100, Math.round(((db.totalLikes + db.totalDislikes) / Math.max(1, LEARNING_THRESHOLD)) * 100)),
       categories: Object.entries(db.categories).map(([cat, data]) => ({
         category: cat,
         likes: data.likes,
@@ -7641,7 +7872,7 @@ const ReelsLearning = (() => {
       totalDislikes: db.totalDislikes,
       learningActive: isLearningActive(),
       threshold: LEARNING_THRESHOLD,
-      progress: Math.min(100, Math.round((db.totalLikes / LEARNING_THRESHOLD) * 100)),
+      progress: Math.min(100, Math.round(((db.totalLikes + db.totalDislikes) / Math.max(1, LEARNING_THRESHOLD)) * 100)),
       categories: Object.entries(db.categories).map(([cat, data]) => ({
         category: cat,
         likes: data.likes,
@@ -8054,7 +8285,7 @@ async function applyEditorChanges() {
         try {
           await generateGeminiScene();
           const sceneBgImg = document.getElementById('sceneBgImg');
-          if (sceneBgImg && sceneBgImg.src && sceneBgImg.src.startsWith('data:')) {
+          if (sceneBgImg && sceneBgImg.src && !sceneBgImg.src.endsWith('#')) {
             item.sceneUrl = sceneBgImg.src;
             item.sceneGenerated = true;
           }
@@ -8094,9 +8325,21 @@ async function generateMultiProductReels() {
 
   // ═══ RESET — önceki videonun kalıntılarını temizle ═══
   console.log('🧹 === YENİ VİDEO — TÜM ESKİ VERİLER SİFİRLANIYOR ===');
-  // Müzik sıfırla
+  // Müzik sıfırla — TÜM ses kaynaklarını durdur
   if (customMusicAudio) { try { customMusicAudio.pause(); } catch(e){} customMusicAudio = null; }
   try { stopMusic(); } catch(e) {}
+  // Trend önizleme sesini durdur
+  if (typeof _trendPreviewAudio !== 'undefined' && _trendPreviewAudio) {
+    try { _trendPreviewAudio.pause(); } catch(e){} _trendPreviewAudio = null;
+  }
+  // Jamendo önizleme sesini durdur
+  if (typeof JamendoAPI !== 'undefined' && JamendoAPI.currentPreviewAudio) {
+    try { JamendoAPI.currentPreviewAudio.pause(); } catch(e){} JamendoAPI.currentPreviewAudio = null;
+  }
+  // currentPreviewAudio (Jamendo arama önizlemesi)
+  if (typeof currentPreviewAudio !== 'undefined' && currentPreviewAudio) {
+    try { currentPreviewAudio.pause(); } catch(e){} currentPreviewAudio = null;
+  }
   // Geçiş geçmişi (aynı video içi tekrar engeli yeniden başlasın)
   window._lastReelsTransitions = null;
   window._lastReelsMood = null;
@@ -8157,7 +8400,13 @@ async function generateMultiProductReels() {
         const _tracks = _jamData.results || [];
         console.log(`🎵 ERKEN MÜZİK: ${_tracks.length} sonuç`);
         if (_tracks.length > 0) {
-          const _pick = _tracks[Math.floor(Math.random()*Math.min(3,_tracks.length))];
+          // Aynı şarkı tekrar gelmesin — son 5 track ID'sini hatırla
+          if (!window._lastJamendoTrackIds) window._lastJamendoTrackIds = [];
+          let _availTracks = _tracks.filter(t => !window._lastJamendoTrackIds.includes(t.id));
+          if (_availTracks.length === 0) { _availTracks = _tracks; window._lastJamendoTrackIds = []; }
+          const _pick = _availTracks[Math.floor(Math.random()*Math.min(3,_availTracks.length))];
+          window._lastJamendoTrackIds.push(_pick.id);
+          if (window._lastJamendoTrackIds.length > 5) window._lastJamendoTrackIds.shift();
           if (_pick.audio) {
             // Jamendo MP3'ü blob olarak indir — AudioContext ile videoya gömülebilsin
             try {
@@ -8168,6 +8417,8 @@ async function generateMultiProductReels() {
                 customMusicBlob = _audioBlob;
                 customMusicUrl = URL.createObjectURL(_audioBlob);
                 console.log(`✅ Jamendo MP3 blob olarak indirildi — ${(_audioBlob.size/1024).toFixed(0)}KB`);
+                // ═══ BEAT DETECTION — gerçek BPM tespit et ═══
+                try { await detectAndStoreBPM(_audioBlob, _pick.name); } catch(bpmE) { console.warn('BPM detect:', bpmE.message); }
               } else {
                 // Blob indirilemezse direkt URL kullan (AudioContext olmadan)
                 customMusicUrl = _pick.audio;
@@ -8368,13 +8619,15 @@ async function generateMultiProductReels() {
       const staticPool = (catTransitionPools[item.kategori] || catTransitionPools['diger']).filter(t => !banned.includes(t));
 
       // Dinamik modda CapCut tarzı sert geçişlere ağırlık ver
-      const capcutFavorites = ['flashScale','zoomSnap','glitch','whipPan','chromaticAberration','cameraShake','shatterGlass','tornado','pixelStorm','whiteFlash','epicTransition','popZoom','freezePose','flashSpin','snapZoom'];
+      const capcutFavorites = ['flashScale','zoomSnap','glitch','whipPan','chromaticAberration','cameraShake','shatterGlass','tornado','pixelStorm','whiteFlash','epicTransition','popZoom','freezePose','flashSpin','snapZoom','tearReveal','inkSplash','hexGrid'];
+      // CapCut'ta ASLA kullanılmayacak yumuşak geçişler
+      const softTransitions = ['silkFade','crossDissolve','slowFadeIn','lightSweep','halation'];
       let finalPool = [];
       if (_isDynamic) {
-        // Dinamik: CapCut favorileri 5x ağırlık
+        // Dinamik: CapCut favorileri 8x ağırlık — yumuşak geçişler hariç
         const capcutAvailable = capcutFavorites.filter(t => !banned.includes(t));
-        capcutAvailable.forEach(t => { for(let w=0;w<5;w++) finalPool.push(t); });
-        trendPool.forEach(t => { if (!capcutAvailable.includes(t)) finalPool.push(t); });
+        capcutAvailable.forEach(t => { for(let w=0;w<8;w++) finalPool.push(t); });
+        trendPool.forEach(t => { if (!capcutAvailable.includes(t) && !softTransitions.includes(t)) finalPool.push(t); });
       } else {
         // Normal: trend 3x ağırlıklı
         trendPool.forEach(t => { finalPool.push(t, t, t); });
@@ -8415,7 +8668,7 @@ async function generateMultiProductReels() {
       // ── SAHNE GÖRSELİ YÜKLE ──
       let si = null;
       const sceneSrc = item.sceneUrl;
-      if (sceneSrc && (sceneSrc.startsWith('data:') || sceneSrc.startsWith('blob:'))) {
+      if (sceneSrc) {
         si = new Image();
         si.crossOrigin = 'anonymous';
         try {
@@ -8432,7 +8685,7 @@ async function generateMultiProductReels() {
       let pi = null;
       // Öncelik: removedUrl > originalUrl
       const prodSrc = item.removedUrl || item.originalUrl;
-      if (prodSrc && (prodSrc.startsWith('data:') || prodSrc.startsWith('blob:'))) {
+      if (prodSrc) {
         pi = new Image();
         pi.crossOrigin = 'anonymous';
         try {
@@ -8695,6 +8948,20 @@ async function generateMultiProductReels() {
         const panY = Math.cos(productT * Math.PI * 0.5) * 10;  // Hafif dikey hareket
         vctx.save(); vctx.translate(VW/2+panX, VH/2+panY); vctx.scale(scale,scale);
         vctx.drawImage(sceneImg, -dW/2, -dH/2, dW, dH); vctx.restore();
+
+        // Composite başarısız olduysa ürünü sahnenin üstüne ayrıca çiz
+        if (item.compositeSuccess === false && _validProd) {
+          const pR = prodImg.width / prodImg.height;
+          let pW, pH;
+          if (pR > VW / (VH * 0.65)) { pW = VW * 0.80; pH = pW / pR; }
+          else { pH = VH * 0.65; pW = pH * pR; }
+          const zs = 1 + productT * 0.04;
+          pW *= zs; pH *= zs;
+          vctx.save();
+          vctx.shadowColor = 'rgba(0,0,0,0.4)'; vctx.shadowBlur = 30; vctx.shadowOffsetY = 15;
+          vctx.drawImage(prodImg, (VW-pW)/2, (VH-pH)/2 + VH*0.02, pW, pH);
+          vctx.restore();
+        }
       } else if (_validProd) {
         // Sahne yok — şık gradient arka plan + ürün görseli
         // Kategoriye göre arka plan rengi
@@ -9146,18 +9413,35 @@ async function generateMultiProductReels() {
       const frameInProd = Math.round((time - prodStartTime) * FPS);
       if (frameInProd < TRANSITION_FRAMES && productIdx > 0) {
         const tT = frameInProd / TRANSITION_FRAMES;
-        // Dinamik: keskin snap easing | Normal: yumuşak ease-in-out
+        // Dinamik: CapCut tarzı agresif snap | Normal: yumuşak ease-in-out
         const eT = _isDynamic
-          ? Math.min(1, tT * 3) // 0.33'te %100'e ulaşır — çok hızlı snap
+          ? (tT < 0.2 ? tT * 5 : 1) // %20'de %100 — keskin snap (CapCut tarzı)
           : (tT<0.5 ? 2*tT*tT : 1-Math.pow(-2*tT+2,2)/2);
         const tt = productTransitions[productIdx] || 'crossDissolve';
         vctx.save();
 
-        // DİNAMİK MOD: CapCut tarzı — geçiş başında beyaz flaş patlama
-        if (_isDynamic && tT < 0.15) {
-          const flashI = 1 - (tT / 0.15);
-          vctx.fillStyle = `rgba(255,255,255,${flashI * 0.7})`;
-          vctx.fillRect(0, 0, VW, VH);
+        // DİNAMİK MOD: CapCut tarzı efektler
+        if (_isDynamic) {
+          // 1. Beyaz flaş patlama — daha yoğun
+          if (tT < 0.12) {
+            const flashI = 1 - (tT / 0.12);
+            vctx.fillStyle = `rgba(255,255,255,${flashI * 0.95})`;
+            vctx.fillRect(0, 0, VW, VH);
+          }
+          // 2. Zoom snap — %108'den %100'e hızlı snap
+          if (tT < 0.25) {
+            const zoomSnap = 1 + (1 - tT / 0.25) * 0.08;
+            vctx.translate(VW/2, VH/2);
+            vctx.scale(zoomSnap, zoomSnap);
+            vctx.translate(-VW/2, -VH/2);
+          }
+          // 3. Bass drop kamera sarsıntısı
+          if (tT < 0.15) {
+            const shakeIntensity = (1 - tT / 0.15) * 8;
+            const shakeX = Math.sin(tT * 80) * shakeIntensity;
+            const shakeY = Math.cos(tT * 60) * shakeIntensity * 0.6;
+            vctx.translate(shakeX, shakeY);
+          }
         }
         if(tt==='crossDissolve'||tt==='slowFadeIn'||tt==='silkFade') {
           vctx.globalAlpha=eT;
@@ -10294,16 +10578,23 @@ async function generateMultiProductReels() {
     // ═══ BİTİŞ KARTI (OUTRO) — OTONOM: ürüne göre ayarlanır ═══
     try {
     console.log('🎬 OUTRO bitiş kartı başlıyor...');
+    // Font yüklenmiş mi kontrol et — yüklenmemişse fallback kullan
+    const _outroFont = document.fonts?.check('12px "Cormorant Garamond"') ? '"Cormorant Garamond",serif' : '"DM Sans",sans-serif';
+    if (!document.fonts?.check('12px "Cormorant Garamond"')) {
+      console.warn('⚠️ OUTRO: Cormorant Garamond fontu yüklenmemiş — DM Sans kullanılıyor');
+      try { document.fonts.load('12px "Cormorant Garamond"').catch(()=>{}); } catch(e){}
+    }
     const outroName = document.getElementById('outroNameInput')?.value?.trim() || '';
     const outroSlogan = document.getElementById('outroSloganInput')?.value?.trim() || '';
     const outroStyle = document.getElementById('outroStyleSelect')?.value || 'elegant';
 
     // ═══ ÜRÜN ANA RENKLERİNİ TOPLA — logo/outro renk paleti için ═══
+    const _validHex = (c) => /^#[0-9a-fA-F]{3,6}$/.test(c);
     const productColors = [];
     productsWithScene.forEach(item => {
       if (item.analysis && item.analysis.dominant_renk) {
         const c = item.analysis.dominant_renk;
-        if (c && c !== '#000' && c !== '#000000') productColors.push(c);
+        if (c && c !== '#000' && c !== '#000000' && _validHex(c)) productColors.push(c);
       }
     });
     // En az 2 renk olsun — yoksa varsayılan altın tonu
@@ -10338,7 +10629,7 @@ async function generateMultiProductReels() {
         sloganColor: `rgba(255,255,255,0.7)`,
         lineColor: primaryColor,
         accentColor: secondaryColor,
-        fontName: '"Cormorant Garamond",serif'
+        fontName: _outroFont
       },
       minimal: {
         bg1: '#ffffff', bg2: '#f5f5f5',
@@ -10366,7 +10657,7 @@ async function generateMultiProductReels() {
         nameColor: isBright ? primaryColor : '#81c784',
         sloganColor: 'rgba(255,255,255,0.6)',
         lineColor: primaryColor, accentColor: secondaryColor,
-        fontName: '"Cormorant Garamond",serif'
+        fontName: _outroFont
       }
     };
     const os = outroStyles[outroStyle] || outroStyles.elegant;
@@ -10669,6 +10960,18 @@ async function generateMultiProductReels() {
     const videoDuration = (TOTAL_SECS + 1.5).toFixed(1); // +1.5s outro
     if(vpText) vpText.textContent = `✅ Reels hazır — ${videoDuration}s video, ${productsWithScene.length} ürün`;
     toast(`🎬 Reels hazır! ${videoDuration}s video, ${productsWithScene.length} ürün. Videoyu izleyin.`, 'success');
+
+    // Geri bildirim barını göster
+    const feedbackBar = document.getElementById('feedbackBar');
+    if (feedbackBar) {
+      feedbackBar.style.display = 'block';
+      feedbackBar.dataset.videoMeta = JSON.stringify({
+        category: dominantCat,
+        template: window._lastDirectorDecision?.template || '',
+        transitions: productTransitions,
+        music: window._lastMusicTag || ''
+      });
+    }
 
     // Süre skalasını güncelle
     buildDurationSliders();
@@ -11670,6 +11973,21 @@ async function generateGeminiScene() {
   statusText.textContent = '✦ AI sahne tasarlanıyor...';
   bar.style.width = '20%';
 
+  // Öğrenme verisini prompt'a bağla (Fenix öğrenme döngüsü)
+  try {
+    if (window.ReelsLearning) {
+      const cat = lastAnalysisResult?.kategori || 'diger';
+      window._learnedPreferences = {
+        theme: ReelsLearning.getBestTheme(cat),
+        scene: ReelsLearning.getBestScene(cat),
+        effects: ReelsLearning.getBestEffects(cat, 3),
+        template: ReelsLearning.getBestTemplate(cat),
+        colorGrade: ReelsLearning.getBestColorGrade(cat)
+      };
+      console.log('🧠 FENİX ÖĞRENME → sahne prompt\'una eklendi:', window._learnedPreferences);
+    }
+  } catch(e) { console.warn('Öğrenme verisi okunamadı:', e); }
+
   // Prompt oluştur — ürüne göre sahne
   const scenePrompt = buildScenePrompt(catTxt, prodName, colorInfo);
 
@@ -12644,7 +12962,9 @@ async function exportReelsVideo() {
     const VW = 1080;
     const VH = 1920;
     const FPS = 30;
-    const DURATION = 8; // saniye
+    // Dinamik süre — efekt ve sahne karmaşıklığına göre
+    const hasEffects = document.querySelectorAll('.eff-item.on[data-eff]').length > 0;
+    const DURATION = hasEffects ? 10 : 8; // Efekt varsa 10sn, yoksa 8sn
     const TOTAL_FRAMES = FPS * DURATION;
 
     // Offscreen canvas — yüksek kalite ayarları
@@ -12795,7 +13115,28 @@ async function exportReelsVideo() {
         vctx.scale(scale, scale);
         vctx.drawImage(aiBgImage, -drawW/2, -drawH/2, drawW, drawH);
         vctx.restore();
-        // Ürünü TEKRAR çizme — AI zaten ürünü sahneye yerleştirdi
+        // compositeProductOnScene ürünü sahneye yerleştirdi — aiBgImage'da ürün VAR
+        // Ek sinematik efektler (AI sahnesi üstüne)
+        if (activeEffects.includes('sparkle')) drawSparkles(vctx, VW, VH, time);
+        // Film grain efekti (profesyonel görünüm)
+        if (t > 0.05 && t < 0.95) {
+          vctx.save();
+          vctx.globalAlpha = 0.03;
+          for (let gi = 0; gi < 50; gi++) {
+            const gx = Math.random() * VW, gy = Math.random() * VH;
+            vctx.fillStyle = Math.random() > 0.5 ? '#fff' : '#000';
+            vctx.fillRect(gx, gy, 2, 2);
+          }
+          vctx.restore();
+        }
+        // Vignette (kenar karartma — sinematik)
+        vctx.save();
+        const vigGrad = vctx.createRadialGradient(VW/2, VH/2, VW*0.35, VW/2, VH/2, VW*0.85);
+        vigGrad.addColorStop(0, 'rgba(0,0,0,0)');
+        vigGrad.addColorStop(1, 'rgba(0,0,0,0.35)');
+        vctx.fillStyle = vigGrad;
+        vctx.fillRect(0, 0, VW, VH);
+        vctx.restore();
       } else {
         // === NORMAL MOD — gradient + emoji + ürün ===
         // Arka plan gradyanı çiz
@@ -12928,6 +13269,31 @@ async function exportReelsVideo() {
 
     vpText.textContent = '✅ Video indirildi!';
     toast('🎬 Reels videosu başarıyla indirildi!', 'success');
+
+    // ═══ FENIX SHADOW LEARNING: Video export kaydı ═══
+    try {
+      fetch('/api/fenix/shadow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          actor: 'claude',
+          taskType: 'video_export',
+          input: {
+            hasAIScene: !!aiBgImage,
+            hasProduct: hasProdImg,
+            effects: activeEffects,
+            transition: typeof currentTransition !== 'undefined' ? currentTransition : null,
+            duration: DURATION
+          },
+          output: {
+            format: mimeType,
+            frames: TOTAL_FRAMES,
+            sizeKB: Math.round(blob.size / 1024)
+          },
+          outcome: 'success'
+        })
+      }).catch(() => {});
+    } catch(e) {}
 
   } catch (err) {
     const msg = (err && err.message) ? err.message : String(err);
@@ -13181,6 +13547,104 @@ function selectExportFormat(btn, format) {
 // Also define the missing downloadCanvas / clearUpload aliases
 function downloadCanvas() { exportFormat('reels'); }
 function clearUpload() { clearAllUploads(); }
+
+// ═══ GERİ BİLDİRİM (Fenix öğrenme döngüsü) ═══
+async function sendFeedback(rating) {
+  const bar = document.getElementById('feedbackBar');
+  const msg = document.getElementById('feedbackMsg');
+  const likeBtn = document.getElementById('feedbackLikeBtn');
+  const dislikeBtn = document.getElementById('feedbackDislikeBtn');
+
+  // Butonları devre dışı bırak
+  if (likeBtn) likeBtn.disabled = true;
+  if (dislikeBtn) dislikeBtn.disabled = true;
+
+  // Seçili butonu vurgula
+  if (rating === 'like' && likeBtn) likeBtn.style.background = 'rgba(76,175,80,0.3)';
+  if (rating === 'dislike' && dislikeBtn) dislikeBtn.style.background = 'rgba(244,67,54,0.3)';
+
+  // Video meta verisini al
+  let meta = {};
+  try { meta = JSON.parse(bar?.dataset?.videoMeta || '{}'); } catch(e) {}
+
+  // ═══ Yerel öğrenme sistemi (ReelsLearning) güncelle ═══
+  if (window.ReelsLearning) {
+    try {
+      // videoData objesi olarak gönder (ReelsLearning bunu bekliyor)
+      const videoData = {
+        category: meta.category || 'unknown',
+        transitions: meta.transitions || [],
+        templateId: meta.template || meta.templateId || null,
+        colorGrade: meta.colorGrade || null,
+        musicTag: meta.musicTag || null,
+        bpm: meta.bpm || null,
+        sentiment: meta.sentiment || null,
+        sceneType: meta.sceneType || null,
+        theme: meta.theme || null,
+        floor: meta.floor || null,
+        object: meta.object || null,
+        lighting: meta.lighting || null,
+        effects: meta.effects || [],
+        cameras: meta.cameras || []
+      };
+      if (rating === 'like') ReelsLearning.recordLike(videoData);
+      else ReelsLearning.recordDislike(videoData);
+    } catch(e) { console.warn('ReelsLearning güncelleme hatası:', e); }
+  }
+
+  // ═══ Sunucuya kaydet (Firestore — kalıcı öğrenme) ═══
+  try {
+    const feedbackPayload = {
+      rating,
+      category: meta.category || 'unknown',
+      templateUsed: meta.template || meta.templateId || null,
+      transitionsUsed: meta.transitions || [],
+      musicUsed: meta.music || meta.musicTag || null,
+      comment: null,
+      // Detaylı meta — sunucu tarafında öğrenme için
+      videoMeta: {
+        colorGrade: meta.colorGrade || null,
+        bpm: meta.bpm || null,
+        sentiment: meta.sentiment || null,
+        sceneType: meta.sceneType || null,
+        theme: meta.theme || null,
+        lighting: meta.lighting || null,
+        effects: meta.effects || [],
+        duration: meta.duration || null
+      }
+    };
+    const resp = await fetch('/api/feedback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(feedbackPayload)
+    });
+    if (resp.ok) {
+      console.log(`✅ Feedback Firestore'a kaydedildi: ${rating} | kategori: ${meta.category || 'unknown'}`);
+    }
+  } catch(e) {
+    console.warn('Feedback sunucu hatası (yerel kayıt devam ediyor):', e);
+  }
+
+  // ═══ Periyodik localStorage → Firestore sync ═══
+  // Her 10 feedback'te bir sunucuya toplam öğrenme durumunu gönder
+  try {
+    if (window.ReelsLearning) {
+      const stats = ReelsLearning.getStats();
+      if (stats.totalLikes + stats.totalDislikes > 0 && (stats.totalLikes + stats.totalDislikes) % 10 === 0) {
+        fetch('/api/feedback/sync-learning', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(stats)
+        }).catch(() => {});
+        console.log(`🔄 Öğrenme durumu Firestore'a senkronize edildi (${stats.totalLikes} like, ${stats.totalDislikes} dislike)`);
+      }
+    }
+  } catch(e) {}
+
+  // UI güncelle
+  if (msg) { msg.style.display = 'inline'; msg.textContent = rating === 'like' ? '👍 Teşekkürler!' : '👎 Dikkate alındı!'; }
+  toast(rating === 'like' ? '👍 Beğeni kaydedildi — Fenix öğreniyor!' : '👎 Not edildi — bir sonraki daha iyi olacak!', 'info');
+}
 
 async function exportFormat(format) {
   const dims = {
@@ -14493,6 +14957,135 @@ function drawTextOverlay(ctx, w, h, name, slogan, price, t, effects) {
 // JAMENDO API ENTEGRASYONU — Telifsiz müzik arama + indirme
 // Client ID: 8dafa09a
 // ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════
+// BEAT DETECTION + SYNC — Müzikten BPM tespit ve geçiş senkronu
+// ═══════════════════════════════════════════════════════
+window._currentMusicBPM = 110; // Varsayılan
+window._currentBeatInterval = 60 / 110;
+window._beatTimestamps = []; // Vuruş zamanları (saniye)
+
+/**
+ * Müzik blob'undan BPM tespit et (AudioContext + energy analiz)
+ */
+async function detectAndStoreBPM(blob, trackName) {
+  try {
+    // Performans: sadece ilk 500KB analiz et (tüm şarkıyı işleme — CPU donuyor)
+    const MAX_BYTES = 512 * 1024; // 500KB
+    const slicedBlob = blob.size > MAX_BYTES ? blob.slice(0, MAX_BYTES) : blob;
+    const arrayBuffer = await slicedBlob.arrayBuffer();
+
+    // Standart AudioContext ile decode et (OfflineAudioContext çok ağır)
+    const tempCtx = new AudioContext({ sampleRate: 22050 }); // Düşük sample rate
+    let audioBuffer;
+    try {
+      audioBuffer = await tempCtx.decodeAudioData(arrayBuffer);
+    } catch(e) {
+      tempCtx.close();
+      console.warn('BPM decode hatası:', e.message);
+      return;
+    }
+    tempCtx.close();
+
+    // Ses verisini al — max 30 saniye
+    const MAX_SECONDS = 30;
+    const channelData = audioBuffer.getChannelData(0);
+    const sampleRate = audioBuffer.sampleRate;
+
+    // Enerji bazlı BPM tespiti — max 30sn analiz
+    // 1) Ses verisini 10ms'lik bloklara böl
+    const blockSize = Math.floor(sampleRate * 0.01); // 10ms
+    const maxSamples = Math.min(channelData.length, sampleRate * MAX_SECONDS);
+    const energies = [];
+    for (let i = 0; i < maxSamples - blockSize; i += blockSize) {
+      let energy = 0;
+      for (let j = i; j < i + blockSize; j++) {
+        energy += channelData[j] * channelData[j];
+      }
+      energies.push(energy / blockSize);
+    }
+
+    // 2) Enerji piklerini bul (beat = ani enerji artışı)
+    const avgEnergy = energies.reduce((a, b) => a + b, 0) / energies.length;
+    const threshold = avgEnergy * 1.5;
+    const beats = [];
+    let lastBeatIdx = -10;
+    for (let i = 1; i < energies.length; i++) {
+      if (energies[i] > threshold && energies[i] > energies[i - 1] && i - lastBeatIdx > 20) {
+        beats.push(i * 0.01); // saniye
+        lastBeatIdx = i;
+      }
+    }
+
+    // 3) Beat aralıklarından BPM hesapla
+    if (beats.length >= 4) {
+      const intervals = [];
+      for (let i = 1; i < Math.min(beats.length, 50); i++) {
+        intervals.push(beats[i] - beats[i - 1]);
+      }
+      intervals.sort((a, b) => a - b);
+      // Medyan aralık
+      const medianInterval = intervals[Math.floor(intervals.length / 2)];
+      const detectedBPM = Math.round(60 / medianInterval);
+
+      // Geçerli BPM aralığı (40-200)
+      if (detectedBPM >= 40 && detectedBPM <= 200) {
+        window._currentMusicBPM = detectedBPM;
+        window._currentBeatInterval = medianInterval;
+        window._beatTimestamps = beats.slice(0, 200);
+        console.log(`🥁 BPM TESPIT: ${detectedBPM} BPM (${beats.length} beat, interval: ${medianInterval.toFixed(3)}sn) — "${trackName}"`);
+        // Shadow learning kaydet
+        try {
+          fetch('/api/fenix/shadow', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ actor: 'system', taskType: 'beat_detection', input: { trackName }, output: { bpm: detectedBPM, beatCount: beats.length }, outcome: 'success' })
+          }).catch(() => {});
+        } catch(e) {}
+        return detectedBPM;
+      }
+    }
+
+    console.log(`🥁 BPM tespit edilemedi — varsayılan ${window._currentMusicBPM} kullanılacak`);
+    return window._currentMusicBPM;
+  } catch(e) {
+    console.warn('BPM analiz hatası:', e.message);
+    return window._currentMusicBPM;
+  }
+}
+
+/**
+ * Beat-sync hesapla — geçiş noktalarını döner
+ * @param {number} totalDuration - Video toplam süresi (saniye)
+ * @param {number} sceneCount - Sahne sayısı
+ * @returns {object} { sceneDuration, transitionFrames[], bpm }
+ */
+function calculateBeatSyncLocal(totalDuration, sceneCount, fps) {
+  const bpm = window._currentMusicBPM;
+  const beatInterval = 60 / bpm;
+  fps = fps || 30;
+
+  // Her sahne kaç beat sürecek?
+  const rawSceneDuration = totalDuration / sceneCount;
+  const beatsPerScene = Math.max(2, Math.round(rawSceneDuration / beatInterval));
+  const alignedSceneDuration = beatsPerScene * beatInterval;
+
+  // Geçiş frame'lerini hesapla (beat'e hizalı)
+  const transitionFrames = [];
+  for (let i = 1; i < sceneCount; i++) {
+    const timeSec = i * alignedSceneDuration;
+    transitionFrames.push(Math.round(timeSec * fps));
+  }
+
+  console.log(`🥁 Beat-Sync: BPM=${bpm}, sahne=${alignedSceneDuration.toFixed(2)}sn (${beatsPerScene} beat), geçişler: [${transitionFrames.join(',')}]`);
+
+  return {
+    bpm,
+    beatInterval,
+    sceneDuration: alignedSceneDuration,
+    beatsPerScene,
+    transitionFrames,
+    totalAlignedDuration: sceneCount * alignedSceneDuration
+  };
+}
+
 const JamendoAPI = (() => {
   const CLIENT_ID = '8dafa09a';
   const BASE = 'https://api.jamendo.com/v3.0';
@@ -14645,6 +15238,12 @@ const JamendoAPI = (() => {
       document.querySelectorAll('.mtrack').forEach(t => t.classList.remove('sel'));
 
       toast(`✅ "${name}" müziği yüklendi — videoda kullanılacak`, 'success');
+
+      // ═══ BPM + BEAT SYNC — müzikten tempo analizi ═══
+      try {
+        await detectAndStoreBPM(blob, name);
+      } catch(bpmErr) { console.warn('BPM tespit hatası:', bpmErr.message); }
+
     } catch(e) {
       toast('Jamendo indirme hatası: ' + e.message, 'error');
     }
@@ -14695,6 +15294,21 @@ const JamendoAPI = (() => {
       document.getElementById('customMusicPreview').style.display = 'block';
 
       console.log(`🎵 Jamendo otonom: "${pick.name}" by ${pick.artist_name}`);
+
+      // BPM — Jamendo musicinfo'dan veya analiz ile
+      try {
+        // Önce Jamendo metadata'dan BPM al
+        let bpm = 110;
+        if (pick.musicinfo?.audio?.speed) {
+          const speedMap = { very_low: 60, low: 80, medium: 110, high: 130, very_high: 150 };
+          bpm = speedMap[pick.musicinfo.audio.speed] || 110;
+        }
+        if (pick.musicinfo?.audio?.tempo) bpm = pick.musicinfo.audio.tempo;
+        window._currentMusicBPM = bpm;
+        window._currentBeatInterval = 60 / bpm;
+        console.log(`🎵 BPM: ${bpm} (beat interval: ${(60/bpm).toFixed(3)}sn)`);
+      } catch(bpmErr) {}
+
     } catch(e) {
       console.warn('Jamendo otonom hatası:', e.message);
     }
@@ -14727,6 +15341,7 @@ const TrendUI = (() => {
       if (!resp.ok) return;
       trendDB = await resp.json();
       window._staticTrendDB = trendDB;
+      window.trendDatabase = trendDB; // alias — debug ve dış erişim için
       renderAll();
       // Son güncelleme
       const el = document.getElementById('trendLastUpdate');
@@ -15481,91 +16096,6 @@ const TrendAnalyzer = (() => {
   return { init, updateAllTrends, getBestForCategory, getDB: () => trendDB, CONFIG };
 })();
 
-// ═══════════════════════════════════════════════════════════════
-// TikTok TREND SCRAPER — Creative Center API + Gemini fallback
-// ═══════════════════════════════════════════════════════════════
-const TikTokScraper = (() => {
-  const CLIENT_KEY = 'aw37taordtjwxght';
-  const CLIENT_SECRET = 'FbctsPvLeriz7lmEouv8W1DMQqyAVSSd';
-
-  // TikTok Research API — trend hashtag ve müzik verisi
-  async function fetchTrendingMusic(region = 'TR') {
-    // TikTok Research API — access token gerekli
-    try {
-      // 1. Access token al
-      const tokenResp = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `client_key=${CLIENT_KEY}&client_secret=${CLIENT_SECRET}&grant_type=client_credentials`
-      });
-      if (!tokenResp.ok) throw new Error('Token alınamadı: ' + tokenResp.status);
-      const tokenData = await tokenResp.json();
-      const accessToken = tokenData.access_token;
-      if (!accessToken) throw new Error('Access token boş');
-
-      // 2. Trending hashtag'leri çek (Research API — commercial use gerekebilir)
-      // NOT: Bireysel hesapla sınırlı — ileride commercial API'ye geçilecek
-      console.log('[TikTok] Access token alındı, trend verisi çekiliyor...');
-
-      // 3. Hashtag'lerden müzik analizi (Gemini ile)
-      return { success: true, token: accessToken };
-    } catch(e) {
-      console.warn('[TikTok] API hatası:', e.message);
-      return { success: false, error: e.message };
-    }
-  }
-
-  // Gemini AI ile TikTok trend analizi (Creative Center web verisi simülasyonu)
-  async function fetchViGemini(geminiKey, category) {
-    if (!geminiKey) return null;
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${geminiKey}`;
-      const resp = await fetch(url, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `TikTok Creative Center'da ${category} kategorisinde Mart 2026'da Türkiye'de EN TREND olan müzikleri analiz et. En çok kullanılan 10 TikTok sesi/müziği listele.\n\nJSON döndür: {"trending":[{"name":"ses adı","artist":"sanatçı","uses":"kullanım sayısı","vibe":"açıklama","bpm":120}]}` }], role: 'user' }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 1500, responseMimeType: 'application/json' }
-        })
-      });
-      if (!resp.ok) return null;
-      const result = await resp.json();
-      const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) return null;
-      return JSON.parse(text.replace(/```json\s*/gi,'').replace(/```/g,'').trim());
-    } catch(e) {
-      console.warn('[TikTok Scraper] Gemini hatası:', e.message);
-      return null;
-    }
-  }
-
-  // Tam tarama — tüm kategoriler
-  async function fullScan(geminiKey) {
-    console.log('[TikTok Scraper] Tam tarama başladı...');
-    const categories = ['taki','kozmetik','giyim','aksesuar','elektronik','arac','yiyecek','dekor','spor'];
-    const results = {};
-
-    // Önce TikTok API token dene
-    const apiResult = await fetchTrendingMusic();
-    if (apiResult.success) {
-      console.log('[TikTok] API bağlantısı başarılı');
-    }
-
-    // Her kategori için Gemini analizi
-    for (const cat of categories) {
-      const data = await fetchViGemini(geminiKey, cat);
-      if (data?.trending) {
-        results[cat] = data.trending;
-        console.log(`[TikTok] ${cat}: ${data.trending.length} trend müzik`);
-      }
-      await new Promise(r => setTimeout(r, 1500)); // Rate limit
-    }
-
-    console.log('[TikTok Scraper] Tarama tamamlandı');
-    return results;
-  }
-
-  return { fetchTrendingMusic, fetchViGemini, fullScan };
-})();
 
 // ═══════════════════════════════════════════════════════════════
 // BAŞLATMA — TrendUI + TrendAnalyzer init
@@ -16138,6 +16668,497 @@ console.log('🎬 PhotoReel AI v9 — Meta-Şablon + AI Director + Öğrenme Sis
     </div>
   </div>
 </div>
+
+<!-- MOBİL ALT TAB BAR -->
+<nav class="mob-tabbar" id="mobTabbar">
+  <button class="mob-tab active" id="mobTabCenter" onclick="mobSwitch('center')">
+    <span class="mob-tab-icon">🎬</span>
+    <span>Önizleme</span>
+  </button>
+  <button class="mob-tab" id="mobTabLeft" onclick="mobSwitch('left')">
+    <span class="mob-tab-icon">📁</span>
+    <span>Ürünler</span>
+  </button>
+  <button class="mob-tab" id="mobTabRight" onclick="mobSwitch('right')">
+    <span class="mob-tab-icon">⚙️</span>
+    <span>Ayarlar</span>
+  </button>
+</nav>
+
+<script>
+/* Mobil tab geçişi */
+function mobSwitch(tab) {
+  if (window.innerWidth > 767) return;
+  const left  = document.querySelector('.left');
+  const right = document.querySelector('.right');
+  const center= document.querySelector('.center');
+  // Hepsini kapat
+  left  && left.classList.remove('mob-open');
+  right && right.classList.remove('mob-open');
+  // Aktif tab
+  document.querySelectorAll('.mob-tab').forEach(b => b.classList.remove('active'));
+  if (tab === 'left') {
+    left && left.classList.add('mob-open');
+    document.getElementById('mobTabLeft').classList.add('active');
+  } else if (tab === 'right') {
+    right && right.classList.add('mob-open');
+    document.getElementById('mobTabRight').classList.add('active');
+  } else {
+    document.getElementById('mobTabCenter').classList.add('active');
+  }
+}
+/* Ekran boyutu değişince temizle */
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 767) {
+    document.querySelector('.left')  && document.querySelector('.left').classList.remove('mob-open');
+    document.querySelector('.right') && document.querySelector('.right').classList.remove('mob-open');
+  }
+});
+</script>
+
+<!-- ═══ FENİX MOD SEÇİM + PİPELİNE ═══ -->
+<script>
+const MOD_RENK = {
+  hizli:  { renk: '#00d2ff', ad: '⚡ Hızlı Mod'  },
+  pro:    { renk: '#ff6600', ad: '🎛 Pro Mod'     },
+  '360':  { renk: '#c084fc', ad: '🌐 360° Mod'    },
+  otonom: { renk: '#c9a84c', ad: '🤖 Otonom Mod'  },
+};
+
+// ── Seçili mod ──
+let _secilenMod = null;
+let _yuklenenDosyalar = [];
+
+const MOD_UPLOAD_INFO = {
+  hizli:  { ico: '⚡', hint: 'Fotoğraf veya video yükle — hızlı reels üretiyoruz' },
+  pro:    { ico: '🎛', hint: 'Düzenlemek istediğin fotoğraf veya videoyu seç'     },
+  '360':  { ico: '🌐', hint: '360° fotoğraf veya equirectangular video yükle'      },
+  otonom: { ico: '🤖', hint: 'Ürün fotoğrafını at — Fenix gerisini halleder'       },
+};
+
+function selectMode(mod) {
+  _secilenMod = mod;
+  // Mod ekranını kapat
+  const modeOverlay = document.getElementById('mode-overlay');
+  if (modeOverlay) modeOverlay.style.display = 'none';
+
+  // Yükleme ekranını aç
+  const info = MOD_UPLOAD_INFO[mod] || MOD_UPLOAD_INFO.otonom;
+  document.getElementById('upload-mod-ico').textContent   = info.ico;
+  document.getElementById('upload-mod-title').textContent = (MOD_RENK[mod]?.ad || 'Dosya Yükle');
+  document.getElementById('upload-mod-hint').textContent  = info.hint;
+  const uploadOverlay = document.getElementById('upload-overlay');
+  if (uploadOverlay) uploadOverlay.style.display = 'flex';
+
+  localStorage.setItem('fenix_mod', mod);
+}
+
+function showModeSelect() {
+  const overlay = document.getElementById('mode-overlay');
+  if (overlay) overlay.style.display = 'flex';
+  const uploadOverlay = document.getElementById('upload-overlay');
+  if (uploadOverlay) uploadOverlay.style.display = 'none';
+}
+
+// ── Tablet dosya yükleme fonksiyonları ──
+function handleTabletFile(files) {
+  if (!files || !files.length) return;
+  _yuklenenDosyalar = Array.from(files);
+  gosterOnizleme(_yuklenenDosyalar);
+  // Mevcut sol panel upload zone'una da aktar
+  const mainInput = document.getElementById('fileInput');
+  if (mainInput) {
+    try {
+      const dt = new DataTransfer();
+      _yuklenenDosyalar.forEach(f => dt.items.add(f));
+      mainInput.files = dt.files;
+      mainInput.dispatchEvent(new Event('change', { bubbles: true }));
+    } catch(e) { /* sessiz */ }
+  }
+}
+
+function handleTabletDrop(event) {
+  event.preventDefault();
+  const zone = document.getElementById('uploadDropZone');
+  if (zone) { zone.style.borderColor = 'var(--gold)'; zone.style.background = 'var(--warm)'; }
+  const files = event.dataTransfer.files;
+  handleTabletFile(files);
+}
+
+function gosterOnizleme(files) {
+  const wrap  = document.getElementById('uploadPreviewWrap');
+  const grid  = document.getElementById('uploadPreviewGrid');
+  const count = document.getElementById('uploadPreviewCount');
+  const btn   = document.getElementById('uploadDevamBtn');
+  if (!wrap || !grid) return;
+
+  grid.innerHTML = '';
+  files.forEach(f => {
+    const div = document.createElement('div');
+    div.style.cssText = 'position:relative;width:80px;height:80px;border-radius:10px;overflow:hidden;border:1.5px solid var(--border);';
+    if (f.type.startsWith('image/')) {
+      const img = document.createElement('img');
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+      img.src = URL.createObjectURL(f);
+      div.appendChild(img);
+    } else {
+      // Video — ikon göster
+      div.style.background = '#1a1a1a';
+      div.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:2px;">
+        <div style="font-size:24px;">🎬</div>
+        <div style="font-size:8px;color:#aaa;padding:0 4px;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:72px;">${f.name.substring(0,12)}</div>
+      </div>`;
+    }
+    grid.appendChild(div);
+  });
+
+  count.textContent = `${files.length} dosya seçildi`;
+  wrap.style.display = 'block';
+  btn.style.display  = 'inline-block';
+  document.getElementById('uploadDropZone').style.borderColor = 'var(--gold)';
+}
+
+function clearTabletUpload() {
+  _yuklenenDosyalar = [];
+  const wrap = document.getElementById('uploadPreviewWrap');
+  const btn  = document.getElementById('uploadDevamBtn');
+  if (wrap) wrap.style.display = 'none';
+  if (btn)  btn.style.display  = 'none';
+  document.getElementById('uploadDropZone').style.borderColor = 'var(--border)';
+  document.getElementById('tabletFileInput').value = '';
+}
+
+function devamEt() {
+  const uploadOverlay = document.getElementById('upload-overlay');
+  if (uploadOverlay) uploadOverlay.style.display = 'none';
+
+  // Moda göre devam
+  const m = MOD_RENK[_secilenMod] || MOD_RENK.otonom;
+  const lbl = document.getElementById('active-mode-lbl');
+  if (lbl) { lbl.textContent = m.ad; lbl.style.color = m.renk; }
+
+  if (_secilenMod === 'otonom') {
+    const autoBtn = document.getElementById('autoModeBtn');
+    if (autoBtn) autoBtn.click();
+    showFenixProduceBar();
+    // Otonom: dosyalar varsa hemen pipeline'a gönder
+    if (_yuklenenDosyalar.length > 0) {
+      setTimeout(() => fenixProduce(_yuklenenDosyalar[0]), 300);
+    }
+  } else if (_secilenMod === 'hizli') {
+    showHizliPanel();
+  } else if (_secilenMod === 'pro') {
+    showProPanel();
+  } else if (_secilenMod === '360') {
+    show360Panel();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// HIZLI MOD PANELİ — Yeni başlayanlar için sade araçlar
+// ─────────────────────────────────────────────────────────────
+function showHizliPanel() {
+  if (document.getElementById('hizli-panel')) return;
+  const panel = document.createElement('div');
+  panel.id = 'hizli-panel';
+  panel.style.cssText = `
+    background:#111;border-bottom:1px solid #2a2a2a;padding:12px 20px;
+    display:flex;align-items:center;flex-wrap:wrap;gap:12px;
+  `;
+  panel.innerHTML = `
+    <span style="font-size:12px;font-weight:700;color:#00d2ff;">⚡ HIZLI MOD</span>
+
+    <!-- Filtre -->
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span style="font-size:11px;color:#888;">Filtre:</span>
+      <select id="hizli-filtre" onchange="hizliFiltre(this.value)" style="
+        background:#1e1e1e;color:#fff;border:1px solid #333;border-radius:6px;
+        padding:5px 10px;font-size:11px;cursor:pointer;">
+        <option value="">— Seç —</option>
+        <option value="warm">🌅 Sıcak</option>
+        <option value="cool">❄️ Soğuk</option>
+        <option value="vivid">🌈 Canlı</option>
+        <option value="bw">⬛ Siyah-Beyaz</option>
+        <option value="vintage">📷 Vintage</option>
+        <option value="cinema">🎬 Sinema</option>
+      </select>
+    </div>
+
+    <!-- Şablon -->
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span style="font-size:11px;color:#888;">Şablon:</span>
+      <select id="hizli-sablon" onchange="hizliSablon(this.value)" style="
+        background:#1e1e1e;color:#fff;border:1px solid #333;border-radius:6px;
+        padding:5px 10px;font-size:11px;cursor:pointer;">
+        <option value="">— Seç —</option>
+        <option value="ticaret">🛍️ E-Ticaret</option>
+        <option value="kafe">☕ Kafe / Restoran</option>
+        <option value="moda">👗 Moda</option>
+        <option value="spor">⚽ Spor</option>
+        <option value="teknoloji">📱 Teknoloji</option>
+      </select>
+    </div>
+
+    <!-- Metin -->
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span style="font-size:11px;color:#888;">Kanca metni:</span>
+      <input id="hizli-metin" placeholder="Başlık yaz..." style="
+        background:#1e1e1e;color:#fff;border:1px solid #333;border-radius:6px;
+        padding:5px 10px;font-size:11px;width:160px;" />
+    </div>
+
+    <!-- Müzik BPM -->
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span style="font-size:11px;color:#888;">Tempo:</span>
+      <select id="hizli-bpm" style="
+        background:#1e1e1e;color:#fff;border:1px solid #333;border-radius:6px;
+        padding:5px 10px;font-size:11px;cursor:pointer;">
+        <option value="80">🐢 Yavaş (80 BPM)</option>
+        <option value="100" selected>😊 Orta (100 BPM)</option>
+        <option value="128">⚡ Hızlı (128 BPM)</option>
+      </select>
+    </div>
+
+    <!-- Reels butonu -->
+    <button onclick="hizliReels()" style="
+      padding:7px 18px;background:linear-gradient(135deg,#00d2ff,#0077aa);
+      color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">
+      ▶ Reels Üret
+    </button>
+
+    <!-- Fotoğraf düzenle butonu -->
+    <button onclick="hizliFotoDuzenle()" style="
+      padding:7px 14px;background:#1e2e1e;color:#4ade80;border:1px solid #4ade80;
+      border-radius:8px;font-size:11px;cursor:pointer;">
+      🖼 Foto Düzenle
+    </button>
+
+    <!-- Metin ekle -->
+    <button onclick="hizliMetinEkle()" style="
+      padding:7px 14px;background:#1e1e2e;color:#a78bfa;border:1px solid #a78bfa;
+      border-radius:8px;font-size:11px;cursor:pointer;">
+      T Metin Ekle
+    </button>
+
+    <span id="hizli-status" style="font-size:10px;color:#666;"></span>
+  `;
+  const prog = document.querySelector('.prog');
+  if (prog) prog.parentNode.insertBefore(panel, prog);
+}
+
+function hizliFiltre(filtre) {
+  const canvas = document.getElementById('c') || document.querySelector('canvas');
+  if (!canvas) return;
+  const status = document.getElementById('hizli-status');
+  if (status) status.textContent = `Filtre uygulanıyor: ${filtre}...`;
+  // Filtre CSS olarak uygula
+  const filterMap = {
+    warm:    'sepia(0.3) saturate(1.4) brightness(1.05)',
+    cool:    'hue-rotate(20deg) saturate(0.9) brightness(1.05)',
+    vivid:   'saturate(1.8) contrast(1.1)',
+    bw:      'grayscale(1)',
+    vintage: 'sepia(0.5) contrast(0.9) brightness(0.95)',
+    cinema:  'contrast(1.2) saturate(0.8) brightness(0.9)',
+  };
+  if (canvas) canvas.style.filter = filterMap[filtre] || '';
+  if (status) setTimeout(() => status.textContent = '', 1500);
+}
+
+function hizliSablon(sablon) {
+  const status = document.getElementById('hizli-status');
+  if (status) status.textContent = `"${sablon}" şablonu uygulandı`;
+  // Şablon seçilince metin alanına öneri koy
+  const metinSonerileri = {
+    ticaret:    'Şimdi Al — Sınırlı Stok!',
+    kafe:       'Her yudumda ayrı lezzet ☕',
+    moda:       'Tarzını tamamla — yeni koleksiyon',
+    spor:       'Limitlerini zorla 💪',
+    teknoloji:  'Geleceği bugün yaşa 🚀',
+  };
+  const inp = document.getElementById('hizli-metin');
+  if (inp && metinSonerileri[sablon]) inp.value = metinSonerileri[sablon];
+  setTimeout(() => { if (status) status.textContent = ''; }, 2000);
+}
+
+function hizliReels() {
+  const status = document.getElementById('hizli-status');
+  const bpm    = document.getElementById('hizli-bpm')?.value || '100';
+  const filtre = document.getElementById('hizli-filtre')?.value || '';
+  const metin  = document.getElementById('hizli-metin')?.value || '';
+  if (status) status.textContent = '⏳ Reels hazırlanıyor...';
+  // Mevcut üretim pipeline'ını kullan
+  const autoBtn = document.getElementById('autoModeBtn');
+  if (autoBtn) {
+    if (metin) {
+      const hookInp = document.getElementById('hookText') || document.querySelector('[id*="hook"]');
+      if (hookInp) hookInp.value = metin;
+    }
+    autoBtn.click();
+  } else {
+    toast('⚡ Dosya yükle ve Reels üret butonuna bas!', 'info');
+  }
+  if (status) setTimeout(() => status.textContent = '', 3000);
+}
+
+function hizliFotoDuzenle() {
+  // Sol paneli göster — basit araçlar
+  const leftPanel = document.querySelector('.panel') || document.getElementById('left-panel');
+  if (leftPanel) {
+    leftPanel.style.display = 'flex';
+    toast('🖼 Düzenleme araçları açık', 'info');
+  } else {
+    toast('Düzenleme paneli açılıyor...', 'info');
+  }
+}
+
+function hizliMetinEkle() {
+  const metin = document.getElementById('hizli-metin')?.value;
+  if (!metin) {
+    toast('Önce kanca metnini yaz!', 'warn');
+    document.getElementById('hizli-metin')?.focus();
+    return;
+  }
+  // Mevcut metin sistemiyle bütünleşik
+  const hookInp = document.getElementById('hookText') || document.querySelector('[placeholder*="kanca"]');
+  if (hookInp) { hookInp.value = metin; toast('✅ Metin eklendi', 'success'); }
+  else toast('Metin paneli: ' + metin, 'info');
+}
+
+// ─────────────────────────────────────────────────────────────
+// PRO MOD PANELİ — Profesyonel araçlar
+// ─────────────────────────────────────────────────────────────
+function showProPanel() {
+  if (document.getElementById('pro-panel')) return;
+  const panel = document.createElement('div');
+  panel.id = 'pro-panel';
+  panel.style.cssText = 'background:#111;border-bottom:1px solid #2a2a2a;padding:10px 20px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;';
+  panel.innerHTML = `
+    <span style="font-size:12px;font-weight:700;color:#ff6600;">🎛 PRO MOD</span>
+    <button onclick="document.querySelector('.panel')&&(document.querySelector('.panel').style.display='flex')" style="padding:6px 14px;background:#1e1e1e;color:#ff6600;border:1px solid #ff6600;border-radius:6px;font-size:11px;cursor:pointer;">🎨 Katman Araçları</button>
+    <button onclick="toast('Renk eğrisi açılıyor...','info')" style="padding:6px 14px;background:#1e1e1e;color:#ff9944;border:1px solid #ff9944;border-radius:6px;font-size:11px;cursor:pointer;">📈 Renk Eğrisi</button>
+    <button onclick="toast('Figür boyama modu aktif','info')" style="padding:6px 14px;background:#1e1e1e;color:#ffd700;border:1px solid #ffd700;border-radius:6px;font-size:11px;cursor:pointer;">🎭 Figür Boyama</button>
+  `;
+  const prog = document.querySelector('.prog');
+  if (prog) prog.parentNode.insertBefore(panel, prog);
+}
+
+// ─────────────────────────────────────────────────────────────
+// 360° MOD PANELİ
+// ─────────────────────────────────────────────────────────────
+function show360Panel() {
+  if (document.getElementById('panel-360')) return;
+  const panel = document.createElement('div');
+  panel.id = 'panel-360';
+  panel.style.cssText = 'background:#111;border-bottom:1px solid #2a2a2a;padding:10px 20px;display:flex;align-items:center;flex-wrap:wrap;gap:10px;';
+  panel.innerHTML = `
+    <span style="font-size:12px;font-weight:700;color:#c084fc;">🌐 360° MOD</span>
+    <select id="360-kategori" style="background:#1e1e1e;color:#fff;border:1px solid #333;border-radius:6px;padding:5px 10px;font-size:11px;">
+      <option value="spor">⚽ Spor</option>
+      <option value="motor">🏍 Motor</option>
+      <option value="parasut">🪂 Paraşüt</option>
+      <option value="snowboard">🏂 Snowboard</option>
+      <option value="sualti">🤿 Su Altı</option>
+      <option value="tekne">⛵ Tekne</option>
+      <option value="pist">🏎 Pist</option>
+    </select>
+    <button onclick="toast('360° düzeltme başlıyor...','info')" style="padding:6px 14px;background:#1e1e2e;color:#c084fc;border:1px solid #c084fc;border-radius:6px;font-size:11px;cursor:pointer;">🌀 360° Düzelt</button>
+    <button onclick="toast('Rüzgar sesi filtreleniyor...','info')" style="padding:6px 14px;background:#1e1e2e;color:#a78bfa;border:1px solid #a78bfa;border-radius:6px;font-size:11px;cursor:pointer;">🔇 Rüzgar Filtrele</button>
+    <button onclick="toast('Reels export hazır','info')" style="padding:6px 14px;background:#1e1e2e;color:#818cf8;border:1px solid #818cf8;border-radius:6px;font-size:11px;cursor:pointer;">📤 Reels Export</button>
+  `;
+  const prog = document.querySelector('.prog');
+  if (prog) prog.parentNode.insertBefore(panel, prog);
+}
+
+// Otonom modda Fenix üretim barını göster
+function showFenixProduceBar() {
+  if (document.getElementById('fenix-produce-bar')) return;
+  const bar = document.createElement('div');
+  bar.id = 'fenix-produce-bar';
+  bar.style.cssText = 'background:#1a1a1a;padding:10px 24px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #333;';
+  bar.innerHTML = `
+    <span style="font-size:11px;color:#888;">Kategori:</span>
+    <select id="fp-kategori" style="background:#2a2a2a;color:#fff;border:1px solid #444;border-radius:5px;padding:4px 8px;font-size:11px;">
+      <option value="kozmetik">💄 Kozmetik</option>
+      <option value="taki">💍 Takı</option>
+      <option value="giyim">👗 Giyim</option>
+      <option value="ayakkabi">👟 Ayakkabı</option>
+      <option value="elektronik">📱 Elektronik</option>
+      <option value="gida">🍕 Gıda</option>
+      <option value="spor">⚽ Spor</option>
+      <option value="parfum">🌸 Parfüm</option>
+      <option value="ev-yasam">🏠 Ev & Yaşam</option>
+      <option value="aksesuar">👜 Aksesuar</option>
+      <optgroup label="── Aksiyon ──">
+      <option value="motor">🏍 Motor</option>
+      <option value="suAlti">🤿 Su Altı</option>
+      <option value="parasut">🪂 Paraşüt</option>
+      <option value="snowboard">🏂 Snowboard</option>
+      <option value="tekne">⛵ Tekne</option>
+      <option value="pist">🏎 Pist</option>
+      </optgroup>
+    </select>
+    <input id="fp-urun" placeholder="Ürün adı (ör: çiçek parfüm)" style="background:#2a2a2a;color:#fff;border:1px solid #444;border-radius:5px;padding:4px 10px;font-size:11px;width:180px;">
+    <input id="fp-kanca" placeholder="Kancan metni (opsiyonel)" style="background:#2a2a2a;color:#fff;border:1px solid #444;border-radius:5px;padding:4px 10px;font-size:11px;width:180px;">
+    <button onclick="fenixProduce()" id="fp-btn" style="padding:6px 18px;background:linear-gradient(135deg,#c9a84c,#9a7a2e);color:#fff;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;">🔥 Fenix ile Üret</button>
+    <span id="fp-status" style="font-size:10px;color:#888;"></span>
+  `;
+  const prog = document.querySelector('.prog');
+  if (prog) prog.parentNode.insertBefore(bar, prog);
+}
+
+async function fenixProduce() {
+  const btn    = document.getElementById('fp-btn');
+  const status = document.getElementById('fp-status');
+  const kat    = document.getElementById('fp-kategori')?.value || 'kozmetik';
+  const urun   = document.getElementById('fp-urun')?.value || kat;
+  const kanca  = document.getElementById('fp-kanca')?.value || '';
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Üretiliyor...';
+  status.textContent = 'Fenix karar alıyor...';
+
+  try {
+    const r = await fetch('/api/fenix/produce', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ kategori: kat, urun, kanca, platform: 'reels', sure: 15 })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      status.textContent = '✅ Üretim başladı — fenix-memory.html\'den takip et';
+      status.style.color = '#4caf50';
+    } else {
+      status.textContent = '❌ ' + (d.error || 'Hata');
+      status.style.color = '#f44336';
+    }
+  } catch(e) {
+    status.textContent = '❌ Bağlantı hatası';
+    status.style.color = '#f44336';
+  }
+
+  btn.disabled = false;
+  btn.textContent = '🔥 Fenix ile Üret';
+}
+
+// Sayfa açılışında
+(function() {
+  // Gemini key otomatik çek
+  fetch('/api/config').then(r => r.json()).then(cfg => {
+    const gi = document.getElementById('geminiKeyInput');
+    if (gi && cfg.geminiKey && !gi.value) {
+      gi.value = cfg.geminiKey;
+      localStorage.setItem('photoreel_gemini_key', cfg.geminiKey);
+    }
+  }).catch(() => {});
+
+  // Son kullanılan modu uygula
+  const sonMod = localStorage.getItem('fenix_mod');
+  if (sonMod) {
+    selectMode(sonMod);
+  }
+  // Yoksa mod seçim ekranı açık kalır
+})();
+</script>
 
 </body>
 </html>

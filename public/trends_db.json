@@ -1,0 +1,400 @@
+{
+  "lastUpdated": "2026-03-26",
+  "sources": ["TikTok Creative Center", "Instagram Reels Trending", "TokChart", "Buffer", "HeyOrca", "SocialBee", "Spotify Viral Charts", "CapCut Trending", "Metricool", "Dash Social"],
+  "regions": ["Global", "USA", "Europe", "Turkey"],
+
+  "trendMusic": {
+    "taki": {
+      "songs": [
+        {"name": "Kiss It Better", "artist": "Rihanna", "bpm": 95, "vibe": "slow-motion aesthetic close-up", "popularity": 98, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Sets With Me", "artist": "Rihanna", "bpm": 100, "vibe": "ring stack finger showcase", "popularity": 94, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Aperture", "artist": "Harry Styles", "bpm": 88, "vibe": "cinematic luxury day-in-life", "popularity": 94, "platform": "both", "region": "global", "commercial": false},
+        {"name": "E85", "artist": "Don Toliver", "bpm": 92, "vibe": "smooth atmospheric lifestyle", "popularity": 91, "platform": "tiktok", "region": "USA/Europe", "commercial": false},
+        {"name": "Rose Colored Filter", "artist": "Carter Rogers", "bpm": 78, "vibe": "dreamy soft romantic", "popularity": 77, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "fragile", "artist": "idontlikemirrorss", "bpm": 70, "vibe": "scenic golden hour minimal", "popularity": 77, "platform": "tiktok", "region": "global", "commercial": false},
+        {"name": "360 Orchestral Cover", "artist": "Bridgerton/Charli XCX", "bpm": 82, "vibe": "elegant theatrical flair", "popularity": 93, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "The One", "artist": "Jorja Smith", "bpm": 85, "vibe": "intimate cinematic cool", "popularity": 86, "platform": "instagram", "region": "Europe", "commercial": false},
+        {"name": "The Less I Know the Better", "artist": "Tame Impala", "bpm": 116, "vibe": "recurring aesthetic classic", "popularity": 90, "platform": "both", "region": "global", "commercial": false},
+        {"name": "End of Beginning", "artist": "Djo", "bpm": 85, "vibe": "nostalgia city montage", "popularity": 89, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Moonlight Serenade", "artist": "Glenn Miller", "bpm": 62, "vibe": "vintage luxury classic", "popularity": 75, "platform": "instagram", "region": "Europe", "commercial": true},
+        {"name": "Hopelessly Devoted To You", "artist": "Olivia Newton-John", "bpm": 72, "vibe": "emotional attachment nostalgic", "popularity": 86, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "Ring Ring Ring", "artist": "Tyler, The Creator", "bpm": 88, "vibe": "retro-funk aesthetic close-up showcase", "popularity": 87, "platform": "instagram", "region": "global", "commercial": false}
+      ],
+      "transitions": ["soft zoom", "light leak", "bloom", "3D zoom", "soft fade", "beat-sync flash", "polaroid", "halation"]
+    },
+
+    "kozmetik": {
+      "songs": [
+        {"name": "360 Orchestral Cover", "artist": "Bridgerton/Charli XCX", "bpm": 82, "vibe": "elegant luxe bridgerton", "popularity": 97, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "CHANEL", "artist": "Tyla", "bpm": 105, "vibe": "fashion beauty GRWM confident", "popularity": 93, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Rich Girl", "artist": "Gwen Stefani ft. Eve", "bpm": 110, "vibe": "liquid pour serum product", "popularity": 91, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "Natural Beauty", "artist": "India Happy", "bpm": 90, "vibe": "skincare self-care organic", "popularity": 84, "platform": "instagram", "region": "global", "commercial": true},
+        {"name": "Resiliencia", "artist": "Rantseni", "bpm": 68, "vibe": "calm mindful peaceful", "popularity": 87, "platform": "instagram", "region": "global", "commercial": true},
+        {"name": "Carefree Days", "artist": "Various", "bpm": 75, "vibe": "morning routine cozy", "popularity": 89, "platform": "both", "region": "global", "commercial": true},
+        {"name": "Ray Mysterio", "artist": "The Alchemist", "bpm": 85, "vibe": "cinematic elegant unboxing", "popularity": 80, "platform": "instagram", "region": "USA", "commercial": false},
+        {"name": "Fever Dream", "artist": "Alex Warren", "bpm": 90, "vibe": "peaceful routine comfort", "popularity": 76, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Low Cortisol", "artist": "TikTok Trending Sound", "bpm": 72, "vibe": "self-care stress relief skincare routine", "popularity": 85, "platform": "tiktok", "region": "global", "commercial": false},
+        {"name": "Man I Need", "artist": "Olivia Dean", "bpm": 95, "vibe": "jazzy playful flirty", "popularity": 84, "platform": "instagram", "region": "Europe", "commercial": false},
+        {"name": "Waltz of the Flowers", "artist": "Tchaikovsky", "bpm": 65, "vibe": "mythbusting funny elegant", "popularity": 83, "platform": "instagram", "region": "global", "commercial": true},
+        {"name": "Espresso", "artist": "Sabrina Carpenter", "bpm": 104, "vibe": "youthful playful catchy", "popularity": 92, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Go", "artist": "BLACKPINK", "bpm": 128, "vibe": "chic confident K-pop", "popularity": 90, "platform": "both", "region": "global", "commercial": false},
+        {"name": "DAISIES", "artist": "Justin Bieber", "bpm": 85, "vibe": "chill lifestyle morning routine skincare", "popularity": 88, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "Ring Ring Ring", "artist": "Tyler, The Creator", "bpm": 88, "vibe": "retro-funk GRWM makeup transformation", "popularity": 86, "platform": "instagram", "region": "global", "commercial": false}
+      ],
+      "transitions": ["soft dissolve", "bloom", "light sweep", "halation", "edge glow", "masking", "soft fade", "beat-sync flash"]
+    },
+
+    "giyim": {
+      "songs": [
+        {"name": "Dracula Remix", "artist": "Tame Impala & JENNIE", "bpm": 115, "vibe": "strut walk fashion Paris", "popularity": 98, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Kiss All the Time", "artist": "Harry Styles", "bpm": 118, "vibe": "GRWM outfit transition disco", "popularity": 95, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Cha Cha Cha", "artist": "Bruno Mars", "bpm": 100, "vibe": "smooth nostalgic groove", "popularity": 97, "platform": "both", "region": "global", "commercial": false},
+        {"name": "American Girls", "artist": "Harry Styles", "bpm": 112, "vibe": "retro pop eclectic", "popularity": 90, "platform": "tiktok", "region": "USA/Europe", "commercial": false},
+        {"name": "Mystery Girl", "artist": "Housecall & Alex Gerst", "bpm": 95, "vibe": "cool effortless indie", "popularity": 84, "platform": "tiktok", "region": "global", "commercial": false},
+        {"name": "Forever Your Girl", "artist": "Paula Abdul", "bpm": 108, "vibe": "colorful montage launch", "popularity": 85, "platform": "instagram", "region": "USA", "commercial": false},
+        {"name": "Black Beatles", "artist": "Rae Sremmurd ft. Gucci Mane", "bpm": 130, "vibe": "nostalgia 2016 revival group pose squad", "popularity": 84, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "Pop Dat Thang", "artist": "DaBaby", "bpm": 130, "vibe": "dance challenge energetic", "popularity": 87, "platform": "tiktok", "region": "USA", "commercial": false},
+        {"name": "SCUBA JUKE", "artist": "h5wk", "bpm": 135, "vibe": "viral dance uptempo fun", "popularity": 90, "platform": "tiktok", "region": "global", "commercial": false},
+        {"name": "Goodies", "artist": "Ciara", "bpm": 125, "vibe": "motivation workout confidence", "popularity": 84, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Behind These Hazel Eyes", "artist": "Kelly Clarkson", "bpm": 120, "vibe": "2000s nostalgia powerful", "popularity": 83, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "Lush Life", "artist": "Zara Larsson", "bpm": 120, "vibe": "confident lifestyle throwback", "popularity": 91, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Reason To Stay", "artist": "Olivia Dean", "bpm": 95, "vibe": "warm feel-good personal", "popularity": 89, "platform": "instagram", "region": "Europe", "commercial": false},
+        {"name": "Motion Party", "artist": "BossMan Dlow", "bpm": 128, "vibe": "high-energy confidence strut GRWM", "popularity": 89, "platform": "tiktok", "region": "USA", "commercial": false},
+        {"name": "Ring Ring Ring", "artist": "Tyler, The Creator", "bpm": 88, "vibe": "retro-funk outfit check transformation", "popularity": 87, "platform": "instagram", "region": "global", "commercial": false}
+      ],
+      "transitions": ["whip pan", "beat-sync cut", "split reveal", "chromatic aberration", "speed ramp", "zoom + shake", "white flash", "masking"]
+    },
+
+    "aksesuar": {
+      "songs": [
+        {"name": "Sets With Me", "artist": "Rihanna", "bpm": 100, "vibe": "collection showcase nail", "popularity": 95, "platform": "both", "region": "global", "commercial": false},
+        {"name": "E85", "artist": "Don Toliver", "bpm": 92, "vibe": "lifestyle vibes smooth", "popularity": 91, "platform": "tiktok", "region": "USA", "commercial": false},
+        {"name": "Aperture", "artist": "Harry Styles", "bpm": 88, "vibe": "cinematic luxury", "popularity": 90, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Rose Colored Filter", "artist": "Carter Rogers", "bpm": 78, "vibe": "dreamy romantic soft", "popularity": 83, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "I Love Rock N Roll", "artist": "Joan Jett", "bpm": 96, "vibe": "debate purchase decision", "popularity": 86, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "Black Beatles", "artist": "Rae Sremmurd ft. Gucci Mane", "bpm": 130, "vibe": "nostalgia revival collection showcase team", "popularity": 83, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "Kiss Me", "artist": "Sixpence None The Richer", "bpm": 90, "vibe": "sweet romantic nostalgic", "popularity": 88, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "Gypsy", "artist": "Fleetwood Mac", "bpm": 80, "vibe": "aspirational resolution classic", "popularity": 85, "platform": "instagram", "region": "Europe/USA", "commercial": false},
+        {"name": "Cha Cha Cha", "artist": "Bruno Mars", "bpm": 100, "vibe": "smooth product reveal", "popularity": 94, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Yukon x Candy Shop", "artist": "Justin Bieber / 50 Cent", "bpm": 110, "vibe": "mashup GRWM getting ready", "popularity": 84, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "Risk It All", "artist": "Bruno Mars", "bpm": 90, "vibe": "warm soulful romantic", "popularity": 93, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Ring Ring Ring", "artist": "Tyler, The Creator", "bpm": 88, "vibe": "retro-funk collection showcase house tour", "popularity": 88, "platform": "instagram", "region": "global", "commercial": false}
+      ],
+      "transitions": ["zoom snap", "light leak", "polaroid", "card 3D", "soft fade", "beat-sync flash", "bloom", "split reveal"]
+    },
+
+    "elektronik": {
+      "songs": [
+        {"name": "E85", "artist": "Don Toliver", "bpm": 92, "vibe": "sleek product reveal atmospheric", "popularity": 93, "platform": "tiktok", "region": "global", "commercial": false},
+        {"name": "Ray Mysterio", "artist": "The Alchemist", "bpm": 85, "vibe": "cinematic elegant unboxing", "popularity": 90, "platform": "instagram", "region": "USA", "commercial": false},
+        {"name": "Trunks", "artist": "A$AP Rocky", "bpm": 105, "vibe": "confident unboxing tech", "popularity": 88, "platform": "tiktok", "region": "USA", "commercial": false},
+        {"name": "B.B.B", "artist": "Juvenile ft. Megan Thee Stallion", "bpm": 130, "vibe": "hype-driven tech reveal bass", "popularity": 91, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Go", "artist": "BLACKPINK", "bpm": 128, "vibe": "sleek premium gadget K-pop", "popularity": 89, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Bass Da Da Da", "artist": "Various", "bpm": 130, "vibe": "beat sync meme fast cut", "popularity": 92, "platform": "tiktok", "region": "global", "commercial": true},
+        {"name": "Risk It All", "artist": "Bruno Mars", "bpm": 90, "vibe": "cinematic golden hour", "popularity": 87, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "Heaven Can Wait", "artist": "Michael Jackson", "bpm": 95, "vibe": "reaction dramatic reveal", "popularity": 88, "platform": "tiktok", "region": "global", "commercial": false},
+        {"name": "Dramamine", "artist": "Modest Mouse", "bpm": 88, "vibe": "multi-niche versatile", "popularity": 86, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Cha Cha Cha", "artist": "Bruno Mars", "bpm": 100, "vibe": "smooth reveal montage", "popularity": 95, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Motion Party", "artist": "BossMan Dlow", "bpm": 128, "vibe": "high-energy confident tech unveil", "popularity": 87, "platform": "tiktok", "region": "USA", "commercial": false}
+      ],
+      "transitions": ["glitch", "zoom + shake", "white flash", "chromatic aberration", "3D zoom", "speed ramp", "whip pan", "beat-sync flash"]
+    },
+
+    "arac": {
+      "songs": [
+        {"name": "E85", "artist": "Don Toliver", "bpm": 92, "vibe": "atmospheric night drive", "popularity": 95, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Dracula Remix", "artist": "Tame Impala & JENNIE", "bpm": 115, "vibe": "dramatic reveal walk", "popularity": 92, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Bass Da Da Da", "artist": "Various", "bpm": 130, "vibe": "beat drop car reveal", "popularity": 93, "platform": "tiktok", "region": "global", "commercial": true},
+        {"name": "fragile", "artist": "idontlikemirrorss", "bpm": 70, "vibe": "scenic golden hour drive", "popularity": 86, "platform": "tiktok", "region": "global", "commercial": false},
+        {"name": "B.B.B", "artist": "Juvenile ft. Megan Thee Stallion", "bpm": 130, "vibe": "high energy bass power", "popularity": 91, "platform": "both", "region": "USA", "commercial": false},
+        {"name": "War", "artist": "T.I.", "bpm": 120, "vibe": "hard-hitting dramatic confidence", "popularity": 87, "platform": "tiktok", "region": "USA", "commercial": false},
+        {"name": "Break My Stride", "artist": "Matthew Wilder", "bpm": 112, "vibe": "feel-good progress power", "popularity": 79, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "All The Things She Said", "artist": "t.A.T.u", "bpm": 140, "vibe": "nostalgic dramatic intense", "popularity": 88, "platform": "both", "region": "Europe", "commercial": false},
+        {"name": "Cinematic Epic Score", "artist": "Various/CML", "bpm": 90, "vibe": "trailer style reveal", "popularity": 79, "platform": "both", "region": "global", "commercial": true},
+        {"name": "End of Beginning", "artist": "Djo", "bpm": 85, "vibe": "nostalgic sunset cruise", "popularity": 89, "platform": "both", "region": "global", "commercial": false}
+      ],
+      "transitions": ["whip pan", "film burn", "speed ramp", "zoom + shake", "flash scale", "glitch", "chromatic aberration", "beat-sync flash"]
+    },
+
+    "yiyecek": {
+      "songs": [
+        {"name": "Cha Cha Cha", "artist": "Bruno Mars", "bpm": 100, "vibe": "recipe reveal groove", "popularity": 97, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Carefree Days", "artist": "Various", "bpm": 75, "vibe": "cozy cooking morning", "popularity": 90, "platform": "both", "region": "global", "commercial": true},
+        {"name": "Fever Dream", "artist": "Alex Warren", "bpm": 90, "vibe": "comfort food relaxed", "popularity": 83, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Rich Girl", "artist": "Gwen Stefani ft. Eve", "bpm": 110, "vibe": "liquid pour aesthetic", "popularity": 85, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "Low Cortisol", "artist": "TikTok Trending Sound", "bpm": 72, "vibe": "chill mindful cooking self-care", "popularity": 84, "platform": "tiktok", "region": "global", "commercial": false},
+        {"name": "Choosin Texas", "artist": "Various", "bpm": 95, "vibe": "feel-good country cooking", "popularity": 78, "platform": "tiktok", "region": "USA", "commercial": false},
+        {"name": "Push It Remix", "artist": "Salt-N-Pepa", "bpm": 120, "vibe": "hype lets go cooking", "popularity": 77, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "Resiliencia", "artist": "Rantseni", "bpm": 68, "vibe": "calm mindful baking", "popularity": 82, "platform": "instagram", "region": "global", "commercial": true},
+        {"name": "Arizona Dreaming Remastered", "artist": "Various", "bpm": 80, "vibe": "aesthetic food styling", "popularity": 75, "platform": "instagram", "region": "USA", "commercial": true},
+        {"name": "Happy Ukulele", "artist": "Various/CML", "bpm": 110, "vibe": "cheerful cooking kids", "popularity": 74, "platform": "both", "region": "global", "commercial": true},
+        {"name": "Lush Life", "artist": "Zara Larsson", "bpm": 120, "vibe": "energetic food montage", "popularity": 88, "platform": "both", "region": "global", "commercial": false},
+        {"name": "DAISIES", "artist": "Justin Bieber", "bpm": 85, "vibe": "chill cozy cooking travel lifestyle", "popularity": 87, "platform": "instagram", "region": "global", "commercial": false}
+      ],
+      "transitions": ["soft dissolve", "slide up", "masking", "beat-sync cut", "warm fade", "bloom", "light leak", "parallax"]
+    },
+
+    "dekor": {
+      "songs": [
+        {"name": "Resiliencia", "artist": "Rantseni", "bpm": 68, "vibe": "calm interior peaceful", "popularity": 92, "platform": "instagram", "region": "global", "commercial": true},
+        {"name": "Carefree Days", "artist": "Various", "bpm": 75, "vibe": "home tour cozy aesthetic", "popularity": 90, "platform": "both", "region": "global", "commercial": true},
+        {"name": "fragile", "artist": "idontlikemirrorss", "bpm": 70, "vibe": "scenic minimal empty street", "popularity": 87, "platform": "tiktok", "region": "global", "commercial": false},
+        {"name": "360 Orchestral Cover", "artist": "Bridgerton/Charli XCX", "bpm": 82, "vibe": "dramatic room reveal", "popularity": 91, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "End of Beginning", "artist": "Djo", "bpm": 85, "vibe": "nostalgic before/after", "popularity": 86, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Assumptions Slowed", "artist": "re.cept", "bpm": 65, "vibe": "text overlay POV aesthetic", "popularity": 79, "platform": "tiktok", "region": "global", "commercial": false},
+        {"name": "Rein Me In", "artist": "Various", "bpm": 72, "vibe": "emotional reflective growth storytelling", "popularity": 85, "platform": "tiktok", "region": "global", "commercial": false},
+        {"name": "Low Cortisol", "artist": "TikTok Trending Sound", "bpm": 72, "vibe": "calm peaceful home interior mindful", "popularity": 84, "platform": "tiktok", "region": "global", "commercial": false},
+        {"name": "Piano Man x Silver Springs", "artist": "Remix", "bpm": 78, "vibe": "ambient room transformation", "popularity": 74, "platform": "instagram", "region": "USA", "commercial": false},
+        {"name": "Blessings", "artist": "Delana Hope", "bpm": 80, "vibe": "new month fresh start", "popularity": 79, "platform": "instagram", "region": "global", "commercial": false},
+        {"name": "Gypsy", "artist": "Fleetwood Mac", "bpm": 80, "vibe": "aspirational bohemian", "popularity": 85, "platform": "instagram", "region": "Europe", "commercial": false},
+        {"name": "DAISIES", "artist": "Justin Bieber", "bpm": 85, "vibe": "chill pleasant home tour room vibes", "popularity": 86, "platform": "instagram", "region": "global", "commercial": false}
+      ],
+      "transitions": ["soft fade", "parallax slide", "door open", "bloom", "curtain drop", "masking", "light leak", "3D zoom"]
+    },
+
+    "spor": {
+      "songs": [
+        {"name": "B.B.B", "artist": "Juvenile ft. Megan Thee Stallion", "bpm": 130, "vibe": "heavy bass workout hype", "popularity": 95, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Bass Da Da Da", "artist": "Various", "bpm": 130, "vibe": "beat sync action fast cut", "popularity": 93, "platform": "tiktok", "region": "global", "commercial": true},
+        {"name": "Dracula Remix", "artist": "Tame Impala & JENNIE", "bpm": 115, "vibe": "power walk strut", "popularity": 90, "platform": "both", "region": "global", "commercial": false},
+        {"name": "War", "artist": "T.I.", "bpm": 120, "vibe": "hard-hitting gym motivation", "popularity": 89, "platform": "tiktok", "region": "USA", "commercial": false},
+        {"name": "Goodies", "artist": "Ciara", "bpm": 125, "vibe": "motivation daily routine", "popularity": 87, "platform": "both", "region": "global", "commercial": false},
+        {"name": "Pop Dat Thang", "artist": "DaBaby", "bpm": 130, "vibe": "dance challenge energetic", "popularity": 86, "platform": "tiktok", "region": "USA", "commercial": false},
+        {"name": "SCUBA JUKE", "artist": "h5wk", "bpm": 135, "vibe": "viral dance uptempo", "popularity": 89, "platform": "tiktok", "region": "global", "commercial": false},
+        {"name": "Kiss All the Time", "artist": "Harry Styles", "bpm": 118, "vibe": "workout montage transition", "popularity": 84, "platform": "both", "region": "global", "commercial": false},
+        {"name": "All The Things She Said", "artist": "t.A.T.u", "bpm": 140, "vibe": "intense dramatic sprint", "popularity": 88, "platform": "both", "region": "Europe", "commercial": false},
+        {"name": "Rock That Body", "artist": "Black Eyed Peas", "bpm": 130, "vibe": "high energy comeback", "popularity": 77, "platform": "tiktok", "region": "global", "commercial": false},
+        {"name": "Motion Party", "artist": "BossMan Dlow", "bpm": 128, "vibe": "bold confident hype celebration momentum", "popularity": 90, "platform": "tiktok", "region": "USA", "commercial": false}
+      ],
+      "transitions": ["speed ramp", "whip pan", "zoom + shake", "flash scale", "glitch", "chromatic aberration", "beat-sync flash", "white flash"]
+    }
+  },
+
+  "trendTransitions": {
+    "top15_overall": [
+      {"name": "Beat-Sync Flash", "desc": "2 frame white flash on snare/kick hits", "popularity": 98, "capcut": "White Flash effect", "bestFor": "tüm kategoriler"},
+      {"name": "Zoom + Shake", "desc": "Dinamik zoom-in + kamera sarsıntısı", "popularity": 96, "capcut": "Zoom + Shake keyframe", "bestFor": "elektronik, spor, araç"},
+      {"name": "Whip Pan", "desc": "Yatay hızlı süpürme + motion blur", "popularity": 95, "capcut": "Camera Blur Right transition", "bestFor": "giyim, araç, spor"},
+      {"name": "Speed Ramp", "desc": "Yavaş-hızlı-yavaş velocity değişimi", "popularity": 94, "capcut": "Velocity > Custom", "bestFor": "araç, spor, elektronik"},
+      {"name": "Chromatic Aberration", "desc": "RGB kanal kayması beat drop'ta", "popularity": 93, "capcut": "Chromatic Aberration effect", "bestFor": "elektronik, giyim, spor"},
+      {"name": "3D Zoom", "desc": "Derinlik zoom + parallax efekti", "popularity": 91, "capcut": "3D Zoom effect", "bestFor": "takı, elektronik, dekor"},
+      {"name": "Light Leak", "desc": "Sıcak altın ışık sızıntısı", "popularity": 90, "capcut": "Light Leak overlay", "bestFor": "takı, kozmetik, aksesuar"},
+      {"name": "Soft Dissolve", "desc": "Yumuşak crossfade klipler arası", "popularity": 89, "capcut": "Dissolve transition", "bestFor": "kozmetik, dekor, yiyecek"},
+      {"name": "Split Reveal", "desc": "Dikey/yatay split açılma", "popularity": 88, "capcut": "Split transition", "bestFor": "giyim, aksesuar"},
+      {"name": "Masking", "desc": "Görünmez kesim iki klibi blend", "popularity": 87, "capcut": "Mask > custom shape", "bestFor": "kozmetik, yiyecek, dekor"},
+      {"name": "Edge Glow", "desc": "%25 alpha parıltı kenar", "popularity": 86, "capcut": "Edge Glow filter", "bestFor": "takı, kozmetik"},
+      {"name": "Halation", "desc": "Highlight bleed anamorphic efekt", "popularity": 85, "capcut": "Halation overlay", "bestFor": "takı, kozmetik, lüks"},
+      {"name": "Film Burn", "desc": "Vintage film yanma turuncu-kırmızı", "popularity": 84, "capcut": "Film Burn overlay", "bestFor": "araç, vintage ürün"},
+      {"name": "Bloom", "desc": "Parlak ışık yayılma lens flare", "popularity": 83, "capcut": "Bloom/Glow effect", "bestFor": "takı, kozmetik, lüks"},
+      {"name": "Parallax Slide", "desc": "Ön plan/arka plan farklı hız kayma", "popularity": 82, "capcut": "Keyframe position", "bestFor": "dekor, yiyecek, aksesuar"},
+      {"name": "AI Reveal", "desc": "AI destekli futuristik ürün açılış efekti", "popularity": 88, "capcut": "AI Effects > Reveal template", "bestFor": "elektronik, kozmetik, takı"},
+      {"name": "Infinite Loop", "desc": "Kesintisiz döngü sürekli hareket hipnotik", "popularity": 85, "capcut": "Loop template / Keyframe seamless", "bestFor": "giyim, spor, aksesuar"},
+      {"name": "Liquid Drop", "desc": "Sıvı damlası / akış efekti klipler arası geçiş", "popularity": 82, "capcut": "Liquid transition / Wave effect", "bestFor": "kozmetik, yiyecek, takı"},
+      {"name": "Shoulder Swap", "desc": "Omuz hareketi ile sahne değiştirme kamera kesimi", "popularity": 80, "capcut": "Manual in-camera cut on shoulder motion", "bestFor": "giyim, aksesuar"},
+      {"name": "Vertical Swipe", "desc": "Dikey süpürme geçişi short-form için optimized", "popularity": 83, "capcut": "Vertical Slide transition", "bestFor": "tüm kategoriler (Reels/Shorts)"}
+    ]
+  },
+
+  "trendFormats": {
+    "top10": [
+      {"name": "Beat-Drop Reveal", "desc": "Setup → beat drop → ürün reveal", "popularity": 97},
+      {"name": "GRWM + Product", "desc": "Get Ready With Me ürün entegrasyonu", "popularity": 95},
+      {"name": "Before/After Transform", "desc": "Dönüşüm geçişi ile ürün etkisi", "popularity": 93},
+      {"name": "Collection Carousel", "desc": "Çoklu ürün beat sync slayt", "popularity": 91},
+      {"name": "Spring Transition", "desc": "Mevsimsel glow-up montaj", "popularity": 89},
+      {"name": "Finger Showcase", "desc": "Parmak kaldırma ile ürün gösterimi", "popularity": 88},
+      {"name": "POV Text Overlay", "desc": "Bakış açısı + metin + ürün", "popularity": 87},
+      {"name": "Cinematic B-Roll", "desc": "Sinematik detay çekimi montaj", "popularity": 86},
+      {"name": "Debate Purchase", "desc": "Karakter tartışması ürün kararı", "popularity": 85},
+      {"name": "Unboxing Hype", "desc": "Kutu açma + tepki + reveal", "popularity": 84},
+      {"name": "Scuba Dance Challenge", "desc": "SCUBA JUKE dansı ile ürün/fit showcase", "popularity": 88},
+      {"name": "New Month Declaration", "desc": "Mart bildirisi tarzı niyet + ürün vitrini", "popularity": 83}
+    ]
+  },
+
+  "commercialSafe": {
+    "note": "Bu şarkılar ticari kullanım için güvenli (CML veya CC0)",
+    "songs": [
+      {"name": "Bass Da Da Da", "artist": "CML", "commercial": true},
+      {"name": "Natural Beauty", "artist": "India Happy", "commercial": true},
+      {"name": "Carefree Days", "artist": "Various/CML", "commercial": true},
+      {"name": "Resiliencia", "artist": "Rantseni", "commercial": true},
+      {"name": "Waltz of the Flowers", "artist": "Tchaikovsky (public domain)", "commercial": true},
+      {"name": "Arizona Dreaming Remastered", "artist": "CML", "commercial": true},
+      {"name": "Moonlight Serenade", "artist": "Glenn Miller (public domain)", "commercial": true},
+      {"name": "Happy Ukulele", "artist": "CML", "commercial": true},
+      {"name": "Cinematic Epic Score", "artist": "CML", "commercial": true}
+    ]
+  },
+
+  "2025_evergreen": {
+    "note": "2025'ten beri sürekli trend olan şarkılar",
+    "songs": [
+      {"name": "Espresso", "artist": "Sabrina Carpenter", "since": "2025-Q1"},
+      {"name": "End of Beginning", "artist": "Djo", "since": "2024-Q4"},
+      {"name": "The Less I Know the Better", "artist": "Tame Impala", "since": "2023"},
+      {"name": "Dramamine", "artist": "Modest Mouse", "since": "2025-Q2"},
+      {"name": "Lush Life", "artist": "Zara Larsson", "since": "2025-Q3"},
+      {"name": "Gnarly", "artist": "KATSEYE", "since": "2025-Q3"},
+      {"name": "Anxiety", "artist": "Doechii", "since": "2025-Q2", "note": "10.4M creations, 51.6B views"},
+      {"name": "Cha Cha Cha", "artist": "Bruno Mars", "since": "2026-Q1"},
+      {"name": "Aperture", "artist": "Harry Styles", "since": "2026-Q1"}
+    ]
+  },
+
+  "trendScenes": {
+    "taki": {
+      "backgrounds": [
+        {"name": "Dark Velvet Pedestal", "desc": "Koyu kadife kumaş üzeri yükseltilmiş platform", "popularity": 96},
+        {"name": "Marble Slab Close-up", "desc": "Beyaz/gri mermer yüzey makro çekim", "popularity": 94},
+        {"name": "Warm Golden Hour Skin", "desc": "Altın saat ten üzerinde takı gösterimi", "popularity": 92},
+        {"name": "Black Infinity Background", "desc": "Sonsuz siyah arka plan parıltılı ışık", "popularity": 90},
+        {"name": "Rose Petal Flat Lay", "desc": "Gül yaprakları arasında düz yatay çekim", "popularity": 88},
+        {"name": "Silk Fabric Drape", "desc": "İpek kumaş kıvrımları üzerinde", "popularity": 87}
+      ],
+      "lighting": ["soft diffused", "golden rim light", "single spot dramatic", "backlit glow"],
+      "camera": ["macro close-up", "slow 360 rotate", "finger showcase", "lifestyle on-body"]
+    },
+    "kozmetik": {
+      "backgrounds": [
+        {"name": "White Marble Bathroom", "desc": "Beyaz mermer banyo tezgahı", "popularity": 95},
+        {"name": "Cream Gradient Studio", "desc": "Krem-bej gradient stüdyo", "popularity": 93},
+        {"name": "Water Splash Surface", "desc": "Su damlası/sıçrama efektli yüzey", "popularity": 91},
+        {"name": "Monstera Leaf Natural", "desc": "Yeşil yaprak doğal arka plan", "popularity": 89},
+        {"name": "Pink Silk Flat Lay", "desc": "Pembe ipek üzerinde düz yatay", "popularity": 88},
+        {"name": "Bathroom Shelf Lifestyle", "desc": "Banyo rafı yaşam tarzı çekim", "popularity": 86}
+      ],
+      "lighting": ["soft natural window", "ring light frontal", "backlit product glow", "warm diffused"],
+      "camera": ["product pour slow-mo", "GRWM routine", "before/after split", "texture close-up"]
+    },
+    "giyim": {
+      "backgrounds": [
+        {"name": "Urban Street Wall", "desc": "Kentsel sokak duvarı önünde", "popularity": 96},
+        {"name": "White Studio Infinity", "desc": "Beyaz sonsuz stüdyo", "popularity": 94},
+        {"name": "Mirror Reflection Setup", "desc": "Ayna yansıması çekim", "popularity": 92},
+        {"name": "Concrete Industrial", "desc": "Beton endüstriyel mekan", "popularity": 90},
+        {"name": "Nature Outdoor Park", "desc": "Doğa/park açık hava", "popularity": 88},
+        {"name": "Bedroom Casual", "desc": "Yatak odası rahat ortam", "popularity": 86}
+      ],
+      "lighting": ["natural outdoor", "studio softbox", "neon colored", "golden hour street"],
+      "camera": ["full body fit check", "outfit spin transition", "detail zoom crop", "walking strut"]
+    },
+    "aksesuar": {
+      "backgrounds": [
+        {"name": "Marble Pedestal", "desc": "Mermer kaide üzeri premium", "popularity": 95},
+        {"name": "Leather Surface", "desc": "Deri yüzey lüks his", "popularity": 92},
+        {"name": "Minimal White Shelf", "desc": "Minimalist beyaz raf", "popularity": 90},
+        {"name": "Magazine Flat Lay", "desc": "Dergi tarzı düz yatay düzen", "popularity": 88},
+        {"name": "Cafe Table Lifestyle", "desc": "Kafe masası yaşam tarzı", "popularity": 86}
+      ],
+      "lighting": ["soft window side", "overhead flat lay", "warm studio", "dramatic spot"],
+      "camera": ["hand holding showcase", "flat lay top-down", "lifestyle on-table", "collection grid"]
+    },
+    "elektronik": {
+      "backgrounds": [
+        {"name": "Dark Tech Desk", "desc": "Koyu teknoloji masası RGB", "popularity": 96},
+        {"name": "Gradient Dark Blue", "desc": "Koyu mavi gradient modern", "popularity": 94},
+        {"name": "Neon Accent Lighting", "desc": "Neon aksan ışıklı setup", "popularity": 92},
+        {"name": "Clean White Studio", "desc": "Temiz beyaz stüdyo Apple tarzı", "popularity": 91},
+        {"name": "Holographic Surface", "desc": "Holografik yansımalı yüzey", "popularity": 88},
+        {"name": "Unboxing Table POV", "desc": "Kutu açma masası birinci şahıs", "popularity": 86}
+      ],
+      "lighting": ["RGB accent", "cool blue studio", "backlit silhouette", "clean white diffused"],
+      "camera": ["unboxing POV hands", "360 product spin", "feature zoom detail", "glitch transition reveal"]
+    },
+    "arac": {
+      "backgrounds": [
+        {"name": "Dramatic Highway Sunset", "desc": "Dramatik otoyol gün batımı", "popularity": 97},
+        {"name": "Underground Parking LED", "desc": "Yer altı otopark LED ışıklar", "popularity": 95},
+        {"name": "Mountain Road Scenic", "desc": "Dağ yolu manzara", "popularity": 93},
+        {"name": "Wet City Street Night", "desc": "Islak şehir sokağı gece neon", "popularity": 92},
+        {"name": "Desert Straight Road", "desc": "Çöl dümdüz yol ufuk", "popularity": 90},
+        {"name": "Marina/Harbor Luxury", "desc": "Marina/liman lüks ortam", "popularity": 88}
+      ],
+      "lighting": ["golden hour dramatic", "neon city reflections", "fog/mist atmospheric", "headlight trails"],
+      "camera": ["drone aerial fly-by", "rolling shot side track", "interior dashboard POV", "walk-around reveal"]
+    },
+    "yiyecek": {
+      "backgrounds": [
+        {"name": "Rustic Wood Table", "desc": "Rustik ahşap masa", "popularity": 96},
+        {"name": "White Marble Kitchen", "desc": "Beyaz mermer mutfak tezgahı", "popularity": 94},
+        {"name": "Linen Cloth Natural", "desc": "Keten kumaş doğal düzen", "popularity": 92},
+        {"name": "Dark Moody Board", "desc": "Koyu karamsar tahta yüzey", "popularity": 90},
+        {"name": "Outdoor Garden Table", "desc": "Açık hava bahçe masası", "popularity": 88},
+        {"name": "Colorful Flat Lay Ingredients", "desc": "Renkli malzeme düz yatay", "popularity": 87}
+      ],
+      "lighting": ["natural window side", "warm overhead pendant", "dark moody single source", "golden backlit steam"],
+      "camera": ["overhead flat lay", "steam/pour slow-mo", "hands cooking POV", "plating reveal"]
+    },
+    "dekor": {
+      "backgrounds": [
+        {"name": "Scandinavian White Room", "desc": "İskandinav beyaz oda", "popularity": 95},
+        {"name": "Warm Living Room Cozy", "desc": "Sıcak oturma odası rahat", "popularity": 93},
+        {"name": "Concrete Modern Loft", "desc": "Beton modern çatı katı", "popularity": 91},
+        {"name": "Boho Earth Tone", "desc": "Bohem toprak tonları", "popularity": 89},
+        {"name": "Window Light Vignette", "desc": "Pencere ışığı vinyet", "popularity": 87},
+        {"name": "Plant Shelf Garden", "desc": "Bitki rafı yeşil alan", "popularity": 86}
+      ],
+      "lighting": ["natural window warm", "soft ambient candle", "overhead modern pendant", "backlit curtain glow"],
+      "camera": ["room tour pan", "before/after transform", "detail vignette zoom", "time-lapse setup"]
+    },
+    "spor": {
+      "backgrounds": [
+        {"name": "Gym Floor/Rack", "desc": "Spor salonu zemin/raf", "popularity": 95},
+        {"name": "Outdoor Track/Field", "desc": "Açık hava pist/saha", "popularity": 93},
+        {"name": "Urban Rooftop City", "desc": "Şehir çatı manzara", "popularity": 91},
+        {"name": "Mountain Trail Nature", "desc": "Dağ patikası doğa", "popularity": 89},
+        {"name": "Dark Studio Spotlight", "desc": "Koyu stüdyo spot ışık", "popularity": 88},
+        {"name": "Beach Sand Sunrise", "desc": "Kumsal gündoğumu", "popularity": 86}
+      ],
+      "lighting": ["harsh dramatic spot", "natural outdoor golden", "backlit silhouette", "neon gym LED"],
+      "camera": ["slow-mo action", "dynamic angle change", "POV workout", "before/after body"]
+    }
+  },
+
+  "trendEffects": {
+    "colorGrading": [
+      {"name": "Cinematic Teal & Orange", "desc": "Film tarzı teal gölge + turuncu highlight", "popularity": 97, "bestFor": "araç, spor, elektronik"},
+      {"name": "Warm Golden Glow", "desc": "Kodak Gold 400 sıcak altın ton", "popularity": 95, "bestFor": "takı, kozmetik, yiyecek"},
+      {"name": "Analog Nostalgia", "desc": "Kodachrome 64 retro film renk paleti", "popularity": 94, "bestFor": "giyim, aksesuar, dekor"},
+      {"name": "Clean Bright White", "desc": "Parlak beyaz minimal modern", "popularity": 92, "bestFor": "elektronik, kozmetik"},
+      {"name": "Dark Moody Contrast", "desc": "Derin siyahlar yüksek kontrast", "popularity": 91, "bestFor": "araç, takı, elektronik"},
+      {"name": "Pastel Soft Dream", "desc": "Pastel yumuşak düşünceli", "popularity": 89, "bestFor": "kozmetik, dekor, yiyecek"},
+      {"name": "Vintage VHS Grain", "desc": "VHS grain + renk kayması retro", "popularity": 88, "bestFor": "giyim, spor"},
+      {"name": "Cool Blue Tech", "desc": "Soğuk mavi teknoloji his", "popularity": 87, "bestFor": "elektronik, araç"}
+    ],
+    "overlayEffects": [
+      {"name": "Light Leak Overlay", "desc": "Sıcak ışık sızıntısı katmanı", "popularity": 96},
+      {"name": "Film Grain Texture", "desc": "İnce film grain dokusu", "popularity": 94},
+      {"name": "Dust Particles Float", "desc": "Havada süzülen toz parçacıkları", "popularity": 92},
+      {"name": "Lens Flare Anamorphic", "desc": "Anamorfik lens parlaması", "popularity": 91},
+      {"name": "Bokeh Circle Blur", "desc": "Bokeh daire bulanıklık arka plan", "popularity": 90},
+      {"name": "Rain/Water Droplets", "desc": "Yağmur/su damlası cam efekti", "popularity": 88},
+      {"name": "Prism Rainbow Split", "desc": "Prizmatik gökkuşağı ışık bölünmesi", "popularity": 86},
+      {"name": "Fog/Mist Atmospheric", "desc": "Sis/buğu atmosferik katman", "popularity": 85}
+    ],
+    "animationEffects": [
+      {"name": "Levitation Float", "desc": "Ürün havada süzülme sihirli", "popularity": 95},
+      {"name": "Motion Freeze Splash", "desc": "Hareket dondurma sıçrama", "popularity": 93},
+      {"name": "360 Product Spin", "desc": "360 derece ürün dönüşü", "popularity": 92},
+      {"name": "Parallax Depth Scroll", "desc": "Derinlik kaydırma ön/arka plan", "popularity": 90},
+      {"name": "Text Kinetic Typography", "desc": "Dinamik hareket eden metin", "popularity": 89},
+      {"name": "Morph Shape Transform", "desc": "Şekil dönüşüm morph efekti", "popularity": 87}
+    ]
+  },
+
+  "trendTemplates": {
+    "capcut_product": [
+      {"name": "Beat-Sync Product Reveal", "desc": "Müzik beat'ine senkron ürün açılışı", "clips": 5, "popularity": 97},
+      {"name": "E-Commerce Item Display", "desc": "Fiyat + özellik + CTA katmanlı vitrin", "clips": 3, "popularity": 95},
+      {"name": "Before/After Transform", "desc": "Öncesi/sonrası dönüşüm split screen", "clips": 2, "popularity": 93},
+      {"name": "Flat Lay Collection Grid", "desc": "Yukarıdan düz yatay koleksiyon grid", "clips": 6, "popularity": 91},
+      {"name": "Unboxing Hype Reveal", "desc": "Kutu açma heyecan gerilim", "clips": 4, "popularity": 90},
+      {"name": "Speed Ramp Lifestyle", "desc": "Yavaş-hızlı yaşam tarzı montaj", "clips": 8, "popularity": 89},
+      {"name": "Magazine Style Editorial", "desc": "Dergi tarzı editöryel düzen", "clips": 5, "popularity": 88},
+      {"name": "Finger Tap Product Show", "desc": "Parmak dokunuşu ile ürün gösterimi", "clips": 4, "popularity": 87},
+      {"name": "Cinematic B-Roll Montage", "desc": "Sinematik detay çekim montajı", "clips": 10, "popularity": 86},
+      {"name": "AI Auto Product Video", "desc": "AI otomatik ürün videosu (Pippit/CapCut)", "clips": "auto", "popularity": 85}
+    ]
+  }
+}

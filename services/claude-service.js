@@ -45,14 +45,34 @@ Kısa, öz ve faydalı cevaplar ver. Kod önerilerinde pratik ol. Gereksiz açı
 
 ${firestoreContext}`;
 
-  const response = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 4096,
-    system: systemPrompt,
-    messages
+  // Circuit breaker + Shadow Learning + Metrik kaydı
+  const { getBreaker } = require('../utils/circuit-breaker');
+  const breaker = getBreaker('claude');
+  const startTime = Date.now();
+
+  const result = await breaker.call(async () => {
+    const response = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 4096,
+      system: systemPrompt,
+      messages
+    });
+    return response.content[0].text;
+  }, () => {
+    return 'Claude şu an geçici olarak kullanılamıyor. Lütfen biraz sonra tekrar deneyin.';
   });
 
-  return response.content[0].text;
+  const latency = Date.now() - startTime;
+
+  // Fenix Brain — metrik + shadow learning
+  try {
+    if (global.fenixBrain) {
+      global.fenixBrain.recordMetric('claude', latency, true);
+      global.fenixBrain.recordShadow('claude', 'chat', { messageLength: message.length }, { responseLength: result.length, latencyMs: latency }, 'success');
+    }
+  } catch(e) {}
+
+  return result;
 }
 
 function isAvailable() {

@@ -1,9 +1,30 @@
 const express = require('express');
 const router = express.Router();
-const { Firestore } = require('@google-cloud/firestore');
 const fs = require('fs');
 const path = require('path');
 const { validate, schemas } = require('../middlewares/validate');
+const logger = require('../utils/logger');
+
+// Firestore lazy init — credentials yoksa bellekte çalış
+let _firestoreDb = null;
+let _firestoreAvailable = false;
+function getDb() {
+  if (_firestoreDb) return _firestoreDb;
+  try {
+    const { Firestore } = require('@google-cloud/firestore');
+    _firestoreDb = new Firestore({ projectId: 'photoreel-491017' });
+    _firestoreAvailable = true;
+    return _firestoreDb;
+  } catch(e) {
+    logger.warn('Claude-local: Firestore bağlanamadı, bellek modu');
+    _firestoreAvailable = false;
+    return null;
+  }
+}
+
+// Bellek fallback
+const memMessages = [];
+const memReplies = [];
 
 // Dosya listesini başlangıçta 1 kez oku, önbellekte tut
 let _cachedFileList = null;
@@ -21,7 +42,6 @@ function getCachedFileList() {
   } catch(e) { return ''; }
 }
 
-const db = new Firestore({ projectId: 'photoreel-491017' });
 const MSG_COL = 'claude-messages';    // Tabletten gelen
 const REPLY_COL = 'claude-replies';   // Claude'un yanıtları
 
@@ -79,35 +99,38 @@ router.post('/send', validate(schemas.sendToTablet), async (req, res) => {
     if (!text) return res.json({ ok: false, error: 'Mesaj boş' });
 
     const id = Date.now().toString();
-    await db.collection(MSG_COL).doc(id).set({
-      text,
-      from: from || 'tablet',
-      timestamp: new Date().toISOString(),
-      read: false,
-      createdAt: Firestore.Timestamp.now()
-    });
+    const db = getDb();
+    if (db) {
+      try {
+        const { Firestore } = require('@google-cloud/firestore');
+        await db.collection(MSG_COL).doc(id).set({ text, from: from || 'tablet', timestamp: new Date().toISOString(), read: false, createdAt: Firestore.Timestamp.now() });
+      } catch(fe) { logger.warn('Firestore mesaj kayıt hatası, bellek kullanılıyor'); }
+    }
+    memMessages.push({ id, text, from: from || 'tablet', timestamp: new Date().toISOString(), read: false });
+    if (memMessages.length > 100) memMessages.shift();
 
     if (global.io) global.io.emit('claude_message_received', { id, text });
-    console.log(`\n💬 [TABLET → CLAUDE] ${text}\n`);
+    logger.info(`TABLET → CLAUDE: ${text.substring(0,50)}`);
 
-    // Hemen yanıt dön, Gemini arka planda yanıt verecek
     res.json({ ok: true, messageId: id });
 
-    // Arka planda otomatik yanıt (Gemini + proje context)
+    // Arka planda Gemini yanıt
     const aiReply = await autoReply(text);
     if (aiReply) {
       const replyId = Date.now().toString();
-      await db.collection(REPLY_COL).doc(replyId).set({
-        text: aiReply,
-        from: 'claude',
-        timestamp: new Date().toISOString(),
-        createdAt: Firestore.Timestamp.now()
-      });
+      if (db) {
+        try {
+          const { Firestore } = require('@google-cloud/firestore');
+          await db.collection(REPLY_COL).doc(replyId).set({ text: aiReply, from: 'claude', timestamp: new Date().toISOString(), createdAt: Firestore.Timestamp.now() });
+        } catch(fe) {}
+      }
+      memReplies.push({ id: replyId, text: aiReply, from: 'claude', timestamp: new Date().toISOString() });
+      if (memReplies.length > 100) memReplies.shift();
       if (global.io) global.io.emit('claude_reply', { id: replyId, text: aiReply });
-      console.log(`\n🤖 [AUTO-REPLY] ${aiReply}\n`);
+      logger.info(`AUTO-REPLY: ${aiReply.substring(0,50)}`);
     }
   } catch(e) {
-    console.error('Send hata:', e.message, e.stack);
+    logger.error('Send hata:', { error: e.message });
     if (!res.headersSent) res.json({ ok: false, error: e.message });
   }
 });
@@ -116,16 +139,18 @@ router.post('/send', validate(schemas.sendToTablet), async (req, res) => {
 router.get('/inbox', async (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
   try {
-    const snap = await db.collection(MSG_COL)
-      .where('read', '==', false)
-      .limit(20)
-      .get();
-    const messages = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      .sort((a, b) => Number(a.id) - Number(b.id));
+    const db = getDb();
+    if (db) {
+      try {
+        const snap = await db.collection(MSG_COL).where('read', '==', false).limit(20).get();
+        const messages = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => Number(a.id) - Number(b.id));
+        return res.json({ messages });
+      } catch(fe) {}
+    }
+    const messages = memMessages.filter(m => !m.read);
     res.json({ messages });
   } catch(e) {
-    console.error('Inbox hata:', e.message);
-    res.json({ messages: [], error: e.message });
+    res.json({ messages: [] });
   }
 });
 
@@ -176,17 +201,18 @@ router.get('/replies', async (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
   try {
     const since = Number(req.query.since) || 0;
-    const snap = await db.collection(REPLY_COL)
-      .orderBy('createdAt', 'desc')
-      .limit(20)
-      .get();
-    const replies = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .filter(r => Number(r.id) > since)
-      .sort((a, b) => Number(a.id) - Number(b.id));
+    const db = getDb();
+    if (db) {
+      try {
+        const snap = await db.collection(REPLY_COL).orderBy('createdAt', 'desc').limit(20).get();
+        const replies = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(r => Number(r.id) > since).sort((a, b) => Number(a.id) - Number(b.id));
+        return res.json({ replies });
+      } catch(fe) {}
+    }
+    // Bellek fallback
+    const replies = memReplies.filter(r => Number(r.id) > since);
     res.json({ replies });
   } catch(e) {
-    console.error('Replies hata:', e.message);
     res.json({ replies: [] });
   }
 });

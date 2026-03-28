@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fenix AI — Yapay Zeka ile Profesyonel Reels Videosu</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0f0a1a;--surface:#1a1128;--card:#221838;--orange:#ff6b35;--pink:#e040fb;--purple:#7c4dff;--text:#e8e0f0;--muted:#9a8cb0}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:1rem 1.5rem;display:flex;justify-content:space-between;align-items:center;background:rgba(15,10,26,.85);backdrop-filter:blur(12px);border-bottom:1px solid rgba(124,77,255,.15)}
+.nav-logo{font-size:1.25rem;font-weight:800;letter-spacing:2px}
+.nav-logo span{background:linear-gradient(135deg,var(--orange),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-cta{padding:.5rem 1.25rem;border-radius:8px;background:linear-gradient(135deg,var(--orange),var(--pink));font-weight:600;font-size:.85rem;color:#fff;transition:transform .2s}
+.nav-cta:hover{transform:scale(1.05)}
+
+/* HERO */
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:6rem 1.5rem 4rem;position:relative}
+.hero::before{content:'';position:absolute;top:-20%;left:50%;transform:translateX(-50%);width:600px;height:600px;background:radial-gradient(circle,rgba(124,77,255,.2),transparent 70%);pointer-events:none}
+.hero-badge{display:inline-block;padding:.4rem 1rem;border-radius:20px;border:1px solid rgba(224,64,251,.3);font-size:.8rem;color:var(--pink);margin-bottom:1.5rem;background:rgba(224,64,251,.08)}
+.hero h1{font-size:clamp(2.5rem,6vw,4rem);font-weight:900;letter-spacing:3px;margin-bottom:1rem}
+.hero h1 .fire{background:linear-gradient(135deg,var(--orange),var(--pink),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:clamp(1rem,2.5vw,1.25rem);color:var(--muted);max-width:540px;margin:0 auto 2.5rem}
+.btn-primary{display:inline-block;padding:.9rem 2.5rem;border-radius:12px;background:linear-gradient(135deg,var(--orange),var(--pink));font-size:1.1rem;font-weight:700;color:#fff;transition:transform .2s,box-shadow .2s;box-shadow:0 4px 24px rgba(255,107,53,.3)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(255,107,53,.45)}
+
+/* SECTIONS */
+section{padding:5rem 1.5rem;max-width:1100px;margin:0 auto}
+.section-title{text-align:center;font-size:clamp(1.5rem,4vw,2.2rem);font-weight:800;margin-bottom:.75rem}
+.section-sub{text-align:center;color:var(--muted);max-width:500px;margin:0 auto 3rem;font-size:.95rem}
+
+/* STEPS */
+.steps{display:grid;grid-template-columns:1fr;gap:2rem}
+.step{text-align:center;padding:2rem 1.5rem;border-radius:16px;background:var(--surface);border:1px solid rgba(124,77,255,.1);position:relative}
+.step-num{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--pink));display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:1.2rem;margin-bottom:1rem}
+.step-icon{font-size:2.5rem;margin-bottom:.75rem;display:block}
+.step h3{font-size:1.1rem;margin-bottom:.5rem}
+.step p{color:var(--muted);font-size:.9rem}
+@media(min-width:640px){.steps{grid-template-columns:repeat(3,1fr)}}
+
+/* FEATURES */
+.features{display:grid;grid-template-columns:1fr;gap:1.5rem}
+.feat{padding:1.75rem;border-radius:16px;background:var(--card);border:1px solid rgba(124,77,255,.12);transition:transform .25s,border-color .25s}
+.feat:hover{transform:translateY(-4px);border-color:var(--pink)}
+.feat-icon{font-size:2rem;margin-bottom:.75rem;display:block}
+.feat h3{font-size:1.05rem;margin-bottom:.4rem}
+.feat p{color:var(--muted);font-size:.88rem}
+@media(min-width:640px){.features{grid-template-columns:repeat(2,1fr)}}
+
+/* PRICING */
+.pricing{display:grid;grid-template-columns:1fr;gap:1.5rem}
+.plan{padding:2rem 1.5rem;border-radius:16px;background:var(--surface);border:1px solid rgba(124,77,255,.1);text-align:center;transition:transform .25s}
+.plan:hover{transform:translateY(-4px)}
+.plan.pop{border-color:var(--pink);background:linear-gradient(180deg,rgba(224,64,251,.08),var(--surface));position:relative}
+.plan.pop::before{content:'En Populer';position:absolute;top:-12px;left:50%;transform:translateX(-50%);padding:.25rem 1rem;border-radius:20px;background:linear-gradient(135deg,var(--orange),var(--pink));font-size:.7rem;font-weight:700;color:#fff;white-space:nowrap}
+.plan h3{font-size:1.15rem;margin-bottom:.5rem}
+.plan .price{font-size:2.5rem;font-weight:900;margin:.75rem 0 .25rem}
+.plan .price small{font-size:.9rem;font-weight:400;color:var(--muted)}
+.plan .price em{font-style:normal;font-size:1rem}
+.plan ul{list-style:none;margin:1.25rem 0;text-align:left}
+.plan ul li{padding:.35rem 0;font-size:.9rem;color:var(--muted)}
+.plan ul li::before{content:'';margin-right:.5rem;color:var(--pink)}
+.btn-plan{display:inline-block;padding:.7rem 2rem;border-radius:10px;font-weight:600;font-size:.9rem;margin-top:.5rem;transition:transform .2s}
+.btn-outline{border:1px solid var(--purple);color:var(--purple)}
+.btn-outline:hover{background:var(--purple);color:#fff;transform:scale(1.03)}
+.btn-fill{background:linear-gradient(135deg,var(--orange),var(--pink));color:#fff}
+.btn-fill:hover{transform:scale(1.03)}
+@media(min-width:768px){.pricing{grid-template-columns:repeat(3,1fr)}}
+
+/* DEMO */
+.demo-area{max-width:720px;margin:0 auto}
+.demo-video{width:100%;aspect-ratio:16/9;border-radius:16px;background:var(--card);border:1px solid rgba(124,77,255,.15);display:flex;align-items:center;justify-content:center;font-size:3rem;color:var(--muted);margin-bottom:2rem;position:relative;overflow:hidden}
+.demo-video::after{content:'Video yakinda burada';position:absolute;bottom:1rem;font-size:.85rem}
+.ba-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.ba-box{aspect-ratio:1;border-radius:12px;background:var(--surface);border:1px solid rgba(124,77,255,.1);display:flex;align-items:center;justify-content:center;flex-direction:column;font-size:.85rem;color:var(--muted)}
+.ba-box span{font-size:2rem;margin-bottom:.5rem}
+
+/* FOOTER */
+footer{text-align:center;padding:3rem 1.5rem;border-top:1px solid rgba(124,77,255,.1);color:var(--muted);font-size:.85rem}
+footer .f-links{margin-top:.75rem;display:flex;justify-content:center;gap:1.5rem;flex-wrap:wrap}
+footer a:hover{color:var(--pink)}
+
+/* ANIMATIONS */
+.reveal{opacity:0;transform:translateY(30px);transition:opacity .6s ease,transform .6s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo"><span>FENIX</span></div>
+  <a href="/app" class="nav-cta">Giris Yap</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">Yapay Zeka Destekli Video Uretimi</div>
+  <h1><span class="fire">FENIX</span></h1>
+  <p>Urun fotografini yukle, 30 saniyede profesyonel Reels videosu al. E-ticaret icin tasarlanmis yapay zeka.</p>
+  <a href="/app" class="btn-primary">Ucretsiz Dene &rarr;</a>
+</section>
+
+<!-- HOW IT WORKS -->
+<section>
+  <h2 class="section-title reveal">Nasil Calisiyor?</h2>
+  <p class="section-sub reveal">3 adimda urun videonu olustur</p>
+  <div class="steps">
+    <div class="step reveal">
+      <span class="step-num">1</span>
+      <span class="step-icon">&#128247;</span>
+      <h3>Fotograf Yukle</h3>
+      <p>Urun fotografini surukle birak veya galenden sec. PNG, JPG, WebP destegi.</p>
+    </div>
+    <div class="step reveal">
+      <span class="step-num">2</span>
+      <span class="step-icon">&#9889;</span>
+      <h3>AI Sahne Uretir</h3>
+      <p>Fenix yapay zekasi arkaplan, efekt ve muzigi otomatik secip sahne olusturur.</p>
+    </div>
+    <div class="step reveal">
+      <span class="step-num">3</span>
+      <span class="step-icon">&#127916;</span>
+      <h3>Video Hazir</h3>
+      <p>Profesyonel Reels / TikTok videosu saniyeler icinde indirilmeye hazir.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section>
+  <h2 class="section-title reveal">Ozellikler</h2>
+  <p class="section-sub reveal">Fenix'i guclu kilan her sey</p>
+  <div class="features">
+    <div class="feat reveal">
+      <span class="feat-icon">&#129302;</span>
+      <h3>Otonom AI</h3>
+      <p>Fenix kendi basina sahne planlar, arka plan secer, metin yazar. Sen sadece onay ver.</p>
+    </div>
+    <div class="feat reveal">
+      <span class="feat-icon">&#10024;</span>
+      <h3>50+ Gecis Efekti</h3>
+      <p>Zoom, glitch, parallax, morph ve daha fazlasi. Her video benzersiz gorunur.</p>
+    </div>
+    <div class="feat reveal">
+      <span class="feat-icon">&#128200;</span>
+      <h3>Trend Takibi</h3>
+      <p>Instagram ve TikTok trendlerini gercek zamanli takip eder, videolarini trende uyarlar.</p>
+    </div>
+    <div class="feat reveal">
+      <span class="feat-icon">&#127925;</span>
+      <h3>Beat-Sync Muzik</h3>
+      <p>Muzik ritmine otomatik senkronize gecisler. Profesyonel montaj kalitesi.</p>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section>
+  <h2 class="section-title reveal">Fiyatlandirma</h2>
+  <p class="section-sub reveal">Ihtiyacina uygun plani sec</p>
+  <div class="pricing">
+    <div class="plan reveal">
+      <h3>Ucretsiz</h3>
+      <div class="price">0 <em>TL</em></div>
+      <ul>
+        <li>Ayda 5 video</li>
+        <li>720p cikti</li>
+        <li>Temel efektler</li>
+        <li>Filigran ile</li>
+      </ul>
+      <a href="/app" class="btn-plan btn-outline">Basla</a>
+    </div>
+    <div class="plan pop reveal">
+      <h3>Baslangic</h3>
+      <div class="price">199 <em>TL</em><small>/ay</small></div>
+      <ul>
+        <li>Ayda 30 video</li>
+        <li>1080p Full HD</li>
+        <li>Tum efektler</li>
+        <li>Filigran yok</li>
+      </ul>
+      <a href="/app" class="btn-plan btn-fill">Satin Al</a>
+    </div>
+    <div class="plan reveal">
+      <h3>Pro</h3>
+      <div class="price">499 <em>TL</em><small>/ay</small></div>
+      <ul>
+        <li>Sinirsiz video</li>
+        <li>4K cikti</li>
+        <li>Oncelikli islem</li>
+        <li>API erisimi</li>
+      </ul>
+      <a href="/app" class="btn-plan btn-outline">Satin Al</a>
+    </div>
+  </div>
+</section>
+
+<!-- DEMO -->
+<section>
+  <h2 class="section-title reveal">Ornek Cikti</h2>
+  <p class="section-sub reveal">Fotograftan videoya donusum</p>
+  <div class="demo-area">
+    <div class="demo-video reveal">&#9654;</div>
+    <div class="ba-row">
+      <div class="ba-box reveal">
+        <span>&#128247;</span>
+        Once — Urun Fotografi
+      </div>
+      <div class="ba-box reveal">
+        <span>&#127916;</span>
+        Sonra — Reels Videosu
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div>Fenix AI &copy; 2026 | Bedrihan Ozdogan</div>
+  <div class="f-links">
+    <a href="/app">Uygulama</a>
+    <a href="mailto:info@fenixai.co">Iletisim</a>
+    <a href="#">Gizlilik</a>
+    <a href="#">Kullanim Sartlari</a>
+  </div>
+</footer>
+
+<script>
+// Reveal on scroll
+const obs = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }});
+}, { threshold: 0.15 });
+document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

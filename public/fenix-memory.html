@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Fenix Hafıza — Canlı</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+:root {
+  --bg: #080810;
+  --surface: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.08);
+  --text: #e8e0f0;
+  --muted: #6b6580;
+  --orange: #FF6B35;
+  --purple: #8B5CF6;
+  --cyan: #06b6d4;
+  --green: #3fb950;
+  --fire: linear-gradient(135deg,#FF6B35,#8B5CF6);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',-apple-system,sans-serif;min-height:100vh;overflow-x:hidden}
+
+/* ── HEADER ── */
+header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 24px;
+  background:rgba(10,10,20,0.95);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
+  backdrop-filter:blur(20px);
+}
+.logo{font-size:18px;font-weight:700;background:var(--fire);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hstatus{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:#f85149;transition:background .3s}
+.dot.live{background:var(--green);box-shadow:0 0 8px var(--green)}
+
+/* ── STATS ROW ── */
+.stats{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:12px;padding:16px 24px;
+}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:16px;text-align:center;
+}
+.stat-num{font-size:32px;font-weight:700;line-height:1}
+.stat-num.orange{color:var(--orange)}
+.stat-num.purple{color:var(--purple)}
+.stat-num.cyan{color:var(--cyan)}
+.stat-num.green{color:var(--green)}
+.stat-lbl{font-size:11px;color:var(--muted);margin-top:6px}
+
+/* ── MAIN GRID ── */
+.main{display:grid;grid-template-columns:1fr 380px;gap:16px;padding:0 24px 24px}
+
+/* ── FEED ── */
+.feed-wrap{display:flex;flex-direction:column;gap:0}
+.feed-title{font-size:13px;color:var(--orange);font-weight:600;letter-spacing:.5px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.feed-title .pulse{width:6px;height:6px;border-radius:50%;background:var(--orange);animation:pulse 1.5s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+
+.lesson-entry{
+  background:var(--surface);border:1px solid var(--border);border-radius:12px;
+  padding:14px 16px;margin-bottom:8px;
+  animation:slideIn .4s cubic-bezier(.34,1.56,.64,1);
+  position:relative;overflow:hidden;
+}
+.lesson-entry.new{border-color:var(--orange);box-shadow:0 0 20px rgba(255,107,53,.15)}
+@keyframes slideIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+.lesson-entry::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+  background:var(--fire);border-radius:0 2px 2px 0;
+}
+.le-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.le-cat{
+  font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;letter-spacing:.5px;
+  background:rgba(255,107,53,.12);color:var(--orange);border:1px solid rgba(255,107,53,.3);
+}
+.le-actor{font-size:10px;color:var(--muted)}
+.le-time{font-size:10px;color:var(--muted);margin-left:auto}
+.le-bug{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;line-height:1.4}
+.le-fix{font-size:12px;color:var(--muted);line-height:1.5}
+.le-fix span{color:var(--green)}
+
+/* ── SIDEBAR ── */
+.sidebar{display:flex;flex-direction:column;gap:16px}
+
+/* Kategori kartları */
+.cat-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px}
+.cat-title{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.5px;margin-bottom:12px}
+.cat-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.cat-name{font-size:12px;color:var(--text);width:110px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cat-bar-wrap{flex:1;height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.cat-bar{height:100%;border-radius:3px;background:var(--fire);transition:width .6s cubic-bezier(.34,1.56,.64,1)}
+.cat-count{font-size:11px;color:var(--orange);font-weight:700;width:28px;text-align:right}
+
+/* Eğitim ilerlemesi */
+.train-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px}
+.train-title{font-size:12px;color:var(--muted);font-weight:600;letter-spacing:.5px;margin-bottom:14px}
+.train-bar-wrap{height:10px;background:rgba(255,255,255,.06);border-radius:5px;overflow:hidden;margin-bottom:8px}
+.train-bar{height:100%;border-radius:5px;background:var(--fire);transition:width .8s ease;box-shadow:0 0 10px rgba(255,107,53,.4)}
+.train-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}
+.train-status{font-size:12px;color:var(--text);margin-top:10px;min-height:18px}
+
+/* Hız göstergesi */
+.speed-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px}
+.speed-num{font-size:28px;font-weight:700;color:var(--cyan);line-height:1}
+.speed-lbl{font-size:11px;color:var(--muted);margin-top:4px}
+.speed-graph{display:flex;align-items:flex-end;gap:3px;height:40px;margin-top:10px}
+.speed-bar-g{flex:1;background:rgba(6,182,212,.15);border-radius:3px 3px 0 0;transition:height .3s}
+
+/* Tamamlanan eğitimler */
+.phases-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px}
+.phase-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+.phase-item:last-child{border-bottom:none}
+.phase-dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
+.phase-name{flex:1;color:var(--text)}
+.phase-cnt{color:var(--orange);font-weight:700;font-size:11px}
+.phase-cost{color:var(--muted);font-size:10px;margin-left:4px}
+
+/* Maliyet göstergesi */
+.cost-section{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;text-align:center}
+.cost-num{font-size:28px;font-weight:700;color:var(--orange)}
+.cost-budget{font-size:12px;color:var(--muted);margin-top:4px}
+.cost-bar-wrap{height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden;margin-top:10px}
+.cost-bar{height:100%;background:var(--fire);border-radius:4px;transition:width .6s ease}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,107,53,.3);border-radius:2px}
+
+/* ── TABLet (≤1200px) ── */
+@media(max-width:1200px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .main{grid-template-columns:1fr;padding:0 16px 80px}
+  .sidebar{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .cat-section{grid-column:1/-1}
+}
+
+/* ── MOBİL (≤600px) ── */
+@media(max-width:600px){
+  .stats{grid-template-columns:repeat(2,1fr);gap:8px;padding:12px 16px}
+  .stat-num{font-size:24px}
+  .sidebar{grid-template-columns:1fr}
+  header{padding:12px 16px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">✦ Fenix Hafıza</div>
+  <a href="/analytics" style="font-size:12px;font-weight:600;color:var(--muted);text-decoration:none;padding:7px 12px;border:1px solid var(--border);border-radius:8px;-webkit-tap-highlight-color:transparent;transition:color .2s;" onmouseover="this.style.color='#FF6B35'" onmouseout="this.style.color=''">📊 Analitik</a>
+  <!-- Eğitim kontrolleri — her zaman görünür -->
+  <div style="display:flex;align-items:center;gap:8px">
+    <div style="font-size:11px;color:var(--muted)">$<span id="h-cost">0.0000</span> / $<span id="h-budget">5</span></div>
+    <div style="width:80px;height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden">
+      <div id="h-bar" style="height:100%;background:var(--fire);width:0%;transition:width .6s ease;border-radius:3px"></div>
+    </div>
+    <select id="train-budget-sel" style="background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:#fff;padding:8px 10px;font-size:13px;cursor:pointer;min-height:44px;">
+      <option value="2">$2</option>
+      <option value="5" selected>$5</option>
+      <option value="10">$10</option>
+    </select>
+    <button id="btn-train"
+      style="padding:10px 18px;background:var(--fire);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;min-height:44px;min-width:80px;-webkit-tap-highlight-color:transparent;"
+      ontouchend="event.preventDefault();startTraining();"
+      onclick="startTraining()">
+      🔥 Eğit
+    </button>
+    <button id="btn-stop"
+      style="padding:10px 14px;background:rgba(255,60,60,.15);border:1px solid rgba(255,60,60,.4);border-radius:10px;color:#ff6b6b;font-size:13px;font-weight:700;cursor:pointer;min-height:44px;-webkit-tap-highlight-color:transparent;"
+      ontouchend="event.preventDefault();stopTraining();"
+      onclick="stopTraining()">
+      ■ Dur
+    </button>
+  </div>
+  <div class="hstatus">
+    <div class="dot" id="dot"></div>
+    <span id="conn-lbl">Bağlanıyor...</span>
+    <span style="color:var(--border)">|</span>
+    <span id="last-evt" style="color:var(--muted);font-size:11px">—</span>
+  </div>
+</header>
+
+<!-- İstatistikler -->
+<div class="stats">
+  <div class="stat-card">
+    <div class="stat-num orange" id="s-total">0</div>
+    <div class="stat-lbl">Toplam Ders</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num purple" id="s-cats">0</div>
+    <div class="stat-lbl">Kategori</div>
+  </div>
+  <div class="stat-card" style="cursor:pointer" onclick="startTraining()">
+    <div class="stat-num cyan" id="s-session">0</div>
+    <div class="stat-lbl">Bu Oturumda</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-num green" id="s-rate">0</div>
+    <div class="stat-lbl">Ders/Dakika</div>
+  </div>
+</div>
+
+<!-- Ana içerik -->
+<div class="main">
+
+  <!-- Canlı feed -->
+  <div class="feed-wrap">
+    <div class="feed-title">
+      <div class="pulse"></div>
+      CANLI ÖĞRENME AKIŞI
+    </div>
+    <div id="feed"></div>
+  </div>
+
+  <!-- Sağ sidebar -->
+  <div class="sidebar">
+
+    <!-- Eğitim ilerlemesi -->
+    <div class="train-section">
+      <div class="train-title">EĞİTİM İLERLEMESİ</div>
+      <div class="train-bar-wrap">
+        <div class="train-bar" id="train-bar" style="width:0%"></div>
+      </div>
+      <div class="train-labels">
+        <span id="train-done">0</span>
+        <span id="train-total">/ 0 hedef</span>
+      </div>
+      <div class="train-status" id="train-status">Bekleniyor...</div>
+    </div>
+
+    <!-- Hız -->
+    <div class="speed-section">
+      <div class="speed-num" id="speed-num">0</div>
+      <div class="speed-lbl">ders / dakika (son 60s)</div>
+      <div class="speed-graph" id="speed-graph"></div>
+    </div>
+
+    <!-- Maliyet -->
+    <div class="cost-section">
+      <div class="cost-num">$<span id="cost-num">0.0000</span></div>
+      <div class="cost-budget">/ $<span id="cost-budget">50.00</span> bütçe</div>
+      <div class="cost-bar-wrap"><div class="cost-bar" id="cost-bar" style="width:0%"></div></div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button ontouchend="event.preventDefault();startTraining();" onclick="startTraining()"
+          style="flex:1;padding:12px 8px;background:var(--fire);border:none;border-radius:10px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;min-height:48px;-webkit-tap-highlight-color:transparent;">
+          🔥 Eğit
+        </button>
+        <button ontouchend="event.preventDefault();stopTraining();" onclick="stopTraining()"
+          style="padding:12px 16px;background:rgba(255,60,60,.15);border:1px solid rgba(255,60,60,.4);border-radius:10px;color:#ff6b6b;font-size:13px;font-weight:700;cursor:pointer;min-height:48px;-webkit-tap-highlight-color:transparent;">
+          ■ Dur
+        </button>
+      </div>
+    </div>
+
+    <!-- Tamamlanan eğitimler -->
+    <div class="phases-section">
+      <div class="cat-title">TAMAMLANAN EĞİTİMLER</div>
+      <div id="phases-list"><div style="color:var(--muted);font-size:12px">Henüz eğitim yapılmadı</div></div>
+    </div>
+
+    <!-- Kategoriler -->
+    <div class="cat-section">
+      <div class="cat-title">KATEGORİ DAĞILIMI</div>
+      <div id="cat-list"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const BASE = window.location.origin;
+
+// State
+let totalLessons = 0;
+let sessionCount = 0;
+let catMap = {};
+let trainTarget = 0;
+let rateLog = [];
+let speedHistory = [];
+let socket = null;
+const shownIds = new Set(); // duplicate önleme
+
+// ── TOKEN AL, SONRA BAĞLAN ──
+async function initSocket() {
+  let token = localStorage.getItem('fenix_token') || '';
+  if (!token) {
+    try {
+      const r = await fetch('/api/auth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: 'fenix-memory-viewer' })
+      });
+      const d = await r.json();
+      if (d && d.token) { token = d.token; localStorage.setItem('fenix_token', token); }
+    } catch(e) {}
+  }
+
+  socket = io(BASE, {
+    transports: ['websocket', 'polling'],
+    auth: { token },
+    query: { token },
+    reconnection: true,
+    reconnectionDelay: 2000,
+    reconnectionDelayMax: 10000
+  });
+
+  socket.on('connect', () => {
+    document.getElementById('dot').classList.add('live');
+    document.getElementById('conn-lbl').textContent = 'Canlı';
+    loadSnapshot();
+  });
+  socket.on('disconnect', () => {
+    document.getElementById('dot').classList.remove('live');
+    document.getElementById('conn-lbl').textContent = 'Bağlantı koptu';
+  });
+
+  socket.on('fenix:lesson', entry => {
+    addLesson(entry, true);
+    if (entry.total) updateTotal(entry.total);
+    document.getElementById('last-evt').textContent = 'Son: ' + new Date().toLocaleTimeString('tr-TR');
+  });
+
+  socket.on('fenix:train:start', data => {
+    trainTarget = data.total || 0;
+    document.getElementById('train-total').textContent = '/ ' + trainTarget + ' hedef';
+    document.getElementById('train-status').textContent = '🔥 Eğitim başladı...';
+  });
+
+  socket.on('fenix:train:progress', data => {
+    const pct = data.pct || (trainTarget ? Math.round((data.done / trainTarget) * 100) : 0);
+    document.getElementById('train-bar').style.width = pct + '%';
+    document.getElementById('train-done').textContent = data.done;
+    document.getElementById('train-status').textContent = data.status || '';
+    if (data.cost !== undefined) updateCost(parseFloat(data.cost), parseFloat(data.budget || 50));
+  });
+
+  socket.on('fenix:train:done', data => {
+    document.getElementById('train-bar').style.width = '100%';
+    document.getElementById('train-status').textContent = '✅ Tamamlandı! ' + (data.total || '') + ' ders — $' + (data.cost || '0');
+    document.getElementById('btn-train').disabled = false;
+    if (data.cost) updateCost(parseFloat(data.cost), parseFloat(data.budget || 50));
+  });
+
+  socket.on('fenix:train:phase', data => {
+    if (data.phases) renderPhases(data.phases);
+  });
+}
+
+initSocket();
+
+// ── Heartbeat — bağlantıyı sürekli canlı tut ──
+setInterval(() => {
+  fetch('/health').catch(() => {});
+  if (socket && !socket.connected) {
+    try { socket.connect(); } catch(e) {}
+  }
+}, 15000);
+
+// ── Otomatik yenileme — yeni deploy algılanınca sayfa kendini yeniler ──
+(function() {
+  let _rev = null;
+  function checkVersion() {
+    fetch('/api/version', { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => {
+        if (!_rev) { _rev = d.revision; return; }
+        if (_rev !== d.revision) {
+          document.getElementById('conn-lbl').textContent = 'Yeni sürüm — yenileniyor...';
+          setTimeout(() => location.reload(), 2000);
+        }
+      }).catch(() => {});
+  }
+  setInterval(checkVersion, 30000);
+  checkVersion();
+})();
+
+// ── Periyodik durum güncelleme (30s) ──
+setInterval(async function pollStatus() {
+  try {
+    const s = await fetch('/api/fenix/train/status');
+    const st = await s.json();
+    if (!st.ok) return;
+    if (st.totalLessons > totalLessons) updateTotal(st.totalLessons);
+    if (st.totalCost !== undefined) updateCost(parseFloat(st.totalCost), parseFloat(st.budget || 50));
+    if (st.phases) renderPhases(st.phases);
+  } catch(e) {}
+}, 30000);
+
+// ── Training kontrolleri ──
+function fenixToast(msg, tip) {
+  let t = document.getElementById('fenix-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'fenix-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;padding:12px 24px;border-radius:12px;font-size:14px;font-weight:600;color:#fff;transition:opacity .3s;pointer-events:none;';
+    document.body.appendChild(t);
+  }
+  t.style.background = tip === 'hata' ? '#c0392b' : tip === 'uyari' ? '#e67e22' : '#27ae60';
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._to);
+  t._to = setTimeout(() => t.style.opacity = '0', 3000);
+}
+
+function setTrainBtns(disabled, text) {
+  // Header ve sidebar butonların ikisi de güncellenir
+  document.querySelectorAll('#btn-train, .btn-train-all').forEach(b => {
+    b.disabled = disabled;
+    if (text) b.textContent = text;
+  });
+}
+
+async function startTraining() {
+  setTrainBtns(true, '⏳ Başlatılıyor...');
+  const budget = parseFloat(document.getElementById('train-budget-sel')?.value || 5);
+  try {
+    const r = await fetch('/api/fenix/train', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ budget })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      setTrainBtns(true, '🔥 Çalışıyor...');
+      const st = document.getElementById('train-status');
+      if (st) st.textContent = 'Eğitim başladı — Gemini öğreniyor...';
+      fenixToast(`✅ Eğitim başladı — $${budget} bütçe`, 'basarili');
+    } else {
+      setTrainBtns(false, '🔥 Eğit');
+      fenixToast('⚠️ ' + (d.error || 'Başlatılamadı'), 'hata');
+    }
+  } catch(e) {
+    setTrainBtns(false, '🔥 Eğit');
+    fenixToast('❌ Sunucuya ulaşılamadı — sayfayı yenile', 'hata');
+  }
+}
+
+async function stopTraining() {
+  try {
+    await fetch('/api/fenix/train/stop', { method: 'POST' });
+    setTrainBtns(false, '🔥 Eğit');
+    const st = document.getElementById('train-status');
+    if (st) st.textContent = 'Durduruldu.';
+    fenixToast('⏹ Eğitim durduruldu', 'uyari');
+  } catch(e) {
+    fenixToast('❌ Sunucuya ulaşılamadı', 'hata');
+  }
+}
+
+// ── Maliyet güncelle (header + sidebar) ──
+function updateCost(cost, budget) {
+  const pct = Math.min(100, Math.round(cost / budget * 100));
+  // Header
+  document.getElementById('h-cost').textContent = cost.toFixed(4);
+  document.getElementById('h-bar').style.width = pct + '%';
+  const hb = document.getElementById('h-budget');
+  if (hb) hb.textContent = budget.toFixed(0);
+  // Sidebar
+  const cn = document.getElementById('cost-num');
+  const cb = document.getElementById('cost-budget');
+  const cbar = document.getElementById('cost-bar');
+  if (cn) cn.textContent = cost.toFixed(4);
+  if (cb) cb.textContent = budget.toFixed(2);
+  if (cbar) cbar.style.width = pct + '%';
+}
+
+// ── Tamamlanan eğitimleri göster ──
+function renderPhases(phases) {
+  const el = document.getElementById('phases-list');
+  if (!phases || phases.length === 0) return;
+  el.innerHTML = phases.slice().reverse().map(p => `
+    <div class="phase-item">
+      <div class="phase-dot"></div>
+      <div class="phase-name">${esc(p.name)}</div>
+      <div class="phase-cnt">${p.lessons} ders</div>
+      <div class="phase-cost">$${p.cost}</div>
+    </div>
+  `).join('');
+}
+
+// ── SNAPSHOT YÜKLEme ──
+async function loadSnapshot() {
+  try {
+    const r = await fetch('/api/fenix/memory?limit=200');
+    const d = await r.json();
+    if (!d.ok) return;
+    d.lessons.forEach(l => addLesson(l, false));
+    // Gerçek toplam: d.total (trainer'dan) > d.count (sadece dönen slice)
+    updateTotal(d.total || d.count);
+    updateStats();
+  } catch(e) {}
+  // Trainer status'tan da totalLessons al (daha doğru)
+  try {
+    const s = await fetch('/api/fenix/train/status');
+    const st = await s.json();
+    if (st.ok && st.totalLessons > totalLessons) {
+      updateTotal(st.totalLessons);
+    }
+  } catch(e) {}
+}
+
+// ── DERS EKLE ──
+const MAX_FEED = 80;
+function addLesson(entry, isNew) {
+  // Duplicate önle
+  const uid = entry.id || (entry.category + entry.bug);
+  if (shownIds.has(uid)) return;
+  shownIds.add(uid);
+
+  const feed = document.getElementById('feed');
+
+  // Kategori sayacı
+  catMap[entry.category] = (catMap[entry.category] || 0) + 1;
+
+  // Session
+  if (isNew) {
+    sessionCount++;
+    document.getElementById('s-session').textContent = sessionCount;
+    rateLog.push(Date.now());
+  }
+
+  // Feed kartı
+  const el = document.createElement('div');
+  el.className = 'lesson-entry' + (isNew ? ' new' : '');
+  const time = new Date(entry.timestamp || Date.now());
+  const timeStr = time.toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'});
+  el.innerHTML = `
+    <div class="le-top">
+      <span class="le-cat">${esc(entry.category)}</span>
+      <span class="le-actor">${esc(entry.actor || 'fenix')}</span>
+      <span class="le-time">${timeStr}</span>
+    </div>
+    <div class="le-bug">${esc(entry.bug || '').substring(0, 120)}</div>
+    <div class="le-fix"><span>→</span> ${esc(entry.fix || '').substring(0, 160)}</div>
+  `;
+
+  if (isNew) {
+    feed.insertBefore(el, feed.firstChild);
+    setTimeout(() => el.classList.remove('new'), 2000);
+  } else {
+    feed.appendChild(el);
+  }
+
+  // Max feed limit
+  while (feed.children.length > MAX_FEED) feed.removeChild(feed.lastChild);
+
+  updateCats();
+}
+
+function updateTotal(n) {
+  totalLessons = n;
+  document.getElementById('s-total').textContent = n;
+}
+
+function updateStats() {
+  document.getElementById('s-cats').textContent = Object.keys(catMap).length;
+}
+
+// ── KATEGORİ LİSTESİ ──
+function updateCats() {
+  document.getElementById('s-cats').textContent = Object.keys(catMap).length;
+  const sorted = Object.entries(catMap).sort((a,b) => b[1]-a[1]);
+  const max = sorted[0]?.[1] || 1;
+  const list = document.getElementById('cat-list');
+  list.innerHTML = sorted.map(([cat, cnt]) => `
+    <div class="cat-row">
+      <div class="cat-name">${esc(cat)}</div>
+      <div class="cat-bar-wrap"><div class="cat-bar" style="width:${Math.round(cnt/max*100)}%"></div></div>
+      <div class="cat-count">${cnt}</div>
+    </div>
+  `).join('');
+}
+
+// ── HIZ ──
+setInterval(() => {
+  const now = Date.now();
+  rateLog = rateLog.filter(t => now - t < 60000);
+  const rate = rateLog.length;
+  document.getElementById('s-rate').textContent = rate;
+  document.getElementById('speed-num').textContent = rate;
+
+  speedHistory.push(rate);
+  if (speedHistory.length > 20) speedHistory.shift();
+  const maxSpd = Math.max(...speedHistory, 1);
+  const graph = document.getElementById('speed-graph');
+  graph.innerHTML = speedHistory.map(v =>
+    `<div class="speed-bar-g" style="height:${Math.round(v/maxSpd*100)}%;background:rgba(6,182,212,${.15 + v/maxSpd*.7})"></div>`
+  ).join('');
+}, 5000);
+
+// ── UTIL ──
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>

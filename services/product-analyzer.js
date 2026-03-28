@@ -9,7 +9,8 @@
 const config = require('../config');
 const logger = require('../utils/logger');
 
-const GEMINI_VISION_MODEL = 'gemini-2.5-flash';
+const { selectModel } = require('./gemini-service');
+const GEMINI_VISION_MODEL = selectModel('analysis'); // Flash-lite — ucuz ve hızlı
 
 // Analiz prompt'u — ürünü her açıdan tara
 const ANALYSIS_PROMPT = `Sen bir e-ticaret ürün analiz uzmanısın. Bu fotoğrafı analiz et ve SADECE JSON döndür, başka bir şey yazma.

@@ -17,7 +17,7 @@ const REPORT_INTERVAL = 10000; // 10 saniye
 
 // === SİSTEM BİLGİLERİ ===
 
-function getSystemInfo() {
+async function getSystemInfo() {
   const cpus = os.cpus();
   const totalMem = os.totalmem();
   const freeMem = os.freemem();
@@ -54,11 +54,22 @@ function getSystemInfo() {
     apps = Array.from(appSet).slice(0, 30);
   } catch(e) {}
 
-  // İnternet durumu (senkron kontrol)
+  // İnternet durumu (DNS resolve ile — CMD açmaz, hızlı)
   let internetStatus = 'bilinmiyor';
   try {
-    execSync('ping -n 1 -w 2000 8.8.8.8', { timeout: 3000, windowsHide: true, stdio: 'ignore' });
-    internetStatus = 'bağlı';
+    const dns = require('dns');
+    dns.resolve('google.com', (err) => {}); // async arka plan
+    // Senkron fallback: basit HTTP
+    const net = require('net');
+    const sock = new net.Socket();
+    sock.setTimeout(2000);
+    try {
+      await new Promise((resolve, reject) => {
+        sock.connect(53, '8.8.8.8', () => { internetStatus = 'bağlı'; sock.destroy(); resolve(); });
+        sock.on('error', () => { internetStatus = 'bağlantı yok'; sock.destroy(); resolve(); });
+        sock.on('timeout', () => { internetStatus = 'bağlantı yok'; sock.destroy(); resolve(); });
+      });
+    } catch(e2) { internetStatus = 'bağlantı yok'; }
   } catch(e) { internetStatus = 'bağlantı yok'; }
 
   // Uptime
@@ -249,29 +260,37 @@ async function processCommands(commands) {
         result = { type: 'open_app', ...openApp(cmd.data) };
         break;
       case 'shutdown':
-        result = { type: 'shutdown', message: 'Bilgisayar kapatılıyor...' };
-        setTimeout(() => execSync('shutdown /s /t 5'), 2000);
+        // Tehlikeli komut — onay isteniyor
+        console.log('⚠️ SHUTDOWN komutu alındı — 30sn içinde CTRL+C ile iptal edilebilir');
+        result = { type: 'shutdown', message: 'Bilgisayar 30sn içinde kapanacak...' };
+        setTimeout(() => {
+          exec('shutdown /s /t 5', { windowsHide: true }, (err) => {
+            if (err) console.error('Shutdown hatası:', err.message);
+          });
+        }, 30000);
         break;
       case 'restart':
-        result = { type: 'restart', message: 'Bilgisayar yeniden başlatılıyor...' };
-        setTimeout(() => execSync('shutdown /r /t 5'), 2000);
+        console.log('⚠️ RESTART komutu alındı — 30sn içinde CTRL+C ile iptal edilebilir');
+        result = { type: 'restart', message: 'Bilgisayar 30sn içinde yeniden başlayacak...' };
+        setTimeout(() => {
+          exec('shutdown /r /t 5', { windowsHide: true }, (err) => {
+            if (err) console.error('Restart hatası:', err.message);
+          });
+        }, 30000);
         break;
       case 'lock':
-        execSync('rundll32.exe user32.dll,LockWorkStation');
+        exec('rundll32.exe user32.dll,LockWorkStation', { windowsHide: true });
         result = { type: 'lock', message: 'Bilgisayar kilitlendi' };
         break;
       case 'message':
         // Mesajı göster (sanitize edilmiş — RCE koruması)
         const safeMsg = (cmd.data || '').replace(/[^a-zA-Z0-9\sğüşıöçĞÜŞİÖÇ.,!?:\-()]/g, '').substring(0, 200);
-        try {
-          execSync(`msg * "${safeMsg}"`, { timeout: 5000, windowsHide: true });
-        } catch(e) {
-          try {
-            // PowerShell — Base64 encode ile injection önleme
-            const b64 = Buffer.from(safeMsg, 'utf16le').toString('base64');
-            execSync(`powershell -encodedCommand ${Buffer.from(`Add-Type -AssemblyName System.Windows.Forms;[System.Windows.Forms.MessageBox]::Show('${safeMsg.replace(/'/g, "''")}', 'Fenix AI')`, 'utf16le').toString('base64')}`, { timeout: 5000, windowsHide: true });
-          } catch(e2) {}
-        }
+        // PowerShell ile güvenli mesaj gösterme (Base64 encode)
+        const psScript = `Add-Type -AssemblyName System.Windows.Forms;[System.Windows.Forms.MessageBox]::Show('${safeMsg.replace(/'/g, "''")}', 'Fenix AI')`;
+        const encodedCmd = Buffer.from(psScript, 'utf16le').toString('base64');
+        exec(`powershell -encodedCommand ${encodedCmd}`, { timeout: 10000, windowsHide: true }, (err) => {
+          if (err) console.log('Mesaj gösterme hatası:', err.message);
+        });
         result = { type: 'message', message: 'Mesaj gösterildi' };
         break;
       default:

@@ -4,7 +4,7 @@
  * Dev/prod ayrımı NODE_ENV ile yapılır.
  */
 
-require('dotenv').config();
+require('dotenv').config({ override: true });
 
 const ENV = process.env.NODE_ENV || 'development';
 const isProd = ENV === 'production';
@@ -44,7 +44,7 @@ const config = {
   jwtSecret: process.env.JWT_SECRET || (isProd ? null : require('crypto').randomBytes(32).toString('hex')),
   bodyLimit: process.env.BODY_LIMIT || '5mb',
   rateLimitWindow: parseInt(process.env.RATE_LIMIT_WINDOW) || 15 * 60 * 1000, // 15 dk
-  rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX) || 100,
+  rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX) || 500,
 
   // Loglama
   logLevel: process.env.LOG_LEVEL || (isProd ? 'info' : 'debug'),

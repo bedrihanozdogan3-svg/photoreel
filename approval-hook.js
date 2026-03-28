@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 const CLOUD_URL = 'https://photoreel-194617495310.europe-west1.run.app';
+const LOCAL_URL = 'http://localhost:3000';
 
 // Stdin'i hizlica oku, karar ver
 let chunks = [];
@@ -25,19 +26,40 @@ process.stdin.on('end', async () => {
   try { cmd = JSON.parse(input).command || ''; } catch(e) { cmd = input.slice(0, 200); }
 
   try {
-    const res = await fetch(CLOUD_URL + '/api/approval/request', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: 'Bash', description: cmd.slice(0, 300), type: 'permission' })
-    });
-    const { approvalId } = await res.json();
+    // Hem lokal hem cloud'a gönder — tablet hangisinden açıksa oradan onaylar
+    const body = JSON.stringify({ title: 'Bash Komutu', description: cmd.slice(0, 300), type: 'permission' });
+    const opts = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body };
+
+    let approvalId;
+    try {
+      const res = await fetch(LOCAL_URL + '/api/approval/request', opts);
+      const data = await res.json();
+      approvalId = data.approvalId;
+    } catch(e) {
+      // Lokal yoksa cloud'a gönder
+      const res = await fetch(CLOUD_URL + '/api/approval/request', opts);
+      const data = await res.json();
+      approvalId = data.approvalId;
+    }
+
+    // Aynı anda cloud'a da gönder (tablet cloud'dan açıksa)
+    try { await fetch(CLOUD_URL + '/api/approval/request', opts); } catch(e) {}
 
     for (let i = 0; i < 60; i++) {
       await new Promise(r => setTimeout(r, 1000));
-      const c = await fetch(CLOUD_URL + '/api/approval/result/' + approvalId);
-      const r = await c.json();
-      if (r.status === 'approved') process.exit(0);
-      if (r.status === 'rejected') process.exit(1);
+      // Hem lokal hem cloud'dan kontrol et
+      try {
+        const c = await fetch(LOCAL_URL + '/api/approval/result/' + approvalId);
+        const r = await c.json();
+        if (r.status === 'approved') process.exit(0);
+        if (r.status === 'rejected') process.exit(1);
+      } catch(e) {}
+      try {
+        const c = await fetch(CLOUD_URL + '/api/approval/result/' + approvalId);
+        const r = await c.json();
+        if (r.status === 'approved') process.exit(0);
+        if (r.status === 'rejected') process.exit(1);
+      } catch(e) {}
     }
     process.exit(1); // timeout -> reddet (güvenlik)
   } catch(e) {

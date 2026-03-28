@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Fenix Analytics — Video Performansı</title>
+<style>
+:root {
+  --bg: #080810;
+  --surface: rgba(255,255,255,0.04);
+  --border: rgba(255,255,255,0.08);
+  --text: #e8e0f0;
+  --muted: #6b6580;
+  --orange: #FF6B35;
+  --purple: #8B5CF6;
+  --cyan: #06b6d4;
+  --green: #3fb950;
+  --red: #f85149;
+  --fire: linear-gradient(135deg,#FF6B35,#8B5CF6);
+  --fire-green: linear-gradient(135deg,#3fb950,#06b6d4);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',-apple-system,sans-serif;min-height:100vh}
+
+/* NAV */
+.nav{
+  display:flex;align-items:center;gap:8px;
+  padding:14px 24px;
+  background:rgba(10,10,20,0.95);
+  border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100;
+  backdrop-filter:blur(20px);
+}
+.nav-logo{font-size:17px;font-weight:700;background:var(--fire);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-right:8px}
+.nav-link{
+  padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;
+  color:var(--muted);text-decoration:none;border:1px solid transparent;transition:all .2s;
+  -webkit-tap-highlight-color:transparent;
+}
+.nav-link:hover,.nav-link.active{color:var(--orange);border-color:rgba(255,107,53,.3);background:rgba(255,107,53,.08)}
+.nav-spacer{flex:1}
+.nav-refresh{
+  padding:8px 14px;background:var(--surface);border:1px solid var(--border);
+  border-radius:8px;color:var(--muted);font-size:12px;cursor:pointer;
+  min-height:40px;-webkit-tap-highlight-color:transparent;
+}
+.nav-refresh:active{background:rgba(255,255,255,.08)}
+
+/* HERO — büyük KPI kartları */
+.hero{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:20px 24px 0}
+.kpi{
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  padding:20px;text-align:center;position:relative;overflow:hidden;
+}
+.kpi::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--fire);
+}
+.kpi.green::before{background:var(--fire-green)}
+.kpi.red::before{background:linear-gradient(135deg,#f85149,#ff6b35)}
+.kpi-num{font-size:36px;font-weight:800;line-height:1;letter-spacing:-1px}
+.kpi-num.orange{color:var(--orange)}
+.kpi-num.purple{color:var(--purple)}
+.kpi-num.cyan{color:var(--cyan)}
+.kpi-num.green{color:var(--green)}
+.kpi-num.red{color:var(--red)}
+.kpi-lbl{font-size:11px;color:var(--muted);margin-top:6px;font-weight:600;letter-spacing:.5px}
+.kpi-sub{font-size:12px;color:var(--muted);margin-top:4px}
+
+/* GRID */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:20px 24px}
+.grid-full{grid-column:1/-1}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px}
+.card-title{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.8px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title .badge{
+  font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;
+  background:rgba(255,107,53,.12);color:var(--orange);border:1px solid rgba(255,107,53,.3);
+}
+
+/* KATEGORİ PERFORMANS */
+.cat-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.cat-emoji{font-size:16px;width:24px;text-align:center;flex-shrink:0}
+.cat-info{flex:1;min-width:0}
+.cat-name-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
+.cat-name{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cat-score{font-size:13px;font-weight:800;color:var(--green)}
+.cat-score.bad{color:var(--red)}
+.cat-score.mid{color:var(--orange)}
+.cat-bar-wrap{height:6px;background:rgba(255,255,255,.06);border-radius:3px;overflow:hidden}
+.cat-bar{height:100%;border-radius:3px;transition:width .8s cubic-bezier(.34,1.56,.64,1)}
+.cat-bar.good{background:linear-gradient(90deg,var(--green),var(--cyan))}
+.cat-bar.bad{background:linear-gradient(90deg,var(--red),var(--orange))}
+.cat-counts{font-size:10px;color:var(--muted);margin-top:3px;display:flex;gap:8px}
+.cat-counts .liked{color:var(--green)}
+.cat-counts .disliked{color:var(--red)}
+
+/* FEEDBACK DONUT */
+.donut-wrap{display:flex;align-items:center;justify-content:center;gap:24px;padding:8px 0}
+.donut{position:relative;width:120px;height:120px}
+.donut svg{transform:rotate(-90deg)}
+.donut-pct{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-size:24px;font-weight:800;text-align:center;line-height:1;
+}
+.donut-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.donut-legend{display:flex;flex-direction:column;gap:10px}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:12px}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* FAZ ZAMAN ÇİZELGESİ */
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.tl-item:last-child{border-bottom:none}
+.tl-dot-wrap{display:flex;flex-direction:column;align-items:center;gap:0}
+.tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.tl-dot.done{background:var(--green);box-shadow:0 0 8px rgba(63,185,80,.5)}
+.tl-dot.active{background:var(--orange);box-shadow:0 0 8px rgba(255,107,53,.5);animation:glow 1.5s ease-in-out infinite}
+.tl-dot.waiting{background:rgba(255,255,255,.1);border:1px solid var(--border)}
+@keyframes glow{0%,100%{box-shadow:0 0 8px rgba(255,107,53,.5)}50%{box-shadow:0 0 16px rgba(255,107,53,.8)}}
+.tl-body{flex:1}
+.tl-name{font-size:13px;font-weight:700;color:var(--text);line-height:1.3}
+.tl-desc{font-size:11px;color:var(--muted);margin-top:3px;line-height:1.5}
+.tl-tag{
+  display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;margin-top:5px;font-weight:700;
+}
+.tl-tag.done{background:rgba(63,185,80,.12);color:var(--green);border:1px solid rgba(63,185,80,.3)}
+.tl-tag.active{background:rgba(255,107,53,.12);color:var(--orange);border:1px solid rgba(255,107,53,.3)}
+.tl-tag.waiting{background:rgba(255,255,255,.04);color:var(--muted);border:1px solid var(--border)}
+
+/* MALİYET TABLOSU */
+.cost-table{width:100%;border-collapse:collapse}
+.cost-table th{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.5px;padding:6px 8px;text-align:left;border-bottom:1px solid var(--border)}
+.cost-table td{font-size:12px;padding:8px;border-bottom:1px solid rgba(255,255,255,.04)}
+.cost-table tr:last-child td{border-bottom:none}
+.cost-table .num{text-align:right;font-weight:700;font-family:monospace;font-size:13px}
+.cost-table .green{color:var(--green)}
+.cost-table .orange{color:var(--orange)}
+.cost-table .muted{color:var(--muted)}
+
+/* RAKİP KARŞILAŞTIRMA */
+.comp-table{width:100%;border-collapse:collapse}
+.comp-table th{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.5px;padding:8px;text-align:center;border-bottom:1px solid var(--border)}
+.comp-table th:first-child{text-align:left}
+.comp-table td{font-size:12px;padding:8px;border-bottom:1px solid rgba(255,255,255,.04);text-align:center}
+.comp-table td:first-child{text-align:left;font-weight:600}
+.comp-table .fenix-row td{background:rgba(255,107,53,.06);color:var(--orange)}
+.comp-table .fenix-row td:first-child{color:var(--orange);font-weight:800}
+.comp-check{color:var(--green);font-size:14px}
+.comp-x{color:var(--red);font-size:14px}
+.comp-price{color:var(--cyan);font-weight:700;font-family:monospace}
+
+/* EMPTY STATE */
+.empty{text-align:center;padding:32px;color:var(--muted);font-size:13px}
+.empty-icon{font-size:36px;margin-bottom:8px}
+
+/* TOAST */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  z-index:9999;padding:12px 24px;border-radius:12px;font-size:14px;
+  font-weight:600;color:#fff;transition:opacity .3s;pointer-events:none;opacity:0;
+  background:rgba(63,185,80,.9);
+}
+
+/* TABLET */
+@media(max-width:1100px){
+  .hero{grid-template-columns:repeat(2,1fr)}
+  .grid{grid-template-columns:1fr;padding:12px 16px}
+  .nav{padding:12px 16px}
+  .hero{padding:16px 16px 0}
+  .donut-wrap{flex-direction:column}
+}
+@media(max-width:600px){
+  .hero{grid-template-columns:1fr 1fr;gap:8px;padding:12px 12px 0}
+  .kpi-num{font-size:28px}
+  .nav-link{padding:6px 10px;font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo">✦ Fenix</div>
+  <a class="nav-link" href="/fenix">🏠 Ana Sayfa</a>
+  <a class="nav-link" href="/fenix-memory.html">🧠 Hafıza</a>
+  <a class="nav-link active" href="/analytics">📊 Analitik</a>
+  <a class="nav-link" href="/kontrol">🎛️ Kontrol</a>
+  <div class="nav-spacer"></div>
+  <button class="nav-refresh" ontouchend="event.preventDefault();loadAll();" onclick="loadAll()">⟳ Yenile</button>
+</nav>
+
+<!-- KPI HERO -->
+<div class="hero">
+  <div class="kpi">
+    <div class="kpi-num orange" id="kpi-total">—</div>
+    <div class="kpi-lbl">TOPLAM VİDEO</div>
+    <div class="kpi-sub" id="kpi-total-sub">Geri bildirim alınan</div>
+  </div>
+  <div class="kpi green">
+    <div class="kpi-num green" id="kpi-sat">—</div>
+    <div class="kpi-lbl">MEMNUNİYET</div>
+    <div class="kpi-sub" id="kpi-sat-sub">Beğenildi oranı</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-num cyan" id="kpi-lessons">—</div>
+    <div class="kpi-lbl">FENIX DERSİ</div>
+    <div class="kpi-sub">Öğrenilen kural</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-num purple" id="kpi-cost">—</div>
+    <div class="kpi-lbl">EĞİTİM MALİYETİ</div>
+    <div class="kpi-sub">Toplam API harcaması</div>
+  </div>
+</div>
+
+<!-- ANA GRID -->
+<div class="grid">
+
+  <!-- KATEGORİ PERFORMANSI -->
+  <div class="card">
+    <div class="card-title">📂 KATEGORİ PERFORMANSI <span class="badge" id="cat-badge">0 kategori</span></div>
+    <div id="cat-perf-list">
+      <div class="empty"><div class="empty-icon">📂</div>Henüz geri bildirim yok</div>
+    </div>
+  </div>
+
+  <!-- FEEDBACK DONUT -->
+  <div class="card">
+    <div class="card-title">🎯 GENEL GERİ BİLDİRİM</div>
+    <div class="donut-wrap">
+      <div class="donut">
+        <svg width="120" height="120" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="14"/>
+          <circle id="donut-liked" cx="60" cy="60" r="48" fill="none"
+            stroke="#3fb950" stroke-width="14" stroke-dasharray="0 302"
+            stroke-linecap="round" style="transition:stroke-dasharray 1s ease"/>
+          <circle id="donut-disliked" cx="60" cy="60" r="48" fill="none"
+            stroke="#f85149" stroke-width="14" stroke-dasharray="0 302" stroke-dashoffset="0"
+            stroke-linecap="round" style="transition:all 1s ease"/>
+        </svg>
+        <div class="donut-pct">
+          <div style="color:var(--green)" id="donut-pct-text">—</div>
+          <div class="donut-sub">beğeni</div>
+        </div>
+      </div>
+      <div class="donut-legend">
+        <div class="legend-item">
+          <div class="legend-dot" style="background:var(--green)"></div>
+          <span>✅ Beğenildi: <b id="leg-liked">0</b></span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:var(--red)"></div>
+          <span>❌ Yeniden Yap: <b id="leg-disliked">0</b></span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-dot" style="background:var(--purple)"></div>
+          <span>Toplam: <b id="leg-total">0</b></span>
+        </div>
+        <div style="margin-top:8px;padding:10px;background:rgba(255,255,255,.04);border-radius:10px;font-size:11px;color:var(--muted);line-height:1.5">
+          100 video beğendikçe<br>Fenix daha iyi üretir
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- YOL HARİTASI (FAZ) -->
+  <div class="card">
+    <div class="card-title">🗺️ ÜRÜN YOL HARİTASI</div>
+    <div class="timeline">
+
+      <div class="tl-item">
+        <div class="tl-dot-wrap"><div class="tl-dot done"></div></div>
+        <div class="tl-body">
+          <div class="tl-name">Faz 1 — Şablon + Animasyon</div>
+          <div class="tl-desc">Flux/Kling olmadan. Ken Burns animasyon, BPM sync, müzik. ~$0.001/video</div>
+          <span class="tl-tag done">✅ Hazır</span>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot-wrap"><div class="tl-dot active"></div></div>
+        <div class="tl-body">
+          <div class="tl-name">Faz 2 — Ses Dublaj (ElevenLabs)</div>
+          <div class="tl-desc">Bedrihan + eş sesi klonlanacak. Kategori tonlaması: lüks=yumuşak, spor=enerjik</div>
+          <span class="tl-tag active">🔥 Sıradaki</span>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot-wrap"><div class="tl-dot waiting"></div></div>
+        <div class="tl-body">
+          <div class="tl-name">Faz 3 — Lip-Sync (HeyGen)</div>
+          <div class="tl-desc">Sunucu videosu + ses senkronizasyonu. Türkçe presenter avatarı</div>
+          <span class="tl-tag waiting">⏳ Beklemede</span>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot-wrap"><div class="tl-dot waiting"></div></div>
+        <div class="tl-body">
+          <div class="tl-name">Faz 4 — Katalog Otomasyonu</div>
+          <div class="tl-desc">Trendyol entegratörü: ürün listesi → otomatik video üretim pipeline</div>
+          <span class="tl-tag waiting">⏳ Beklemede</span>
+        </div>
+      </div>
+
+      <div class="tl-item">
+        <div class="tl-dot-wrap"><div class="tl-dot waiting"></div></div>
+        <div class="tl-body">
+          <div class="tl-name">Faz 5 — AI Görsel (Flux/Kling)</div>
+          <div class="tl-desc">fal.ai bakiyesi yüklenince. Ürün sahnesi üretimi + video animasyonu</div>
+          <span class="tl-tag waiting">⏳ Bakiye gerekli</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MALİYET ANALİZİ -->
+  <div class="card">
+    <div class="card-title">💰 MALİYET ANALİZİ</div>
+    <table class="cost-table">
+      <thead>
+        <tr>
+          <th>Kalem</th>
+          <th style="text-align:right">Birim</th>
+          <th style="text-align:right">Durum</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Video üretim (şablon)</td>
+          <td class="num green">~$0.001</td>
+          <td class="num green">✅ Aktif</td>
+        </tr>
+        <tr>
+          <td>Gemini eğitim (API)</td>
+          <td class="num orange" id="cost-per-lesson">—</td>
+          <td class="num orange">Ölçülüyor</td>
+        </tr>
+        <tr>
+          <td>ElevenLabs ses klonlama</td>
+          <td class="num muted">~$0.01/dk</td>
+          <td class="num muted">⏳ Beklemede</td>
+        </tr>
+        <tr>
+          <td>Flux img2img (fal.ai)</td>
+          <td class="num muted">~$0.25/img</td>
+          <td class="num muted">⏳ Bakiye</td>
+        </tr>
+        <tr>
+          <td>Kling video animasyon</td>
+          <td class="num muted">~$0.50/vid</td>
+          <td class="num muted">⏳ Bakiye</td>
+        </tr>
+        <tr style="border-top:1px solid var(--border)">
+          <td style="font-weight:700">Faz 1 Toplam (100 video)</td>
+          <td class="num green" style="font-size:15px">~$0.10</td>
+          <td class="num green">✅</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:12px;padding:10px;background:rgba(63,185,80,.06);border:1px solid rgba(63,185,80,.2);border-radius:10px;font-size:11px;color:var(--muted);line-height:1.6">
+      💡 <b style="color:var(--green)">İlk 10 satıcı ücretsiz</b> — $5 bütçeyle ~5000 video üretebilirsin.<br>
+      Trendyol satıcı başına ortalama <b style="color:var(--orange)">1000 ürün</b> = <b style="color:var(--orange)">$1</b>/satıcı/ay.
+    </div>
+  </div>
+
+  <!-- RAKİP KARŞILAŞTIRMA — FULL WIDTH -->
+  <div class="card grid-full">
+    <div class="card-title">🥊 RAKİP KARŞILAŞTIRMA <span class="badge">2026 Q1</span></div>
+    <div style="overflow-x:auto">
+      <table class="comp-table">
+        <thead>
+          <tr>
+            <th>Platform</th>
+            <th>Fiyat</th>
+            <th>Türkçe Ses</th>
+            <th>BPM Sync</th>
+            <th>Ses Klonlama</th>
+            <th>Lip-Sync</th>
+            <th>360° Video</th>
+            <th>Katalog Oto.</th>
+            <th>Trendyol</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Topview AI</td>
+            <td class="comp-price">$20-50</td>
+            <td><span class="comp-x">✕</span></td>
+            <td><span class="comp-x">✕</span></td>
+            <td><span class="comp-x">✕</span></td>
+            <td><span class="comp-x">✕</span></td>
+            <td><span class="comp-x">✕</span></td>
+            <td><span class="comp-x">✕</span></td>
+            <td><span class="comp-x">✕</span></td>
+          </tr>
+          <tr>
+            <td>Creatify AI</td>
+            <td class="comp-price">$39-99</td>
+            <td><span class="comp-x">✕</span></td>
+            <td><span class="comp-x">✕</span></td>
+            <td><span class="comp-x">✕</span></td>
+            <td style="color:var(--orange)">△</td>
+            <td><span class="comp-x">✕</span></td>
+            <td><span class="comp-x">✕</span></td>
+            <td><span class="comp-x">✕</span></td>
+          </tr>
+          <tr>
+            <td>Canva Video</td>
+            <td class="comp-price">$13-30</td>
+            <td style="color:var(--orange)">△</td>
+            <td><span class="comp-x">✕</span></td>
+            <td><span class="comp-x">✕</span></td>
+            <td><span class="comp-x">✕</span></td>
+            <td><span class="comp-x">✕</span></td>
+            <td><span class="comp-x">✕</span></td>
+            <td><span class="comp-x">✕</span></td>
+          </tr>
+          <tr class="fenix-row">
+            <td>🔥 Fenix PhotoReel</td>
+            <td class="comp-price" style="color:var(--green)">TBD</td>
+            <td><span class="comp-check">✓</span></td>
+            <td><span class="comp-check">✓</span></td>
+            <td><span class="comp-check">✓</span></td>
+            <td><span class="comp-check">✓</span></td>
+            <td><span class="comp-check">✓</span></td>
+            <td><span class="comp-check">✓</span></td>
+            <td><span class="comp-check">✓</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:12px;font-size:11px;color:var(--muted)">
+      △ = Kısmi destek &nbsp;·&nbsp; Kaynak: topview.ai, creatify.ai (2026-03-28)
+    </div>
+  </div>
+
+  <!-- FAL.AI BAKİYE UYARISI -->
+  <div class="card grid-full" id="fal-warning" style="border-color:rgba(248,81,73,.3);background:rgba(248,81,73,.06)">
+    <div class="card-title" style="color:var(--red)">⚠️ YAPILACAKLAR — ÖNCE BUNLAR</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+      <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:14px">
+        <div style="font-size:14px;font-weight:700;color:var(--orange);margin-bottom:6px">1. fal.ai bakiyesi</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5">Flux/Kling çalışmıyor.<br>~$20 yükle → <b style="color:var(--cyan)">fal.ai/dashboard/billing</b></div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:14px">
+        <div style="font-size:14px;font-weight:700;color:var(--orange);margin-bottom:6px">2. Ses kaydı</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5">Sen + eşin ~2 dk Türkçe ses kaydet.<br>ElevenLabs klonlama için.</div>
+      </div>
+      <div style="background:rgba(255,255,255,.04);border-radius:10px;padding:14px">
+        <div style="font-size:14px;font-weight:700;color:var(--orange);margin-bottom:6px">3. İlk 10 satıcı</div>
+        <div style="font-size:12px;color:var(--muted);line-height:1.5">Trendyol satıcılarına DM at.<br>Ücretsiz demo + geri bildirim al.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+const BASE = window.location.origin;
+
+const CAT_EMOJI = {
+  gida:'🍕', kozmetik:'💄', giyim:'👗', elektronik:'📱', mobilya:'🛋️',
+  motor:'🏍️', suAlti:'🤿', parasut:'🪂', snowboard:'🏂', tekne:'⛵',
+  pist:'🏁', oyuncak:'🧸', spor:'⚽', kitap:'📚', beyazesya:'🏠'
+};
+
+function toast(msg, tip) {
+  const t = document.getElementById('toast');
+  t.style.background = tip === 'hata' ? 'rgba(248,81,73,.9)' : 'rgba(63,185,80,.9)';
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._to);
+  t._to = setTimeout(() => t.style.opacity = '0', 3000);
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── DONUT CHART ──
+function updateDonut(liked, disliked) {
+  const total = liked + disliked;
+  const circ = 2 * Math.PI * 48; // 301.6
+  const likedPct = total > 0 ? liked / total : 0;
+  const likedDash = (likedPct * circ).toFixed(1);
+  const dislikedPct = total > 0 ? disliked / total : 0;
+  const dislikedDash = (dislikedPct * circ).toFixed(1);
+  const likedOffset = 0;
+  const dislikedOffset = -(likedPct * circ);
+
+  const dl = document.getElementById('donut-liked');
+  const dd = document.getElementById('donut-disliked');
+  if (dl) {
+    dl.setAttribute('stroke-dasharray', `${likedDash} ${circ}`);
+  }
+  if (dd) {
+    dd.setAttribute('stroke-dasharray', `${dislikedDash} ${circ}`);
+    dd.setAttribute('stroke-dashoffset', dislikedOffset.toFixed(1));
+  }
+
+  const pctEl = document.getElementById('donut-pct-text');
+  if (pctEl) pctEl.textContent = total > 0 ? Math.round(likedPct * 100) + '%' : '—';
+
+  const ll = document.getElementById('leg-liked');
+  const ld = document.getElementById('leg-disliked');
+  const lt = document.getElementById('leg-total');
+  if (ll) ll.textContent = liked;
+  if (ld) ld.textContent = disliked;
+  if (lt) lt.textContent = total;
+}
+
+// ── KATEGORİ PERFORMANSI ──
+function renderCatPerf(categories) {
+  const el = document.getElementById('cat-perf-list');
+  const badge = document.getElementById('cat-badge');
+  const entries = Object.entries(categories);
+
+  if (entries.length === 0) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📂</div>Henüz geri bildirim yok</div>';
+    return;
+  }
+
+  badge.textContent = entries.length + ' kategori';
+
+  // Satisfaction'a göre sırala
+  entries.sort((a,b) => {
+    const sa = a[1].satisfaction ?? -1;
+    const sb = b[1].satisfaction ?? -1;
+    return sb - sa;
+  });
+
+  el.innerHTML = entries.map(([cat, data]) => {
+    const pct = data.satisfaction ?? 0;
+    const isGood = pct >= 70;
+    const isMid = pct >= 40 && pct < 70;
+    const scoreClass = isGood ? '' : isMid ? 'mid' : 'bad';
+    const barClass = isGood ? 'good' : 'bad';
+    const emoji = CAT_EMOJI[cat] || '📦';
+    const hasData = data.total > 0;
+
+    return `
+      <div class="cat-row">
+        <div class="cat-emoji">${emoji}</div>
+        <div class="cat-info">
+          <div class="cat-name-row">
+            <div class="cat-name">${esc(cat)}</div>
+            <div class="cat-score ${scoreClass}">${hasData ? pct + '%' : '—'}</div>
+          </div>
+          <div class="cat-bar-wrap">
+            <div class="cat-bar ${barClass}" style="width:${hasData ? pct : 0}%"></div>
+          </div>
+          <div class="cat-counts">
+            <span class="liked">✅ ${data.liked}</span>
+            <span class="disliked">❌ ${data.disliked}</span>
+            <span style="color:var(--muted)">(${data.total} toplam)</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ── KPI GÜNCELLE ──
+function updateKPIs(overview) {
+  const totalEl = document.getElementById('kpi-total');
+  const satEl = document.getElementById('kpi-sat');
+  const lessonsEl = document.getElementById('kpi-lessons');
+  const costEl = document.getElementById('kpi-cost');
+  const satSubEl = document.getElementById('kpi-sat-sub');
+  const totalSubEl = document.getElementById('kpi-total-sub');
+
+  if (totalEl) totalEl.textContent = overview.totalVideos || 0;
+  if (satEl) satEl.textContent = overview.satisfaction !== null ? overview.satisfaction + '%' : '—';
+  if (satSubEl) satSubEl.textContent = overview.satisfaction !== null
+    ? (overview.satisfaction >= 70 ? '✅ Hedef: %70+' : '📈 Hedef: %70')
+    : 'Geri bildirim bekleniyor';
+  if (totalSubEl) totalSubEl.textContent = overview.liked + ' beğeni, ' + overview.disliked + ' yeniden';
+
+  const training = overview.training || {};
+  if (lessonsEl) lessonsEl.textContent = training.totalLessons || 0;
+  if (costEl) costEl.textContent = training.totalCost ? '$' + parseFloat(training.totalCost).toFixed(4) : '$0';
+
+  // Maliyet/ders hesapla
+  const cpl = document.getElementById('cost-per-lesson');
+  if (cpl && training.totalLessons > 0 && training.totalCost > 0) {
+    const perLesson = training.totalCost / training.totalLessons;
+    cpl.textContent = '$' + perLesson.toFixed(5) + '/ders';
+  }
+}
+
+// ── ANA YÜKLEme ──
+async function loadAll() {
+  try {
+    // Önce feedback/stats'tan yükle (daha hızlı)
+    const [fbRes, trainRes] = await Promise.allSettled([
+      fetch(BASE + '/api/feedback/stats').then(r => r.json()),
+      fetch(BASE + '/api/fenix/train/status').then(r => r.json())
+    ]);
+
+    const fb = fbRes.status === 'fulfilled' && fbRes.value.ok ? fbRes.value.stats : null;
+    const train = trainRes.status === 'fulfilled' && trainRes.value.ok ? trainRes.value : {};
+
+    const overview = {
+      totalVideos: fb?.total || 0,
+      liked: fb?.liked || 0,
+      disliked: fb?.disliked || 0,
+      satisfaction: fb?.total > 0 ? Math.round((fb.liked / fb.total) * 100) : null,
+      categories: {},
+      training: {
+        totalLessons: train.totalLessons || 0,
+        totalCost: train.totalCost || 0,
+        phases: train.phases || []
+      }
+    };
+
+    // Kategori verisi
+    if (fb?.categories) {
+      for (const [cat, data] of Object.entries(fb.categories)) {
+        const total = (data.liked || 0) + (data.disliked || 0);
+        overview.categories[cat] = {
+          liked: data.liked || 0,
+          disliked: data.disliked || 0,
+          total,
+          satisfaction: total > 0 ? Math.round((data.liked / total) * 100) : null
+        };
+      }
+    }
+
+    updateKPIs(overview);
+    updateDonut(overview.liked, overview.disliked);
+    if (Object.keys(overview.categories).length > 0) {
+      renderCatPerf(overview.categories);
+    }
+
+    toast('✅ Veriler güncellendi', 'ok');
+  } catch(e) {
+    toast('❌ Yükleme hatası: ' + e.message, 'hata');
+  }
+}
+
+// İlk yükle
+loadAll();
+
+// 60 saniyede bir otomatik yenile
+setInterval(loadAll, 60000);
+</script>
+</body>
+</html>
