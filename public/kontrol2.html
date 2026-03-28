@@ -732,20 +732,22 @@ function sendChat() {
   var bubble = addMsg('', currentModel === 'fenix' ? 'fenix' : currentModel);
   bubble.innerHTML = '<span class="loading-dots"></span>';
 
+  // API endpoint — Fenix de Gemini kullanır ama sistem bağlamıyla
   var endpoint = currentModel === 'claude' ? '/api/chat/claude' : '/api/chat/gemini';
-  var body = { message: text, model: currentModel };
 
-  // Fenix modunda beyin bağlamı ekle
+  // Fenix modunda sistem bağlamını mesajın önüne ekle
+  var finalText = text;
   if (currentModel === 'fenix') {
-    body.systemContext = 'Sen Fenix AI. Ateşten doğan, video üretimi konusunda uzmanlaşmış bir yapay zeka. Bedrihan Özdoğan\'ın dijital asistanısın. Reels video üretimi, kategori analizi, BPM senkronizasyonu konularında uzmansın. Türkçe ve özgün bir dille cevap ver.';
+    finalText = '[SİSTEM: Sen Fenix AI. Ateşten doğan, video üretimi konusunda uzmanlaşmış yapay zeka. Bedrihan\'ın dijital asistanısın. Reels video, kategori analizi, trend, BPM konularında uzmansın. Kısa, özgün, Türkçe cevap ver. Konu dışına çıkma.]\n\nKULLANICI: ' + text;
   }
 
-  ft(endpoint, 'POST', body).then(function(r) {
+  // API { text } bekliyor — message değil!
+  ft(endpoint, 'POST', { text: finalText }).then(function(r) {
     var reply = (r && (r.reply || r.response || r.text || r.message)) || '(cevap alınamadı)';
     bubble.textContent = reply;
     document.getElementById('chat-messages').scrollTop = 9999;
-  }).catch(function() {
-    bubble.textContent = '⚠ Bağlantı hatası';
+  }).catch(function(err) {
+    bubble.textContent = '⚠ Bağlantı hatası: ' + (err && err.message || 'bilinmiyor');
   });
 }
 
