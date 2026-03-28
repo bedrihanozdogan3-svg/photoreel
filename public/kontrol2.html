@@ -440,6 +440,11 @@ table.kt tr.quota-full td{background:rgba(255,107,26,.05)}
     <span class="nav-icon">🌐</span>
     <span class="nav-label">AĞ</span>
   </button>
+  <div class="nav-sep"></div>
+  <button class="nav-btn" data-tab="ses">
+    <span class="nav-icon">🎙️</span>
+    <span class="nav-label">SES</span>
+  </button>
 </div>
 
 <!-- ══ MAIN ══ -->
@@ -596,6 +601,134 @@ table.kt tr.quota-full td{background:rgba(255,107,26,.05)}
       </div>
     </div>
 
+    <!-- SES & DUBLAJ -->
+    <div class="tab-panel" id="tab-ses">
+      <div style="padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:14px">
+
+        <!-- Durum Kartları -->
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+          <div style="background:var(--void-card);border:1px solid var(--char-border);border-radius:6px;padding:14px;text-align:center">
+            <div style="font-size:22px;margin-bottom:6px">🎤</div>
+            <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--ash-muted)">KONUŞMA → METİN</div>
+            <div style="font-size:12px;font-weight:600;color:var(--ember-bright);margin-top:4px">Deepgram Nova-3</div>
+            <div style="font-size:10px;color:var(--ash-muted);margin-top:2px">$0.03/1K karakter · 200ms</div>
+            <div id="stt-status" style="margin-top:6px;font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:3px;display:inline-block;background:rgba(255,107,26,.1);color:var(--ash-muted);border:1px solid var(--char-border)">BAĞLI DEĞİL</div>
+          </div>
+          <div style="background:var(--void-card);border:1px solid var(--char-border);border-radius:6px;padding:14px;text-align:center">
+            <div style="font-size:22px;margin-bottom:6px">🌍</div>
+            <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--ash-muted)">ÇEVİRİ</div>
+            <div style="font-size:12px;font-weight:600;color:var(--ember-bright);margin-top:4px">GPT-4o mini</div>
+            <div style="font-size:10px;color:var(--ash-muted);margin-top:2px">$0.15/1M token · Kültürel</div>
+            <div style="margin-top:6px;font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:3px;display:inline-block;background:rgba(63,185,80,.1);color:#3fb950;border:1px solid rgba(63,185,80,.3)">✓ GEMINI HAZIR</div>
+          </div>
+          <div style="background:var(--void-card);border:1px solid var(--char-border);border-radius:6px;padding:14px;text-align:center">
+            <div style="font-size:22px;margin-bottom:6px">🔊</div>
+            <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--ash-muted)">SES SENTEZİ (TTS)</div>
+            <div style="font-size:12px;font-weight:600;color:var(--ember-bright);margin-top:4px">ElevenLabs v3</div>
+            <div style="font-size:10px;color:var(--ash-muted);margin-top:2px">$206/1M karakter · 75ms</div>
+            <div id="tts-status" style="margin-top:6px;font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:3px;display:inline-block;background:rgba(255,107,26,.1);color:var(--ash-muted);border:1px solid var(--char-border)">BAĞLI DEĞİL</div>
+          </div>
+          <div style="background:var(--void-card);border:1px solid var(--char-border);border-radius:6px;padding:14px;text-align:center">
+            <div style="font-size:22px;margin-bottom:6px">👄</div>
+            <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--ash-muted)">DUDAK SENKRONU</div>
+            <div style="font-size:12px;font-weight:600;color:var(--ember-bright);margin-top:4px">Sync.so</div>
+            <div style="font-size:10px;color:var(--ash-muted);margin-top:2px">Kullanım bazlı · Near-zero</div>
+            <div id="sync-status" style="margin-top:6px;font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:3px;display:inline-block;background:rgba(255,107,26,.1);color:var(--ash-muted);border:1px solid var(--char-border)">BAĞLI DEĞİL</div>
+          </div>
+        </div>
+
+        <!-- Pipeline Akışı -->
+        <div style="background:var(--void-card);border:1px solid var(--char-border);border-radius:6px;padding:16px">
+          <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--ash-muted);margin-bottom:14px">DUBLAJ PİPELINE</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:4px;background:rgba(255,107,26,.06);border:1px solid rgba(255,107,26,.15)">
+              <span style="font-size:16px">📁</span>
+              <div><div style="font-size:11px;font-weight:600;color:var(--ash-text)">Video Yükle</div><div style="font-size:10px;color:var(--ash-muted)">MP4, MOV, AVI</div></div>
+            </div>
+            <div style="text-align:center;color:var(--ember-core);font-size:12px">↓</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:4px;background:rgba(63,185,80,.06);border:1px solid rgba(63,185,80,.15)">
+              <span style="font-size:16px">🎤</span>
+              <div><div style="font-size:11px;font-weight:600;color:var(--ash-text)">Deepgram Nova-3 → Transkript</div><div style="font-size:10px;color:var(--ash-muted)">Konuşmacı tespiti + zaman damgaları</div></div>
+            </div>
+            <div style="text-align:center;color:var(--ember-core);font-size:12px">↓</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:4px;background:rgba(0,200,255,.06);border:1px solid rgba(0,200,255,.12)">
+              <span style="font-size:16px">🌍</span>
+              <div><div style="font-size:11px;font-weight:600;color:var(--ash-text)">GPT-4o mini → Kültürel Çeviri</div><div style="font-size:10px;color:var(--ash-muted)">Deyimler, bağlam, marka terimleri korunur</div></div>
+            </div>
+            <div style="text-align:center;color:var(--ember-core);font-size:12px">↓</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:4px;background:rgba(212,168,83,.06);border:1px solid rgba(212,168,83,.2)">
+              <span style="font-size:16px">🔊</span>
+              <div><div style="font-size:11px;font-weight:600;color:var(--ash-text)">ElevenLabs v3 → Ses Klonlama + TTS</div><div style="font-size:10px;color:var(--ash-muted)">3 dk örnekle klonlama, duygu kontrolü</div></div>
+            </div>
+            <div style="text-align:center;color:var(--ember-core);font-size:12px">↓</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:4px;background:rgba(255,107,26,.06);border:1px solid rgba(255,107,26,.15)">
+              <span style="font-size:16px">👄</span>
+              <div><div style="font-size:11px;font-weight:600;color:var(--ash-text)">Sync.so → Dudak Senkronu</div><div style="font-size:10px;color:var(--ash-muted)">Profil açılarında da çalışır</div></div>
+            </div>
+            <div style="text-align:center;color:var(--ember-core);font-size:12px">↓</div>
+            <div style="display:flex;align-items:center;gap:10px;padding:8px;border-radius:4px;background:rgba(255,255,255,.04);border:1px solid var(--char-border)">
+              <span style="font-size:16px">✅</span>
+              <div><div style="font-size:11px;font-weight:600;color:var(--ash-text)">İnsan Onay + Dışa Aktar</div><div style="font-size:10px;color:var(--ash-muted)">Reels, TikTok, YouTube Shorts</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Maliyet Karşılaştırma -->
+        <div style="background:var(--void-card);border:1px solid var(--char-border);border-radius:6px;padding:16px">
+          <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--ash-muted);margin-bottom:12px">MALİYET PAKETLERİ</div>
+          <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">
+            <div style="padding:10px;border-radius:4px;border:1px solid rgba(255,107,26,.3);background:rgba(255,107,26,.06)">
+              <div style="font-size:10px;font-weight:700;color:var(--ember-bright)">🚀 BAŞLANGIÇ</div>
+              <div style="font-size:13px;font-weight:700;color:var(--ash-text);margin:4px 0">$50-80/ay</div>
+              <div style="font-size:10px;color:var(--ash-muted);line-height:1.6">Fish Audio + Deepgram<br>+ Sync.so + GPT-4o mini</div>
+            </div>
+            <div style="padding:10px;border-radius:4px;border:1px solid rgba(212,168,83,.3);background:rgba(212,168,83,.06)">
+              <div style="font-size:10px;font-weight:700;color:var(--phoenix-gold)">👑 BÜYÜYÜNCE</div>
+              <div style="font-size:13px;font-weight:700;color:var(--ash-text);margin:4px 0">$150-300/ay</div>
+              <div style="font-size:10px;color:var(--ash-muted);line-height:1.6">ElevenLabs v3 + Rask AI<br>+ Cartesia Sonic-3</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fenix Fark -->
+        <div style="background:var(--void-card);border:1px solid var(--char-border);border-radius:6px;padding:16px">
+          <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--ash-muted);margin-bottom:12px">FENİX FARK YARATACAK</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--ember-bright);flex-shrink:0">🐦</span><div style="font-size:11px;color:var(--ash-text)"><strong>Phoenix Voice ID</strong> — 30 sn örnekle klonlama (rakipler 3+ dk istiyor)</div></div>
+            <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--ember-bright);flex-shrink:0">💓</span><div style="font-size:11px;color:var(--ash-text)"><strong>Duygu Haritası</strong> — Orijinal duygu grafiğini çıkar, dublajda aynen uygula</div></div>
+            <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--ember-bright);flex-shrink:0">🎵</span><div style="font-size:11px;color:var(--ash-text)"><strong>Beat Sync Dublaj</strong> — Cümleler müzik beat'lerine otomatik hizalanır</div></div>
+            <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--ember-bright);flex-shrink:0">🔒</span><div style="font-size:11px;color:var(--ash-text)"><strong>Veri Güvencesi</strong> — Ses eğitimde kullanılmaz garantisi (rakiplerin en büyük açığı)</div></div>
+            <div style="display:flex;gap:8px;align-items:flex-start"><span style="color:var(--ember-bright);flex-shrink:0">🏷️</span><div style="font-size:11px;color:var(--ash-text)"><strong>Şeffaflık Etiketi</strong> — "AI dublajı" otomatik etiketi, AB yasası uyumlu</div></div>
+          </div>
+        </div>
+
+        <!-- API Key Giriş Alanları -->
+        <div style="background:var(--void-card);border:1px solid rgba(255,107,26,.25);border-radius:6px;padding:16px">
+          <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--ember-bright);margin-bottom:12px">🔑 API BAĞLANTILARI</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div>
+              <div style="font-size:10px;letter-spacing:1px;color:var(--ash-muted);margin-bottom:4px">ELEVENLABS API KEY</div>
+              <div style="display:flex;gap:6px">
+                <input type="password" id="xi-key-input" placeholder="sk-..." style="flex:1;background:rgba(255,255,255,.04);border:1px solid var(--char-border);border-radius:4px;padding:7px 10px;font-size:11px;color:var(--ash-text);outline:none;font-family:'Fira Code',monospace">
+                <button id="btn-xi-save" style="background:rgba(255,107,26,.15);border:1px solid rgba(255,107,26,.3);border-radius:4px;padding:7px 12px;font-size:10px;color:var(--ember-bright);cursor:pointer;font-family:'Cinzel',serif;letter-spacing:1px">KAYDET</button>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:10px;letter-spacing:1px;color:var(--ash-muted);margin-bottom:4px">DEEPGRAM API KEY</div>
+              <div style="display:flex;gap:6px">
+                <input type="password" id="dg-key-input" placeholder="..." style="flex:1;background:rgba(255,255,255,.04);border:1px solid var(--char-border);border-radius:4px;padding:7px 10px;font-size:11px;color:var(--ash-text);outline:none;font-family:'Fira Code',monospace">
+                <button id="btn-dg-save" style="background:rgba(255,107,26,.15);border:1px solid rgba(255,107,26,.3);border-radius:4px;padding:7px 12px;font-size:10px;color:var(--ember-bright);cursor:pointer;font-family:'Cinzel',serif;letter-spacing:1px">KAYDET</button>
+              </div>
+            </div>
+          </div>
+          <div style="margin-top:10px;font-size:10px;color:var(--ash-muted);line-height:1.6">
+            ⓘ Key'ler Cloud Run'a env var olarak eklenir. Tarayıcıda saklanmaz.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
     <!-- DOMAIN / AĞ -->
     <div class="tab-panel" id="tab-domain">
       <div class="domain-wrap">
@@ -694,6 +827,7 @@ function switchTab(tab) {
   if (tab === 'gelir') loadGelir();
   if (tab === 'beyin') loadBeyin();
   if (tab === 'domain') loadDomain();
+  if (tab === 'ses') loadSes();
 }
 
 // ══ MODEL SEÇİMİ ══
@@ -994,6 +1128,34 @@ function loadDomain() {
   }).catch(function() { setDot('dot-gemini-svc', 'warn'); setDot('dot-claude-svc', 'warn'); });
 }
 
+// ══ SES & DUBLAJ ══
+function loadSes() {
+  // ElevenLabs key kontrolü
+  ft('/api/version').then(function(r) {
+    if (!r) return;
+    var xiOk = r.services && r.services.elevenlabs;
+    var dgOk = r.services && r.services.deepgram;
+    var el = document.getElementById('stt-status');
+    var tts = document.getElementById('tts-status');
+    if (el) { el.textContent = dgOk ? '✓ BAĞLI' : 'BAĞLI DEĞİL'; el.style.color = dgOk ? '#3fb950' : ''; el.style.borderColor = dgOk ? 'rgba(63,185,80,.3)' : ''; }
+    if (tts) { tts.textContent = xiOk ? '✓ BAĞLI' : 'BAĞLI DEĞİL'; tts.style.color = xiOk ? '#3fb950' : ''; tts.style.borderColor = xiOk ? 'rgba(63,185,80,.3)' : ''; }
+  }).catch(function() {});
+}
+
+// API key kaydet → Cloud Run env var olarak ekle (admin API üzerinden)
+function saveApiKey(envName, value, statusElId) {
+  if (!value || value.length < 8) { toast('Geçerli bir key gir', 'warn'); return; }
+  ft('/api/admin/env', 'POST', { key: envName, value: value }).then(function(r) {
+    if (r && r.ok) {
+      toast(envName + ' kaydedildi ✓', 'ok');
+      var el = document.getElementById(statusElId);
+      if (el) { el.textContent = '✓ BAĞLI'; el.style.color = '#3fb950'; }
+    } else {
+      toast('Hata: ' + (r && r.error || 'bilinmiyor'), 'err');
+    }
+  }).catch(function() { toast('Bağlantı hatası', 'err'); });
+}
+
 function setDot(id, status) {
   var el = document.getElementById(id);
   if (!el) return;
@@ -1016,6 +1178,8 @@ document.addEventListener('click', function(e) {
   if (t.id === 'ap-ok' && pendingApprovalId) { respondApproval(true); return; }
   if (t.id === 'ap-no' && pendingApprovalId) { respondApproval(false); return; }
   if (t.id === 'btn-domain-check') { loadDomain(); return; }
+  if (t.id === 'btn-xi-save') { saveApiKey('ELEVENLABS_API_KEY', document.getElementById('xi-key-input').value, 'stt-status'); return; }
+  if (t.id === 'btn-dg-save') { saveApiKey('DEEPGRAM_API_KEY', document.getElementById('dg-key-input').value, 'tts-status'); return; }
 });
 
 // Enter to send

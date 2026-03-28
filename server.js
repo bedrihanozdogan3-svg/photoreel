@@ -204,8 +204,9 @@ app.get('/qr', requireAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'qr.html'));
 });
 
-// Versiyon & sistem sağlığı (kontrol paneli için)
+// Versiyon & sistem sağlığı (kontrol paneli için) — TEK endpoint
 app.get('/api/version', (req, res) => {
+  res.set('Cache-Control', 'no-cache');
   const pkg = (() => { try { return require('./package.json'); } catch { return {}; } })();
   res.json({
     ok: true,
@@ -215,10 +216,14 @@ app.get('/api/version', (req, res) => {
     uptime: Math.floor(process.uptime()),
     nodeVersion: process.version,
     timestamp: new Date().toISOString(),
+    revision: process.env.K_REVISION || 'dev',
+    ts: process.env.DEPLOY_TS || Date.now(),
     services: {
       firestore: !!process.env.GOOGLE_APPLICATION_CREDENTIALS || !!process.env.FIREBASE_PROJECT_ID,
       gemini: !!process.env.GEMINI_API_KEY,
-      fal: !!process.env.FAL_KEY
+      fal: !!process.env.FAL_KEY,
+      elevenlabs: !!process.env.ELEVENLABS_API_KEY,
+      deepgram: !!process.env.DEEPGRAM_API_KEY
     }
   });
 });
@@ -631,15 +636,7 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-// Deployment versiyonu — Cloud Run K_REVISION env var'ı otomatik sağlar
-// Sayfalar bunu poll edip yeni deploy algıladığında kendini yeniler
-app.get('/api/version', (req, res) => {
-  res.set('Cache-Control', 'no-cache');
-  res.json({
-    revision: process.env.K_REVISION || 'dev-' + process.env.NODE_ENV,
-    ts: process.env.DEPLOY_TS || Date.now()
-  });
-});
+// /api/version — yukarıda tek endpoint olarak tanımlandı
 
 // Health check (Cloud Run için)
 app.get('/health', (req, res) => {
