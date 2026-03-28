@@ -1,14 +1,17 @@
 /**
  * Fenix AI — Video Üretim API
  * fal.ai Kling v2.1 ile ürün fotoğrafından reels video üretir.
+ * Luma Dream Machine Ray-2 ile 360° orbit ürün videosu üretir.
  * POST /api/generate
+ * POST /api/generate/360
  */
 
 const express = require('express');
 const router  = express.Router();
 const logger  = require('../utils/logger');
 
-const FAL_KEY = process.env.FAL_KEY;
+const FAL_KEY  = process.env.FAL_KEY;
+const LUMA_KEY = process.env.LUMA_KEY;
 
 // Kategori → Türkçe prompt şablonu
 const KATEGORI_PROMPT = {
@@ -161,16 +164,176 @@ async function uploadToFal(base64String) {
 }
 
 /**
+ * POST /api/generate/360
+ * Body: {
+ *   imageBase64: string,   // base64 ürün fotoğrafı
+ *   imageUrl: string,      // veya direkt URL
+ *   kategori: string,
+ *   sirketAdi: string,
+ *   customerId: string,
+ *   yon: 'sol'|'sag'       // orbit yönü (varsayılan: sol)
+ * }
+ * Luma Dream Machine Ray-2 ile 360° orbit video üretir.
+ */
+router.post('/360', async (req, res) => {
+  if (!LUMA_KEY) {
+    return res.status(503).json({ ok: false, error: '360° video servisi henüz yapılandırılmadı. Luma API key gerekli.' });
+  }
+
+  const { imageBase64, imageUrl, kategori, sirketAdi, customerId, yon } = req.body || {};
+
+  if (!imageBase64 && !imageUrl) {
+    return res.status(400).json({ ok: false, error: 'Ürün fotoğrafı gerekli.' });
+  }
+  if (!customerId) {
+    return res.status(400).json({ ok: false, error: 'Müşteri kimliği gerekli.' });
+  }
+
+  try {
+    // 1. Fotoğrafı fal.ai storage'a yükle (base64 ise — Luma da URL kabul eder)
+    let productImageUrl = imageUrl;
+    if (imageBase64 && !imageUrl) {
+      if (!FAL_KEY) {
+        return res.status(503).json({ ok: false, error: 'Fotoğraf yükleme için FAL_KEY gerekli.' });
+      }
+      productImageUrl = await uploadToFal(imageBase64);
+    }
+
+    // 2. 360° orbit prompt oluştur
+    const orbitYon  = yon === 'sag' ? 'right' : 'left';
+    const katPrompt = KATEGORI_360_PROMPT[kategori] || KATEGORI_360_PROMPT.genel;
+    const sirketEki = sirketAdi ? `, branded for ${sirketAdi}` : '';
+    const finalPrompt = `Camera slowly orbits 360 degrees ${orbitYon} around the product, smooth cinematic motion, ${katPrompt}${sirketEki}`;
+
+    logger.info('360° video üretimi başlatıldı', { customerId, kategori, yon: orbitYon });
+
+    // 3. Luma Dream Machine Ray-2 çağrısı
+    const lumaRes = await fetch('https://api.lumalabs.ai/dream-machine/v1/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LUMA_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        prompt: finalPrompt,
+        model: 'ray-2',
+        resolution: '720p',
+        duration: '5s',
+        aspect_ratio: '1:1',
+        loop: true,
+        keyframes: {
+          frame0: {
+            type: 'image',
+            url: productImageUrl
+          }
+        }
+      })
+    });
+
+    if (!lumaRes.ok) {
+      const errText = await lumaRes.text();
+      logger.error('Luma API hatası', { status: lumaRes.status, body: errText.slice(0, 200) });
+      return res.status(502).json({ ok: false, error: `360° video servisi hatası (${lumaRes.status})` });
+    }
+
+    const lumaData = await lumaRes.json();
+    const generationId = lumaData?.id;
+
+    if (!generationId) {
+      logger.error('Luma generation ID yok', { lumaData });
+      return res.status(502).json({ ok: false, error: '360° video başlatılamadı.' });
+    }
+
+    // 4. Luma asenkron — polling ile sonucu bekle (max 120sn)
+    const videoUrl = await pollLumaResult(generationId);
+
+    logger.info('360° video üretildi', { customerId, videoUrl: videoUrl.slice(0, 60) });
+
+    return res.json({
+      ok: true,
+      videoUrl,
+      type: '360-orbit',
+      duration: 5,
+      prompt: finalPrompt
+    });
+
+  } catch (e) {
+    logger.error('360° Generate hatası', { error: e.message, stack: e.stack?.slice(0, 200) });
+    return res.status(500).json({ ok: false, error: '360° video üretimi sırasında hata oluştu.' });
+  }
+});
+
+/**
+ * Luma generation tamamlanana kadar poll et (max 120sn)
+ */
+async function pollLumaResult(generationId, maxWaitMs = 120000) {
+  const startTime = Date.now();
+  const pollInterval = 4000; // 4sn aralıklarla kontrol
+
+  while (Date.now() - startTime < maxWaitMs) {
+    await new Promise(r => setTimeout(r, pollInterval));
+
+    const pollRes = await fetch(`https://api.lumalabs.ai/dream-machine/v1/generations/${generationId}`, {
+      headers: { 'Authorization': `Bearer ${LUMA_KEY}` }
+    });
+
+    if (!pollRes.ok) continue;
+
+    const data = await pollRes.json();
+    const state = data?.state;
+
+    if (state === 'completed') {
+      const url = data?.assets?.video;
+      if (url) return url;
+      throw new Error('Luma video URL boş');
+    }
+
+    if (state === 'failed') {
+      const reason = data?.failure_reason || 'Bilinmeyen hata';
+      throw new Error(`Luma üretim başarısız: ${reason}`);
+    }
+
+    logger.info('Luma polling...', { generationId, state, elapsed: Date.now() - startTime });
+  }
+
+  throw new Error('360° video zaman aşımı (120sn)');
+}
+
+// Kategori → 360° orbit arka plan / atmosfer ipuçları
+const KATEGORI_360_PROMPT = {
+  gida:       'clean white table surface, appetizing warm lighting',
+  icecek:     'dark bar counter, dramatic backlight, condensation',
+  kozmetik:   'soft white marble surface, elegant studio lighting',
+  parfum:     'black velvet surface, moody dramatic atmosphere, smoke wisps',
+  giyim:      'minimal clean studio, neutral grey background',
+  ayakkabi:   'concrete urban surface, teal-orange color grade',
+  elektronik: 'dark tech surface, blue LED ambient lighting',
+  spor:       'gym floor, high-energy lighting, teal-orange grade',
+  taki:       'black velvet, sparkle highlights, luxury atmosphere',
+  aksesuar:   'cream linen surface, soft natural light',
+  'ev-yasam': 'warm wooden surface, golden hour window light',
+  genel:      'clean minimal studio, professional lighting'
+};
+
+/**
  * GET /api/generate/status
- * fal.ai bağlantı testi
+ * fal.ai + Luma bağlantı testi
  */
 router.get('/status', (req, res) => {
   res.json({
     ok: true,
-    connected: !!FAL_KEY,
-    model: 'kling-v2.1-standard',
-    pricePerVideo: '$0.35 (5sn)',
-    modelsAvailable: ['kling-v2.1-standard', 'wan-v2.5', 'kling-v2.1-pro']
+    reels: {
+      connected: !!FAL_KEY,
+      model: 'kling-v2.1-standard',
+      pricePerVideo: '$0.35 (5sn)',
+      modelsAvailable: ['kling-v2.1-standard', 'wan-v2.5', 'kling-v2.1-pro']
+    },
+    orbit360: {
+      connected: !!LUMA_KEY,
+      model: 'luma-ray-2',
+      pricePerVideo: '~$0.30-0.50 (5sn)',
+      features: ['360° orbit', '3D volumetric', 'loop support', '720p']
+    }
   });
 });
 

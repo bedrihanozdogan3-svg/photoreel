@@ -642,7 +642,43 @@ canvas#particles{position:fixed;inset:0;pointer-events:none;z-index:0}
         <div class="sec-title" id="p3-title">Komutlar</div>
         <div class="sec-sub" id="p3-sub">Videon nasıl olsun? İstersen boş bırak, Fenix halleder.</div>
 
-        <div class="commands-section">
+        <!-- VİDEO TİPİ SEÇİMİ -->
+        <div style="margin-bottom:16px">
+          <div class="field-label" style="margin-bottom:8px">VİDEO TİPİ</div>
+          <div style="display:flex;gap:8px">
+            <button class="vtype-btn active" id="vtype-reels" style="
+              flex:1;padding:10px 8px;border:1px solid rgba(255,106,0,0.3);border-radius:6px;
+              background:rgba(255,69,0,0.12);color:rgba(196,168,130,0.9);font-size:11px;
+              letter-spacing:1px;cursor:pointer;transition:all .2s;font-family:inherit">
+              🎬 REELS<br><span style="font-size:9px;opacity:.6">fal.ai · $0.35</span>
+            </button>
+            <button class="vtype-btn" id="vtype-360" style="
+              flex:1;padding:10px 8px;border:1px solid rgba(255,106,0,0.15);border-radius:6px;
+              background:transparent;color:rgba(196,168,130,0.5);font-size:11px;
+              letter-spacing:1px;cursor:pointer;transition:all .2s;font-family:inherit">
+              🔄 360° ORBİT<br><span style="font-size:9px;opacity:.6">Luma Ray-2 · ~$0.40</span>
+            </button>
+          </div>
+          <!-- 360° orbit yön seçimi (sadece 360 seçilince gösterilir) -->
+          <div id="orbit-options" style="display:none;margin-top:8px;padding:10px;border:1px solid rgba(255,106,0,0.1);border-radius:6px;background:rgba(255,69,0,0.04)">
+            <div class="field-label" style="margin-bottom:6px;font-size:9px">DÖNÜŞ YÖNÜ</div>
+            <div style="display:flex;gap:8px">
+              <button class="orbit-dir active" id="orbit-sol" style="
+                flex:1;padding:7px;border:1px solid rgba(255,106,0,0.25);border-radius:4px;
+                background:rgba(255,69,0,0.1);color:rgba(196,168,130,0.8);font-size:10px;
+                cursor:pointer;font-family:inherit">← SOL</button>
+              <button class="orbit-dir" id="orbit-sag" style="
+                flex:1;padding:7px;border:1px solid rgba(255,106,0,0.1);border-radius:4px;
+                background:transparent;color:rgba(196,168,130,0.4);font-size:10px;
+                cursor:pointer;font-family:inherit">SAĞ →</button>
+            </div>
+            <div style="margin-top:6px;font-size:10px;color:rgba(196,168,130,0.35);line-height:1.5">
+              Luma Ray-2 ile 3D volumetrik 360° orbit. ~30-60sn üretim süresi.
+            </div>
+          </div>
+        </div>
+
+        <div class="commands-section" id="reels-commands">
           <div class="field-label" id="preset-label">HIZLI SEÇIM</div>
           <div class="preset-row" id="preset-row">
             <button class="preset-btn" onclick="togglePreset(this,'Arka plan sade ve minimal olsun')">🏔 Sade arka plan</button>
@@ -653,11 +689,11 @@ canvas#particles{position:fixed;inset:0;pointer-events:none;z-index:0}
             <button class="preset-btn" onclick="togglePreset(this,'Stüdyo arka planı, temiz görünüm')">📸 Stüdyo arka planı</button>
           </div>
           <div class="field-label" id="custom-cmd-label" style="margin-top:12px">ÖZEL KOMUT <span style="font-size:8px;color:rgba(196,168,130,0.28)">· İSTEĞE BAĞLI</span></div>
-          <textarea class="cmd-input" id="cmd-input" id="cmd-input"
+          <textarea class="cmd-input" id="cmd-input"
             placeholder="örn: Arka planı deniz kenarı yap, renkleri sıcak tut..." maxlength="300"></textarea>
         </div>
 
-        <button class="btn-main" onclick="startProduction()"><span id="btn-fire">🜂 ATEŞE VER</span></button>
+        <button class="btn-main" id="btn-fire-main"><span id="btn-fire">🜂 ATEŞE VER</span></button>
         <button class="btn-back" onclick="goStep(2)"><span id="btn-back-3">← GERİ</span></button>
       </div>
 
@@ -702,7 +738,9 @@ const S = {
   company: localStorage.getItem('fx_sirket') || '',
   category: null,
   presets: [],
-  customCmd: ''
+  customCmd: '',
+  videoType: 'reels',   // 'reels' | '360'
+  orbitYon: 'sol'       // 'sol' | 'sag'
 };
 
 // ── I18N ──
@@ -1095,6 +1133,47 @@ function selectCat(el,cat){
   document.getElementById('btn-next-2').disabled=false;
 }
 
+// ── VİDEO TİPİ ──
+function selectVideoType(type){
+  S.videoType = type;
+  const reelsBtn = document.getElementById('vtype-reels');
+  const orbitBtn = document.getElementById('vtype-360');
+  const orbitOpts = document.getElementById('orbit-options');
+  const reelsCmds = document.getElementById('reels-commands');
+
+  const activeStyle = 'background:rgba(255,69,0,0.12);border-color:rgba(255,106,0,0.3);color:rgba(196,168,130,0.9)';
+  const inactiveStyle = 'background:transparent;border-color:rgba(255,106,0,0.15);color:rgba(196,168,130,0.5)';
+
+  if(type === 'reels'){
+    reelsBtn.style.cssText = reelsBtn.style.cssText.replace(/background:[^;]+;border-color:[^;]+;color:[^;]+/, '') + activeStyle;
+    orbitBtn.style.cssText = orbitBtn.style.cssText.replace(/background:[^;]+;border-color:[^;]+;color:[^;]+/, '') + inactiveStyle;
+    orbitOpts.style.display = 'none';
+    reelsCmds.style.display = 'block';
+    document.getElementById('btn-fire').textContent = '🜂 ATEŞE VER';
+  } else {
+    orbitBtn.style.cssText = orbitBtn.style.cssText.replace(/background:[^;]+;border-color:[^;]+;color:[^;]+/, '') + activeStyle;
+    reelsBtn.style.cssText = reelsBtn.style.cssText.replace(/background:[^;]+;border-color:[^;]+;color:[^;]+/, '') + inactiveStyle;
+    orbitOpts.style.display = 'block';
+    reelsCmds.style.display = 'none';
+    document.getElementById('btn-fire').textContent = '🔄 360° ATEŞE VER';
+  }
+}
+
+function selectOrbitDir(dir){
+  S.orbitYon = dir;
+  const solBtn = document.getElementById('orbit-sol');
+  const sagBtn = document.getElementById('orbit-sag');
+  const activeStyle = 'background:rgba(255,69,0,0.1);border-color:rgba(255,106,0,0.25);color:rgba(196,168,130,0.8)';
+  const inactiveStyle = 'background:transparent;border-color:rgba(255,106,0,0.1);color:rgba(196,168,130,0.4)';
+  if(dir === 'sol'){
+    solBtn.style.cssText = solBtn.style.cssText + activeStyle;
+    sagBtn.style.cssText = sagBtn.style.cssText + inactiveStyle;
+  } else {
+    sagBtn.style.cssText = sagBtn.style.cssText + activeStyle;
+    solBtn.style.cssText = solBtn.style.cssText + inactiveStyle;
+  }
+}
+
 // ── PRESET COMMANDS ──
 function togglePreset(btn,val){
   const L = T[S.lang];
@@ -1184,12 +1263,13 @@ async function startProduction(){
       showQuota();
     }
 
-    // Video üret — fal.ai Kling
+    // Video üret
     const genBody = {
       kategori:    S.category || 'genel',
       komutlar:    S.presets || [],
       sirketAdi:   S.company || '',
-      customerId:  S.customerId
+      customerId:  S.customerId,
+      yon:         S.orbitYon || 'sol'
     };
     // Fotoğraf base64 mi URL mi?
     if(S.photo && S.photo.startsWith('data:')){
@@ -1198,7 +1278,16 @@ async function startProduction(){
       genBody.imageUrl = S.photo;
     }
 
-    const res = await fetch('/api/generate', {
+    // Video tipi: Reels (fal.ai) veya 360° (Luma)
+    const endpoint = S.videoType === '360' ? '/api/generate/360' : '/api/generate';
+
+    // 360° için progress mesajı güncelle
+    if(S.videoType === '360'){
+      document.getElementById('prod-title').textContent = '360° ORBİT HESAPLANIYOR';
+      document.getElementById('prod-sub').textContent = 'Luma Ray-2 ürünü 3D olarak modeli oluşturuyor...';
+    }
+
+    const res = await fetch(endpoint, {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(genBody)
@@ -1234,7 +1323,8 @@ function showResult(videoUrl, data){
 
   const wrap = document.getElementById('video-canvas-wrap') || document.querySelector('.video-canvas-wrap');
 
-  if(videoUrl && videoUrl.endsWith('.mp4') || (videoUrl && videoUrl.includes('fal.media'))){
+  const isVideoUrl = videoUrl && (videoUrl.endsWith('.mp4') || videoUrl.includes('fal.media') || videoUrl.includes('lumalabs') || videoUrl.includes('luma.video') || videoUrl.includes('.mp4'));
+  if(isVideoUrl){
     // Gerçek video — <video> elementi ile oynat
     wrap.innerHTML = `
       <video id="result-video" autoplay loop muted playsinline
@@ -1453,6 +1543,19 @@ function toast(msg){
         }
       }).catch(()=>{});
   }
+  // Video tipi seçim butonları
+  const vtReels = document.getElementById('vtype-reels');
+  const vt360   = document.getElementById('vtype-360');
+  const orbitSol = document.getElementById('orbit-sol');
+  const orbitSag = document.getElementById('orbit-sag');
+  const fireBtn  = document.getElementById('btn-fire-main');
+
+  if(vtReels) vtReels.addEventListener('click', ()=> selectVideoType('reels'));
+  if(vt360)   vt360.addEventListener('click',   ()=> selectVideoType('360'));
+  if(orbitSol) orbitSol.addEventListener('click', ()=> selectOrbitDir('sol'));
+  if(orbitSag) orbitSag.addEventListener('click', ()=> selectOrbitDir('sag'));
+  if(fireBtn)  fireBtn.addEventListener('click', ()=> startProduction());
+
   // Service worker
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/sw.js').catch(()=>{});

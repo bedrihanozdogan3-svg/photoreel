@@ -726,6 +726,41 @@ table.kt tr.quota-full td{background:rgba(255,107,26,.05)}
           </div>
         </div>
 
+        <!-- 360° VİDEO — Luma Dream Machine -->
+        <div style="background:var(--void-card);border:1px solid rgba(88,166,255,.2);border-radius:6px;padding:16px">
+          <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;color:var(--blue);margin-bottom:12px">🔄 360° ORBİT VİDEO</div>
+
+          <!-- Durum -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+            <div style="background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.15);border-radius:5px;padding:12px;text-align:center">
+              <div style="font-size:18px;margin-bottom:4px">🎬</div>
+              <div style="font-size:10px;font-weight:600;color:var(--ash-text)">Luma Ray-2</div>
+              <div style="font-size:9px;color:var(--ash-muted);margin-top:2px">3D volumetrik orbit</div>
+              <div id="luma-status" style="margin-top:6px;font-size:9px;letter-spacing:1px;padding:2px 8px;border-radius:3px;display:inline-block;background:rgba(255,107,26,.1);color:var(--ash-muted);border:1px solid var(--char-border)">BAĞLI DEĞİL</div>
+            </div>
+            <div style="background:rgba(88,166,255,.06);border:1px solid rgba(88,166,255,.15);border-radius:5px;padding:12px;text-align:center">
+              <div style="font-size:18px;margin-bottom:4px">💰</div>
+              <div style="font-size:10px;font-weight:600;color:var(--ash-text)">Fiyatlandırma</div>
+              <div style="font-size:9px;color:var(--ash-muted);margin-top:2px;line-height:1.5">~$0.30-0.50 / 5sn<br>Ray-2 Flash: daha ucuz</div>
+            </div>
+          </div>
+
+          <!-- Nasıl çalışır -->
+          <div style="font-size:11px;color:var(--ash-text);margin-bottom:10px;line-height:1.7;padding:10px;background:rgba(88,166,255,.04);border-radius:4px;border:1px solid rgba(88,166,255,.1)">
+            <strong style="color:var(--blue)">Nasıl çalışır:</strong> Ürün fotoğrafı → Luma Ray-2 3D volumetrik model → Kamera 360° orbit → MP4 video. Fal.ai Kling ile kıyasla <em>gerçek paralaks ve derinlik</em> üretir.
+          </div>
+
+          <!-- Luma API Key -->
+          <div style="font-size:10px;letter-spacing:1px;color:var(--ash-muted);margin-bottom:4px">LUMA API KEY</div>
+          <div style="display:flex;gap:6px;margin-bottom:6px">
+            <input type="password" id="luma-key-input" placeholder="luma-..." style="flex:1;background:rgba(255,255,255,.04);border:1px solid var(--char-border);border-radius:4px;padding:7px 10px;font-size:11px;color:var(--ash-text);outline:none;font-family:'Fira Code',monospace">
+            <button id="btn-luma-save" style="background:rgba(88,166,255,.15);border:1px solid rgba(88,166,255,.3);border-radius:4px;padding:7px 12px;font-size:10px;color:var(--blue);cursor:pointer;font-family:'Cinzel',serif;letter-spacing:1px">KAYDET</button>
+          </div>
+          <div style="font-size:10px;color:var(--ash-muted);line-height:1.6">
+            ⓘ Key al: <strong style="color:var(--blue)">lumalabs.ai/dream-machine/api</strong> → API Keys → Create Key
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -1133,12 +1168,15 @@ function loadSes() {
   // ElevenLabs key kontrolü
   ft('/api/version').then(function(r) {
     if (!r) return;
-    var xiOk = r.services && r.services.elevenlabs;
-    var dgOk = r.services && r.services.deepgram;
+    var xiOk  = r.services && r.services.elevenlabs;
+    var dgOk  = r.services && r.services.deepgram;
+    var lumaOk = r.services && r.services.luma;
     var el = document.getElementById('stt-status');
     var tts = document.getElementById('tts-status');
+    var lumaEl = document.getElementById('luma-status');
     if (el) { el.textContent = dgOk ? '✓ BAĞLI' : 'BAĞLI DEĞİL'; el.style.color = dgOk ? '#3fb950' : ''; el.style.borderColor = dgOk ? 'rgba(63,185,80,.3)' : ''; }
     if (tts) { tts.textContent = xiOk ? '✓ BAĞLI' : 'BAĞLI DEĞİL'; tts.style.color = xiOk ? '#3fb950' : ''; tts.style.borderColor = xiOk ? 'rgba(63,185,80,.3)' : ''; }
+    if (lumaEl) { lumaEl.textContent = lumaOk ? '✓ BAĞLI' : 'BAĞLI DEĞİL'; lumaEl.style.color = lumaOk ? '#58a6ff' : ''; lumaEl.style.borderColor = lumaOk ? 'rgba(88,166,255,.3)' : ''; }
   }).catch(function() {});
 }
 
@@ -1180,6 +1218,7 @@ document.addEventListener('click', function(e) {
   if (t.id === 'btn-domain-check') { loadDomain(); return; }
   if (t.id === 'btn-xi-save') { saveApiKey('ELEVENLABS_API_KEY', document.getElementById('xi-key-input').value, 'stt-status'); return; }
   if (t.id === 'btn-dg-save') { saveApiKey('DEEPGRAM_API_KEY', document.getElementById('dg-key-input').value, 'tts-status'); return; }
+  if (t.id === 'btn-luma-save') { saveApiKey('LUMA_KEY', document.getElementById('luma-key-input').value, 'luma-status'); return; }
 });
 
 // Enter to send

@@ -236,7 +236,8 @@ app.get('/api/version', (req, res) => {
       gemini: !!process.env.GEMINI_API_KEY,
       fal: !!process.env.FAL_KEY,
       elevenlabs: !!process.env.ELEVENLABS_API_KEY,
-      deepgram: !!process.env.DEEPGRAM_API_KEY
+      deepgram: !!process.env.DEEPGRAM_API_KEY,
+      luma: !!process.env.LUMA_KEY
     }
   });
 });
