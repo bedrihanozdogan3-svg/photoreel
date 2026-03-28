@@ -1184,26 +1184,45 @@ async function startProduction(){
       showQuota();
     }
 
-    // Video üret
+    // Video üret — fal.ai Kling
+    const genBody = {
+      kategori:    S.category || 'genel',
+      komutlar:    S.presets || [],
+      sirketAdi:   S.company || '',
+      customerId:  S.customerId
+    };
+    // Fotoğraf base64 mi URL mi?
+    if(S.photo && S.photo.startsWith('data:')){
+      genBody.imageBase64 = S.photo;
+    } else if(S.photo){
+      genBody.imageUrl = S.photo;
+    }
+
     const res = await fetch('/api/generate', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        category:S.category,
-        productImageUrl:S.photo,
-        style:'auto',
-        companyName:S.company||'Fenix',
-        hookText:S.customCmd||null,
-        customerId:S.customerId
-      })
+      body: JSON.stringify(genBody)
     });
     const data = await res.json();
-    clearInterval(pInterval);fill.style.width='100%';
-    setTimeout(()=>showResult(data.videoUrl||S.photo, data), 400);
+    clearInterval(pInterval); fill.style.width='100%';
+
+    if(!data.ok){
+      // Quota geri iade et (video üretilemedi)
+      toast(data.error || 'Video üretilemedi, tekrar deneyin.');
+      S.quota = (S.quota||0) + 1;
+      showQuota();
+      document.getElementById('producing').classList.remove('show');
+      goStep(3);
+      return;
+    }
+
+    setTimeout(()=>showResult(data.videoUrl, data), 400);
+
   } catch(e){
     clearInterval(pInterval);
-    // Demo mode — render on canvas
-    showResult(null, {});
+    toast('Bağlantı hatası, tekrar deneyin.');
+    document.getElementById('producing').classList.remove('show');
+    goStep(3);
   }
 }
 
@@ -1211,14 +1230,28 @@ function showResult(videoUrl, data){
   document.getElementById('producing').classList.remove('show');
   const rb=document.getElementById('result-box');
   rb.classList.add('show');
-
-  // Quota zaten sunucuda düşüldü — sadece badge güncelle
   showQuota();
 
-  // Draw on canvas
-  const canvas=document.getElementById('result-canvas');
-  const cx=canvas.getContext('2d');
-  drawVideoFrame(cx, canvas, videoUrl);
+  const wrap = document.getElementById('video-canvas-wrap') || document.querySelector('.video-canvas-wrap');
+
+  if(videoUrl && videoUrl.endsWith('.mp4') || (videoUrl && videoUrl.includes('fal.media'))){
+    // Gerçek video — <video> elementi ile oynat
+    wrap.innerHTML = `
+      <video id="result-video" autoplay loop muted playsinline
+        style="width:100%;height:100%;object-fit:cover;border-radius:8px"
+        src="${videoUrl}">
+      </video>`;
+    // İndir butonunu video URL'ye bağla
+    const dl = document.getElementById('btn-dl');
+    if(dl){ dl.onclick = ()=>{ const a=document.createElement('a'); a.href=videoUrl; a.download='fenix-video.mp4'; a.click(); }; }
+  } else {
+    // Video yoksa canvas üzerinde fotoğraf göster
+    const canvas=document.getElementById('result-canvas');
+    if(canvas){
+      const cx=canvas.getContext('2d');
+      drawVideoFrame(cx, canvas, videoUrl||S.photo);
+    }
+  }
 
   // Result meta
   document.getElementById('result-meta').textContent =

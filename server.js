@@ -203,6 +203,10 @@ app.get('/app', (req, res) => {
 const customerRoutes = require('./routes/api-customer');
 app.use('/api/customer', customerRoutes);
 
+// Video üretim API — fal.ai Kling
+const generateRoutes = require('./routes/api-generate');
+app.use('/api/generate', generateRoutes);
+
 // Satıcı portalı — sadece admin girebilir
 app.get('/satici', requireAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'satici.html'));
