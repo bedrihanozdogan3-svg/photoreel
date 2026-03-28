@@ -815,6 +815,28 @@ function loadNabiz() {
   }).catch(function() {});
 }
 
+// ══ BEYİN HARİTASI ══
+function loadBeyin() {
+  // Veri yokken demo skills göster
+  var demoSkills = {
+    'Ürün Fotoğrafı': { score: 0, level: 'apprentice', successes: 0, total: 0 },
+    'Arka Plan':      { score: 0, level: 'apprentice', successes: 0, total: 0 },
+    'Renk Uyumu':     { score: 0, level: 'apprentice', successes: 0, total: 0 },
+    'Müzik Seçimi':   { score: 0, level: 'apprentice', successes: 0, total: 0 },
+    'Kamera Hareketi':{ score: 0, level: 'apprentice', successes: 0, total: 0 },
+    'Trend Analizi':  { score: 0, level: 'apprentice', successes: 0, total: 0 }
+  };
+
+  ft('/api/agent/status').then(function(r) {
+    var skills = (r && r.shadowLearning && r.shadowLearning.skills) || {};
+    // Eğer gerçek veri varsa kullan, yoksa demo
+    var finalSkills = Object.keys(skills).length >= 3 ? skills : demoSkills;
+    drawRadar(finalSkills);
+  }).catch(function() {
+    drawRadar(demoSkills);
+  });
+}
+
 // ══ RADAR ══
 function drawRadar(skills) {
   var svg = document.getElementById('radar-svg');
@@ -828,12 +850,12 @@ function drawRadar(skills) {
       var a = (i / n) * Math.PI * 2 - Math.PI / 2;
       return (cx + Math.cos(a) * R * r) + ',' + (cy + Math.sin(a) * R * r);
     }).join(' ');
-    lines += '<polygon points="' + pts + '" fill="none" stroke="rgba(42,30,35,1)" stroke-width="1"/>';
+    lines += '<polygon points="' + pts + '" fill="none" stroke="rgba(255,107,26,0.12)" stroke-width="1"/>';
   });
   // Axes
   keys.forEach(function(_, i) {
     var a = (i / n) * Math.PI * 2 - Math.PI / 2;
-    lines += '<line x1="' + cx + '" y1="' + cy + '" x2="' + (cx + Math.cos(a) * R) + '" y2="' + (cy + Math.sin(a) * R) + '" stroke="rgba(42,30,35,1.5)" stroke-width="1"/>';
+    lines += '<line x1="' + cx + '" y1="' + cy + '" x2="' + (cx + Math.cos(a) * R) + '" y2="' + (cy + Math.sin(a) * R) + '" stroke="rgba(255,107,26,0.18)" stroke-width="1"/>';
   });
   // Data polygon
   var datapts = keys.map(function(k, i) {
