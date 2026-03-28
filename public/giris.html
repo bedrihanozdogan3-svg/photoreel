@@ -198,7 +198,7 @@ canvas#fire{position:fixed;inset:0;pointer-events:none;z-index:0}
       <label>ŞİFRE</label>
       <input type="password" id="pwd" placeholder="••••••••" autocomplete="current-password">
     </div>
-    <button class="btn" id="btn-giris" onclick="giris()">ATEŞİ YAK</button>
+    <button class="btn" id="btn-giris">ATEŞİ YAK</button>
     <div class="err" id="err-msg"></div>
   </div>
 </div>
@@ -257,7 +257,12 @@ canvas#fire{position:fixed;inset:0;pointer-events:none;z-index:0}
   }
 })();
 
-document.addEventListener('keydown', e => { if(e.key==='Enter') giris(); });
+// Tüm event listener'lar DOM hazır olunca — inline onclick YOK (CSP kuralı)
+document.addEventListener('DOMContentLoaded', function(){
+  document.getElementById('btn-giris').addEventListener('click', giris);
+  document.getElementById('usr').addEventListener('keydown', function(e){ if(e.key==='Enter') giris(); });
+  document.getElementById('pwd').addEventListener('keydown', function(e){ if(e.key==='Enter') giris(); });
+});
 
 function showErr(msg){
   const errEl = document.getElementById('err-msg');
