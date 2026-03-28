@@ -3,434 +3,777 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Fenix — Ürün Videosu Yap</title>
+<title>Fenix — Ürünü Ateşe Ver</title>
 <style>
-:root{
-  --bg:#0a0a14;--surface:#13131f;--card:#1a1a2e;
-  --border:rgba(255,255,255,0.08);
-  --orange:#FF6B35;--purple:#8B5CF6;--green:#3fb950;--muted:#6b6580;--text:#e8e0f0;
-  --fire:linear-gradient(135deg,#FF6B35,#8B5CF6);
-}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',-apple-system,sans-serif;min-height:100vh}
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap');
 
-/* ── TOP BAR ── */
-.topbar{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:14px 24px;background:rgba(10,10,20,0.95);
-  border-bottom:1px solid var(--border);
-  position:sticky;top:0;z-index:50;backdrop-filter:blur(20px);
+:root {
+  --bg:       #050508;
+  --ember:    #FF4500;
+  --kor:      #FF6B00;
+  --alev:     #FFAA00;
+  --kul:      #C4A882;
+  --duman:    rgba(200,160,100,0.08);
+  --karanlik: #0a0804;
+  --text:     #F0E6D3;
+  --soluk:    #7a6a55;
 }
-.logo{font-size:18px;font-weight:800;background:var(--fire);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.topbar-hint{font-size:12px;color:var(--muted)}
 
-/* ── STEP HEADER ── */
-.steps-bar{
-  display:flex;justify-content:center;align-items:center;
-  gap:0;padding:20px 24px;
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
-.step-item{
-  display:flex;align-items:center;gap:8px;
-  font-size:12px;font-weight:600;color:var(--muted);
-  transition:color .3s;
+
+/* ── ATEŞ CANVAS — ARKA PLAN ── */
+#fire-canvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.45;
 }
-.step-item.active{color:var(--orange)}
-.step-item.done{color:var(--green)}
-.step-num{
-  width:28px;height:28px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:12px;font-weight:800;
-  background:rgba(255,255,255,.06);border:1px solid var(--border);
-  transition:all .3s;flex-shrink:0;
+
+/* ── TÜYSÜZ DOKU ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 100%, rgba(255,69,0,0.18) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 30% at 20% 80%, rgba(180,50,0,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 80% 80%, rgba(180,50,0,0.10) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 1;
 }
-.step-item.active .step-num{background:var(--fire);border-color:transparent;color:#fff}
-.step-item.done .step-num{background:rgba(63,185,80,.15);border-color:rgba(63,185,80,.4);color:var(--green)}
-.step-sep{width:32px;height:1px;background:var(--border);margin:0 4px;flex-shrink:0}
+
+/* ── TÜM İÇERİK ── */
+.app { position: relative; z-index: 2; min-height: 100vh; }
+
+/* ── LOGO ── */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 28px;
+  border-bottom: 1px solid rgba(255,69,0,0.12);
+  background: rgba(5,5,8,0.7);
+  backdrop-filter: blur(12px);
+  position: sticky; top: 0; z-index: 50;
+}
+.logo {
+  font-family: 'Cinzel', serif;
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 6px;
+  color: var(--kul);
+  text-shadow: 0 0 30px rgba(255,106,0,0.6), 0 0 60px rgba(255,69,0,0.3);
+  position: relative;
+}
+.logo::after {
+  content: '';
+  position: absolute;
+  bottom: -4px; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ember), transparent);
+}
+.logo-tagline {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--soluk);
+  font-family: 'Inter', sans-serif;
+  font-weight: 300;
+  margin-top: 2px;
+}
+
+/* ── ADIM ÇUBUĞU ── */
+.steps-bar {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0; padding: 18px 24px;
+}
+.step-item {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; font-weight: 600; color: var(--soluk);
+  letter-spacing: 1px;
+  font-family: 'Inter', sans-serif;
+  transition: color .4s;
+}
+.step-item.active { color: var(--alev); }
+.step-item.done { color: var(--ember); }
+.step-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,69,0,0.15);
+  transition: all .4s;
+  flex-shrink: 0;
+}
+.step-item.active .step-num {
+  background: rgba(255,106,0,0.15);
+  border-color: var(--ember);
+  color: var(--alev);
+  box-shadow: 0 0 12px rgba(255,69,0,0.4);
+}
+.step-item.done .step-num {
+  background: rgba(255,69,0,0.1);
+  border-color: rgba(255,69,0,0.4);
+  color: var(--ember);
+}
+.step-sep {
+  width: 28px; height: 1px;
+  background: linear-gradient(90deg, rgba(255,69,0,0.15), rgba(255,69,0,0.05));
+  margin: 0 4px; flex-shrink: 0;
+}
 
 /* ── PANEL ── */
-.panel{
-  max-width:560px;margin:0 auto;padding:0 20px 40px;
-  display:none;
-}
-.panel.active{display:block}
+.panel { max-width: 520px; margin: 0 auto; padding: 0 20px 60px; display: none; }
+.panel.active { display: block; }
 
-/* ── KART ── */
-.card{
-  background:var(--card);border:1px solid var(--border);
-  border-radius:20px;padding:28px;
+/* ── KARTSİZ — AÇIK TASARIM ── */
+.section-label {
+  font-family: 'Cinzel', serif;
+  font-size: 13px;
+  letter-spacing: 4px;
+  color: var(--soluk);
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 12px;
 }
-.card-title{font-size:22px;font-weight:800;margin-bottom:6px}
-.card-sub{font-size:14px;color:var(--muted);margin-bottom:24px}
+.section-label::after {
+  content: '';
+  flex: 1; height: 1px;
+  background: linear-gradient(90deg, rgba(255,69,0,0.2), transparent);
+}
+.section-title {
+  font-family: 'Cinzel', serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+.section-sub {
+  font-size: 13px;
+  color: var(--soluk);
+  margin-bottom: 28px;
+  line-height: 1.6;
+}
 
-/* ── UPLOAD ZONE ── */
-.upload-zone{
-  border:2px dashed rgba(139,92,246,.3);border-radius:16px;
-  padding:40px 20px;text-align:center;cursor:pointer;
-  transition:all .3s;background:rgba(139,92,246,.04);
-  position:relative;
+/* ── UPLOAD ALANI ── */
+.upload-zone {
+  border: 1px solid rgba(255,69,0,0.2);
+  border-radius: 4px;
+  padding: 48px 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .3s;
+  background: rgba(255,69,0,0.03);
+  position: relative;
+  overflow: hidden;
 }
-.upload-zone:hover,.upload-zone.drag{
-  border-color:var(--orange);background:rgba(255,107,53,.06);
+.upload-zone::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, transparent 60%, rgba(255,69,0,0.05));
+  pointer-events: none;
 }
-.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-.upload-icon{font-size:44px;margin-bottom:12px;display:block}
-.upload-text{font-size:15px;font-weight:600;margin-bottom:6px}
-.upload-hint{font-size:12px;color:var(--muted)}
+.upload-zone:hover, .upload-zone.drag {
+  border-color: rgba(255,106,0,0.5);
+  background: rgba(255,69,0,0.06);
+  box-shadow: 0 0 40px rgba(255,69,0,0.1) inset;
+}
+.upload-zone input {
+  position: absolute; inset: 0; opacity: 0;
+  cursor: pointer; width: 100%; height: 100%;
+}
+.upload-glyph {
+  font-size: 36px; margin-bottom: 14px; display: block;
+  filter: grayscale(0.3) sepia(0.2);
+}
+.upload-text {
+  font-family: 'Cinzel', serif;
+  font-size: 14px; letter-spacing: 2px;
+  color: var(--kul); margin-bottom: 6px;
+}
+.upload-hint { font-size: 11px; color: var(--soluk); letter-spacing: 1px; }
 
 /* Preview */
-.preview-wrap{
-  display:none;border-radius:16px;overflow:hidden;
-  position:relative;aspect-ratio:1;background:#000;
+.preview-wrap {
+  display: none; border-radius: 4px; overflow: hidden;
+  position: relative; aspect-ratio: 1;
+  background: #000;
+  border: 1px solid rgba(255,69,0,0.2);
+  box-shadow: 0 0 60px rgba(255,69,0,0.15);
 }
-.preview-wrap.show{display:block}
-.preview-wrap img{width:100%;height:100%;object-fit:contain}
-.preview-reset{
-  position:absolute;top:10px;right:10px;
-  background:rgba(0,0,0,.7);border:none;color:#fff;
-  border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;
+.preview-wrap.show { display: block; }
+.preview-wrap img { width: 100%; height: 100%; object-fit: contain; }
+.preview-reset {
+  position: absolute; top: 12px; right: 12px;
+  background: rgba(5,5,8,0.85);
+  border: 1px solid rgba(255,69,0,0.3);
+  color: var(--kul); border-radius: 4px;
+  padding: 6px 14px; font-size: 11px; letter-spacing: 1px;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  transition: all .2s;
 }
+.preview-reset:hover { background: rgba(255,69,0,0.15); color: var(--alev); }
 
 /* ── KATEGORİ ── */
-.cat-grid{
-  display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+.cat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
+.cat-btn {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,69,0,0.1);
+  border-radius: 4px;
+  padding: 14px 8px;
+  text-align: center; cursor: pointer;
+  transition: all .25s;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 72px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
 }
-.cat-btn{
-  background:rgba(255,255,255,.04);border:1px solid var(--border);
-  border-radius:12px;padding:12px 8px;text-align:center;cursor:pointer;
-  transition:all .25s;-webkit-tap-highlight-color:transparent;
-  min-height:70px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+.cat-btn:hover {
+  border-color: rgba(255,106,0,0.35);
+  background: rgba(255,69,0,0.05);
 }
-.cat-btn:hover{border-color:rgba(255,107,53,.4);background:rgba(255,107,53,.06)}
-.cat-btn.sel{border-color:var(--orange);background:rgba(255,107,53,.12);color:var(--orange)}
-.cat-emoji{font-size:22px}
-.cat-name{font-size:11px;font-weight:600}
+.cat-btn.sel {
+  border-color: var(--ember);
+  background: rgba(255,69,0,0.1);
+  box-shadow: 0 0 20px rgba(255,69,0,0.15) inset;
+}
+.cat-emoji { font-size: 20px; }
+.cat-name {
+  font-size: 10px; font-weight: 500; color: var(--soluk);
+  letter-spacing: 1px; font-family: 'Inter', sans-serif;
+}
+.cat-btn.sel .cat-name { color: var(--alev); }
 
 /* ── AYARLAR ── */
-.field{margin-bottom:16px}
-.field label{display:block;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px;letter-spacing:.4px}
-.field input,.field select,.field textarea{
-  width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);
-  border-radius:10px;color:var(--text);padding:12px 14px;font-size:14px;
-  font-family:inherit;transition:border-color .2s;
+.field { margin-bottom: 20px; }
+.field label {
+  display: block; font-size: 10px; color: var(--soluk);
+  font-weight: 600; margin-bottom: 8px;
+  letter-spacing: 2px;
 }
-.field input:focus,.field select:focus,.field textarea:focus{
-  outline:none;border-color:rgba(255,107,53,.5);
+.field input, .field select {
+  width: 100%;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,69,0,0.15);
+  border-radius: 4px;
+  color: var(--text); padding: 13px 16px;
+  font-size: 14px; font-family: 'Inter', sans-serif;
+  transition: border-color .2s;
+  appearance: none;
 }
-.field select option{background:#1a1a2e}
+.field input:focus, .field select:focus {
+  outline: none;
+  border-color: rgba(255,106,0,0.4);
+  box-shadow: 0 0 20px rgba(255,69,0,0.1) inset;
+}
+.field input::placeholder { color: rgba(122,106,85,0.5); }
+.field select option { background: #0a0804; }
 
-/* ── ÜRET BUTONU ── */
-.btn-main{
-  width:100%;padding:16px;border:none;border-radius:14px;
-  background:var(--fire);color:#fff;font-size:16px;font-weight:800;
-  cursor:pointer;transition:transform .2s,box-shadow .2s;
-  min-height:56px;-webkit-tap-highlight-color:transparent;
-  box-shadow:0 4px 20px rgba(255,107,53,.3);
+/* ── ANA BUTON ── */
+.btn-main {
+  width: 100%; padding: 17px;
+  border: 1px solid rgba(255,106,0,0.4);
+  border-radius: 4px;
+  background: rgba(255,69,0,0.12);
+  color: var(--alev);
+  font-size: 12px; font-weight: 700;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 4px;
+  cursor: pointer;
+  transition: all .3s;
+  min-height: 56px;
+  -webkit-tap-highlight-color: transparent;
+  position: relative; overflow: hidden;
 }
-.btn-main:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 28px rgba(255,107,53,.45)}
-.btn-main:disabled{opacity:.5;cursor:not-allowed;transform:none}
-.btn-back{
-  width:100%;padding:14px;border:1px solid var(--border);border-radius:14px;
-  background:transparent;color:var(--muted);font-size:14px;font-weight:600;
-  cursor:pointer;margin-top:10px;min-height:48px;-webkit-tap-highlight-color:transparent;
+.btn-main::before {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ember), transparent);
+  opacity: 0; transition: opacity .3s;
 }
-.btn-back:hover{border-color:rgba(255,255,255,.2);color:var(--text)}
+.btn-main:hover:not(:disabled)::before { opacity: 1; }
+.btn-main:hover:not(:disabled) {
+  background: rgba(255,69,0,0.2);
+  border-color: var(--ember);
+  box-shadow: 0 0 30px rgba(255,69,0,0.2);
+  color: #fff;
+}
+.btn-main:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.btn-back {
+  width: 100%; padding: 14px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--soluk);
+  font-size: 11px; letter-spacing: 2px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer; margin-top: 8px;
+  min-height: 48px;
+  -webkit-tap-highlight-color: transparent;
+  transition: all .2s;
+}
+.btn-back:hover { border-color: rgba(255,69,0,0.2); color: var(--kul); }
 
 /* ── PROGRESS ── */
-.progress-wrap{margin:20px 0}
-.progress-bar-bg{height:8px;background:rgba(255,255,255,.06);border-radius:4px;overflow:hidden}
-.progress-bar-fill{
-  height:100%;background:var(--fire);border-radius:4px;
-  width:0%;transition:width .5s ease;
-  box-shadow:0 0 10px rgba(255,107,53,.4);
+.progress-wrap { margin: 24px 0; }
+.progress-bar-bg {
+  height: 1px;
+  background: rgba(255,69,0,0.1);
+  position: relative; overflow: visible;
 }
-.progress-status{font-size:13px;color:var(--muted);margin-top:8px;min-height:20px}
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--ember), var(--alev));
+  width: 0%; transition: width .6s ease;
+  position: relative;
+}
+.progress-bar-fill::after {
+  content: '';
+  position: absolute; right: 0; top: -3px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--alev);
+  box-shadow: 0 0 10px var(--ember), 0 0 20px rgba(255,106,0,0.6);
+}
+.progress-steps {
+  display: flex; flex-direction: column; gap: 8px; margin-top: 20px;
+}
+.prog-step {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12px; color: var(--soluk);
+  transition: color .3s;
+}
+.prog-step.active { color: var(--kul); }
+.prog-step.done { color: rgba(255,69,0,0.6); }
+.prog-step-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: rgba(255,255,255,0.1); flex-shrink: 0;
+  transition: all .3s;
+}
+.prog-step.active .prog-step-dot {
+  background: var(--ember);
+  box-shadow: 0 0 8px rgba(255,69,0,0.8);
+  animation: flicker 1s ease-in-out infinite;
+}
+.prog-step.done .prog-step-dot { background: rgba(255,69,0,0.4); }
+
+@keyframes flicker {
+  0%,100% { opacity: 1; box-shadow: 0 0 8px rgba(255,69,0,0.8); }
+  50% { opacity: .7; box-shadow: 0 0 16px rgba(255,106,0,1); }
+}
 
 /* ── SONUÇ ── */
-.result-preview{
-  border-radius:16px;overflow:hidden;margin-bottom:20px;
-  background:rgba(0,0,0,.4);border:1px solid var(--border);
-  aspect-ratio:9/16;max-height:400px;
-  display:flex;align-items:center;justify-content:center;
+.result-canvas-wrap {
+  border: 1px solid rgba(255,69,0,0.2);
+  border-radius: 4px; overflow: hidden;
+  margin-bottom: 20px;
+  background: #000;
+  max-width: 240px; margin-left: auto; margin-right: auto;
+  box-shadow: 0 0 60px rgba(255,69,0,0.2), 0 0 120px rgba(255,69,0,0.08);
 }
-.result-preview canvas{width:100%;height:100%;object-fit:contain}
+.result-canvas-wrap canvas { display: block; width: 100%; }
 
-.btn-dl{
-  width:100%;padding:16px;border:none;border-radius:14px;
-  background:linear-gradient(135deg,var(--green),#06b6d4);
-  color:#fff;font-size:15px;font-weight:800;cursor:pointer;
-  min-height:52px;-webkit-tap-highlight-color:transparent;
-  box-shadow:0 4px 20px rgba(63,185,80,.3);
-  transition:transform .2s;
+.result-meta {
+  display: flex; gap: 0; margin-bottom: 20px;
+  border: 1px solid rgba(255,69,0,0.12);
+  border-radius: 4px; overflow: hidden;
 }
-.btn-dl:hover{transform:translateY(-2px)}
-.btn-new{
-  width:100%;padding:14px;border:1px solid var(--border);border-radius:14px;
-  background:transparent;color:var(--muted);font-size:14px;font-weight:600;
-  cursor:pointer;margin-top:10px;min-height:48px;-webkit-tap-highlight-color:transparent;
+.rmeta {
+  flex: 1; padding: 12px 8px; text-align: center;
+  border-right: 1px solid rgba(255,69,0,0.1);
 }
-.result-stats{
-  display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;
+.rmeta:last-child { border-right: none; }
+.rmeta-val {
+  font-family: 'Cinzel', serif;
+  font-size: 16px; color: var(--kul);
+  letter-spacing: 1px;
 }
-.rstat{
-  background:rgba(255,255,255,.04);border-radius:10px;padding:10px;text-align:center;
+.rmeta-lbl { font-size: 9px; color: var(--soluk); letter-spacing: 2px; margin-top: 3px; }
+
+.btn-dl {
+  width: 100%; padding: 17px;
+  border: 1px solid rgba(255,106,0,0.5);
+  border-radius: 4px;
+  background: rgba(255,69,0,0.15);
+  color: var(--alev);
+  font-size: 12px; font-weight: 700;
+  font-family: 'Cinzel', serif;
+  letter-spacing: 4px;
+  cursor: pointer; min-height: 56px;
+  -webkit-tap-highlight-color: transparent;
+  transition: all .3s;
+  box-shadow: 0 0 30px rgba(255,69,0,0.15);
 }
-.rstat-num{font-size:18px;font-weight:800;color:var(--orange)}
-.rstat-lbl{font-size:10px;color:var(--muted);margin-top:2px}
+.btn-dl:hover {
+  background: rgba(255,69,0,0.25);
+  box-shadow: 0 0 50px rgba(255,69,0,0.3);
+}
+
+.feedback-row {
+  display: flex; gap: 8px; margin-top: 8px;
+}
+.btn-fb {
+  flex: 1; padding: 13px 8px;
+  border-radius: 4px; font-size: 11px;
+  font-family: 'Inter', sans-serif; letter-spacing: 1px;
+  cursor: pointer; min-height: 48px;
+  -webkit-tap-highlight-color: transparent;
+  transition: all .2s; font-weight: 600;
+}
+.btn-fb-yes {
+  background: rgba(63,185,80,0.06);
+  border: 1px solid rgba(63,185,80,0.2);
+  color: rgba(100,200,100,0.7);
+}
+.btn-fb-yes:hover { background: rgba(63,185,80,0.12); color: #3fb950; }
+.btn-fb-no {
+  background: rgba(255,69,0,0.06);
+  border: 1px solid rgba(255,69,0,0.2);
+  color: rgba(200,100,60,0.7);
+}
+.btn-fb-no:hover { background: rgba(255,69,0,0.12); color: var(--ember); }
+.btn-fb-new {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.06);
+  color: var(--soluk);
+}
+.btn-fb-new:hover { border-color: rgba(255,69,0,0.2); color: var(--kul); }
 
 /* ── TOAST ── */
-#toast{
-  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
-  z-index:9999;padding:12px 24px;border-radius:12px;
-  font-size:14px;font-weight:600;color:#fff;
-  transition:opacity .3s;pointer-events:none;opacity:0;
-  background:rgba(63,185,80,.9);white-space:nowrap;
+#toast {
+  position: fixed; bottom: 28px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999; padding: 12px 28px;
+  border: 1px solid rgba(255,69,0,0.3);
+  border-radius: 4px;
+  font-size: 12px; letter-spacing: 1px;
+  color: var(--kul); background: rgba(5,5,8,0.95);
+  backdrop-filter: blur(12px);
+  transition: opacity .3s; pointer-events: none; opacity: 0;
+  font-family: 'Inter', sans-serif;
+  box-shadow: 0 0 30px rgba(255,69,0,0.2);
+  white-space: nowrap;
 }
 
-/* ── Gizli iframe (photoreel_v9 motoru) ── */
-#engine{display:none}
+/* spacer */
+.spacer { height: 28px; }
 
-/* TABLET */
-@media(max-width:600px){
-  .topbar{padding:12px 16px}
-  .panel{padding:0 12px 80px}
-  .card{padding:20px}
-  .steps-bar{gap:0;padding:16px 12px}
-  .step-sep{width:20px}
-  .cat-grid{grid-template-columns:repeat(3,1fr);gap:8px}
+/* ── TABLET ── */
+@media(max-width:600px) {
+  .topbar { padding: 16px 18px; }
+  .logo { font-size: 18px; letter-spacing: 4px; }
+  .panel { padding: 0 14px 80px; }
+  .section-title { font-size: 22px; }
+  .cat-grid { gap: 6px; }
 }
 </style>
 </head>
 <body>
 
+<!-- ATEŞ CANVAS -->
+<canvas id="fire-canvas"></canvas>
+
+<div class="app">
+
 <!-- TOP BAR -->
 <div class="topbar">
-  <div class="logo">✦ Fenix</div>
-  <div class="topbar-hint" id="topbar-hint">Ürün fotoğrafından video</div>
+  <div>
+    <div class="logo">FENİX</div>
+    <div class="logo-tagline">KÜLDEN DOĞAN GÖRÜNTÜ</div>
+  </div>
+  <div id="topbar-hint" style="font-size:11px;letter-spacing:2px;color:var(--soluk);font-family:'Inter',sans-serif"></div>
 </div>
 
-<!-- ADIM BAŞLIKLARI -->
+<!-- ADIM ÇUBUĞU -->
 <div class="steps-bar">
   <div class="step-item active" id="sbar-1">
-    <div class="step-num">1</div>
-    <span>Fotoğraf</span>
+    <div class="step-num">I</div>
+    <span>FOTOĞRAF</span>
   </div>
   <div class="step-sep"></div>
   <div class="step-item" id="sbar-2">
-    <div class="step-num">2</div>
-    <span>Kategori</span>
+    <div class="step-num">II</div>
+    <span>KATEGORİ</span>
   </div>
   <div class="step-sep"></div>
   <div class="step-item" id="sbar-3">
-    <div class="step-num">3</div>
-    <span>Ayarlar</span>
+    <div class="step-num">III</div>
+    <span>DETAY</span>
   </div>
   <div class="step-sep"></div>
   <div class="step-item" id="sbar-4">
-    <div class="step-num">4</div>
-    <span>Video</span>
+    <div class="step-num">IV</div>
+    <span>VİDEO</span>
   </div>
 </div>
 
-<!-- ADIM 1: FOTOĞRAF -->
+<!-- ─────────── ADIM 1: FOTOĞRAF ─────────── -->
 <div class="panel active" id="panel-1">
-  <div class="card">
-    <div class="card-title">📸 Ürün Fotoğrafı</div>
-    <div class="card-sub">Ürününün fotoğrafını seç veya sürükle bırak</div>
+  <div class="spacer"></div>
+  <div class="section-label">ADIM I</div>
+  <div class="section-title">Ürününü Getir</div>
+  <div class="section-sub">Fenix fotoğrafı alev alev yakacak. Sürükle bırak ya da seç.</div>
 
-    <div class="upload-zone" id="upload-zone">
-      <input type="file" id="file-input" accept="image/*" onchange="onFileChange(event)">
-      <span class="upload-icon">🖼️</span>
-      <div class="upload-text">Fotoğraf Seç</div>
-      <div class="upload-hint">PNG, JPG, WebP — max 10MB</div>
-    </div>
-
-    <div class="preview-wrap" id="preview-wrap">
-      <img id="preview-img" src="" alt="Ürün fotoğrafı">
-      <button class="preview-reset" onclick="resetPhoto()">✕ Değiştir</button>
-    </div>
-
-    <button class="btn-main" id="btn-next-1" onclick="goStep(2)" disabled style="margin-top:20px">
-      Devam Et →
-    </button>
+  <div class="upload-zone" id="upload-zone">
+    <input type="file" id="file-input" accept="image/*" onchange="onFileChange(event)">
+    <span class="upload-glyph">🜂</span>
+    <div class="upload-text">DOSYAYI BIRAK</div>
+    <div class="upload-hint">PNG · JPG · WEBP · maks 10MB</div>
   </div>
+
+  <div class="preview-wrap" id="preview-wrap">
+    <img id="preview-img" src="" alt="">
+    <button class="preview-reset" onclick="resetPhoto()">✕ DEĞİŞTİR</button>
+  </div>
+
+  <div class="spacer"></div>
+  <button class="btn-main" id="btn-next-1" onclick="goStep(2)" disabled>
+    İLERİ →
+  </button>
 </div>
 
-<!-- ADIM 2: KATEGORİ -->
+<!-- ─────────── ADIM 2: KATEGORİ ─────────── -->
 <div class="panel" id="panel-2">
-  <div class="card">
-    <div class="card-title">📂 Kategori</div>
-    <div class="card-sub">Ürününün kategorisini seç — video tarzı buna göre ayarlanır</div>
+  <div class="spacer"></div>
+  <div class="section-label">ADIM II</div>
+  <div class="section-title">Ateşin Rengi</div>
+  <div class="section-sub">Her kategorinin kendi ritmi, ışığı, enerjisi var.</div>
 
-    <div class="cat-grid">
-      <div class="cat-btn" onclick="selectCat(this,'gida')"><div class="cat-emoji">🍕</div><div class="cat-name">Gıda</div></div>
-      <div class="cat-btn" onclick="selectCat(this,'kozmetik')"><div class="cat-emoji">💄</div><div class="cat-name">Kozmetik</div></div>
-      <div class="cat-btn" onclick="selectCat(this,'giyim')"><div class="cat-emoji">👗</div><div class="cat-name">Giyim</div></div>
-      <div class="cat-btn" onclick="selectCat(this,'elektronik')"><div class="cat-emoji">📱</div><div class="cat-name">Elektronik</div></div>
-      <div class="cat-btn" onclick="selectCat(this,'mobilya')"><div class="cat-emoji">🛋️</div><div class="cat-name">Mobilya</div></div>
-      <div class="cat-btn" onclick="selectCat(this,'oyuncak')"><div class="cat-emoji">🧸</div><div class="cat-name">Oyuncak</div></div>
-      <div class="cat-btn" onclick="selectCat(this,'spor')"><div class="cat-emoji">⚽</div><div class="cat-name">Spor</div></div>
-      <div class="cat-btn" onclick="selectCat(this,'motor')"><div class="cat-emoji">🏍️</div><div class="cat-name">Motor</div></div>
-      <div class="cat-btn" onclick="selectCat(this,'diger')"><div class="cat-emoji">📦</div><div class="cat-name">Diğer</div></div>
-    </div>
-
-    <button class="btn-main" id="btn-next-2" onclick="goStep(3)" disabled style="margin-top:20px">
-      Devam Et →
-    </button>
-    <button class="btn-back" onclick="goStep(1)">← Geri</button>
+  <div class="cat-grid">
+    <div class="cat-btn" onclick="selectCat(this,'gida')"><div class="cat-emoji">🍕</div><div class="cat-name">GIDA</div></div>
+    <div class="cat-btn" onclick="selectCat(this,'kozmetik')"><div class="cat-emoji">💄</div><div class="cat-name">KOZMETİK</div></div>
+    <div class="cat-btn" onclick="selectCat(this,'giyim')"><div class="cat-emoji">👗</div><div class="cat-name">GİYİM</div></div>
+    <div class="cat-btn" onclick="selectCat(this,'elektronik')"><div class="cat-emoji">📱</div><div class="cat-name">ELEKTRONİK</div></div>
+    <div class="cat-btn" onclick="selectCat(this,'mobilya')"><div class="cat-emoji">🛋️</div><div class="cat-name">MOBİLYA</div></div>
+    <div class="cat-btn" onclick="selectCat(this,'oyuncak')"><div class="cat-emoji">🧸</div><div class="cat-name">OYUNCAK</div></div>
+    <div class="cat-btn" onclick="selectCat(this,'spor')"><div class="cat-emoji">⚽</div><div class="cat-name">SPOR</div></div>
+    <div class="cat-btn" onclick="selectCat(this,'motor')"><div class="cat-emoji">🏍️</div><div class="cat-name">MOTOR</div></div>
+    <div class="cat-btn" onclick="selectCat(this,'diger')"><div class="cat-emoji">🜁</div><div class="cat-name">DİĞER</div></div>
   </div>
+
+  <div class="spacer"></div>
+  <button class="btn-main" id="btn-next-2" onclick="goStep(3)" disabled>İLERİ →</button>
+  <button class="btn-back" onclick="goStep(1)">← GERİ</button>
 </div>
 
-<!-- ADIM 3: AYARLAR -->
+<!-- ─────────── ADIM 3: DETAY ─────────── -->
 <div class="panel" id="panel-3">
-  <div class="card">
-    <div class="card-title">⚙️ Video Ayarları</div>
-    <div class="card-sub">İsteğe bağlı — boş bıraksan da olur</div>
+  <div class="spacer"></div>
+  <div class="section-label">ADIM III</div>
+  <div class="section-title">Kimliğini Ver</div>
+  <div class="section-sub">Boş bırakabilirsin — Fenix kendisi karar verir.</div>
 
-    <div class="field">
-      <label>MARKA / MAĞAZA ADI</label>
-      <input type="text" id="inp-marka" placeholder="örn: TechStore TR" maxlength="40">
-    </div>
-    <div class="field">
-      <label>SLOGAN / KANCA (isteğe bağlı)</label>
-      <input type="text" id="inp-kanca" placeholder="örn: En iyi fiyat garantisi!" maxlength="60">
-    </div>
-    <div class="field">
-      <label>VİDEO TARZI</label>
-      <select id="inp-stil">
-        <option value="dinamik">⚡ Dinamik (CapCut tarzı, enerjik)</option>
-        <option value="normal">🎬 Normal (yumuşak, profesyonel)</option>
-      </select>
-    </div>
-    <div class="field">
-      <label>MÜZİK TEMPOSU</label>
-      <select id="inp-bpm">
-        <option value="auto">🎵 Otomatik (kategoriye göre)</option>
-        <option value="slow">🐢 Yavaş (≤90 BPM)</option>
-        <option value="mid">🚶 Orta (90-120 BPM)</option>
-        <option value="fast">🏃 Hızlı (120+ BPM)</option>
-      </select>
-    </div>
-
-    <button class="btn-main" onclick="startProduction()">
-      🎬 Video Üret
-    </button>
-    <button class="btn-back" onclick="goStep(2)">← Geri</button>
+  <div class="field">
+    <label>MARKA VEYA MAĞAZA ADI</label>
+    <input type="text" id="inp-marka" placeholder="örn: TechStore, ZenStyle..." maxlength="40">
   </div>
+  <div class="field">
+    <label>KANCA — İLK 3 SANİYE</label>
+    <input type="text" id="inp-kanca" placeholder="örn: En iyi fiyat garantisi!" maxlength="60">
+  </div>
+  <div class="field">
+    <label>ENERJI SEVİYESİ</label>
+    <select id="inp-stil">
+      <option value="dinamik">⚡ Dinamik — hızlı, sert, CapCut tarzı</option>
+      <option value="normal">🌊 Akış — yumuşak, sinematik, nefes alan</option>
+    </select>
+  </div>
+
+  <div class="spacer"></div>
+  <button class="btn-main" onclick="startProduction()">🜂 ATEŞE VER</button>
+  <button class="btn-back" onclick="goStep(2)">← GERİ</button>
 </div>
 
-<!-- ADIM 4: ÜRETİM / SONUÇ -->
+<!-- ─────────── ADIM 4: ÜRETİM / SONUÇ ─────────── -->
 <div class="panel" id="panel-4">
-  <div class="card" id="card-producing">
-    <div class="card-title">🔥 Video Üretiliyor</div>
-    <div class="card-sub" id="prod-sub">Fenix sahneyi hazırlıyor...</div>
+  <div class="spacer"></div>
+
+  <!-- Üretim ekranı -->
+  <div id="card-producing">
+    <div class="section-label">ÜRETİM</div>
+    <div class="section-title">Fenix Uçuyor</div>
+    <div class="section-sub" id="prod-sub">Kor parçaları toplaniyor...</div>
 
     <div class="progress-wrap">
       <div class="progress-bar-bg">
         <div class="progress-bar-fill" id="prog-fill"></div>
       </div>
-      <div class="progress-status" id="prog-status">Analiz ediliyor...</div>
     </div>
 
-    <!-- Gizli iframe — photoreel_v9 motoru buradan çalışır -->
-    <iframe id="engine" src="/app" style="display:none" onload="engineReady()"></iframe>
-
-    <div style="margin-top:20px;padding:14px;background:rgba(255,255,255,.03);border-radius:12px;font-size:12px;color:var(--muted);line-height:1.6">
-      💡 Fenix kategorine özel sahne, müzik ve geçiş efektleri seçiyor.<br>
-      Ortalama süre: <b style="color:var(--orange)">15-30 saniye</b>
+    <div class="progress-steps" id="prog-steps">
+      <div class="prog-step active" id="ps-1"><div class="prog-step-dot"></div>Ürün analiz ediliyor</div>
+      <div class="prog-step" id="ps-2"><div class="prog-step-dot"></div>Kategori belirleniyor</div>
+      <div class="prog-step" id="ps-3"><div class="prog-step-dot"></div>Müzik ve tempo seçiliyor</div>
+      <div class="prog-step" id="ps-4"><div class="prog-step-dot"></div>Sahne ve geçişler uygulanıyor</div>
+      <div class="prog-step" id="ps-5"><div class="prog-step-dot"></div>Render tamamlanıyor</div>
     </div>
   </div>
 
-  <div class="card" id="card-result" style="display:none">
-    <div class="card-title">✅ Video Hazır!</div>
-    <div class="card-sub">Reels / TikTok formatında indirebilirsin</div>
+  <!-- Sonuç ekranı -->
+  <div id="card-result" style="display:none">
+    <div class="section-label">TAMAMLANDI</div>
+    <div class="section-title">Video Hazır</div>
+    <div class="section-sub" id="result-sub">Reels formatında hazır</div>
 
-    <div class="result-stats">
-      <div class="rstat"><div class="rstat-num" id="rs-sure">—</div><div class="rstat-lbl">Süre</div></div>
-      <div class="rstat"><div class="rstat-num" id="rs-format">9:16</div><div class="rstat-lbl">Format</div></div>
-      <div class="rstat"><div class="rstat-num" id="rs-fps">60</div><div class="rstat-lbl">FPS</div></div>
+    <div class="result-meta">
+      <div class="rmeta"><div class="rmeta-val" id="rs-sure">—</div><div class="rmeta-lbl">SÜRE</div></div>
+      <div class="rmeta"><div class="rmeta-val">9:16</div><div class="rmeta-lbl">FORMAT</div></div>
+      <div class="rmeta"><div class="rmeta-val">60</div><div class="rmeta-lbl">FPS</div></div>
     </div>
 
-    <div class="result-preview">
-      <canvas id="result-canvas"></canvas>
+    <div class="result-canvas-wrap">
+      <canvas id="result-canvas" width="270" height="480"></canvas>
     </div>
 
-    <button class="btn-dl" onclick="downloadVideo()">⬇️ Videoyu İndir</button>
+    <button class="btn-dl" onclick="downloadVideo()">KAYDET ⬇</button>
 
-    <div style="display:flex;gap:8px;margin-top:10px">
-      <button class="btn-new" onclick="resetAll()" style="flex:1">🔄 Yeni Video</button>
-      <button class="btn-new" onclick="sendFeedback(true)" style="flex:1;color:var(--green);border-color:rgba(63,185,80,.3)">✅ Beğendim</button>
-      <button class="btn-new" onclick="sendFeedback(false)" style="flex:1;color:#f85149;border-color:rgba(248,81,73,.3)">❌ Yeniden</button>
+    <div class="feedback-row">
+      <button class="btn-fb btn-fb-yes" onclick="sendFeedback(true)">✓ BEĞENDİM</button>
+      <button class="btn-fb btn-fb-no" onclick="sendFeedback(false)">✕ YENİDEN</button>
+      <button class="btn-fb btn-fb-new" onclick="resetAll()">↺ YENİ</button>
     </div>
   </div>
 </div>
 
+</div><!-- /app -->
+
 <div id="toast"></div>
 
+<!-- ═══════════════════════════════════════════ -->
 <script>
 const BASE = window.location.origin;
 
+// ── ATEŞ PARTİKÜLLERİ ──
+(function initFire() {
+  const canvas = document.getElementById('fire-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  class Particle {
+    constructor() { this.reset(true); }
+    reset(init) {
+      this.x = Math.random() * W;
+      this.y = init ? Math.random() * H : H + 10;
+      this.vx = (Math.random() - 0.5) * 0.6;
+      this.vy = -(Math.random() * 1.8 + 0.6);
+      this.life = Math.random() * 0.6 + 0.4;
+      this.decay = Math.random() * 0.004 + 0.002;
+      this.size = Math.random() * 3 + 1;
+      this.type = Math.random() < 0.3 ? 'ember' : 'flame';
+    }
+    update() {
+      this.x += this.vx + Math.sin(this.y * 0.02) * 0.3;
+      this.y += this.vy;
+      this.vy *= 0.995;
+      this.life -= this.decay;
+      if (this.life <= 0 || this.y < -20) this.reset(false);
+    }
+    draw() {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, this.life);
+      if (this.type === 'ember') {
+        const t = this.life;
+        const r = t > 0.5 ? 255 : Math.floor(255 * t * 2);
+        const g = t > 0.7 ? Math.floor(255 * (t - 0.7) * 3.3) : 0;
+        ctx.fillStyle = `rgb(${r},${Math.min(160,g)},0)`;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+        // kor parıltısı
+        if (this.life > 0.5) {
+          ctx.globalAlpha = (this.life - 0.5) * 0.4;
+          const grd = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size * 4);
+          grd.addColorStop(0, 'rgba(255,180,0,0.8)');
+          grd.addColorStop(1, 'rgba(255,69,0,0)');
+          ctx.fillStyle = grd;
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size * 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else {
+        const t = this.life;
+        ctx.globalAlpha = t * 0.15;
+        const grd = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size * 6);
+        grd.addColorStop(0, `rgba(255,${Math.floor(80 + t * 100)},0,0.6)`);
+        grd.addColorStop(0.5, `rgba(255,50,0,0.2)`);
+        grd.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = grd;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size * 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
+  // Partikülleri oluştur
+  for (let i = 0; i < 120; i++) particles.push(new Particle());
+
+  function loop() {
+    ctx.clearRect(0, 0, W, H);
+    particles.forEach(p => { p.update(); p.draw(); });
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+
 // ── STATE ──
 let state = {
-  step: 1,
-  photoDataUrl: null,
-  photoFile: null,
-  kategori: null,
-  marka: '',
-  kanca: '',
-  stil: 'dinamik',
-  bpm: 'auto',
-  videoBlob: null,
-  videoData: null
+  step: 1, photoDataUrl: null, kategori: null,
+  marka: '', kanca: '', stil: 'dinamik', videoData: null
 };
 
 // ── TOAST ──
-function toast(msg, tip) {
+function toast(msg) {
   const t = document.getElementById('toast');
-  t.style.background = tip === 'hata' ? 'rgba(248,81,73,.9)' : tip === 'uyari' ? 'rgba(230,126,34,.9)' : 'rgba(63,185,80,.9)';
   t.textContent = msg;
   t.style.opacity = '1';
   clearTimeout(t._to);
-  t._to = setTimeout(() => t.style.opacity = '0', 3000);
+  t._to = setTimeout(() => t.style.opacity = '0', 3200);
 }
 
 // ── ADIM YÖNETİMİ ──
 function goStep(n) {
-  // Paneller
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById('panel-' + n).classList.add('active');
-
-  // Step bar
   for (let i = 1; i <= 4; i++) {
     const el = document.getElementById('sbar-' + i);
     el.classList.remove('active', 'done');
     if (i < n) el.classList.add('done');
     else if (i === n) el.classList.add('active');
   }
-
   state.step = n;
-
-  // Topbar hint
-  const hints = {1:'Fotoğraf yükle', 2:'Kategori seç', 3:'Ayarları belirle', 4:'Video hazırlanıyor'};
+  const hints = {1:'', 2:'Kategori seçilmedi', 3:'Neredeyse hazır', 4:''};
   document.getElementById('topbar-hint').textContent = hints[n] || '';
-
-  window.scrollTo({top: 0, behavior: 'smooth'});
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // ── FOTOĞRAF ──
 function onFileChange(e) {
   const file = e.target.files[0];
   if (!file) return;
-  if (file.size > 10 * 1024 * 1024) { toast('Dosya 10MB\'dan büyük', 'hata'); return; }
-
-  state.photoFile = file;
+  if (file.size > 10 * 1024 * 1024) { toast('⚠ Dosya 10MB sınırını aşıyor'); return; }
   const reader = new FileReader();
-  reader.onload = (ev) => {
+  reader.onload = ev => {
     state.photoDataUrl = ev.target.result;
     document.getElementById('preview-img').src = ev.target.result;
     document.getElementById('upload-zone').style.display = 'none';
     document.getElementById('preview-wrap').classList.add('show');
     document.getElementById('btn-next-1').disabled = false;
-    toast('✅ Fotoğraf yüklendi', 'ok');
+    toast('Fotoğraf yüklendi');
   };
   reader.readAsDataURL(file);
 }
@@ -441,15 +784,12 @@ uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('dra
 uz.addEventListener('dragleave', () => uz.classList.remove('drag'));
 uz.addEventListener('drop', e => {
   e.preventDefault(); uz.classList.remove('drag');
-  const file = e.dataTransfer.files[0];
-  if (file && file.type.startsWith('image/')) {
-    const fakeEv = { target: { files: [file] } };
-    onFileChange(fakeEv);
-  }
+  const f = e.dataTransfer.files[0];
+  if (f && f.type.startsWith('image/')) onFileChange({ target: { files: [f] } });
 });
 
 function resetPhoto() {
-  state.photoDataUrl = null; state.photoFile = null;
+  state.photoDataUrl = null;
   document.getElementById('upload-zone').style.display = 'block';
   document.getElementById('preview-wrap').classList.remove('show');
   document.getElementById('btn-next-1').disabled = true;
@@ -462,168 +802,159 @@ function selectCat(el, cat) {
   el.classList.add('sel');
   state.kategori = cat;
   document.getElementById('btn-next-2').disabled = false;
+  document.getElementById('topbar-hint').textContent = cat.toUpperCase() + ' SEÇİLDİ';
 }
 
 // ── ÜRETİM ──
 let prodInterval = null;
-let engineLoaded = false;
-
-function engineReady() {
-  engineLoaded = true;
-}
 
 async function startProduction() {
   state.marka = document.getElementById('inp-marka').value.trim();
   state.kanca = document.getElementById('inp-kanca').value.trim();
   state.stil  = document.getElementById('inp-stil').value;
-  state.bpm   = document.getElementById('inp-bpm').value;
-
   goStep(4);
-
-  // iframe'i yükle (motor)
-  const iframe = document.getElementById('engine');
-  iframe.style.display = 'none';
-
-  // Progress simülasyonu + gerçek API çağrısı paralel
-  let pct = 0;
-  const steps = [
-    [10, 'Ürün analiz ediliyor...'],
-    [25, 'Kategori: ' + state.kategori + ' — sahne seçiliyor...'],
-    [45, 'Müzik ve tempo ayarlanıyor...'],
-    [65, 'Efektler uygulanıyor...'],
-    [80, 'Geçişler senkronize ediliyor...'],
-    [95, 'Video render ediliyor...']
-  ];
-  let si = 0;
-  prodInterval = setInterval(() => {
-    if (si < steps.length) {
-      pct = steps[si][0];
-      document.getElementById('prog-fill').style.width = pct + '%';
-      document.getElementById('prog-status').textContent = steps[si][1];
-      si++;
-    }
-  }, 1200);
+  runProgressSteps();
 
   try {
-    // Gerçek API: storyboard üret
-    const sbRes = await fetch(BASE + '/api/video/storyboard', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        category: state.kategori,
-        productImageUrl: state.photoDataUrl,
-        style: state.stil,
-        companyName: state.marka || 'Mağaza',
-        hookText: state.kanca || null
-      })
-    }).then(r => r.json()).catch(() => null);
+    const [sbRes, muzRes] = await Promise.allSettled([
+      fetch(BASE + '/api/video/storyboard', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: state.kategori, productImageUrl: state.photoDataUrl, style: state.stil, companyName: state.marka || 'Mağaza', hookText: state.kanca || null })
+      }).then(r => r.json()),
+      fetch(BASE + '/api/music/search', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ category: state.kategori, mood: state.stil })
+      }).then(r => r.json())
+    ]);
 
-    // Müzik ara
-    const muzRes = await fetch(BASE + '/api/music/search', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ category: state.kategori, mood: state.stil })
-    }).then(r => r.json()).catch(() => null);
-
-    // Sonucu kaydet
     state.videoData = {
-      storyboard: sbRes?.storyboard || null,
-      music: muzRes?.track || null,
-      kategori: state.kategori,
-      stil: state.stil,
-      timestamp: Date.now()
+      storyboard: sbRes.status === 'fulfilled' ? sbRes.value?.storyboard : null,
+      music: muzRes.status === 'fulfilled' ? muzRes.value?.track : null,
+      kategori: state.kategori, stil: state.stil, ts: Date.now()
     };
-
-    // Tamamla
-    clearInterval(prodInterval);
-    document.getElementById('prog-fill').style.width = '100%';
-    document.getElementById('prog-status').textContent = '✅ Tamamlandı!';
-
-    setTimeout(() => showResult(sbRes), 600);
-
-  } catch(e) {
-    clearInterval(prodInterval);
-    // API olmasa da demo sonuç göster
-    setTimeout(() => showResult(null), 500);
-  }
+  } catch(e) { /* api olmasa da devam */ }
 }
 
-function showResult(sbData) {
+function runProgressSteps() {
+  const stepMap = [
+    [10, 'ps-1', 'Ürün ateşle karşılaşıyor...'],
+    [28, 'ps-2', 'Kategori belirleniyor...'],
+    [50, 'ps-3', 'Ritim ve müzik seçiliyor...'],
+    [72, 'ps-4', 'Efektler ve geçişler...'],
+    [92, 'ps-5', 'Son dokunuşlar...']
+  ];
+  let si = 0;
+  clearInterval(prodInterval);
+  prodInterval = setInterval(() => {
+    if (si >= stepMap.length) { clearInterval(prodInterval); setTimeout(() => showResult(), 500); return; }
+    const [pct, stepId, label] = stepMap[si];
+    document.getElementById('prog-fill').style.width = pct + '%';
+    document.getElementById('prod-sub').textContent = label;
+    // adım state
+    if (si > 0) {
+      const prev = document.getElementById(stepMap[si-1][1]);
+      if (prev) { prev.classList.remove('active'); prev.classList.add('done'); }
+    }
+    const cur = document.getElementById(stepId);
+    if (cur) cur.classList.add('active');
+    si++;
+  }, 1100);
+}
+
+function showResult() {
+  clearInterval(prodInterval);
+  document.getElementById('prog-fill').style.width = '100%';
   document.getElementById('card-producing').style.display = 'none';
   document.getElementById('card-result').style.display = 'block';
-
-  // İstatistikler
   document.getElementById('rs-sure').textContent = state.stil === 'dinamik' ? '15s' : '20s';
-  document.getElementById('rs-fps').textContent = '60';
-  document.getElementById('rs-format').textContent = '9:16';
+  document.getElementById('result-sub').textContent = state.kategori.toUpperCase() + ' · ' + (state.marka || 'FENIX') + ' · REELS';
+  drawResultCanvas();
+  toast('Video hazır — indirebilirsin');
+}
 
-  // Canvas — ürün önizlemesi
+// ── CANVAS ÖNIZLEME ──
+function drawResultCanvas() {
   const canvas = document.getElementById('result-canvas');
   canvas.width = 270; canvas.height = 480;
   const ctx = canvas.getContext('2d');
 
-  // Gradient arka plan
-  const grad = ctx.createLinearGradient(0, 0, 270, 480);
-  grad.addColorStop(0, '#0a0a14');
-  grad.addColorStop(1, '#1a0a2e');
-  ctx.fillStyle = grad;
+  // Siyah arka plan
+  ctx.fillStyle = '#050508';
+  ctx.fillRect(0, 0, 270, 480);
+
+  // Alev gradient alttan
+  const flameGrad = ctx.createRadialGradient(135, 480, 0, 135, 480, 260);
+  flameGrad.addColorStop(0, 'rgba(255,69,0,0.25)');
+  flameGrad.addColorStop(0.5, 'rgba(255,100,0,0.08)');
+  flameGrad.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = flameGrad;
   ctx.fillRect(0, 0, 270, 480);
 
   // Ürün fotoğrafı
-  const img = new Image();
-  img.onload = () => {
-    // Ortalanmış ürün
-    const maxW = 220, maxH = 280;
-    const ratio = Math.min(maxW / img.width, maxH / img.height);
-    const w = img.width * ratio, h = img.height * ratio;
-    const x = (270 - w) / 2, y = (480 - h) / 2 - 30;
-    ctx.drawImage(img, x, y, w, h);
+  if (state.photoDataUrl) {
+    const img = new Image();
+    img.onload = () => {
+      const maxW = 210, maxH = 260;
+      const r = Math.min(maxW / img.width, maxH / img.height);
+      const w = img.width * r, h = img.height * r;
+      const x = (270 - w) / 2, y = (480 - h) / 2 - 24;
+      // Glow
+      ctx.save();
+      ctx.shadowColor = 'rgba(255,100,0,0.5)';
+      ctx.shadowBlur = 30;
+      ctx.drawImage(img, x, y, w, h);
+      ctx.restore();
+      drawCanvasOverlay(ctx);
+    };
+    img.src = state.photoDataUrl;
+  } else {
+    drawCanvasOverlay(ctx);
+  }
+}
 
-    // Marka yazısı
-    if (state.marka) {
-      ctx.fillStyle = 'rgba(255,107,53,0.9)';
-      ctx.font = 'bold 13px DM Sans, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(state.marka.toUpperCase(), 135, 440);
-    }
+function drawCanvasOverlay(ctx) {
+  // Alt çizgi
+  ctx.strokeStyle = 'rgba(255,69,0,0.3)';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath(); ctx.moveTo(20, 420); ctx.lineTo(250, 420); ctx.stroke();
 
-    // Kategori badge
-    ctx.fillStyle = 'rgba(255,107,53,0.15)';
-    const bw = 80, bh = 22, bx = 135 - bw/2, by = 22;
-    ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 11); ctx.fill();
-    ctx.fillStyle = 'rgba(255,107,53,0.9)';
-    ctx.font = 'bold 10px DM Sans, sans-serif';
-    ctx.fillText(state.kategori.toUpperCase(), 135, 37);
+  // Kategori
+  ctx.font = '700 9px Inter, sans-serif';
+  ctx.fillStyle = 'rgba(255,106,0,0.7)';
+  ctx.letterSpacing = '2px';
+  ctx.textAlign = 'center';
+  ctx.fillText(state.kategori.toUpperCase(), 135, 437);
 
-    // Reels logo
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.font = '10px sans-serif';
-    ctx.fillText('✦ FENIX REELS', 135, 460);
-  };
-  img.src = state.photoDataUrl;
+  // Marka
+  if (state.marka) {
+    ctx.font = '700 13px Cinzel, serif';
+    ctx.fillStyle = 'rgba(196,168,130,0.9)';
+    ctx.fillText(state.marka.toUpperCase(), 135, 458);
+  }
 
-  toast('✅ Video hazır — indirebilirsin!', 'ok');
+  // Fenix logo küçük
+  ctx.font = '500 9px Inter, sans-serif';
+  ctx.fillStyle = 'rgba(122,106,85,0.4)';
+  ctx.fillText('✦ FENİX', 135, 474);
+
+  // Üst köşe - format
+  ctx.textAlign = 'right';
+  ctx.font = '500 9px Inter, sans-serif';
+  ctx.fillStyle = 'rgba(122,106,85,0.4)';
+  ctx.fillText('9:16 · 60FPS', 255, 20);
 }
 
 // ── İNDİR ──
 function downloadVideo() {
-  // Canvas'ı PNG olarak indir (gerçek video export için photoreel_v9 gerekiyor)
   const canvas = document.getElementById('result-canvas');
   const link = document.createElement('a');
-  link.download = 'fenix-reels-' + state.kategori + '-' + Date.now() + '.png';
+  link.download = `fenix-${state.kategori}-${Date.now()}.png`;
   link.href = canvas.toDataURL('image/png');
   link.click();
-  toast('⬇️ İndiriliyor...', 'ok');
-
-  // Fenix'e bildir
+  toast('İndiriliyor...');
   fetch(BASE + '/api/fenix/feedback', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      action: 'download',
-      kategori: state.kategori,
-      videoData: state.videoData
-    })
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'download', kategori: state.kategori, videoData: state.videoData })
   }).catch(() => {});
 }
 
@@ -631,36 +962,29 @@ function downloadVideo() {
 async function sendFeedback(liked) {
   try {
     await fetch(BASE + '/api/feedback', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        liked,
-        category: state.kategori,
-        videoData: state.videoData || { kategori: state.kategori }
-      })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ liked, category: state.kategori, videoData: state.videoData || { kategori: state.kategori } })
     });
-    toast(liked ? '✅ Teşekkürler! Fenix öğrendi.' : '🔄 Yeniden üretiliyor...', liked ? 'ok' : 'uyari');
-    if (!liked) setTimeout(() => startProduction(), 1500);
-  } catch(e) {
-    toast('Geri bildirim gönderilemedi', 'hata');
-  }
+    toast(liked ? 'Fenix öğrendi. Teşekkürler.' : 'Yeniden üretiliyor...');
+    if (!liked) setTimeout(startProduction, 1200);
+  } catch(e) { toast('Geri bildirim gönderilemedi'); }
 }
 
 // ── SIFIRLA ──
 function resetAll() {
   clearInterval(prodInterval);
-  state = {
-    step:1, photoDataUrl:null, photoFile:null, kategori:null,
-    marka:'', kanca:'', stil:'dinamik', bpm:'auto',
-    videoBlob:null, videoData:null
-  };
+  state = { step:1, photoDataUrl:null, kategori:null, marka:'', kanca:'', stil:'dinamik', videoData:null };
   resetPhoto();
   document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('sel'));
   document.getElementById('btn-next-2').disabled = true;
   document.getElementById('card-producing').style.display = 'block';
   document.getElementById('card-result').style.display = 'none';
   document.getElementById('prog-fill').style.width = '0%';
-  document.getElementById('prog-status').textContent = 'Analiz ediliyor...';
+  ['ps-1','ps-2','ps-3','ps-4','ps-5'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.classList.remove('active','done'); }
+  });
+  document.getElementById('ps-1').classList.add('active');
   goStep(1);
 }
 </script>
