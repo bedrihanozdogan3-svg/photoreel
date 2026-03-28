@@ -28,6 +28,27 @@ const memStore = {};
 const FREE_QUOTA = 5;
 const COLLECTION = 'fenix-customers';
 
+// CustomerId format doğrulama — path traversal ve injection engeli
+function isValidCustomerId(id) {
+  return typeof id === 'string' && /^(phone_\d{7,15}|email_[a-z0-9._%+\-]{1,64}@[a-z0-9.\-]{1,255}\.[a-z]{2,})$/.test(id);
+}
+
+// Admin kontrolü (list/stats için)
+function requireAdminLocal(req, res, next) {
+  const jwt = require('jsonwebtoken');
+  const secret = process.env.JWT_SECRET;
+  if (!secret) return res.status(500).json({ ok: false, error: 'Yapılandırma hatası.' });
+  const cookie = req.cookies && req.cookies.fenix_admin;
+  const header = req.headers.authorization && req.headers.authorization.replace('Bearer ', '');
+  const token = cookie || header;
+  if (!token) return res.status(401).json({ ok: false, error: 'Yetkisiz.' });
+  try {
+    const p = jwt.verify(token, secret);
+    if (p.role !== 'admin') return res.status(403).json({ ok: false, error: 'Yetersiz yetki.' });
+    next();
+  } catch { return res.status(401).json({ ok: false, error: 'Geçersiz token.' }); }
+}
+
 /**
  * Müşteri kimliğini normalize et.
  * Telefon: +90... → sadece rakamlar
@@ -143,34 +164,28 @@ router.post('/use-quota', async (req, res) => {
 
     if (firestore) {
       const ref = firestore.collection(COLLECTION).doc(customerId);
-      const snap = await ref.get();
 
-      if (!snap.exists) {
-        return res.status(404).json({ ok: false, error: 'Müşteri bulunamadı.' });
-      }
-
-      const data = snap.data();
-      const used = data.used || 0;
-      const remaining = Math.max(0, FREE_QUOTA - used);
-
-      if (remaining <= 0) {
-        return res.status(403).json({
-          ok: false,
-          error: 'Ücretsiz video hakkınız doldu.',
-          remaining: 0
+      // Firestore transaction — race condition engeli (eş zamanlı isteklerde quota aşımı önlenir)
+      let newRemaining;
+      let newUsed;
+      try {
+        await firestore.runTransaction(async (t) => {
+          const snap = await t.get(ref);
+          if (!snap.exists) throw Object.assign(new Error('Müşteri bulunamadı.'), { status: 404 });
+          const data = snap.data();
+          const used = data.used || 0;
+          const remaining = Math.max(0, FREE_QUOTA - used);
+          if (remaining <= 0) throw Object.assign(new Error('Ücretsiz video hakkınız doldu.'), { status: 403, remaining: 0 });
+          t.update(ref, { used: used + 1, lastUsedAt: new Date().toISOString() });
+          newUsed = used + 1;
+          newRemaining = remaining - 1;
         });
+      } catch (txErr) {
+        return res.status(txErr.status || 500).json({ ok: false, error: txErr.message, remaining: txErr.remaining ?? undefined });
       }
 
-      // Quota kullan
-      await ref.update({
-        used: used + 1,
-        lastUsedAt: new Date().toISOString()
-      });
-
-      const newRemaining = remaining - 1;
-      logger.info('Quota kullanıldı', { customerId, used: used + 1, remaining: newRemaining });
-
-      return res.json({ ok: true, remaining: newRemaining, used: used + 1, total: FREE_QUOTA });
+      logger.info('Quota kullanıldı', { customerId, used: newUsed, remaining: newRemaining });
+      return res.json({ ok: true, remaining: newRemaining, used: newUsed, total: FREE_QUOTA });
 
     } else {
       // Bellek fallback
@@ -196,6 +211,9 @@ router.post('/use-quota', async (req, res) => {
  */
 router.get('/quota/:customerId', async (req, res) => {
   const { customerId } = req.params;
+  if (!isValidCustomerId(customerId)) {
+    return res.status(400).json({ ok: false, error: 'Geçersiz müşteri kimliği.' });
+  }
 
   try {
     const firestore = getDb();
@@ -221,7 +239,7 @@ router.get('/quota/:customerId', async (req, res) => {
  * Tüm müşterileri listeler (admin panel için).
  * Query: ?limit=50&status=all|active|full
  */
-router.get('/list', async (req, res) => {
+router.get('/list', requireAdminLocal, async (req, res) => {
   const limit = Math.min(parseInt(req.query.limit) || 50, 200);
   const status = req.query.status || 'all'; // all | active | full
 
@@ -284,7 +302,7 @@ router.get('/list', async (req, res) => {
  * GET /api/customer/stats
  * Toplam müşteri sayısı, kota durumu, gelir özeti.
  */
-router.get('/stats', async (req, res) => {
+router.get('/stats', requireAdminLocal, async (req, res) => {
   try {
     const firestore = getDb();
 

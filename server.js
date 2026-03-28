@@ -162,13 +162,22 @@ app.get('/analytics', (req, res) => {
 // Admin auth kontrolü — httpOnly cookie veya Authorization header
 const jwt = require('jsonwebtoken');
 function requireAdmin(req, res, next) {
-  const jwtSecret = process.env.JWT_SECRET || 'fenix-dev-secret';
+  const jwtSecret = process.env.JWT_SECRET;
+  // Production'da JWT_SECRET zorunlu — fallback YOK
+  if (!jwtSecret) {
+    logger.error('KRITIK: JWT_SECRET env var eksik!');
+    return res.status(500).json({ ok: false, error: 'Sunucu yapılandırma hatası.' });
+  }
   // Cookie kontrolü
   const cookie = req.cookies && req.cookies.fenix_admin;
   // Header kontrolü (Bearer token)
   const header = req.headers.authorization && req.headers.authorization.replace('Bearer ', '');
   const token = cookie || header;
-  if (!token) return res.redirect('/giris?next=' + encodeURIComponent(req.originalUrl));
+  // next parametresi whitelist ile sınırlandırılmış — open redirect engeli
+  const ALLOWED_NEXT = ['/kontrol', '/satici', '/qr', '/dashboard', '/analytics'];
+  const nextPath = req.originalUrl;
+  const safeNext = ALLOWED_NEXT.includes(nextPath.split('?')[0]) ? nextPath : '/kontrol';
+  if (!token) return res.redirect('/giris?next=' + encodeURIComponent(safeNext));
   try {
     const payload = jwt.verify(token, jwtSecret);
     if (payload.role !== 'admin') throw new Error('Yetersiz yetki');
