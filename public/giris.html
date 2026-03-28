@@ -76,12 +76,23 @@ canvas#fire{position:fixed;inset:0;pointer-events:none;z-index:0}
 .btn:disabled{opacity:0.4;cursor:not-allowed}
 
 .err{
-  margin-top:14px;padding:9px 13px;
-  background:rgba(255,0,0,0.07);border:1px solid rgba(255,0,0,0.18);
-  border-radius:4px;font-size:12px;color:rgba(255,80,80,0.75);
+  margin-top:16px;padding:12px 16px;
+  background:rgba(220,30,30,0.18);
+  border:1.5px solid rgba(255,60,60,0.7);
+  border-radius:6px;font-size:13px;font-weight:600;
+  color:#FF6B6B;
   display:none;letter-spacing:0.5px;
+  text-align:center;
+  box-shadow:0 0 16px rgba(255,0,0,0.25);
 }
-.err.show{display:block}
+.err.show{display:block;animation:shake 0.4s ease}
+@keyframes shake{
+  0%,100%{transform:translateX(0)}
+  20%{transform:translateX(-8px)}
+  40%{transform:translateX(8px)}
+  60%{transform:translateX(-6px)}
+  80%{transform:translateX(6px)}
+}
 
 .loading{
   display:inline-block;width:12px;height:12px;
@@ -248,16 +259,26 @@ canvas#fire{position:fixed;inset:0;pointer-events:none;z-index:0}
 
 document.addEventListener('keydown', e => { if(e.key==='Enter') giris(); });
 
+function showErr(msg){
+  const errEl = document.getElementById('err-msg');
+  errEl.textContent = '⚠️  ' + msg;
+  errEl.classList.remove('show');
+  // force reflow for animation restart
+  void errEl.offsetWidth;
+  errEl.classList.add('show');
+}
+
 async function giris(){
   const btn = document.getElementById('btn-giris');
-  const errEl = document.getElementById('err-msg');
   const usr = document.getElementById('usr').value.trim();
   const pwd = document.getElementById('pwd').value;
-  errEl.classList.remove('show');
+  document.getElementById('err-msg').classList.remove('show');
 
-  if(!usr || !pwd){
-    errEl.textContent = 'Kullanıcı adı ve şifre gerekli.';
-    errEl.classList.add('show'); return;
+  if(!usr){
+    showErr('Kullanıcı adını gir.'); return;
+  }
+  if(!pwd){
+    showErr('Şifreyi gir.'); return;
   }
 
   btn.disabled = true;
@@ -269,20 +290,37 @@ async function giris(){
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ username: usr, password: pwd })
     });
-    const data = await res.json();
+
+    let data;
+    try {
+      data = await res.json();
+    } catch(jsonErr) {
+      console.error('JSON parse hatası:', jsonErr);
+      showErr('Sunucu yanıtı okunamadı (HTTP ' + res.status + ')');
+      btn.disabled = false; btn.innerHTML = 'ATEŞİ YAK';
+      return;
+    }
+
+    console.log('Login response:', res.status, data);
 
     if(data.ok && data.token){
       localStorage.setItem('fenix_token', data.token);
-      const next = new URLSearchParams(location.search).get('next') || '/satici';
-      window.location.href = next;
+      btn.innerHTML = '✓ GİRİLDİ';
+      const next = new URLSearchParams(location.search).get('next') || '/kontrol';
+      setTimeout(() => { window.location.href = next; }, 300);
     } else {
-      errEl.textContent = data.error || 'Hatalı kullanıcı adı veya şifre.';
-      errEl.classList.add('show');
+      if(res.status === 401){
+        showErr('❌ Hatalı kullanıcı adı veya şifre.');
+      } else if(res.status === 503){
+        showErr('Sunucu yapılandırması eksik. Yöneticiye başvur.');
+      } else {
+        showErr(data.error || 'Giriş başarısız (HTTP ' + res.status + ')');
+      }
       btn.disabled = false; btn.innerHTML = 'ATEŞİ YAK';
     }
   } catch(e) {
-    errEl.textContent = 'Sunucuya bağlanılamadı.';
-    errEl.classList.add('show');
+    console.error('Fetch hatası:', e);
+    showErr('Sunucuya bağlanılamadı: ' + e.message);
     btn.disabled = false; btn.innerHTML = 'ATEŞİ YAK';
   }
 }
