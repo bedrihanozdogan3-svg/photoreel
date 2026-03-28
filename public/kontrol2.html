@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,interactive-widget=resizes-content">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Fenix Kontrol">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#080507">
+<link rel="manifest" href="/manifest-kontrol.json">
+<link rel="icon" href="/fenix-icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="/fenix-icon-192.png">
 <title>Fenix — Komuta Köprüsü</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@300;400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
@@ -410,6 +417,11 @@ table.kt tr.quota-full td{background:rgba(255,107,26,.05)}
   </div>
   <div class="tb-train-badge" id="tb-train">⚡ EĞİTİM AKTİF</div>
   <div class="tb-domain" id="tb-domain" onclick="switchTab('domain')">fenixphotoai.com ✓</div>
+  <button id="btn-pwa-install" style="
+    display:none;padding:4px 12px;border:1px solid rgba(255,107,26,.35);border-radius:3px;
+    background:rgba(255,107,26,.12);font-size:10px;letter-spacing:1px;
+    color:var(--ember-bright);cursor:pointer;font-family:'Cinzel',serif;
+    transition:all .2s" title="Masaüstüne Ekle">📲 YÜKLE</button>
   <div class="tb-user">BEDRİHAN</div>
 </div>
 
@@ -1317,6 +1329,33 @@ function toast(msg, type) {
   var c = document.getElementById('toast-c'), d = document.createElement('div');
   d.className = 'toast' + (type ? ' ' + type : ''); d.textContent = msg; c.appendChild(d);
   setTimeout(function() { d.remove(); }, 2500);
+}
+
+// ══ PWA INSTALL ══
+var _pwaPrompt = null;
+window.addEventListener('beforeinstallprompt', function(e) {
+  e.preventDefault();
+  _pwaPrompt = e;
+  var btn = document.getElementById('btn-pwa-install');
+  if (btn) btn.style.display = 'block';
+});
+window.addEventListener('appinstalled', function() {
+  var btn = document.getElementById('btn-pwa-install');
+  if (btn) btn.style.display = 'none';
+  toast('Fenix masaüstüne eklendi ✓', 'ok');
+});
+document.addEventListener('click', function(e) {
+  if (e.target.id === 'btn-pwa-install' && _pwaPrompt) {
+    _pwaPrompt.prompt();
+    _pwaPrompt.userChoice.then(function(r) {
+      if (r.outcome === 'accepted') { _pwaPrompt = null; }
+    });
+  }
+});
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw-kontrol.js').catch(function() {});
 }
 
 // ══ INIT ══

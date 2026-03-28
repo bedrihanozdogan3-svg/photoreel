@@ -1,0 +1,39 @@
+{
+  "name": "Fenix Kontrol",
+  "short_name": "Fenix ✦",
+  "description": "Fenix AI Komuta Köprüsü — Admin Panel",
+  "start_url": "/kontrol",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#080507",
+  "theme_color": "#080507",
+  "lang": "tr",
+  "icons": [
+    {
+      "src": "/fenix-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/fenix-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Fenix Chat",
+      "url": "/kontrol",
+      "description": "Fenix AI ile konuş"
+    },
+    {
+      "name": "Müşteri Uygulaması",
+      "url": "/app",
+      "description": "Ürün videosu üret"
+    }
+  ]
+}
