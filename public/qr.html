@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fenix — Telefona Kur</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@300;400;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#050508;color:#F0E6D3;
+  font-family:'Inter',sans-serif;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:32px 20px;
+}
+body::before{
+  content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 60% 40% at 50% 100%,rgba(255,69,0,0.15),transparent 70%);
+  pointer-events:none;
+}
+.wrap{position:relative;z-index:1;width:100%;max-width:400px;text-align:center}
+
+.logo{
+  font-family:'Cinzel',serif;font-size:28px;font-weight:900;
+  letter-spacing:8px;color:#C4A882;
+  text-shadow:0 0 30px rgba(255,106,0,0.5);
+  margin-bottom:4px;
+}
+.tagline{font-size:10px;letter-spacing:3px;color:#7a6a55;margin-bottom:40px}
+
+.qr-wrap{
+  background:rgba(255,255,255,0.97);
+  border-radius:8px;padding:20px;
+  display:inline-block;margin-bottom:28px;
+  box-shadow:0 0 60px rgba(255,69,0,0.2);
+}
+#qr-canvas{display:block}
+
+.url-box{
+  border:1px solid rgba(255,69,0,0.2);border-radius:4px;
+  padding:12px 16px;font-size:13px;color:#7a6a55;
+  letter-spacing:0.5px;margin-bottom:28px;
+  word-break:break-all;
+}
+.url-box b{color:#C4A882}
+
+.steps{text-align:left;margin-bottom:32px}
+.step-row{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:12px 0;border-bottom:1px solid rgba(255,69,0,0.08);
+}
+.step-row:last-child{border-bottom:none}
+.step-n{
+  font-family:'Cinzel',serif;font-size:11px;
+  color:rgba(255,106,0,0.6);letter-spacing:1px;
+  width:24px;flex-shrink:0;padding-top:1px;
+}
+.step-text{font-size:13px;color:#7a6a55;line-height:1.6}
+.step-text b{color:#C4A882}
+
+.platform-row{
+  display:flex;gap:12px;justify-content:center;margin-bottom:28px;
+}
+.plat{
+  flex:1;padding:12px;border:1px solid rgba(255,69,0,0.12);
+  border-radius:4px;font-size:11px;letter-spacing:1px;
+  color:#7a6a55;background:rgba(255,69,0,0.03);
+}
+.plat-icon{font-size:20px;display:block;margin-bottom:5px}
+
+.note{
+  font-size:11px;color:rgba(122,106,85,0.5);
+  letter-spacing:0.5px;line-height:1.6;
+}
+.note a{color:rgba(255,106,0,0.5);text-decoration:none}
+
+.btn-go{
+  display:inline-block;margin-top:20px;
+  padding:14px 32px;
+  border:1px solid rgba(255,106,0,0.3);border-radius:4px;
+  background:rgba(255,69,0,0.08);
+  font-family:'Cinzel',serif;font-size:11px;
+  letter-spacing:3px;color:rgba(255,150,0,0.8);
+  text-decoration:none;transition:all .3s;
+}
+.btn-go:hover{background:rgba(255,69,0,0.15);color:#FFAA00}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">FENİX</div>
+  <div class="tagline">TELEFONA YÜKLE · ANA EKRANA EKLE</div>
+
+  <div class="qr-wrap">
+    <canvas id="qr-canvas"></canvas>
+  </div>
+
+  <div class="url-box" id="url-box">
+    <b id="url-text">Yükleniyor...</b>
+  </div>
+
+  <div class="platform-row">
+    <div class="plat">
+      <span class="plat-icon">🍎</span>
+      Safari → Paylaş → Ana Ekrana Ekle
+    </div>
+    <div class="plat">
+      <span class="plat-icon">🤖</span>
+      Chrome → ⋮ → Uygulamayı Yükle
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step-row">
+      <div class="step-n">I</div>
+      <div class="step-text">Kamerayı aç, QR kodu okut<br><b>ya da linki kopyala</b></div>
+    </div>
+    <div class="step-row">
+      <div class="step-n">II</div>
+      <div class="step-text">Tarayıcıda sayfa açılır<br><b>iPhone:</b> Safari alt menü → Paylaş → Ana Ekrana Ekle<br><b>Android:</b> Chrome ⋮ → Uygulamayı Yükle</div>
+    </div>
+    <div class="step-row">
+      <div class="step-n">III</div>
+      <div class="step-text">Fenix ikonu ana ekrana iner<br><b>Tam ekran, uygulama gibi</b> açılır</div>
+    </div>
+    <div class="step-row">
+      <div class="step-n">IV</div>
+      <div class="step-text">Ayarlar'dan <b>şirket adı + logo</b> yükle<br>Bir kez kurulur, her video için otomatik eklenir</div>
+    </div>
+  </div>
+
+  <a href="/satici" class="btn-go">UYGULAMAYA GİT →</a>
+
+  <p class="note" style="margin-top:20px">
+    Play Store'a gerek yok — PWA olarak çalışır.<br>
+    İnternet bağlantısı olmadan bile temel özellikler açık kalır.
+  </p>
+</div>
+
+<script>
+// Mevcut URL'den QR oluştur
+const appUrl = window.location.origin + '/satici';
+document.getElementById('url-text').textContent = appUrl;
+
+QRCode.toCanvas(
+  document.getElementById('qr-canvas'),
+  appUrl,
+  {
+    width: 220,
+    margin: 2,
+    color: { dark: '#050508', light: '#f7f3ee' },
+    errorCorrectionLevel: 'H'
+  },
+  err => { if (err) console.error(err); }
+);
+</script>
+</body>
+</html>

@@ -2,529 +2,274 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Fenix — Ürünü Ateşe Ver</title>
+
+<!-- PWA -->
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#FF4500">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fenix">
+<link rel="apple-touch-icon" href="/fenix-icon-192.png">
+
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap');
+:root{
+  --bg:#050508;--ember:#FF4500;--kor:#FF6B00;--alev:#FFAA00;
+  --kul:#C4A882;--soluk:#7a6a55;--text:#F0E6D3;
+  --border:rgba(255,69,0,0.15);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden}
 
-:root {
-  --bg:       #050508;
-  --ember:    #FF4500;
-  --kor:      #FF6B00;
-  --alev:     #FFAA00;
-  --kul:      #C4A882;
-  --duman:    rgba(200,160,100,0.08);
-  --karanlik: #0a0804;
-  --text:     #F0E6D3;
-  --soluk:    #7a6a55;
-}
+/* ATEŞ */
+#fc{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;opacity:.4}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 50% 100%,rgba(255,69,0,0.16),transparent 70%);pointer-events:none;z-index:1}
+.app{position:relative;z-index:2;min-height:100vh}
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+/* TOP BAR */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;background:rgba(5,5,8,0.8);
+  border-bottom:1px solid rgba(255,69,0,0.1);
+  position:sticky;top:0;z-index:50;backdrop-filter:blur(16px);
+}
+.logo{font-family:'Cinzel',serif;font-size:20px;font-weight:900;letter-spacing:5px;color:var(--kul);text-shadow:0 0 24px rgba(255,106,0,0.5)}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.btn-settings{
+  width:36px;height:36px;border:1px solid rgba(255,69,0,0.2);border-radius:50%;
+  background:rgba(255,69,0,0.05);color:var(--soluk);font-size:15px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;
+}
+.btn-settings:hover{border-color:var(--ember);color:var(--kul)}
+.btn-qr{
+  width:36px;height:36px;border:1px solid rgba(255,69,0,0.2);border-radius:50%;
+  background:rgba(255,69,0,0.05);color:var(--soluk);font-size:13px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  text-decoration:none;transition:all .2s;
+}
+.btn-qr:hover{border-color:var(--ember);color:var(--kul)}
 
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'Inter', -apple-system, sans-serif;
-  min-height: 100vh;
-  overflow-x: hidden;
-}
+/* ADIM ÇUBUĞU */
+.steps-bar{display:flex;align-items:center;justify-content:center;gap:0;padding:14px 20px}
+.step-item{display:flex;align-items:center;gap:7px;font-size:10px;font-weight:600;color:var(--soluk);letter-spacing:1.5px;transition:color .3s}
+.step-item.active{color:var(--alev)}
+.step-item.done{color:var(--ember)}
+.step-num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;background:rgba(255,255,255,.03);border:1px solid rgba(255,69,0,.15);transition:all .3s;flex-shrink:0}
+.step-item.active .step-num{background:rgba(255,106,0,.15);border-color:var(--ember);color:var(--alev);box-shadow:0 0 10px rgba(255,69,0,.4)}
+.step-item.done .step-num{background:rgba(255,69,0,.08);border-color:rgba(255,69,0,.3);color:var(--ember)}
+.step-sep{width:22px;height:1px;background:rgba(255,69,0,.1);margin:0 3px;flex-shrink:0}
 
-/* ── ATEŞ CANVAS — ARKA PLAN ── */
-#fire-canvas {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.45;
-}
+/* PANEL */
+.panel{max-width:500px;margin:0 auto;padding:0 18px 80px;display:none}
+.panel.active{display:block}
+.sp{height:24px}
+.sec-lbl{font-family:'Cinzel',serif;font-size:11px;letter-spacing:4px;color:var(--soluk);margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.sec-lbl::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(255,69,0,.2),transparent)}
+.sec-title{font-family:'Cinzel',serif;font-size:26px;font-weight:700;color:var(--text);margin-bottom:5px;line-height:1.2}
+.sec-sub{font-size:12px;color:var(--soluk);margin-bottom:24px;line-height:1.6}
 
-/* ── TÜYSÜZ DOKU ── */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 60% 50% at 50% 100%, rgba(255,69,0,0.18) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 30% at 20% 80%, rgba(180,50,0,0.12) 0%, transparent 60%),
-    radial-gradient(ellipse 40% 30% at 80% 80%, rgba(180,50,0,0.10) 0%, transparent 60%);
-  pointer-events: none;
-  z-index: 1;
-}
+/* UPLOAD */
+.upload-zone{border:1px solid rgba(255,69,0,.2);border-radius:4px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .3s;background:rgba(255,69,0,.03);position:relative;overflow:hidden}
+.upload-zone:hover,.upload-zone.drag{border-color:rgba(255,106,0,.5);background:rgba(255,69,0,.06);box-shadow:0 0 40px rgba(255,69,0,.1) inset}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-glyph{font-size:32px;margin-bottom:12px;display:block}
+.upload-text{font-family:'Cinzel',serif;font-size:13px;letter-spacing:2px;color:var(--kul);margin-bottom:5px}
+.upload-hint{font-size:10px;color:var(--soluk);letter-spacing:1px}
+.preview-wrap{display:none;border-radius:4px;overflow:hidden;position:relative;aspect-ratio:1;background:#000;border:1px solid rgba(255,69,0,.2);box-shadow:0 0 40px rgba(255,69,0,.12)}
+.preview-wrap.show{display:block}
+.preview-wrap img{width:100%;height:100%;object-fit:contain}
+.preview-reset{position:absolute;top:10px;right:10px;background:rgba(5,5,8,.85);border:1px solid rgba(255,69,0,.3);color:var(--kul);border-radius:4px;padding:6px 12px;font-size:10px;letter-spacing:1px;cursor:pointer;font-family:'Inter',sans-serif}
 
-/* ── TÜM İÇERİK ── */
-.app { position: relative; z-index: 2; min-height: 100vh; }
+/* KATEGORİ */
+.cat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.cat-btn{background:rgba(255,255,255,.02);border:1px solid rgba(255,69,0,.08);border-radius:4px;padding:13px 6px;text-align:center;cursor:pointer;transition:all .22s;min-height:68px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+.cat-btn:hover{border-color:rgba(255,106,0,.3);background:rgba(255,69,0,.04)}
+.cat-btn.sel{border-color:var(--ember);background:rgba(255,69,0,.1);box-shadow:0 0 16px rgba(255,69,0,.12) inset}
+.cat-emoji{font-size:19px}
+.cat-name{font-size:9px;font-weight:600;color:var(--soluk);letter-spacing:1px}
+.cat-btn.sel .cat-name{color:var(--alev)}
 
-/* ── LOGO ── */
-.topbar {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 28px;
-  border-bottom: 1px solid rgba(255,69,0,0.12);
-  background: rgba(5,5,8,0.7);
-  backdrop-filter: blur(12px);
-  position: sticky; top: 0; z-index: 50;
-}
-.logo {
-  font-family: 'Cinzel', serif;
-  font-size: 22px;
-  font-weight: 900;
-  letter-spacing: 6px;
-  color: var(--kul);
-  text-shadow: 0 0 30px rgba(255,106,0,0.6), 0 0 60px rgba(255,69,0,0.3);
-  position: relative;
-}
-.logo::after {
-  content: '';
-  position: absolute;
-  bottom: -4px; left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--ember), transparent);
-}
-.logo-tagline {
-  font-size: 10px;
-  letter-spacing: 3px;
-  color: var(--soluk);
-  font-family: 'Inter', sans-serif;
-  font-weight: 300;
-  margin-top: 2px;
-}
+/* FIELD */
+.field{margin-bottom:18px}
+.field label{display:block;font-size:10px;color:var(--soluk);font-weight:600;margin-bottom:7px;letter-spacing:2px}
+.field input,.field select{width:100%;background:rgba(255,255,255,.03);border:1px solid rgba(255,69,0,.15);border-radius:4px;color:var(--text);padding:12px 14px;font-size:14px;font-family:'Inter',sans-serif;transition:border-color .2s;appearance:none}
+.field input:focus,.field select:focus{outline:none;border-color:rgba(255,106,0,.4);box-shadow:0 0 16px rgba(255,69,0,.08) inset}
+.field input::placeholder{color:rgba(122,106,85,.4)}
+.field select option{background:#0a0804}
 
-/* ── ADIM ÇUBUĞU ── */
-.steps-bar {
-  display: flex; align-items: center; justify-content: center;
-  gap: 0; padding: 18px 24px;
+/* MÜZİK SEÇİCİ */
+.music-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.music-btn{
+  background:rgba(255,255,255,.02);border:1px solid rgba(255,69,0,.1);
+  border-radius:4px;padding:10px 12px;cursor:pointer;transition:all .22s;
+  display:flex;align-items:center;gap:10px;
 }
-.step-item {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 11px; font-weight: 600; color: var(--soluk);
-  letter-spacing: 1px;
-  font-family: 'Inter', sans-serif;
-  transition: color .4s;
+.music-btn:hover{border-color:rgba(255,106,0,.3)}
+.music-btn.sel{border-color:var(--ember);background:rgba(255,69,0,.08)}
+.music-btn.playing{border-color:var(--alev);background:rgba(255,170,0,.06)}
+.music-icon{font-size:16px;flex-shrink:0}
+.music-info{flex:1;min-width:0}
+.music-name{font-size:11px;font-weight:600;color:var(--kul);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.music-bpm{font-size:9px;color:var(--soluk);letter-spacing:1px;margin-top:2px}
+.music-play{font-size:11px;color:var(--soluk);flex-shrink:0;transition:color .2s}
+.music-btn.sel .music-play{color:var(--ember)}
+.music-upload-btn{
+  width:100%;padding:11px;border:1px dashed rgba(255,69,0,.2);border-radius:4px;
+  background:rgba(255,69,0,.02);color:var(--soluk);font-size:11px;letter-spacing:1px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+  font-family:'Inter',sans-serif;transition:all .2s;position:relative;
 }
-.step-item.active { color: var(--alev); }
-.step-item.done { color: var(--ember); }
-.step-num {
-  width: 26px; height: 26px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 11px; font-weight: 700;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,69,0,0.15);
-  transition: all .4s;
-  flex-shrink: 0;
-}
-.step-item.active .step-num {
-  background: rgba(255,106,0,0.15);
-  border-color: var(--ember);
-  color: var(--alev);
-  box-shadow: 0 0 12px rgba(255,69,0,0.4);
-}
-.step-item.done .step-num {
-  background: rgba(255,69,0,0.1);
-  border-color: rgba(255,69,0,0.4);
-  color: var(--ember);
-}
-.step-sep {
-  width: 28px; height: 1px;
-  background: linear-gradient(90deg, rgba(255,69,0,0.15), rgba(255,69,0,0.05));
-  margin: 0 4px; flex-shrink: 0;
-}
+.music-upload-btn:hover{border-color:rgba(255,106,0,.4);color:var(--kul)}
+.music-upload-btn input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 
-/* ── PANEL ── */
-.panel { max-width: 520px; margin: 0 auto; padding: 0 20px 60px; display: none; }
-.panel.active { display: block; }
+/* LOGO UPLOAD */
+.logo-upload-area{
+  border:1px dashed rgba(255,69,0,.2);border-radius:4px;
+  padding:16px;display:flex;align-items:center;gap:14px;
+  cursor:pointer;position:relative;transition:all .2s;
+  background:rgba(255,69,0,.02);
+}
+.logo-upload-area:hover{border-color:rgba(255,106,0,.4)}
+.logo-upload-area input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.logo-preview-wrap{width:48px;height:48px;border-radius:4px;border:1px solid rgba(255,69,0,.2);background:rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+.logo-preview-wrap img{width:100%;height:100%;object-fit:contain}
+.logo-placeholder{font-size:20px;color:var(--soluk)}
+.logo-upload-text{flex:1}
+.logo-upload-title{font-size:12px;font-weight:600;color:var(--kul);margin-bottom:2px}
+.logo-upload-hint{font-size:10px;color:var(--soluk);letter-spacing:.5px}
+.logo-clear{position:absolute;top:8px;right:8px;background:rgba(5,5,8,.8);border:1px solid rgba(255,69,0,.2);color:var(--soluk);border-radius:4px;padding:4px 8px;font-size:9px;letter-spacing:1px;cursor:pointer;z-index:2;display:none}
 
-/* ── KARTSİZ — AÇIK TASARIM ── */
-.section-label {
-  font-family: 'Cinzel', serif;
-  font-size: 13px;
-  letter-spacing: 4px;
-  color: var(--soluk);
-  margin-bottom: 8px;
-  display: flex; align-items: center; gap: 12px;
-}
-.section-label::after {
-  content: '';
-  flex: 1; height: 1px;
-  background: linear-gradient(90deg, rgba(255,69,0,0.2), transparent);
-}
-.section-title {
-  font-family: 'Cinzel', serif;
-  font-size: 28px;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 6px;
-  line-height: 1.2;
-}
-.section-sub {
-  font-size: 13px;
-  color: var(--soluk);
-  margin-bottom: 28px;
-  line-height: 1.6;
-}
+/* BUTONLAR */
+.btn-main{width:100%;padding:16px;border:1px solid rgba(255,106,0,.4);border-radius:4px;background:rgba(255,69,0,.12);color:var(--alev);font-size:11px;font-weight:700;font-family:'Cinzel',serif;letter-spacing:4px;cursor:pointer;transition:all .3s;min-height:54px;position:relative;overflow:hidden}
+.btn-main::before{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--ember),transparent);opacity:0;transition:opacity .3s}
+.btn-main:hover:not(:disabled)::before{opacity:1}
+.btn-main:hover:not(:disabled){background:rgba(255,69,0,.2);border-color:var(--ember);box-shadow:0 0 28px rgba(255,69,0,.18);color:#fff}
+.btn-main:disabled{opacity:.3;cursor:not-allowed}
+.btn-back{width:100%;padding:13px;border:1px solid rgba(255,255,255,.05);border-radius:4px;background:transparent;color:var(--soluk);font-size:10px;letter-spacing:2px;cursor:pointer;margin-top:8px;min-height:46px;font-family:'Inter',sans-serif;transition:all .2s}
+.btn-back:hover{border-color:rgba(255,69,0,.2);color:var(--kul)}
 
-/* ── UPLOAD ALANI ── */
-.upload-zone {
-  border: 1px solid rgba(255,69,0,0.2);
-  border-radius: 4px;
-  padding: 48px 24px;
-  text-align: center;
-  cursor: pointer;
-  transition: all .3s;
-  background: rgba(255,69,0,0.03);
-  position: relative;
-  overflow: hidden;
-}
-.upload-zone::before {
-  content: '';
-  position: absolute; inset: 0;
-  background: linear-gradient(180deg, transparent 60%, rgba(255,69,0,0.05));
-  pointer-events: none;
-}
-.upload-zone:hover, .upload-zone.drag {
-  border-color: rgba(255,106,0,0.5);
-  background: rgba(255,69,0,0.06);
-  box-shadow: 0 0 40px rgba(255,69,0,0.1) inset;
-}
-.upload-zone input {
-  position: absolute; inset: 0; opacity: 0;
-  cursor: pointer; width: 100%; height: 100%;
-}
-.upload-glyph {
-  font-size: 36px; margin-bottom: 14px; display: block;
-  filter: grayscale(0.3) sepia(0.2);
-}
-.upload-text {
-  font-family: 'Cinzel', serif;
-  font-size: 14px; letter-spacing: 2px;
-  color: var(--kul); margin-bottom: 6px;
-}
-.upload-hint { font-size: 11px; color: var(--soluk); letter-spacing: 1px; }
+/* PROGRESS */
+.prog-wrap{margin:22px 0}
+.prog-line{height:1px;background:rgba(255,69,0,.1);position:relative;overflow:visible;margin-bottom:20px}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--ember),var(--alev));width:0%;transition:width .6s ease;position:relative}
+.prog-fill::after{content:'';position:absolute;right:0;top:-3px;width:7px;height:7px;border-radius:50%;background:var(--alev);box-shadow:0 0 10px var(--ember),0 0 20px rgba(255,106,0,.6)}
+.prog-steps{display:flex;flex-direction:column;gap:7px}
+.ps{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--soluk);transition:color .3s}
+.ps.active{color:var(--kul)}
+.ps.done{color:rgba(255,69,0,.5)}
+.ps-dot{width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,.1);flex-shrink:0;transition:all .3s}
+.ps.active .ps-dot{background:var(--ember);box-shadow:0 0 8px rgba(255,69,0,.8);animation:flkr 1s ease-in-out infinite}
+.ps.done .ps-dot{background:rgba(255,69,0,.4)}
+@keyframes flkr{0%,100%{opacity:1;box-shadow:0 0 8px rgba(255,69,0,.8)}50%{opacity:.6;box-shadow:0 0 16px rgba(255,106,0,1)}}
 
-/* Preview */
-.preview-wrap {
-  display: none; border-radius: 4px; overflow: hidden;
-  position: relative; aspect-ratio: 1;
-  background: #000;
-  border: 1px solid rgba(255,69,0,0.2);
-  box-shadow: 0 0 60px rgba(255,69,0,0.15);
-}
-.preview-wrap.show { display: block; }
-.preview-wrap img { width: 100%; height: 100%; object-fit: contain; }
-.preview-reset {
-  position: absolute; top: 12px; right: 12px;
-  background: rgba(5,5,8,0.85);
-  border: 1px solid rgba(255,69,0,0.3);
-  color: var(--kul); border-radius: 4px;
-  padding: 6px 14px; font-size: 11px; letter-spacing: 1px;
-  cursor: pointer; font-family: 'Inter', sans-serif;
-  transition: all .2s;
-}
-.preview-reset:hover { background: rgba(255,69,0,0.15); color: var(--alev); }
+/* SONUÇ */
+.result-canvas-wrap{border:1px solid rgba(255,69,0,.2);border-radius:4px;overflow:hidden;margin-bottom:18px;background:#000;max-width:220px;margin-left:auto;margin-right:auto;box-shadow:0 0 50px rgba(255,69,0,.18),0 0 100px rgba(255,69,0,.07)}
+.result-canvas-wrap canvas{display:block;width:100%}
+.result-meta{display:flex;gap:0;margin-bottom:18px;border:1px solid rgba(255,69,0,.1);border-radius:4px;overflow:hidden}
+.rm{flex:1;padding:11px 8px;text-align:center;border-right:1px solid rgba(255,69,0,.08)}
+.rm:last-child{border-right:none}
+.rm-val{font-family:'Cinzel',serif;font-size:15px;color:var(--kul);letter-spacing:1px}
+.rm-lbl{font-size:8px;color:var(--soluk);letter-spacing:2px;margin-top:3px}
+.btn-dl{width:100%;padding:16px;border:1px solid rgba(255,106,0,.4);border-radius:4px;background:rgba(255,69,0,.12);color:var(--alev);font-size:11px;font-weight:700;font-family:'Cinzel',serif;letter-spacing:4px;cursor:pointer;min-height:54px;transition:all .3s;box-shadow:0 0 24px rgba(255,69,0,.12)}
+.btn-dl:hover{background:rgba(255,69,0,.22);box-shadow:0 0 40px rgba(255,69,0,.25)}
+.fb-row{display:flex;gap:7px;margin-top:8px}
+.fb{flex:1;padding:12px 6px;border-radius:4px;font-size:10px;font-family:'Inter',sans-serif;letter-spacing:1px;cursor:pointer;min-height:46px;transition:all .2s;font-weight:600}
+.fb-y{background:rgba(63,185,80,.05);border:1px solid rgba(63,185,80,.18);color:rgba(100,200,100,.6)}
+.fb-y:hover{background:rgba(63,185,80,.1);color:#3fb950}
+.fb-n{background:rgba(255,69,0,.05);border:1px solid rgba(255,69,0,.18);color:rgba(200,100,60,.6)}
+.fb-n:hover{background:rgba(255,69,0,.1);color:var(--ember)}
+.fb-r{background:transparent;border:1px solid rgba(255,255,255,.05);color:var(--soluk)}
+.fb-r:hover{border-color:rgba(255,69,0,.2);color:var(--kul)}
 
-/* ── KATEGORİ ── */
-.cat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; }
-.cat-btn {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,69,0,0.1);
-  border-radius: 4px;
-  padding: 14px 8px;
-  text-align: center; cursor: pointer;
-  transition: all .25s;
-  -webkit-tap-highlight-color: transparent;
-  min-height: 72px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
-}
-.cat-btn:hover {
-  border-color: rgba(255,106,0,0.35);
-  background: rgba(255,69,0,0.05);
-}
-.cat-btn.sel {
-  border-color: var(--ember);
-  background: rgba(255,69,0,0.1);
-  box-shadow: 0 0 20px rgba(255,69,0,0.15) inset;
-}
-.cat-emoji { font-size: 20px; }
-.cat-name {
-  font-size: 10px; font-weight: 500; color: var(--soluk);
-  letter-spacing: 1px; font-family: 'Inter', sans-serif;
-}
-.cat-btn.sel .cat-name { color: var(--alev); }
+/* AYARLAR MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(5,5,8,.92);backdrop-filter:blur(8px);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{width:100%;max-width:500px;background:#0a0804;border:1px solid rgba(255,69,0,.15);border-radius:12px 12px 0 0;padding:24px 20px 40px;max-height:90vh;overflow-y:auto}
+.modal-handle{width:40px;height:3px;background:rgba(255,69,0,.2);border-radius:2px;margin:0 auto 20px}
+.modal-title{font-family:'Cinzel',serif;font-size:16px;letter-spacing:3px;color:var(--kul);margin-bottom:20px}
+.modal-close{float:right;background:transparent;border:none;color:var(--soluk);font-size:18px;cursor:pointer;margin-top:-4px}
 
-/* ── AYARLAR ── */
-.field { margin-bottom: 20px; }
-.field label {
-  display: block; font-size: 10px; color: var(--soluk);
-  font-weight: 600; margin-bottom: 8px;
-  letter-spacing: 2px;
+/* PWA BANNER */
+.pwa-banner{
+  background:rgba(255,69,0,.06);border:1px solid rgba(255,69,0,.15);
+  border-radius:4px;padding:14px 16px;margin-bottom:20px;
+  display:none;align-items:center;gap:12px;
 }
-.field input, .field select {
-  width: 100%;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid rgba(255,69,0,0.15);
-  border-radius: 4px;
-  color: var(--text); padding: 13px 16px;
-  font-size: 14px; font-family: 'Inter', sans-serif;
-  transition: border-color .2s;
-  appearance: none;
+.pwa-banner.show{display:flex}
+.pwa-banner-text{flex:1;font-size:12px;color:var(--kul);line-height:1.5}
+.pwa-banner-text small{color:var(--soluk);font-size:10px}
+.btn-install{
+  padding:9px 14px;border:1px solid rgba(255,106,0,.4);border-radius:4px;
+  background:rgba(255,69,0,.12);color:var(--alev);font-size:10px;
+  font-family:'Cinzel',serif;letter-spacing:2px;cursor:pointer;
+  white-space:nowrap;flex-shrink:0;transition:all .2s;
 }
-.field input:focus, .field select:focus {
-  outline: none;
-  border-color: rgba(255,106,0,0.4);
-  box-shadow: 0 0 20px rgba(255,69,0,0.1) inset;
-}
-.field input::placeholder { color: rgba(122,106,85,0.5); }
-.field select option { background: #0a0804; }
+.btn-install:hover{background:rgba(255,69,0,.2);color:#fff}
 
-/* ── ANA BUTON ── */
-.btn-main {
-  width: 100%; padding: 17px;
-  border: 1px solid rgba(255,106,0,0.4);
-  border-radius: 4px;
-  background: rgba(255,69,0,0.12);
-  color: var(--alev);
-  font-size: 12px; font-weight: 700;
-  font-family: 'Cinzel', serif;
-  letter-spacing: 4px;
-  cursor: pointer;
-  transition: all .3s;
-  min-height: 56px;
-  -webkit-tap-highlight-color: transparent;
-  position: relative; overflow: hidden;
-}
-.btn-main::before {
-  content: '';
-  position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--ember), transparent);
-  opacity: 0; transition: opacity .3s;
-}
-.btn-main:hover:not(:disabled)::before { opacity: 1; }
-.btn-main:hover:not(:disabled) {
-  background: rgba(255,69,0,0.2);
-  border-color: var(--ember);
-  box-shadow: 0 0 30px rgba(255,69,0,0.2);
-  color: #fff;
-}
-.btn-main:disabled { opacity: 0.3; cursor: not-allowed; }
+/* TOAST */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:9999;padding:11px 24px;border:1px solid rgba(255,69,0,.25);border-radius:4px;font-size:11px;letter-spacing:1px;color:var(--kul);background:rgba(5,5,8,.95);backdrop-filter:blur(12px);transition:opacity .3s;pointer-events:none;opacity:0;font-family:'Inter',sans-serif;box-shadow:0 0 24px rgba(255,69,0,.15);white-space:nowrap}
 
-.btn-back {
-  width: 100%; padding: 14px;
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 4px;
-  background: transparent;
-  color: var(--soluk);
-  font-size: 11px; letter-spacing: 2px;
-  font-family: 'Inter', sans-serif;
-  cursor: pointer; margin-top: 8px;
-  min-height: 48px;
-  -webkit-tap-highlight-color: transparent;
-  transition: all .2s;
-}
-.btn-back:hover { border-color: rgba(255,69,0,0.2); color: var(--kul); }
-
-/* ── PROGRESS ── */
-.progress-wrap { margin: 24px 0; }
-.progress-bar-bg {
-  height: 1px;
-  background: rgba(255,69,0,0.1);
-  position: relative; overflow: visible;
-}
-.progress-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--ember), var(--alev));
-  width: 0%; transition: width .6s ease;
-  position: relative;
-}
-.progress-bar-fill::after {
-  content: '';
-  position: absolute; right: 0; top: -3px;
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--alev);
-  box-shadow: 0 0 10px var(--ember), 0 0 20px rgba(255,106,0,0.6);
-}
-.progress-steps {
-  display: flex; flex-direction: column; gap: 8px; margin-top: 20px;
-}
-.prog-step {
-  display: flex; align-items: center; gap: 10px;
-  font-size: 12px; color: var(--soluk);
-  transition: color .3s;
-}
-.prog-step.active { color: var(--kul); }
-.prog-step.done { color: rgba(255,69,0,0.6); }
-.prog-step-dot {
-  width: 5px; height: 5px; border-radius: 50%;
-  background: rgba(255,255,255,0.1); flex-shrink: 0;
-  transition: all .3s;
-}
-.prog-step.active .prog-step-dot {
-  background: var(--ember);
-  box-shadow: 0 0 8px rgba(255,69,0,0.8);
-  animation: flicker 1s ease-in-out infinite;
-}
-.prog-step.done .prog-step-dot { background: rgba(255,69,0,0.4); }
-
-@keyframes flicker {
-  0%,100% { opacity: 1; box-shadow: 0 0 8px rgba(255,69,0,0.8); }
-  50% { opacity: .7; box-shadow: 0 0 16px rgba(255,106,0,1); }
-}
-
-/* ── SONUÇ ── */
-.result-canvas-wrap {
-  border: 1px solid rgba(255,69,0,0.2);
-  border-radius: 4px; overflow: hidden;
-  margin-bottom: 20px;
-  background: #000;
-  max-width: 240px; margin-left: auto; margin-right: auto;
-  box-shadow: 0 0 60px rgba(255,69,0,0.2), 0 0 120px rgba(255,69,0,0.08);
-}
-.result-canvas-wrap canvas { display: block; width: 100%; }
-
-.result-meta {
-  display: flex; gap: 0; margin-bottom: 20px;
-  border: 1px solid rgba(255,69,0,0.12);
-  border-radius: 4px; overflow: hidden;
-}
-.rmeta {
-  flex: 1; padding: 12px 8px; text-align: center;
-  border-right: 1px solid rgba(255,69,0,0.1);
-}
-.rmeta:last-child { border-right: none; }
-.rmeta-val {
-  font-family: 'Cinzel', serif;
-  font-size: 16px; color: var(--kul);
-  letter-spacing: 1px;
-}
-.rmeta-lbl { font-size: 9px; color: var(--soluk); letter-spacing: 2px; margin-top: 3px; }
-
-.btn-dl {
-  width: 100%; padding: 17px;
-  border: 1px solid rgba(255,106,0,0.5);
-  border-radius: 4px;
-  background: rgba(255,69,0,0.15);
-  color: var(--alev);
-  font-size: 12px; font-weight: 700;
-  font-family: 'Cinzel', serif;
-  letter-spacing: 4px;
-  cursor: pointer; min-height: 56px;
-  -webkit-tap-highlight-color: transparent;
-  transition: all .3s;
-  box-shadow: 0 0 30px rgba(255,69,0,0.15);
-}
-.btn-dl:hover {
-  background: rgba(255,69,0,0.25);
-  box-shadow: 0 0 50px rgba(255,69,0,0.3);
-}
-
-.feedback-row {
-  display: flex; gap: 8px; margin-top: 8px;
-}
-.btn-fb {
-  flex: 1; padding: 13px 8px;
-  border-radius: 4px; font-size: 11px;
-  font-family: 'Inter', sans-serif; letter-spacing: 1px;
-  cursor: pointer; min-height: 48px;
-  -webkit-tap-highlight-color: transparent;
-  transition: all .2s; font-weight: 600;
-}
-.btn-fb-yes {
-  background: rgba(63,185,80,0.06);
-  border: 1px solid rgba(63,185,80,0.2);
-  color: rgba(100,200,100,0.7);
-}
-.btn-fb-yes:hover { background: rgba(63,185,80,0.12); color: #3fb950; }
-.btn-fb-no {
-  background: rgba(255,69,0,0.06);
-  border: 1px solid rgba(255,69,0,0.2);
-  color: rgba(200,100,60,0.7);
-}
-.btn-fb-no:hover { background: rgba(255,69,0,0.12); color: var(--ember); }
-.btn-fb-new {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.06);
-  color: var(--soluk);
-}
-.btn-fb-new:hover { border-color: rgba(255,69,0,0.2); color: var(--kul); }
-
-/* ── TOAST ── */
-#toast {
-  position: fixed; bottom: 28px; left: 50%;
-  transform: translateX(-50%);
-  z-index: 9999; padding: 12px 28px;
-  border: 1px solid rgba(255,69,0,0.3);
-  border-radius: 4px;
-  font-size: 12px; letter-spacing: 1px;
-  color: var(--kul); background: rgba(5,5,8,0.95);
-  backdrop-filter: blur(12px);
-  transition: opacity .3s; pointer-events: none; opacity: 0;
-  font-family: 'Inter', sans-serif;
-  box-shadow: 0 0 30px rgba(255,69,0,0.2);
-  white-space: nowrap;
-}
-
-/* spacer */
-.spacer { height: 28px; }
-
-/* ── TABLET ── */
-@media(max-width:600px) {
-  .topbar { padding: 16px 18px; }
-  .logo { font-size: 18px; letter-spacing: 4px; }
-  .panel { padding: 0 14px 80px; }
-  .section-title { font-size: 22px; }
-  .cat-grid { gap: 6px; }
+/* TABLET */
+@media(max-width:600px){
+  .topbar{padding:14px 16px}
+  .logo{font-size:17px;letter-spacing:4px}
+  .panel{padding:0 14px 80px}
+  .sec-title{font-size:22px}
+  .cat-grid{gap:6px}
+  .music-grid{grid-template-columns:1fr}
 }
 </style>
 </head>
 <body>
 
-<!-- ATEŞ CANVAS -->
-<canvas id="fire-canvas"></canvas>
+<canvas id="fc"></canvas>
 
 <div class="app">
 
 <!-- TOP BAR -->
 <div class="topbar">
-  <div>
-    <div class="logo">FENİX</div>
-    <div class="logo-tagline">KÜLDEN DOĞAN GÖRÜNTÜ</div>
+  <div class="logo">FENİX</div>
+  <div class="topbar-right">
+    <a href="/qr" class="btn-qr" title="QR Kod">⊞</a>
+    <button class="btn-settings" onclick="openSettings()" title="Şirket Ayarları">⚙</button>
   </div>
-  <div id="topbar-hint" style="font-size:11px;letter-spacing:2px;color:var(--soluk);font-family:'Inter',sans-serif"></div>
+</div>
+
+<!-- PWA KURULUM BANNER -->
+<div class="pwa-banner" id="pwa-banner">
+  <div>📲</div>
+  <div class="pwa-banner-text">
+    <b>Ana Ekrana Ekle</b><br>
+    <small>Uygulama gibi aç, her zaman hazır</small>
+  </div>
+  <button class="btn-install" id="btn-install" onclick="installPWA()">YÜKLE</button>
 </div>
 
 <!-- ADIM ÇUBUĞU -->
 <div class="steps-bar">
-  <div class="step-item active" id="sbar-1">
-    <div class="step-num">I</div>
-    <span>FOTOĞRAF</span>
-  </div>
+  <div class="step-item active" id="sbar-1"><div class="step-num">I</div><span>ÜRÜN</span></div>
   <div class="step-sep"></div>
-  <div class="step-item" id="sbar-2">
-    <div class="step-num">II</div>
-    <span>KATEGORİ</span>
-  </div>
+  <div class="step-item" id="sbar-2"><div class="step-num">II</div><span>KATEGORİ</span></div>
   <div class="step-sep"></div>
-  <div class="step-item" id="sbar-3">
-    <div class="step-num">III</div>
-    <span>DETAY</span>
-  </div>
+  <div class="step-item" id="sbar-3"><div class="step-num">III</div><span>MÜZİK</span></div>
   <div class="step-sep"></div>
-  <div class="step-item" id="sbar-4">
-    <div class="step-num">IV</div>
-    <span>VİDEO</span>
-  </div>
+  <div class="step-item" id="sbar-4"><div class="step-num">IV</div><span>VİDEO</span></div>
 </div>
 
-<!-- ─────────── ADIM 1: FOTOĞRAF ─────────── -->
+<!-- ── ADIM 1: ÜRÜN FOTOĞRAFI ── -->
 <div class="panel active" id="panel-1">
-  <div class="spacer"></div>
-  <div class="section-label">ADIM I</div>
-  <div class="section-title">Ürününü Getir</div>
-  <div class="section-sub">Fenix fotoğrafı alev alev yakacak. Sürükle bırak ya da seç.</div>
+  <div class="sp"></div>
+  <div class="sec-lbl">ADIM I</div>
+  <div class="sec-title">Ürünü Getir</div>
+  <div class="sec-sub">Fotoğrafı sürükle bırak ya da galerisinden seç.</div>
 
   <div class="upload-zone" id="upload-zone">
     <input type="file" id="file-input" accept="image/*" onchange="onFileChange(event)">
     <span class="upload-glyph">🜂</span>
     <div class="upload-text">DOSYAYI BIRAK</div>
-    <div class="upload-hint">PNG · JPG · WEBP · maks 10MB</div>
+    <div class="upload-hint">PNG · JPG · WEBP · max 10MB</div>
   </div>
 
   <div class="preview-wrap" id="preview-wrap">
@@ -532,18 +277,16 @@ body::before {
     <button class="preview-reset" onclick="resetPhoto()">✕ DEĞİŞTİR</button>
   </div>
 
-  <div class="spacer"></div>
-  <button class="btn-main" id="btn-next-1" onclick="goStep(2)" disabled>
-    İLERİ →
-  </button>
+  <div class="sp"></div>
+  <button class="btn-main" id="btn-next-1" onclick="goStep(2)" disabled>İLERİ →</button>
 </div>
 
-<!-- ─────────── ADIM 2: KATEGORİ ─────────── -->
+<!-- ── ADIM 2: KATEGORİ ── -->
 <div class="panel" id="panel-2">
-  <div class="spacer"></div>
-  <div class="section-label">ADIM II</div>
-  <div class="section-title">Ateşin Rengi</div>
-  <div class="section-sub">Her kategorinin kendi ritmi, ışığı, enerjisi var.</div>
+  <div class="sp"></div>
+  <div class="sec-lbl">ADIM II</div>
+  <div class="sec-title">Ateşin Rengi</div>
+  <div class="sec-sub">Kategorine göre LUT, BPM ve efekt otomatik seçilir.</div>
 
   <div class="cat-grid">
     <div class="cat-btn" onclick="selectCat(this,'gida')"><div class="cat-emoji">🍕</div><div class="cat-name">GIDA</div></div>
@@ -554,77 +297,85 @@ body::before {
     <div class="cat-btn" onclick="selectCat(this,'oyuncak')"><div class="cat-emoji">🧸</div><div class="cat-name">OYUNCAK</div></div>
     <div class="cat-btn" onclick="selectCat(this,'spor')"><div class="cat-emoji">⚽</div><div class="cat-name">SPOR</div></div>
     <div class="cat-btn" onclick="selectCat(this,'motor')"><div class="cat-emoji">🏍️</div><div class="cat-name">MOTOR</div></div>
-    <div class="cat-btn" onclick="selectCat(this,'diger')"><div class="cat-emoji">🜁</div><div class="cat-name">DİĞER</div></div>
+    <div class="cat-btn" onclick="selectCat(this,'diger')"><div class="cat-emoji">📦</div><div class="cat-name">DİĞER</div></div>
   </div>
 
-  <div class="spacer"></div>
+  <div class="sp"></div>
   <button class="btn-main" id="btn-next-2" onclick="goStep(3)" disabled>İLERİ →</button>
   <button class="btn-back" onclick="goStep(1)">← GERİ</button>
 </div>
 
-<!-- ─────────── ADIM 3: DETAY ─────────── -->
+<!-- ── ADIM 3: MÜZİK ── -->
 <div class="panel" id="panel-3">
-  <div class="spacer"></div>
-  <div class="section-label">ADIM III</div>
-  <div class="section-title">Kimliğini Ver</div>
-  <div class="section-sub">Boş bırakabilirsin — Fenix kendisi karar verir.</div>
+  <div class="sp"></div>
+  <div class="sec-lbl">ADIM III</div>
+  <div class="sec-title">Ritim</div>
+  <div class="sec-sub">Kategorine uygun müzik otomatik gelir. İstersen değiştir.</div>
 
-  <div class="field">
-    <label>MARKA VEYA MAĞAZA ADI</label>
-    <input type="text" id="inp-marka" placeholder="örn: TechStore, ZenStyle..." maxlength="40">
-  </div>
-  <div class="field">
-    <label>KANCA — İLK 3 SANİYE</label>
-    <input type="text" id="inp-kanca" placeholder="örn: En iyi fiyat garantisi!" maxlength="60">
-  </div>
-  <div class="field">
-    <label>ENERJI SEVİYESİ</label>
-    <select id="inp-stil">
-      <option value="dinamik">⚡ Dinamik — hızlı, sert, CapCut tarzı</option>
-      <option value="normal">🌊 Akış — yumuşak, sinematik, nefes alan</option>
-    </select>
+  <div class="music-grid" id="music-grid">
+    <div class="music-btn sel" data-id="auto" onclick="selectMusic(this,'auto')">
+      <div class="music-icon">🔥</div>
+      <div class="music-info"><div class="music-name">Kategoriye Uygun</div><div class="music-bpm">OTOMATIK SEÇIM</div></div>
+      <div class="music-play" id="mp-auto">●</div>
+    </div>
+    <div class="music-btn" data-id="energetic" onclick="selectMusic(this,'energetic')">
+      <div class="music-icon">⚡</div>
+      <div class="music-info"><div class="music-name">Enerjik / Dinamik</div><div class="music-bpm">120–135 BPM</div></div>
+      <div class="music-play">▶</div>
+    </div>
+    <div class="music-btn" data-id="cinematic" onclick="selectMusic(this,'cinematic')">
+      <div class="music-icon">🌊</div>
+      <div class="music-info"><div class="music-name">Sinematik / Akışkan</div><div class="music-bpm">70–90 BPM</div></div>
+      <div class="music-play">▶</div>
+    </div>
+    <div class="music-btn" data-id="luxury" onclick="selectMusic(this,'luxury')">
+      <div class="music-icon">✦</div>
+      <div class="music-info"><div class="music-name">Lüks / Minimal</div><div class="music-bpm">75–85 BPM</div></div>
+      <div class="music-play">▶</div>
+    </div>
   </div>
 
-  <div class="spacer"></div>
+  <!-- Kendi müziğini yükle -->
+  <label class="music-upload-btn" id="music-upload-btn">
+    <input type="file" id="music-file" accept="audio/*" onchange="onMusicUpload(event)">
+    <span>♪</span>
+    <span id="music-upload-label">Kendi müziğini yükle</span>
+  </label>
+
+  <div class="sp"></div>
   <button class="btn-main" onclick="startProduction()">🜂 ATEŞE VER</button>
   <button class="btn-back" onclick="goStep(2)">← GERİ</button>
 </div>
 
-<!-- ─────────── ADIM 4: ÜRETİM / SONUÇ ─────────── -->
+<!-- ── ADIM 4: ÜRETİM / SONUÇ ── -->
 <div class="panel" id="panel-4">
-  <div class="spacer"></div>
+  <div class="sp"></div>
 
-  <!-- Üretim ekranı -->
   <div id="card-producing">
-    <div class="section-label">ÜRETİM</div>
-    <div class="section-title">Fenix Uçuyor</div>
-    <div class="section-sub" id="prod-sub">Kor parçaları toplaniyor...</div>
-
-    <div class="progress-wrap">
-      <div class="progress-bar-bg">
-        <div class="progress-bar-fill" id="prog-fill"></div>
+    <div class="sec-lbl">ÜRETİM</div>
+    <div class="sec-title">Fenix Uçuyor</div>
+    <div class="sec-sub" id="prod-sub">Kor parçaları toplanıyor...</div>
+    <div class="prog-wrap">
+      <div class="prog-line"><div class="prog-fill" id="prog-fill"></div></div>
+      <div class="prog-steps">
+        <div class="ps active" id="ps-1"><div class="ps-dot"></div>Ürün analiz ediliyor</div>
+        <div class="ps" id="ps-2"><div class="ps-dot"></div>Kategori ve LUT seçiliyor</div>
+        <div class="ps" id="ps-3"><div class="ps-dot"></div>Müzik ve BPM senkronize ediliyor</div>
+        <div class="ps" id="ps-4"><div class="ps-dot"></div>Şirket bilgileri ekleniyor</div>
+        <div class="ps" id="ps-5"><div class="ps-dot"></div>Video render tamamlanıyor</div>
       </div>
-    </div>
-
-    <div class="progress-steps" id="prog-steps">
-      <div class="prog-step active" id="ps-1"><div class="prog-step-dot"></div>Ürün analiz ediliyor</div>
-      <div class="prog-step" id="ps-2"><div class="prog-step-dot"></div>Kategori belirleniyor</div>
-      <div class="prog-step" id="ps-3"><div class="prog-step-dot"></div>Müzik ve tempo seçiliyor</div>
-      <div class="prog-step" id="ps-4"><div class="prog-step-dot"></div>Sahne ve geçişler uygulanıyor</div>
-      <div class="prog-step" id="ps-5"><div class="prog-step-dot"></div>Render tamamlanıyor</div>
     </div>
   </div>
 
-  <!-- Sonuç ekranı -->
   <div id="card-result" style="display:none">
-    <div class="section-label">TAMAMLANDI</div>
-    <div class="section-title">Video Hazır</div>
-    <div class="section-sub" id="result-sub">Reels formatında hazır</div>
+    <div class="sec-lbl">TAMAMLANDI</div>
+    <div class="sec-title">Video Hazır</div>
+    <div class="sec-sub" id="result-sub">Reels · 9:16 · 60fps</div>
 
     <div class="result-meta">
-      <div class="rmeta"><div class="rmeta-val" id="rs-sure">—</div><div class="rmeta-lbl">SÜRE</div></div>
-      <div class="rmeta"><div class="rmeta-val">9:16</div><div class="rmeta-lbl">FORMAT</div></div>
-      <div class="rmeta"><div class="rmeta-val">60</div><div class="rmeta-lbl">FPS</div></div>
+      <div class="rm"><div class="rm-val" id="rs-sure">—</div><div class="rm-lbl">SÜRE</div></div>
+      <div class="rm"><div class="rm-val">9:16</div><div class="rm-lbl">FORMAT</div></div>
+      <div class="rm"><div class="rm-val" id="rs-cat">—</div><div class="rm-lbl">KATEGORİ</div></div>
     </div>
 
     <div class="result-canvas-wrap">
@@ -633,359 +384,448 @@ body::before {
 
     <button class="btn-dl" onclick="downloadVideo()">KAYDET ⬇</button>
 
-    <div class="feedback-row">
-      <button class="btn-fb btn-fb-yes" onclick="sendFeedback(true)">✓ BEĞENDİM</button>
-      <button class="btn-fb btn-fb-no" onclick="sendFeedback(false)">✕ YENİDEN</button>
-      <button class="btn-fb btn-fb-new" onclick="resetAll()">↺ YENİ</button>
+    <div class="fb-row">
+      <button class="fb fb-y" onclick="sendFeedback(true)">✓ BEĞENDİM</button>
+      <button class="fb fb-n" onclick="sendFeedback(false)">✕ YENİDEN</button>
+      <button class="fb fb-r" onclick="resetAll()">↺ YENİ</button>
     </div>
   </div>
 </div>
 
 </div><!-- /app -->
 
+<!-- ── AYARLAR MODAL ── -->
+<div class="modal-overlay" id="settings-modal" onclick="closeSettingsOutside(event)">
+  <div class="modal" id="settings-panel">
+    <div class="modal-handle"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div class="modal-title">ŞİRKET AYARLARI</div>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+
+    <!-- Şirket adı — sol alta HER VIDEO'DA görünür -->
+    <div class="field">
+      <label>ŞİRKET / MAĞAZA ADI — SOL ALTTA HER VIDEODA</label>
+      <input type="text" id="set-sirket" placeholder="örn: TechStore TR" maxlength="40">
+    </div>
+
+    <!-- Slogan -->
+    <div class="field">
+      <label>SLOGAN (isteğe bağlı)</label>
+      <input type="text" id="set-slogan" placeholder="örn: En iyi fiyat garantisi!" maxlength="60">
+    </div>
+
+    <!-- Logo yükleme -->
+    <div class="field">
+      <label>LOGO — BİTİŞ KARTINDA VE SOL ALTTA</label>
+      <div class="logo-upload-area" id="logo-upload-area">
+        <input type="file" id="logo-file" accept="image/*" onchange="onLogoUpload(event)">
+        <div class="logo-preview-wrap" id="logo-preview-wrap">
+          <span class="logo-placeholder" id="logo-placeholder">⊕</span>
+          <img id="logo-preview" style="display:none" src="" alt="">
+        </div>
+        <div class="logo-upload-text">
+          <div class="logo-upload-title" id="logo-upload-title">Logo Yükle</div>
+          <div class="logo-upload-hint">PNG transparan önerilir · max 2MB</div>
+        </div>
+        <button class="logo-clear" id="logo-clear" onclick="clearLogo(event)">✕</button>
+      </div>
+    </div>
+
+    <!-- Video stili -->
+    <div class="field">
+      <label>VİDEO ENERJİSİ</label>
+      <select id="set-stil">
+        <option value="dinamik">⚡ Dinamik — hızlı, sert, CapCut tarzı</option>
+        <option value="normal">🌊 Sinematik — yumuşak, nefes alan</option>
+      </select>
+    </div>
+
+    <button class="btn-main" onclick="saveSettings()" style="margin-top:8px">KAYDET</button>
+  </div>
+</div>
+
 <div id="toast"></div>
 
-<!-- ═══════════════════════════════════════════ -->
+<!-- ═══════════ SCRIPT ═══════════ -->
 <script>
 const BASE = window.location.origin;
 
 // ── ATEŞ PARTİKÜLLERİ ──
-(function initFire() {
-  const canvas = document.getElementById('fire-canvas');
-  const ctx = canvas.getContext('2d');
-  let W, H, particles = [];
-
-  function resize() {
-    W = canvas.width = window.innerWidth;
-    H = canvas.height = window.innerHeight;
-  }
-  resize();
-  window.addEventListener('resize', resize);
-
-  class Particle {
-    constructor() { this.reset(true); }
-    reset(init) {
-      this.x = Math.random() * W;
-      this.y = init ? Math.random() * H : H + 10;
-      this.vx = (Math.random() - 0.5) * 0.6;
-      this.vy = -(Math.random() * 1.8 + 0.6);
-      this.life = Math.random() * 0.6 + 0.4;
-      this.decay = Math.random() * 0.004 + 0.002;
-      this.size = Math.random() * 3 + 1;
-      this.type = Math.random() < 0.3 ? 'ember' : 'flame';
+(function(){
+  const cv = document.getElementById('fc');
+  const cx = cv.getContext('2d');
+  let W, H, pts = [];
+  function rsz(){ W=cv.width=window.innerWidth; H=cv.height=window.innerHeight; }
+  rsz(); window.addEventListener('resize', rsz);
+  class P {
+    constructor(){ this.rst(true); }
+    rst(init){
+      this.x = Math.random()*W;
+      this.y = init ? Math.random()*H : H+10;
+      this.vx = (Math.random()-.5)*.5;
+      this.vy = -(Math.random()*1.6+.5);
+      this.life = Math.random()*.6+.4;
+      this.decay = Math.random()*.004+.002;
+      this.sz = Math.random()*2.5+.8;
+      this.ember = Math.random()<.3;
     }
-    update() {
-      this.x += this.vx + Math.sin(this.y * 0.02) * 0.3;
-      this.y += this.vy;
-      this.vy *= 0.995;
-      this.life -= this.decay;
-      if (this.life <= 0 || this.y < -20) this.reset(false);
-    }
-    draw() {
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, this.life);
-      if (this.type === 'ember') {
-        const t = this.life;
-        const r = t > 0.5 ? 255 : Math.floor(255 * t * 2);
-        const g = t > 0.7 ? Math.floor(255 * (t - 0.7) * 3.3) : 0;
-        ctx.fillStyle = `rgb(${r},${Math.min(160,g)},0)`;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size * 0.8, 0, Math.PI * 2);
-        ctx.fill();
-        // kor parıltısı
-        if (this.life > 0.5) {
-          ctx.globalAlpha = (this.life - 0.5) * 0.4;
-          const grd = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size * 4);
-          grd.addColorStop(0, 'rgba(255,180,0,0.8)');
-          grd.addColorStop(1, 'rgba(255,69,0,0)');
-          ctx.fillStyle = grd;
-          ctx.beginPath();
-          ctx.arc(this.x, this.y, this.size * 4, 0, Math.PI * 2);
-          ctx.fill();
-        }
+    tick(){ this.x+=this.vx+Math.sin(this.y*.02)*.25; this.y+=this.vy; this.vy*=.996; this.life-=this.decay; if(this.life<=0||this.y<-20)this.rst(false); }
+    draw(){
+      cx.save(); cx.globalAlpha=Math.max(0,this.life);
+      if(this.ember){
+        const r=255,g=Math.floor(this.life*120);
+        cx.fillStyle=`rgb(${r},${g},0)`;
+        cx.beginPath(); cx.arc(this.x,this.y,this.sz,0,Math.PI*2); cx.fill();
+        if(this.life>.5){ cx.globalAlpha=(this.life-.5)*.35; const g2=cx.createRadialGradient(this.x,this.y,0,this.x,this.y,this.sz*4); g2.addColorStop(0,'rgba(255,160,0,.8)'); g2.addColorStop(1,'rgba(255,69,0,0)'); cx.fillStyle=g2; cx.beginPath(); cx.arc(this.x,this.y,this.sz*4,0,Math.PI*2); cx.fill(); }
       } else {
-        const t = this.life;
-        ctx.globalAlpha = t * 0.15;
-        const grd = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size * 6);
-        grd.addColorStop(0, `rgba(255,${Math.floor(80 + t * 100)},0,0.6)`);
-        grd.addColorStop(0.5, `rgba(255,50,0,0.2)`);
-        grd.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.fillStyle = grd;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size * 6, 0, Math.PI * 2);
-        ctx.fill();
+        cx.globalAlpha=this.life*.12;
+        const g2=cx.createRadialGradient(this.x,this.y,0,this.x,this.y,this.sz*5);
+        g2.addColorStop(0,`rgba(255,80,0,.5)`); g2.addColorStop(1,'rgba(0,0,0,0)');
+        cx.fillStyle=g2; cx.beginPath(); cx.arc(this.x,this.y,this.sz*5,0,Math.PI*2); cx.fill();
       }
-      ctx.restore();
+      cx.restore();
     }
   }
-
-  // Partikülleri oluştur
-  for (let i = 0; i < 120; i++) particles.push(new Particle());
-
-  function loop() {
-    ctx.clearRect(0, 0, W, H);
-    particles.forEach(p => { p.update(); p.draw(); });
-    requestAnimationFrame(loop);
-  }
+  for(let i=0;i<100;i++) pts.push(new P());
+  function loop(){ cx.clearRect(0,0,W,H); pts.forEach(p=>{p.tick();p.draw();}); requestAnimationFrame(loop); }
   loop();
 })();
 
 // ── STATE ──
 let state = {
-  step: 1, photoDataUrl: null, kategori: null,
-  marka: '', kanca: '', stil: 'dinamik', videoData: null
+  step:1, photoDataUrl:null, kategori:null,
+  musicId:'auto', musicFile:null,
+  videoData:null
+};
+
+// Şirket ayarları localStorage'dan yükle
+let firm = {
+  sirket: localStorage.getItem('fx_sirket') || '',
+  slogan: localStorage.getItem('fx_slogan') || '',
+  logoDataUrl: localStorage.getItem('fx_logo') || null,
+  stil: localStorage.getItem('fx_stil') || 'dinamik'
 };
 
 // ── TOAST ──
-function toast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.opacity = '1';
-  clearTimeout(t._to);
-  t._to = setTimeout(() => t.style.opacity = '0', 3200);
-}
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.opacity='1'; clearTimeout(t._to); t._to=setTimeout(()=>t.style.opacity='0',3000); }
 
-// ── ADIM YÖNETİMİ ──
-function goStep(n) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-' + n).classList.add('active');
-  for (let i = 1; i <= 4; i++) {
-    const el = document.getElementById('sbar-' + i);
-    el.classList.remove('active', 'done');
-    if (i < n) el.classList.add('done');
-    else if (i === n) el.classList.add('active');
+// ── ADIM ──
+function goStep(n){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+n).classList.add('active');
+  for(let i=1;i<=4;i++){
+    const el=document.getElementById('sbar-'+i);
+    el.classList.remove('active','done');
+    if(i<n)el.classList.add('done'); else if(i===n)el.classList.add('active');
   }
-  state.step = n;
-  const hints = {1:'', 2:'Kategori seçilmedi', 3:'Neredeyse hazır', 4:''};
-  document.getElementById('topbar-hint').textContent = hints[n] || '';
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  state.step=n;
+  window.scrollTo({top:0,behavior:'smooth'});
 }
 
 // ── FOTOĞRAF ──
-function onFileChange(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  if (file.size > 10 * 1024 * 1024) { toast('⚠ Dosya 10MB sınırını aşıyor'); return; }
-  const reader = new FileReader();
-  reader.onload = ev => {
-    state.photoDataUrl = ev.target.result;
-    document.getElementById('preview-img').src = ev.target.result;
-    document.getElementById('upload-zone').style.display = 'none';
+function onFileChange(e){
+  const f=e.target.files[0]; if(!f) return;
+  if(f.size>10*1024*1024){toast('Dosya 10MB sınırını aşıyor');return;}
+  const r=new FileReader();
+  r.onload=ev=>{
+    state.photoDataUrl=ev.target.result;
+    document.getElementById('preview-img').src=ev.target.result;
+    document.getElementById('upload-zone').style.display='none';
     document.getElementById('preview-wrap').classList.add('show');
-    document.getElementById('btn-next-1').disabled = false;
-    toast('Fotoğraf yüklendi');
+    document.getElementById('btn-next-1').disabled=false;
+    toast('Fotoğraf hazır');
   };
-  reader.readAsDataURL(file);
+  r.readAsDataURL(f);
 }
-
-// Drag & drop
-const uz = document.getElementById('upload-zone');
-uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('drag'); });
-uz.addEventListener('dragleave', () => uz.classList.remove('drag'));
-uz.addEventListener('drop', e => {
-  e.preventDefault(); uz.classList.remove('drag');
-  const f = e.dataTransfer.files[0];
-  if (f && f.type.startsWith('image/')) onFileChange({ target: { files: [f] } });
-});
-
-function resetPhoto() {
-  state.photoDataUrl = null;
-  document.getElementById('upload-zone').style.display = 'block';
-  document.getElementById('preview-wrap').classList.remove('show');
-  document.getElementById('btn-next-1').disabled = true;
-  document.getElementById('file-input').value = '';
-}
+const uz=document.getElementById('upload-zone');
+uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag');});
+uz.addEventListener('dragleave',()=>uz.classList.remove('drag'));
+uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))onFileChange({target:{files:[f]}});});
+function resetPhoto(){ state.photoDataUrl=null; document.getElementById('upload-zone').style.display='block'; document.getElementById('preview-wrap').classList.remove('show'); document.getElementById('btn-next-1').disabled=true; document.getElementById('file-input').value=''; }
 
 // ── KATEGORİ ──
-function selectCat(el, cat) {
-  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('sel'));
-  el.classList.add('sel');
-  state.kategori = cat;
-  document.getElementById('btn-next-2').disabled = false;
-  document.getElementById('topbar-hint').textContent = cat.toUpperCase() + ' SEÇİLDİ';
+function selectCat(el,cat){
+  document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel'); state.kategori=cat;
+  document.getElementById('btn-next-2').disabled=false;
+  toast(cat.toUpperCase()+' seçildi');
+}
+
+// ── MÜZİK ──
+let audioPreview=null;
+function selectMusic(el,id){
+  document.querySelectorAll('.music-btn').forEach(b=>b.classList.remove('sel'));
+  el.classList.add('sel'); state.musicId=id; state.musicFile=null;
+  document.getElementById('music-upload-label').textContent='Kendi müziğini yükle';
+  if(audioPreview){audioPreview.pause();audioPreview=null;}
+}
+function onMusicUpload(e){
+  const f=e.target.files[0]; if(!f) return;
+  if(f.size>20*1024*1024){toast('Müzik dosyası 20MB sınırını aşıyor');return;}
+  state.musicFile=f; state.musicId='custom';
+  document.getElementById('music-upload-label').textContent='✓ '+f.name.substring(0,28);
+  document.querySelectorAll('.music-btn').forEach(b=>b.classList.remove('sel'));
+  toast('Müzik yüklendi: '+f.name.substring(0,20));
 }
 
 // ── ÜRETİM ──
-let prodInterval = null;
-
-async function startProduction() {
-  state.marka = document.getElementById('inp-marka').value.trim();
-  state.kanca = document.getElementById('inp-kanca').value.trim();
-  state.stil  = document.getElementById('inp-stil').value;
+let prodTimer=null;
+async function startProduction(){
   goStep(4);
-  runProgressSteps();
-
-  try {
-    const [sbRes, muzRes] = await Promise.allSettled([
-      fetch(BASE + '/api/video/storyboard', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category: state.kategori, productImageUrl: state.photoDataUrl, style: state.stil, companyName: state.marka || 'Mağaza', hookText: state.kanca || null })
-      }).then(r => r.json()),
-      fetch(BASE + '/api/music/search', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category: state.kategori, mood: state.stil })
-      }).then(r => r.json())
+  runSteps();
+  try{
+    const [sbRes]=await Promise.allSettled([
+      fetch(BASE+'/api/video/storyboard',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({category:state.kategori,productImageUrl:state.photoDataUrl,style:firm.stil,companyName:firm.sirket||'Mağaza',hookText:firm.slogan||null})
+      }).then(r=>r.json())
     ]);
-
-    state.videoData = {
-      storyboard: sbRes.status === 'fulfilled' ? sbRes.value?.storyboard : null,
-      music: muzRes.status === 'fulfilled' ? muzRes.value?.track : null,
-      kategori: state.kategori, stil: state.stil, ts: Date.now()
-    };
-  } catch(e) { /* api olmasa da devam */ }
+    state.videoData={storyboard:sbRes.status==='fulfilled'?sbRes.value?.storyboard:null,kategori:state.kategori,ts:Date.now()};
+  }catch(e){}
 }
 
-function runProgressSteps() {
-  const stepMap = [
-    [10, 'ps-1', 'Ürün ateşle karşılaşıyor...'],
-    [28, 'ps-2', 'Kategori belirleniyor...'],
-    [50, 'ps-3', 'Ritim ve müzik seçiliyor...'],
-    [72, 'ps-4', 'Efektler ve geçişler...'],
-    [92, 'ps-5', 'Son dokunuşlar...']
-  ];
-  let si = 0;
-  clearInterval(prodInterval);
-  prodInterval = setInterval(() => {
-    if (si >= stepMap.length) { clearInterval(prodInterval); setTimeout(() => showResult(), 500); return; }
-    const [pct, stepId, label] = stepMap[si];
-    document.getElementById('prog-fill').style.width = pct + '%';
-    document.getElementById('prod-sub').textContent = label;
-    // adım state
-    if (si > 0) {
-      const prev = document.getElementById(stepMap[si-1][1]);
-      if (prev) { prev.classList.remove('active'); prev.classList.add('done'); }
-    }
-    const cur = document.getElementById(stepId);
-    if (cur) cur.classList.add('active');
+function runSteps(){
+  const MAP=[[10,'ps-1','Ürün ateşle karşılaşıyor...'],[28,'ps-2','Kategori ve LUT belirleniyor...'],[48,'ps-3','Ritim ve müzik senkronize ediliyor...'],[68,'ps-4','Şirket bilgileri işleniyor...'],[90,'ps-5','Son dokunuşlar...']];
+  let si=0; clearInterval(prodTimer);
+  prodTimer=setInterval(()=>{
+    if(si>=MAP.length){clearInterval(prodTimer);setTimeout(showResult,500);return;}
+    const[pct,pid,lbl]=MAP[si];
+    document.getElementById('prog-fill').style.width=pct+'%';
+    document.getElementById('prod-sub').textContent=lbl;
+    if(si>0){const p=document.getElementById(MAP[si-1][1]);if(p){p.classList.remove('active');p.classList.add('done');}}
+    const c=document.getElementById(pid);if(c)c.classList.add('active');
     si++;
-  }, 1100);
+  },1100);
 }
 
-function showResult() {
-  clearInterval(prodInterval);
-  document.getElementById('prog-fill').style.width = '100%';
-  document.getElementById('card-producing').style.display = 'none';
-  document.getElementById('card-result').style.display = 'block';
-  document.getElementById('rs-sure').textContent = state.stil === 'dinamik' ? '15s' : '20s';
-  document.getElementById('result-sub').textContent = state.kategori.toUpperCase() + ' · ' + (state.marka || 'FENIX') + ' · REELS';
-  drawResultCanvas();
-  toast('Video hazır — indirebilirsin');
+function showResult(){
+  clearInterval(prodTimer);
+  document.getElementById('prog-fill').style.width='100%';
+  document.getElementById('card-producing').style.display='none';
+  document.getElementById('card-result').style.display='block';
+  document.getElementById('rs-sure').textContent=firm.stil==='dinamik'?'15s':'20s';
+  document.getElementById('rs-cat').textContent=state.kategori.toUpperCase();
+  document.getElementById('result-sub').textContent=(firm.sirket||'FENİX')+' · '+state.kategori.toUpperCase()+' · REELS';
+  drawCanvas(); toast('Video hazır');
 }
 
-// ── CANVAS ÖNIZLEME ──
-function drawResultCanvas() {
-  const canvas = document.getElementById('result-canvas');
-  canvas.width = 270; canvas.height = 480;
-  const ctx = canvas.getContext('2d');
+// ── CANVAS — ŞİRKET ADI SOL ALTA, BİTİŞ KARTI ──
+function drawCanvas(){
+  const cv=document.getElementById('result-canvas');
+  cv.width=270;cv.height=480;
+  const cx=cv.getContext('2d');
 
-  // Siyah arka plan
-  ctx.fillStyle = '#050508';
-  ctx.fillRect(0, 0, 270, 480);
-
-  // Alev gradient alttan
-  const flameGrad = ctx.createRadialGradient(135, 480, 0, 135, 480, 260);
-  flameGrad.addColorStop(0, 'rgba(255,69,0,0.25)');
-  flameGrad.addColorStop(0.5, 'rgba(255,100,0,0.08)');
-  flameGrad.addColorStop(1, 'rgba(0,0,0,0)');
-  ctx.fillStyle = flameGrad;
-  ctx.fillRect(0, 0, 270, 480);
+  // Arka plan
+  cx.fillStyle='#050508'; cx.fillRect(0,0,270,480);
+  const fg=cx.createRadialGradient(135,480,0,135,480,280);
+  fg.addColorStop(0,'rgba(255,69,0,.2)'); fg.addColorStop(1,'rgba(0,0,0,0)');
+  cx.fillStyle=fg; cx.fillRect(0,0,270,480);
 
   // Ürün fotoğrafı
-  if (state.photoDataUrl) {
-    const img = new Image();
-    img.onload = () => {
-      const maxW = 210, maxH = 260;
-      const r = Math.min(maxW / img.width, maxH / img.height);
-      const w = img.width * r, h = img.height * r;
-      const x = (270 - w) / 2, y = (480 - h) / 2 - 24;
-      // Glow
-      ctx.save();
-      ctx.shadowColor = 'rgba(255,100,0,0.5)';
-      ctx.shadowBlur = 30;
-      ctx.drawImage(img, x, y, w, h);
-      ctx.restore();
-      drawCanvasOverlay(ctx);
-    };
-    img.src = state.photoDataUrl;
-  } else {
-    drawCanvasOverlay(ctx);
-  }
+  if(!state.photoDataUrl){drawOverlay(cx);return;}
+  const img=new Image();
+  img.onload=()=>{
+    const mw=210,mh=260,r=Math.min(mw/img.width,mh/img.height);
+    const w=img.width*r,h=img.height*r,x=(270-w)/2,y=(480-h)/2-32;
+    cx.save(); cx.shadowColor='rgba(255,100,0,.4)'; cx.shadowBlur=24;
+    cx.drawImage(img,x,y,w,h); cx.restore();
+    drawOverlay(cx);
+    // Logo varsa → sağ alt ürün alanına
+    if(firm.logoDataUrl){
+      const logo=new Image();
+      logo.onload=()=>{
+        const lw=50,lh=50,lr=Math.min(lw/logo.width,lh/logo.height);
+        const lrw=logo.width*lr,lrh=logo.height*lr;
+        cx.save(); cx.globalAlpha=.85;
+        cx.drawImage(logo,250-lrw,410-lrh,lrw,lrh);
+        cx.restore();
+        // Bitiş kartı logosuyla
+        drawEndCard(cx,logo);
+      };
+      logo.src=firm.logoDataUrl;
+    } else {
+      drawEndCard(cx,null);
+    }
+  };
+  img.src=state.photoDataUrl;
 }
 
-function drawCanvasOverlay(ctx) {
-  // Alt çizgi
-  ctx.strokeStyle = 'rgba(255,69,0,0.3)';
-  ctx.lineWidth = 0.5;
-  ctx.beginPath(); ctx.moveTo(20, 420); ctx.lineTo(250, 420); ctx.stroke();
+function drawOverlay(cx){
+  // Yatay çizgi
+  cx.strokeStyle='rgba(255,69,0,.25)'; cx.lineWidth=.5;
+  cx.beginPath(); cx.moveTo(18,422); cx.lineTo(252,422); cx.stroke();
 
-  // Kategori
-  ctx.font = '700 9px Inter, sans-serif';
-  ctx.fillStyle = 'rgba(255,106,0,0.7)';
-  ctx.letterSpacing = '2px';
-  ctx.textAlign = 'center';
-  ctx.fillText(state.kategori.toUpperCase(), 135, 437);
-
-  // Marka
-  if (state.marka) {
-    ctx.font = '700 13px Cinzel, serif';
-    ctx.fillStyle = 'rgba(196,168,130,0.9)';
-    ctx.fillText(state.marka.toUpperCase(), 135, 458);
+  // Şirket adı — SOL ALTA HER ZAMAN
+  if(firm.sirket){
+    cx.font='600 11px Inter,sans-serif'; cx.fillStyle='rgba(196,168,130,.85)';
+    cx.textAlign='left'; cx.fillText(firm.sirket.toUpperCase(),18,438);
   }
+  // Kategori sağa
+  cx.font='500 9px Inter,sans-serif'; cx.fillStyle='rgba(255,106,0,.6)';
+  cx.textAlign='right'; cx.fillText(state.kategori.toUpperCase(),252,438);
 
-  // Fenix logo küçük
-  ctx.font = '500 9px Inter, sans-serif';
-  ctx.fillStyle = 'rgba(122,106,85,0.4)';
-  ctx.fillText('✦ FENİX', 135, 474);
+  // Slogan
+  if(firm.slogan){
+    cx.font='300 9px Inter,sans-serif'; cx.fillStyle='rgba(122,106,85,.6)';
+    cx.textAlign='left'; cx.fillText(firm.slogan.substring(0,32),18,452);
+  }
+  // FPS/format
+  cx.font='400 8px Inter,sans-serif'; cx.fillStyle='rgba(122,106,85,.35)';
+  cx.textAlign='right'; cx.fillText('9:16 · 60FPS',252,452);
+  // Fenix
+  cx.font='400 8px Inter,sans-serif'; cx.fillStyle='rgba(122,106,85,.25)';
+  cx.textAlign='center'; cx.fillText('✦ FENİX',135,470);
+}
 
-  // Üst köşe - format
-  ctx.textAlign = 'right';
-  ctx.font = '500 9px Inter, sans-serif';
-  ctx.fillStyle = 'rgba(122,106,85,0.4)';
-  ctx.fillText('9:16 · 60FPS', 255, 20);
+function drawEndCard(cx,logoImg){
+  // Bitiş kartı — video sonuna simüle
+  // (canvas'ın alt %25'ini bitiş kartı olarak çiz)
+  cx.fillStyle='rgba(5,5,8,.92)'; cx.fillRect(0,320,270,160);
+  // Üst çizgi
+  cx.strokeStyle='rgba(255,69,0,.3)'; cx.lineWidth=1;
+  cx.beginPath(); cx.moveTo(0,320); cx.lineTo(270,320); cx.stroke();
+  // Logo
+  if(logoImg){
+    const lr=Math.min(48/logoImg.width,48/logoImg.height);
+    const lw=logoImg.width*lr,lh=logoImg.height*lr;
+    cx.save(); cx.globalAlpha=.9;
+    cx.drawImage(logoImg,(270-lw)/2,330,lw,lh);
+    cx.restore();
+  }
+  // Şirket adı
+  cx.font='700 13px Cinzel,serif'; cx.fillStyle='rgba(196,168,130,.9)';
+  cx.textAlign='center'; cx.fillText((firm.sirket||'FENİX').toUpperCase(),135,logoImg?392:370);
+  // Slogan
+  if(firm.slogan){
+    cx.font='300 9px Inter,sans-serif'; cx.fillStyle='rgba(122,106,85,.6)';
+    cx.fillText(firm.slogan.substring(0,34),135,logoImg?408:386);
+  }
+  // Alt çizgi
+  cx.strokeStyle='rgba(255,69,0,.15)'; cx.lineWidth=.5;
+  cx.beginPath(); cx.moveTo(60,460); cx.lineTo(210,460); cx.stroke();
+  cx.font='400 8px Inter,sans-serif'; cx.fillStyle='rgba(122,106,85,.3)';
+  cx.fillText('✦ FENİX REELS',135,472);
 }
 
 // ── İNDİR ──
-function downloadVideo() {
-  const canvas = document.getElementById('result-canvas');
-  const link = document.createElement('a');
-  link.download = `fenix-${state.kategori}-${Date.now()}.png`;
-  link.href = canvas.toDataURL('image/png');
-  link.click();
+function downloadVideo(){
+  const cv=document.getElementById('result-canvas');
+  const a=document.createElement('a');
+  a.download=`fenix-${state.kategori}-${Date.now()}.png`;
+  a.href=cv.toDataURL('image/png'); a.click();
   toast('İndiriliyor...');
-  fetch(BASE + '/api/fenix/feedback', {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'download', kategori: state.kategori, videoData: state.videoData })
-  }).catch(() => {});
+  fetch(BASE+'/api/fenix/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'download',kategori:state.kategori,videoData:state.videoData})}).catch(()=>{});
 }
 
 // ── GERİ BİLDİRİM ──
-async function sendFeedback(liked) {
-  try {
-    await fetch(BASE + '/api/feedback', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ liked, category: state.kategori, videoData: state.videoData || { kategori: state.kategori } })
-    });
-    toast(liked ? 'Fenix öğrendi. Teşekkürler.' : 'Yeniden üretiliyor...');
-    if (!liked) setTimeout(startProduction, 1200);
-  } catch(e) { toast('Geri bildirim gönderilemedi'); }
+async function sendFeedback(liked){
+  try{
+    await fetch(BASE+'/api/feedback',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({liked,category:state.kategori,videoData:state.videoData||{kategori:state.kategori}})});
+    toast(liked?'Fenix öğrendi. Teşekkürler.':'Yeniden üretiliyor...');
+    if(!liked)setTimeout(startProduction,1200);
+  }catch(e){toast('Geri bildirim gönderilemedi');}
 }
 
 // ── SIFIRLA ──
-function resetAll() {
-  clearInterval(prodInterval);
-  state = { step:1, photoDataUrl:null, kategori:null, marka:'', kanca:'', stil:'dinamik', videoData:null };
+function resetAll(){
+  clearInterval(prodTimer);
+  state={step:1,photoDataUrl:null,kategori:null,musicId:'auto',musicFile:null,videoData:null};
   resetPhoto();
-  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('sel'));
-  document.getElementById('btn-next-2').disabled = true;
-  document.getElementById('card-producing').style.display = 'block';
-  document.getElementById('card-result').style.display = 'none';
-  document.getElementById('prog-fill').style.width = '0%';
-  ['ps-1','ps-2','ps-3','ps-4','ps-5'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) { el.classList.remove('active','done'); }
-  });
+  document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('btn-next-2').disabled=true;
+  document.getElementById('card-producing').style.display='block';
+  document.getElementById('card-result').style.display='none';
+  document.getElementById('prog-fill').style.width='0%';
+  ['ps-1','ps-2','ps-3','ps-4','ps-5'].forEach(id=>{const el=document.getElementById(id);if(el){el.classList.remove('active','done');}});
   document.getElementById('ps-1').classList.add('active');
   goStep(1);
+}
+
+// ── AYARLAR ──
+function openSettings(){
+  document.getElementById('set-sirket').value=firm.sirket;
+  document.getElementById('set-slogan').value=firm.slogan;
+  document.getElementById('set-stil').value=firm.stil;
+  if(firm.logoDataUrl){
+    document.getElementById('logo-preview').src=firm.logoDataUrl;
+    document.getElementById('logo-preview').style.display='block';
+    document.getElementById('logo-placeholder').style.display='none';
+    document.getElementById('logo-upload-title').textContent='Logo yüklendi ✓';
+    document.getElementById('logo-clear').style.display='block';
+  }
+  document.getElementById('settings-modal').classList.add('open');
+}
+function closeSettings(){ document.getElementById('settings-modal').classList.remove('open'); }
+function closeSettingsOutside(e){ if(e.target===document.getElementById('settings-modal'))closeSettings(); }
+
+function onLogoUpload(e){
+  const f=e.target.files[0]; if(!f) return;
+  if(f.size>2*1024*1024){toast('Logo 2MB sınırını aşıyor');return;}
+  const r=new FileReader();
+  r.onload=ev=>{
+    document.getElementById('logo-preview').src=ev.target.result;
+    document.getElementById('logo-preview').style.display='block';
+    document.getElementById('logo-placeholder').style.display='none';
+    document.getElementById('logo-upload-title').textContent='Logo yüklendi ✓';
+    document.getElementById('logo-clear').style.display='block';
+    document.getElementById('logo-file')._pendingUrl=ev.target.result;
+    toast('Logo yüklendi');
+  };
+  r.readAsDataURL(f);
+}
+function clearLogo(e){
+  e.stopPropagation(); e.preventDefault();
+  document.getElementById('logo-preview').style.display='none';
+  document.getElementById('logo-placeholder').style.display='block';
+  document.getElementById('logo-upload-title').textContent='Logo Yükle';
+  document.getElementById('logo-clear').style.display='none';
+  document.getElementById('logo-file')._pendingUrl=null;
+  document.getElementById('logo-file').value='';
+}
+function saveSettings(){
+  firm.sirket=document.getElementById('set-sirket').value.trim();
+  firm.slogan=document.getElementById('set-slogan').value.trim();
+  firm.stil=document.getElementById('set-stil').value;
+  const pending=document.getElementById('logo-file')._pendingUrl;
+  if(pending)firm.logoDataUrl=pending;
+  else if(!document.getElementById('logo-preview').style.display||document.getElementById('logo-preview').style.display==='none')firm.logoDataUrl=null;
+  localStorage.setItem('fx_sirket',firm.sirket);
+  localStorage.setItem('fx_slogan',firm.slogan);
+  localStorage.setItem('fx_stil',firm.stil);
+  if(firm.logoDataUrl)localStorage.setItem('fx_logo',firm.logoDataUrl);
+  else localStorage.removeItem('fx_logo');
+  closeSettings();
+  toast('Ayarlar kaydedildi — her videoya uygulanacak');
+}
+
+// ── PWA KURULUM ──
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault(); deferredPrompt=e;
+  document.getElementById('pwa-banner').classList.add('show');
+});
+async function installPWA(){
+  if(!deferredPrompt)return;
+  deferredPrompt.prompt();
+  const{outcome}=await deferredPrompt.userChoice;
+  if(outcome==='accepted'){toast('Fenix ana ekrana eklendi!');document.getElementById('pwa-banner').classList.remove('show');}
+  deferredPrompt=null;
+}
+window.addEventListener('appinstalled',()=>{
+  document.getElementById('pwa-banner').classList.remove('show');
+  toast('Fenix kuruldu!');
+});
+
+// ── SERVİS WORKER KAYDEDİ ──
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+
+// ── İLK YÜKLEMEDE: şirket adı varsa hint göster ──
+if(firm.sirket){
+  toast('Hoş geldin, '+firm.sirket);
+} else {
+  setTimeout(()=>toast('⚙ Sağ üstten şirket adı ve logonu ekle'),1500);
 }
 </script>
 </body>
