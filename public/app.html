@@ -22,6 +22,44 @@
   --transition: cubic-bezier(0.4,0,0.2,1);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+/* Touch hızı — tüm tıklanabilir elementlerde 300ms gecikmeyi kaldır */
+button,a,[onclick],.cat-btn,.preset-btn,.id-tab,.lang-btn,.effect-btn,.vtype-btn,.orbit-dir{
+  touch-action:manipulation;cursor:pointer;-webkit-user-select:none;user-select:none;
+}
+/* Video tipi butonları */
+.vtype-btn{
+  flex:1;padding:10px 8px;border-radius:6px;font-size:11px;letter-spacing:1px;
+  font-family:'Inter',sans-serif;transition:all .15s;
+  border:1px solid rgba(255,106,0,0.15);background:transparent;
+  color:rgba(196,168,130,0.5);
+}
+.vtype-btn.vtype-active{
+  background:rgba(255,69,0,0.14);border-color:rgba(255,106,0,0.4);
+  color:rgba(196,168,130,0.95);box-shadow:0 0 8px rgba(255,69,0,0.1);
+}
+.vtype-btn:active{opacity:.75}
+/* Orbit yön butonları */
+.orbit-dir{
+  flex:1;padding:7px;border-radius:4px;font-size:10px;font-family:'Inter',sans-serif;
+  border:1px solid rgba(255,106,0,0.1);background:transparent;
+  color:rgba(196,168,130,0.4);transition:all .15s;
+}
+.orbit-dir.orbit-active{
+  background:rgba(255,69,0,0.12);border-color:rgba(255,106,0,0.3);
+  color:rgba(196,168,130,0.85);
+}
+.orbit-dir:active{opacity:.75}
+/* Efekt butonları */
+.effect-btn{
+  background:rgba(255,69,0,0.04);border:1px solid rgba(255,106,0,0.12);
+  border-radius:6px;padding:9px 6px;text-align:center;
+  transition:background .15s,border-color .15s;
+  color:rgba(196,168,130,0.7);font-family:'Inter',sans-serif;font-size:10px;
+}
+.effect-btn:active,.effect-btn.sel{
+  background:rgba(255,69,0,0.18);border-color:rgba(255,106,0,0.4);
+  color:rgba(196,168,130,0.95);
+}
 html{scroll-behavior:smooth}
 body{
   background:var(--bg);color:#F0E6D3;
@@ -646,16 +684,10 @@ canvas#particles{position:fixed;inset:0;pointer-events:none;z-index:0}
         <div style="margin-bottom:16px">
           <div class="field-label" style="margin-bottom:8px">VİDEO TİPİ</div>
           <div style="display:flex;gap:8px">
-            <button class="vtype-btn active" id="vtype-reels" style="
-              flex:1;padding:10px 8px;border:1px solid rgba(255,106,0,0.3);border-radius:6px;
-              background:rgba(255,69,0,0.12);color:rgba(196,168,130,0.9);font-size:11px;
-              letter-spacing:1px;cursor:pointer;transition:all .2s;font-family:inherit">
+            <button class="vtype-btn vtype-active" id="vtype-reels">
               🎬 REELS<br><span style="font-size:9px;opacity:.6">fal.ai · $0.35</span>
             </button>
-            <button class="vtype-btn" id="vtype-360" style="
-              flex:1;padding:10px 8px;border:1px solid rgba(255,106,0,0.15);border-radius:6px;
-              background:transparent;color:rgba(196,168,130,0.5);font-size:11px;
-              letter-spacing:1px;cursor:pointer;transition:all .2s;font-family:inherit">
+            <button class="vtype-btn" id="vtype-360">
               🔄 360° ORBİT<br><span style="font-size:9px;opacity:.6">Luma Ray-2 · ~$0.40</span>
             </button>
           </div>
@@ -663,14 +695,8 @@ canvas#particles{position:fixed;inset:0;pointer-events:none;z-index:0}
           <div id="orbit-options" style="display:none;margin-top:8px;padding:10px;border:1px solid rgba(255,106,0,0.1);border-radius:6px;background:rgba(255,69,0,0.04)">
             <div class="field-label" style="margin-bottom:6px;font-size:9px">DÖNÜŞ YÖNÜ</div>
             <div style="display:flex;gap:8px">
-              <button class="orbit-dir active" id="orbit-sol" style="
-                flex:1;padding:7px;border:1px solid rgba(255,106,0,0.25);border-radius:4px;
-                background:rgba(255,69,0,0.1);color:rgba(196,168,130,0.8);font-size:10px;
-                cursor:pointer;font-family:inherit">← SOL</button>
-              <button class="orbit-dir" id="orbit-sag" style="
-                flex:1;padding:7px;border:1px solid rgba(255,106,0,0.1);border-radius:4px;
-                background:transparent;color:rgba(196,168,130,0.4);font-size:10px;
-                cursor:pointer;font-family:inherit">SAĞ →</button>
+              <button class="orbit-dir orbit-active" id="orbit-sol">← SOL</button>
+              <button class="orbit-dir" id="orbit-sag">SAĞ →</button>
             </div>
             <div style="margin-top:6px;font-size:10px;color:rgba(196,168,130,0.35);line-height:1.5">
               Luma Ray-2 ile 3D volumetrik 360° orbit. ~30-60sn üretim süresi.
@@ -1147,42 +1173,24 @@ function selectCat(el,cat){
 // ── VİDEO TİPİ ──
 function selectVideoType(type){
   S.videoType = type;
-  const reelsBtn = document.getElementById('vtype-reels');
-  const orbitBtn = document.getElementById('vtype-360');
+  const reelsBtn  = document.getElementById('vtype-reels');
+  const orbitBtn  = document.getElementById('vtype-360');
   const orbitOpts = document.getElementById('orbit-options');
   const reelsCmds = document.getElementById('reels-commands');
 
-  const activeStyle = 'background:rgba(255,69,0,0.12);border-color:rgba(255,106,0,0.3);color:rgba(196,168,130,0.9)';
-  const inactiveStyle = 'background:transparent;border-color:rgba(255,106,0,0.15);color:rgba(196,168,130,0.5)';
+  // classList ile temiz toggle — cssText manipülasyonu YOK
+  reelsBtn.classList.toggle('vtype-active',  type === 'reels');
+  orbitBtn.classList.toggle('vtype-active',  type === '360');
 
-  if(type === 'reels'){
-    reelsBtn.style.cssText = reelsBtn.style.cssText.replace(/background:[^;]+;border-color:[^;]+;color:[^;]+/, '') + activeStyle;
-    orbitBtn.style.cssText = orbitBtn.style.cssText.replace(/background:[^;]+;border-color:[^;]+;color:[^;]+/, '') + inactiveStyle;
-    orbitOpts.style.display = 'none';
-    reelsCmds.style.display = 'block';
-    document.getElementById('btn-fire').textContent = '🜂 ATEŞE VER';
-  } else {
-    orbitBtn.style.cssText = orbitBtn.style.cssText.replace(/background:[^;]+;border-color:[^;]+;color:[^;]+/, '') + activeStyle;
-    reelsBtn.style.cssText = reelsBtn.style.cssText.replace(/background:[^;]+;border-color:[^;]+;color:[^;]+/, '') + inactiveStyle;
-    orbitOpts.style.display = 'block';
-    reelsCmds.style.display = 'none';
-    document.getElementById('btn-fire').textContent = '🔄 360° ATEŞE VER';
-  }
+  orbitOpts.style.display = type === '360' ? 'block' : 'none';
+  reelsCmds.style.display = type === '360' ? 'none'  : 'block';
+  document.getElementById('btn-fire').textContent = type === '360' ? '🔄 360° ATEŞE VER' : '🜂 ATEŞE VER';
 }
 
 function selectOrbitDir(dir){
   S.orbitYon = dir;
-  const solBtn = document.getElementById('orbit-sol');
-  const sagBtn = document.getElementById('orbit-sag');
-  const activeStyle = 'background:rgba(255,69,0,0.1);border-color:rgba(255,106,0,0.25);color:rgba(196,168,130,0.8)';
-  const inactiveStyle = 'background:transparent;border-color:rgba(255,106,0,0.1);color:rgba(196,168,130,0.4)';
-  if(dir === 'sol'){
-    solBtn.style.cssText = solBtn.style.cssText + activeStyle;
-    sagBtn.style.cssText = sagBtn.style.cssText + inactiveStyle;
-  } else {
-    sagBtn.style.cssText = sagBtn.style.cssText + activeStyle;
-    solBtn.style.cssText = solBtn.style.cssText + inactiveStyle;
-  }
+  document.getElementById('orbit-sol').classList.toggle('orbit-active', dir === 'sol');
+  document.getElementById('orbit-sag').classList.toggle('orbit-active', dir === 'sag');
 }
 
 // ── PRESET COMMANDS ──
@@ -1503,21 +1511,16 @@ function loadEffects(videoUrl){
 
   sec.style.display='block';
   grid.innerHTML = EFFECT_DEFS.map(e => `
-    <button class="effect-btn" data-effect="${e.id}" style="
-      background:rgba(255,69,0,0.04);border:1px solid rgba(255,106,0,0.12);
-      border-radius:6px;padding:9px 6px;text-align:center;cursor:pointer;
-      transition:all .2s;color:rgba(196,168,130,0.7);font-family:inherit;font-size:10px">
+    <button class="effect-btn" data-effect="${e.id}">
       <div style="font-size:18px;margin-bottom:3px">${e.emoji}</div>
       <div style="font-weight:600;letter-spacing:.5px">${e.label}</div>
       <div style="font-size:9px;opacity:.6;margin-top:1px">${e.desc}</div>
     </button>
   `).join('');
 
-  // Efekt butonlarına tıklama
+  // Efekt butonlarına tıklama — touch uyumlu
   grid.querySelectorAll('.effect-btn').forEach(btn => {
     btn.addEventListener('click', () => applyEffect(btn.dataset.effect));
-    btn.addEventListener('mouseenter', () => { btn.style.background='rgba(255,69,0,0.12)'; btn.style.borderColor='rgba(255,106,0,0.3)'; });
-    btn.addEventListener('mouseleave', () => { if(!btn.classList.contains('active')) { btn.style.background='rgba(255,69,0,0.04)'; btn.style.borderColor='rgba(255,106,0,0.12)'; } });
   });
 }
 
