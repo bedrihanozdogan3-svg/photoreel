@@ -550,8 +550,8 @@ canvas#particles{position:fixed;inset:0;pointer-events:none;z-index:0}
 
         <!-- Tab seçimi: Telefon / E-posta -->
         <div class="id-tabs">
-          <button class="id-tab active" id="tab-phone" onclick="switchTab('phone')">📱 <span id="tab-phone-lbl">Telefon</span></button>
-          <button class="id-tab" id="tab-email" onclick="switchTab('email')">✉ <span id="tab-email-lbl">E-posta</span></button>
+          <button class="id-tab active" id="tab-phone">📱 <span id="tab-phone-lbl">Telefon</span></button>
+          <button class="id-tab" id="tab-email">✉ <span id="tab-email-lbl">E-posta</span></button>
         </div>
 
         <!-- Telefon -->
@@ -561,7 +561,7 @@ canvas#particles{position:fixed;inset:0;pointer-events:none;z-index:0}
             <div class="phone-prefix">+90</div>
             <input type="tel" class="phone-input" id="phone-input"
               placeholder="5XX XXX XX XX" maxlength="15"
-              inputmode="numeric" oninput="onIdentityInput()">
+              inputmode="numeric">
           </div>
         </div>
 
@@ -569,15 +569,14 @@ canvas#particles{position:fixed;inset:0;pointer-events:none;z-index:0}
         <div id="field-email" style="display:none">
           <div class="field-label" id="email-label">E-POSTA ADRESİ</div>
           <input type="email" class="phone-input" id="email-input"
-            placeholder="ornek@sirket.com" style="width:100%;border-radius:4px"
-            oninput="onIdentityInput()">
+            placeholder="ornek@sirket.com" style="width:100%;border-radius:4px">
         </div>
 
         <div class="gate-note" id="gate-note">
           Aynı telefon/e-posta tekrar girilirse mevcut hakkın görünür — yeni 5 hak verilmez.
         </div>
 
-        <button class="btn-main" id="btn-start" onclick="startApp()" style="margin-top:16px" disabled>
+        <button class="btn-main" id="btn-start" style="margin-top:16px" disabled>
           <span class="loading-spin" id="start-spin" style="display:none"></span>
           <span id="btn-start-text">DEVAM</span>
         </button>
@@ -983,6 +982,11 @@ function setText(id,val){ const e=document.getElementById(id); if(e) e.textConte
 
 // ── IDENTITY TAB ──
 let activeTab = 'phone';
+document.getElementById('tab-phone').addEventListener('click', () => switchTab('phone'));
+document.getElementById('tab-email').addEventListener('click', () => switchTab('email'));
+document.getElementById('phone-input').addEventListener('input', onIdentityInput);
+document.getElementById('email-input').addEventListener('input', onIdentityInput);
+document.getElementById('btn-start').addEventListener('click', startApp);
 function switchTab(tab){
   activeTab = tab;
   document.getElementById('field-phone').style.display = tab==='phone'?'block':'none';
@@ -1698,6 +1702,17 @@ function toast(msg){
   // Service worker
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('/sw.js').catch(()=>{});
+  }
+
+  // Admin bypass — /app?admin=1
+  if(new URLSearchParams(location.search).get('admin')==='1'){
+    S.customerId = 'admin';
+    S.quota = 999;
+    localStorage.setItem('fx_customerId','admin');
+    localStorage.setItem('fx_quota','999');
+    document.getElementById('phone-gate').style.display='none';
+    document.getElementById('steps-bar').style.display='flex';
+    goStep(1);
   }
 })();
 </script>
