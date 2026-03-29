@@ -13,6 +13,8 @@ const { errorHandler, notFoundHandler, setupGlobalHandlers } = require('./middle
 setupGlobalHandlers();
 
 const app = express();
+// Cloud Run / GCP load balancer proxy güveni
+app.set('trust proxy', 1);
 const server = createServer(app);
 const io = new Server(server, {
   cors: { origin: config.allowedOrigins },
