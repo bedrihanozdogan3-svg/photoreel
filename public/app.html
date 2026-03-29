@@ -9,6 +9,7 @@
 <meta name="theme-color" content="#050508">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
 <style>
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    DESIGN TOKENS — 8pt grid
@@ -160,11 +161,41 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
 .mode-card:active{transform:translateY(-2px);}
 
 /* Card variants */
+.mode-card[data-mode="free"]  {--card-c:#6EE7B7;       --card-g:rgba(110,231,183,.25); --card-grad:linear-gradient(135deg,#6EE7B7,#34D399);}
 .mode-card[data-mode="reels"]{--card-c:var(--reels-c);--card-g:var(--reels-g);--card-grad:linear-gradient(135deg,#FF6B1A,#FF4500);}
 .mode-card[data-mode="pro"]  {--card-c:var(--pro-c);  --card-g:var(--pro-g);  --card-grad:linear-gradient(135deg,#A855F7,#7C3AED);}
 .mode-card[data-mode="360"]  {--card-c:var(--deg-c);  --card-g:var(--deg-g);  --card-grad:linear-gradient(135deg,#06B6D4,#0891B2);}
 .mode-card[data-mode="ses"]  {--card-c:var(--ses-c);  --card-g:var(--ses-g);  --card-grad:linear-gradient(135deg,#10B981,#059669);}
 .mode-card[data-mode="otonom"]{--card-c:var(--oto-c); --card-g:var(--oto-g); --card-grad:linear-gradient(135deg,#F59E0B,#D97706);}
+
+/* Locked card */
+.mode-card.locked{opacity:.45;cursor:not-allowed;filter:grayscale(.5);}
+.mode-card.locked:hover{transform:none;border-color:var(--b2);box-shadow:none;}
+.mode-card.locked::before{display:none;}
+.mode-card.locked .card-arr{display:none;}
+.card-lock{position:absolute;top:var(--sp3);right:var(--sp3);font-size:16px;opacity:.7;}
+/* Package badge on cards */
+.card-pkg{display:inline-flex;align-items:center;padding:2px var(--sp2);border-radius:var(--r-full);font-size:var(--fs-2xs);font-weight:700;letter-spacing:.08em;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:var(--tx2);margin-top:auto;}
+.card-pkg.pkg-free{background:rgba(110,231,183,.12);border-color:rgba(110,231,183,.3);color:#6EE7B7;}
+.card-pkg.pkg-paid{background:rgba(255,107,26,.1);border-color:rgba(255,107,26,.25);color:#FF8C5A;}
+
+/* Upgrade modal */
+#upg-modal{position:fixed;inset:0;z-index:9000;display:flex;align-items:center;justify-content:center;padding:var(--sp5);background:rgba(0,0,0,.75);backdrop-filter:blur(8px);opacity:0;pointer-events:none;transition:opacity .25s;}
+#upg-modal.open{opacity:1;pointer-events:all;}
+.upg-box{background:var(--s2);border:1px solid var(--b3);border-radius:var(--r-2xl);padding:var(--sp6);max-width:420px;width:100%;text-align:center;position:relative;}
+.upg-ico{font-size:40px;margin-bottom:var(--sp4);}
+.upg-title{font-size:var(--fs-lg);font-weight:700;margin-bottom:var(--sp2);color:var(--tx1);}
+.upg-sub{font-size:var(--fs-sm);color:var(--tx2);line-height:1.6;margin-bottom:var(--sp5);}
+.upg-pkgs{display:flex;flex-direction:column;gap:var(--sp2);margin-bottom:var(--sp5);}
+.upg-pkg-row{display:flex;align-items:center;justify-content:space-between;padding:var(--sp3) var(--sp4);border-radius:var(--r-md);border:1px solid var(--b2);background:var(--s3);font-size:var(--fs-sm);}
+.upg-pkg-row.highlight{border-color:var(--card-c,#FF6B1A);background:var(--md,rgba(255,107,26,.1));}
+.upg-pkg-name{font-weight:600;color:var(--tx1);}
+.upg-pkg-price{font-size:var(--fs-xs);color:var(--tx2);}
+.upg-actions{display:flex;gap:var(--sp3);}
+.upg-btn-cancel{flex:1;height:44px;border-radius:var(--r-md);border:1px solid var(--b2);font-size:var(--fs-sm);color:var(--tx2);transition:all .2s;}
+.upg-btn-cancel:hover{border-color:var(--b3);color:var(--tx1);}
+.upg-btn-cta{flex:2;height:44px;border-radius:var(--r-md);background:linear-gradient(135deg,#FF6B1A,#FF4500);color:#fff;font-size:var(--fs-sm);font-weight:700;letter-spacing:.08em;transition:all .2s;}
+.upg-btn-cta:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(255,69,0,.35);}
 
 .card-icon{
   width:52px;height:52px;border-radius:var(--r-lg);
@@ -193,129 +224,195 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    SCREEN 3 — WORKSPACE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-#s-work{display:grid;grid-template-rows:56px 1fr 64px;grid-template-columns:1fr;grid-template-areas:"wh""wm""wa";transition:opacity .4s var(--ease);}
-#w-panel{display:none;}
+#s-work{
+  display:grid;
+  grid-template-rows:48px 44px 1fr 110px 56px;
+  grid-template-columns:196px 1fr 260px;
+  grid-template-areas:"wh wh wh""wtb wtb wtb""wl wm wr""wtl wtl wtl""wa wa wa";
+  transition:opacity .4s var(--ease);
+}
+@media(max-width:900px){#s-work{grid-template-columns:1fr;grid-template-rows:48px 44px 1fr 110px 56px;grid-template-areas:"wh""wtb""wm""wtl""wa";}}
 
 /* Work Header */
 #w-hdr{
   grid-area:wh;display:flex;align-items:center;gap:var(--sp3);
-  padding:0 var(--sp5);border-bottom:1px solid var(--b1);
-  background:rgba(5,5,8,.88);backdrop-filter:blur(12px);z-index:10;
+  padding:0 var(--sp4);border-bottom:1px solid rgba(255,255,255,.06);
+  background:rgba(5,5,8,.92);backdrop-filter:blur(16px);z-index:12;
 }
-.w-back{
-  display:flex;align-items:center;gap:var(--sp2);padding:var(--sp2) var(--sp3);
-  border-radius:var(--r-md);border:1px solid var(--b2);
-  font-size:var(--fs-xs);color:var(--tx2);transition:all .2s;
-}
+.w-back{display:flex;align-items:center;gap:var(--sp2);padding:var(--sp2) var(--sp3);border-radius:var(--r-md);border:1px solid var(--b2);font-size:var(--fs-xs);color:var(--tx2);transition:all .2s;}
 .w-back:hover{border-color:var(--mc);color:var(--mc);}
-.w-mode-badge{
-  display:flex;align-items:center;gap:var(--sp2);
-  padding:var(--sp1) var(--sp3);border-radius:var(--r-full);
-  background:var(--md);border:1px solid var(--mc);
-  font-size:var(--fs-xs);color:var(--mc);font-weight:600;letter-spacing:.06em;
-}
+.w-mode-badge{display:flex;align-items:center;gap:var(--sp2);padding:var(--sp1) var(--sp3);border-radius:var(--r-full);background:var(--md);border:1px solid var(--mc);font-size:var(--fs-xs);color:var(--mc);font-weight:600;letter-spacing:.06em;}
 .w-sep{flex:1;}
-.w-cat-sel{
-  display:flex;align-items:center;gap:var(--sp2);
-  padding:var(--sp1) var(--sp4);border-radius:var(--r-full);
-  background:var(--s2);border:1px solid var(--b2);
-  font-size:var(--fs-xs);color:var(--tx2);transition:all .2s;cursor:pointer;
-}
+.w-cat-sel{display:flex;align-items:center;gap:var(--sp2);padding:var(--sp1) var(--sp4);border-radius:var(--r-full);background:var(--s2);border:1px solid var(--b2);font-size:var(--fs-xs);color:var(--tx2);transition:all .2s;cursor:pointer;}
 .w-cat-sel:hover{border-color:var(--mc);color:var(--tx1);}
 .w-quota{font-size:var(--fs-xs);color:var(--tx2);}
 .w-quota strong{color:var(--mc);}
 
-/* Work Main */
-#w-main{grid-area:wm;overflow:hidden;padding:var(--sp5);display:flex;flex-direction:row;gap:var(--sp4);align-items:stretch;}
-
-/* Edit bench */
-#edit-bench{flex:1;display:flex;flex-direction:row;gap:var(--sp3);min-width:0;overflow:hidden;}
-#eb-left{display:flex;flex-direction:column;gap:var(--sp2);flex:1;min-width:0;overflow-y:auto;scrollbar-width:none;}
-#eb-canvas{flex:1;min-height:260px;}
-#eb-right{width:230px;flex-shrink:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--s3) transparent;border:1px solid rgba(255,255,255,.1);border-radius:var(--r-xl);background:rgba(255,255,255,.03);}
-#eb-right .pnl{display:block;}
-#eb-canvas{flex:1;border-radius:var(--r-xl);background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.14);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:0;}
-#eb-ph{display:flex;flex-direction:column;align-items:center;gap:var(--sp2);opacity:.55;}
-#eb-ph-ico{font-size:40px;}
-#eb-ph-txt{font-size:var(--fs-sm);color:var(--tx2);font-weight:500;}
-#eb-img{max-width:100%;max-height:100%;object-fit:contain;border-radius:var(--r-lg);display:none;}
-#eb-toolbar{position:absolute;top:var(--sp3);left:50%;transform:translateX(-50%);display:flex;gap:4px;background:rgba(0,0,0,.75);backdrop-filter:blur(12px);border-radius:999px;padding:5px 10px;border:1px solid rgba(255,255,255,.15);}
-.eb-tool{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;color:rgba(255,255,255,.6);transition:background .15s,color .15s;}
-.eb-tool:hover,.eb-tool.on{background:rgba(255,255,255,.15);color:#fff;}
-.eb-tsep{width:1px;background:rgba(255,255,255,.15);margin:4px 2px;}
-#eb-adj{background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.12);border-radius:var(--r-lg);padding:var(--sp3) var(--sp4);display:grid;grid-template-columns:1fr 1fr;gap:var(--sp2) var(--sp4);}
-.eb-adj-row{display:flex;align-items:center;gap:6px;}
-.eb-adj-lbl{font-size:10px;color:rgba(255,255,255,.6);white-space:nowrap;min-width:60px;}
-.eb-adj-row .f-slider{flex:1;margin:0;}
-.eb-adj-val{font-size:10px;color:rgba(255,255,255,.8);min-width:22px;text-align:right;font-weight:600;}
-#eb-filters{display:flex;gap:var(--sp2);overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
-#eb-filters::-webkit-scrollbar{display:none;}
-.eb-filter{flex-shrink:0;width:68px;height:48px;border-radius:var(--r-md);cursor:pointer;display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px;font-size:8px;color:rgba(255,255,255,.9);font-weight:700;letter-spacing:.04em;border:2px solid rgba(255,255,255,.12);transition:border-color .15s,transform .15s;text-shadow:0 1px 3px rgba(0,0,0,.8);}
-.eb-filter:hover{transform:scale(1.06);border-color:rgba(255,255,255,.3);}
-.eb-filter.on{border-color:var(--mc);box-shadow:0 0 0 1px var(--mc);}
-
-/* Upload wrap — compact stacked zones */
-#upload-wrap{display:flex;flex-direction:column;gap:var(--sp2);width:min(180px,100%);}
-
-/* Upload zone — compact */
-.upload-zone{
-  border:1.5px dashed var(--b2);border-radius:var(--r-lg);
-  background:var(--s1);display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:4px;
-  padding:12px 8px;cursor:pointer;height:120px;
-  transition:border-color .2s,background .2s;
-  position:relative;overflow:hidden;flex-shrink:0;
+/* ── Toolbar ── */
+#w-toolbar{
+  grid-area:wtb;display:flex;align-items:center;gap:1px;
+  padding:0 var(--sp3);
+  background:rgba(8,7,12,.9);backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(255,255,255,.06);z-index:11;
 }
-.upload-zone:hover,.upload-zone.drag{border-color:var(--mc);background:var(--md);}
-.upload-zone.has-file{border-style:solid;border-color:var(--mc);}
-#output-zone{cursor:default;border-color:var(--b1);}
-#output-zone.has-file{border-color:#10B981;border-style:solid;}
-.uz-zone-tag{font-size:8px;font-weight:700;letter-spacing:.1em;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.06);color:var(--tx3);text-transform:uppercase;}
-#output-zone .uz-zone-tag{color:#10B981;background:rgba(16,185,129,.1);}
-.uz-ico{font-size:22px;opacity:.5;}
-.uz-title{font-size:10px;font-weight:600;color:var(--tx1);text-align:center;}
-.uz-sub{font-size:9px;color:var(--tx3);text-align:center;line-height:1.4;}
-.uz-preview{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:inherit;padding:6px;}
-.uz-clear{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;transition:background .15s;}
-.uz-clear:hover{background:rgba(220,38,38,.7);}
-/* Grid mode */
-.uz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:4px;padding:5px;width:100%;align-content:start;}
-.uz-grid-item{border-radius:8px;overflow:hidden;aspect-ratio:1;position:relative;background:var(--s2);}
-.uz-grid-item img{width:100%;height:100%;object-fit:cover;display:block;}
-.uz-grid-item .ugd{position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.75);font-size:9px;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .15s;}
-.uz-grid-item:hover .ugd{opacity:1;}
-.uz-grid-add{border-radius:8px;aspect-ratio:1;border:1.5px dashed var(--b2);display:flex;align-items:center;justify-content:center;font-size:22px;opacity:.4;cursor:pointer;transition:opacity .2s;}
-.uz-grid-add:hover{opacity:.8;}
+.wt-btn{width:36px;height:36px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.45);transition:all .15s;position:relative;flex-shrink:0;overflow:visible;}
+.wt-btn:hover{background:rgba(255,255,255,.09);color:rgba(255,255,255,.9);}
+.wt-btn.on{background:rgba(255,107,26,.15);color:var(--mc);}
+.wt-btn.on::after{content:'';position:absolute;bottom:3px;left:50%;transform:translateX(-50%);width:14px;height:2px;border-radius:1px;background:var(--mc);box-shadow:0 0 6px var(--mc);}
+.wt-btn svg{filter:drop-shadow(0 0 0 transparent);transition:filter .15s;}
+.wt-btn:hover svg{filter:drop-shadow(0 0 2px rgba(255,255,255,.3));}
+.wt-btn.on svg{filter:drop-shadow(0 0 4px var(--mc));}
+/* Tooltip — appears BELOW button (inside canvas area, no clipping) */
+.wt-btn::before{
+  content:attr(data-tip);
+  position:fixed;
+  background:rgba(10,8,18,.97);border:1px solid rgba(255,255,255,.14);
+  color:rgba(255,255,255,.92);font-size:10px;font-weight:500;letter-spacing:.04em;
+  padding:4px 10px;border-radius:6px;white-space:nowrap;
+  z-index:9999;pointer-events:none;
+  opacity:0;transition:opacity .2s;
+  /* position set via JS — we use a global tooltip div instead */
+  display:none;
+}
+/* Use a real tooltip element via JS */
+.wt-divider{width:1px;height:20px;background:rgba(255,255,255,.09);margin:0 4px;flex-shrink:0;}
+.wt-flex{flex:1;}
+.wt-zoom-info{font-size:10px;color:rgba(255,255,255,.3);letter-spacing:.04em;padding:0 var(--sp2);font-variant-numeric:tabular-nums;}
+/* Text overlay on canvas */
+#eb-text-overlay{position:absolute;z-index:20;display:none;flex-direction:column;align-items:center;gap:6px;top:50%;left:50%;transform:translate(-50%,-50%);}
+#eb-text-inp{background:rgba(10,8,18,.9);border:1.5px solid var(--mc);border-radius:8px;color:#fff;font-size:18px;font-weight:600;padding:8px 16px;outline:none;min-width:220px;text-align:center;backdrop-filter:blur(12px);}
+#eb-text-inp::placeholder{color:rgba(255,255,255,.3);}
+.eb-text-actions{display:flex;gap:6px;}
+.eb-text-ok{padding:5px 16px;border-radius:6px;background:var(--mc);color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;}
+.eb-text-cancel{padding:5px 12px;border-radius:6px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6);font-size:11px;}
+#eb-text-layer{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
 
-/* Work Panel */
+/* ── Left panel — Asset Panel ── */
+#w-left{
+  grid-area:wl;
+  background:rgba(6,5,10,.88);
+  border-right:1px solid rgba(255,255,255,.06);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+@media(max-width:900px){#w-left{display:none;}}
+.wl-header{padding:10px 12px 7px;font-size:8px;letter-spacing:.14em;color:rgba(255,255,255,.35);text-transform:uppercase;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.07);font-weight:700;}
+.wl-mode-chips{display:flex;gap:3px;padding:7px 10px;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.07);}
+.wl-chip{flex:1;height:24px;border-radius:var(--r-md);border:1px solid rgba(255,255,255,.1);font-size:8px;font-weight:700;letter-spacing:.05em;color:rgba(255,255,255,.35);transition:all .15s;text-transform:uppercase;}
+.wl-chip:hover{color:rgba(255,255,255,.7);border-color:rgba(255,255,255,.25);}
+.wl-chip.on{background:var(--md);border-color:var(--mc);color:var(--mc);box-shadow:0 0 8px color-mix(in srgb,var(--mc) 20%,transparent);}
+.wl-upload-area{flex-shrink:0;padding:7px 10px 4px;}
+.wl-upload-zone{border:1.5px dashed rgba(255,255,255,.1);border-radius:var(--r-lg);background:rgba(255,255,255,.02);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:8px;cursor:pointer;height:76px;transition:border-color .2s,background .2s;position:relative;overflow:hidden;}
+.wl-upload-zone:hover,.wl-upload-zone.drag{border-color:var(--mc);background:var(--md);}
+.wl-upload-zone.has-file{border-style:solid;border-color:var(--mc);}
+#wl-output-zone{cursor:default;border-color:rgba(255,255,255,.06);}
+#wl-output-zone.has-file{border-color:#10B981;}
+.wl-uz-tag{font-size:7px;font-weight:700;letter-spacing:.09em;padding:1px 6px;border-radius:999px;background:rgba(255,255,255,.06);color:var(--tx3);text-transform:uppercase;}
+#wl-output-zone .wl-uz-tag{color:#10B981;background:rgba(16,185,129,.1);}
+.wl-uz-ico{font-size:16px;opacity:.4;}
+.wl-uz-title{font-size:9px;font-weight:600;color:var(--tx2);text-align:center;}
+.wl-uz-sub{font-size:7.5px;color:var(--tx3);text-align:center;line-height:1.3;}
+.wl-uz-preview{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:inherit;padding:4px;}
+.wl-assets{flex:1;overflow-y:auto;scrollbar-width:none;padding:6px 10px;}
+.wl-sec-lbl{font-size:7.5px;letter-spacing:.1em;color:rgba(255,255,255,.18);text-transform:uppercase;padding:4px 0 5px;display:block;}
+.wl-asset-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-bottom:6px;}
+.wl-asset-item{border-radius:5px;overflow:hidden;aspect-ratio:1;position:relative;background:var(--s2);cursor:pointer;}
+.wl-asset-item img,.wl-asset-item video{width:100%;height:100%;object-fit:cover;display:block;}
+.wl-asset-del{position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:rgba(0,0,0,.8);font-size:7px;color:#fff;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s;cursor:pointer;}
+.wl-asset-item:hover .wl-asset-del{opacity:1;}
+.wl-add-btn{border-radius:5px;aspect-ratio:1;border:1.5px dashed rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:16px;opacity:.25;cursor:pointer;transition:opacity .2s;color:rgba(255,255,255,.6);}
+.wl-add-btn:hover{opacity:.6;}
+
+/* ── Center canvas ── */
+#w-main{
+  grid-area:wm;overflow:hidden;position:relative;
+  background:rgba(3,3,5,1);
+  display:flex;align-items:center;justify-content:center;
+}
+#eb-canvas{
+  width:100%;height:100%;position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+}
+#eb-ph{position:absolute;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--sp2);opacity:.35;pointer-events:none;}
+#eb-ph-ico{font-size:36px;}
+#eb-ph-txt{font-size:var(--fs-sm);color:var(--tx3);font-weight:500;}
+#eb-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none;z-index:1;}
+#eb-img.eb-img-active{display:block;}
+/* Histogram overlay on canvas */
+#cv-hist-wrap{
+  position:absolute;top:14px;right:14px;z-index:5;
+  width:124px;border-radius:10px;overflow:hidden;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(4,3,8,.75);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  box-shadow:0 4px 20px rgba(0,0,0,.5),0 1px 0 rgba(255,255,255,.07) inset;
+  opacity:.8;transition:opacity .2s;cursor:pointer;
+}
+#cv-hist-wrap:hover{opacity:1;}
+#cv-hist{display:block;width:100%;height:54px;}
+#cv-hist-lbl{font-size:7px;color:rgba(255,255,255,.35);letter-spacing:.1em;text-align:center;padding:3px 0 4px;border-top:1px solid rgba(255,255,255,.08);font-weight:700;}
+/* Canvas toolbar (top-center) */
+#eb-toolbar{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:2px;background:rgba(6,4,10,.82);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-radius:999px;padding:5px 10px;border:1px solid rgba(255,255,255,.14);z-index:6;box-shadow:0 4px 24px rgba(0,0,0,.55),0 1px 0 rgba(255,255,255,.06) inset;}
+.eb-tool{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;color:rgba(255,255,255,.55);transition:background .15s,color .15s,box-shadow .15s;}
+.eb-tool:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.95);}
+.eb-tool.on{background:rgba(255,107,26,.2);color:var(--mc);box-shadow:0 0 8px color-mix(in srgb,var(--mc) 35%,transparent);}
+.eb-tsep{width:1px;background:rgba(255,255,255,.1);margin:6px 2px;}
+
+/* ── Work Panel (right — glassmorphism) ── */
 #w-panel{
-  grid-area:wp;border-left:1px solid var(--b1);background:var(--s1);
-  overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--s3) transparent;
+  grid-area:wr;
+  background:rgba(7,5,12,.92);
+  backdrop-filter:blur(28px);-webkit-backdrop-filter:blur(28px);
+  border-left:1px solid rgba(255,255,255,.09);
+  box-shadow:-4px 0 24px rgba(0,0,0,.35);
+  overflow-y:auto;overflow-x:hidden;
+  scrollbar-width:thin;scrollbar-color:var(--s3) transparent;
+  display:flex;flex-direction:column;
 }
 @media(max-width:900px){#w-panel{display:none;}}
 
-.pnl{display:none;}
-.pnl.on{display:block;}
-
-/* ── Accordion panel sections ── */
-.pnl-sec{border-bottom:1px solid var(--b1);}
-.pnl-sec:last-child{border-bottom:none;}
-.pnl-hd{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:10px var(--sp3);cursor:pointer;user-select:none;
-  font-size:var(--fs-2xs);letter-spacing:.14em;color:var(--mc);
-  text-transform:uppercase;font-weight:600;
-  transition:background .15s;
+/* ── Timeline ── */
+#w-timeline{
+  grid-area:wtl;
+  background:rgba(4,3,7,.97);
+  border-top:1px solid rgba(255,255,255,.09);
+  box-shadow:0 -4px 20px rgba(0,0,0,.3);
+  display:flex;flex-direction:column;overflow:hidden;
 }
-.pnl-hd:hover{background:rgba(255,255,255,.03);}
-.pnl-hd::after{content:'›';font-size:14px;color:var(--tx3);transition:transform .25s;line-height:1;transform:rotate(90deg);}
-.pnl-sec.closed .pnl-hd::after{transform:rotate(0deg);}
-.pnl-body{padding:0 var(--sp3) var(--sp3);overflow:hidden;max-height:2000px;transition:max-height .3s ease,padding .3s ease;}
-.pnl-sec.closed .pnl-body{max-height:0;padding-bottom:0;}
+#wtl-header{display:flex;align-items:center;gap:var(--sp3);padding:5px 14px;border-bottom:1px solid rgba(255,255,255,.07);flex-shrink:0;}
+#wtl-play{width:24px;height:24px;border-radius:50%;background:var(--md);border:1px solid var(--mc);display:flex;align-items:center;justify-content:center;color:var(--mc);font-size:9px;transition:all .15s;flex-shrink:0;box-shadow:0 0 8px color-mix(in srgb,var(--mc) 25%,transparent);}
+#wtl-play:hover{background:var(--mc);color:#fff;box-shadow:0 0 14px color-mix(in srgb,var(--mc) 50%,transparent);}
+#wtl-time{font-size:10px;color:rgba(255,255,255,.4);font-variant-numeric:tabular-nums;letter-spacing:.04em;font-weight:600;}
+#wtl-cut-btn{display:none;align-items:center;gap:4px;padding:2px 10px;border-radius:var(--r-full);background:rgba(255,220,80,.12);border:1px solid rgba(255,220,80,.35);color:rgba(255,220,80,.9);font-size:8px;font-weight:700;letter-spacing:.07em;cursor:pointer;transition:all .15s;}
+#wtl-cut-btn:hover{background:rgba(255,220,80,.22);border-color:rgba(255,220,80,.6);}
+#wtl-cut-btn.visible{display:flex;}
+#wtl-audio-cut-btn{display:none;align-items:center;gap:4px;padding:2px 10px;border-radius:var(--r-full);background:rgba(80,200,255,.12);border:1px solid rgba(80,200,255,.35);color:rgba(80,200,255,.9);font-size:8px;font-weight:700;letter-spacing:.07em;cursor:pointer;transition:all .15s;}
+#wtl-audio-cut-btn:hover{background:rgba(80,200,255,.22);border-color:rgba(80,200,255,.6);}
+#wtl-audio-cut-btn.visible{display:flex;}
+#wtl-cut-info{font-size:9px;color:rgba(255,220,80,.6);letter-spacing:.04em;display:none;}
+#wtl-cut-info.visible{display:block;}
+#wtl-dur-chips{display:flex;gap:3px;margin-left:auto;}
+.wtl-dur{padding:2px 10px;border-radius:var(--r-full);border:1px solid rgba(255,255,255,.1);font-size:8px;color:rgba(255,255,255,.3);cursor:pointer;transition:all .15s;font-weight:700;letter-spacing:.05em;}
+.wtl-dur.on,.wtl-dur:hover{border-color:var(--mc);color:var(--mc);background:var(--md);}
+#wtl-track{flex:1;position:relative;overflow:hidden;}
+#wtl-canvas{display:block;width:100%;height:100%;}
+#wtl-audio-canvas{display:block;width:100%;height:100%;}
 
-.pnl-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp2);}
+/* ── Panel sections (accordion) ── */
+.pnl{display:none;}
+.pnl.on{display:flex;flex-direction:column;height:100%;}
+#pnl-pro.on,#pnl-360.on,#pnl-ses.on,#pnl-otonom.on{display:block;height:auto;}
+.pnl-sec{border-bottom:1px solid rgba(255,255,255,.07);}
+.pnl-sec:last-child{border-bottom:none;}
+.pnl-sec:not(.closed){background:rgba(255,107,26,.025);}
+.pnl-hd{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;cursor:pointer;user-select:none;font-size:9px;letter-spacing:.13em;color:rgba(255,255,255,.5);text-transform:uppercase;font-weight:700;transition:background .15s,color .15s;}
+.pnl-hd:hover{background:rgba(255,255,255,.04);color:rgba(255,255,255,.85);}
+.pnl-sec:not(.closed) .pnl-hd{color:var(--mc);text-shadow:0 0 12px color-mix(in srgb,var(--mc) 40%,transparent);}
+.pnl-hd::after{content:'›';font-size:15px;color:rgba(255,255,255,.25);transition:transform .25s;transform:rotate(90deg);}
+.pnl-sec.closed .pnl-hd::after{transform:rotate(0deg);}
+.pnl-body{padding:0 14px 14px;overflow:hidden;max-height:2000px;transition:max-height .3s ease,padding .3s ease;}
+.pnl-sec.closed .pnl-body{max-height:0;padding-bottom:0;}
+.pnl-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
 .pnl-lbl{font-size:var(--fs-sm);color:var(--tx2);}
-.pnl-val{font-size:var(--fs-sm);color:var(--tx1);font-weight:500;}
+.pnl-val{font-size:var(--fs-sm);color:var(--tx1);font-weight:600;}
 .pnl-desc{font-size:var(--fs-xs);color:var(--tx2);line-height:1.6;margin-bottom:var(--sp3);}
 
 /* ── Bench accordion ── */
@@ -333,51 +430,37 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
 .bench-body{overflow:hidden;max-height:2000px;transition:max-height .3s ease;}
 .bench-sec.closed .bench-body{max-height:0;}
 
-/* Field label in panel */
-.f-lbl{display:block;font-size:9px;letter-spacing:.08em;color:rgba(255,255,255,.3);margin-bottom:3px;text-transform:uppercase;}
-/* Select */
-.f-sel{
-  width:100%;padding:4px var(--sp2);border-radius:var(--r-md);
-  background:var(--s3);border:1px solid var(--b2);color:var(--tx1);
-  font-size:11px;outline:none;margin-bottom:var(--sp2);cursor:pointer;
-  transition:border-color .2s;
-}
+/* ── Field controls ── */
+.f-lbl{display:block;font-size:9px;letter-spacing:.07em;color:rgba(255,255,255,.45);margin-bottom:5px;text-transform:uppercase;font-weight:600;}
+.f-sel{width:100%;padding:4px var(--sp2);border-radius:var(--r-md);background:var(--s3);border:1px solid var(--b2);color:var(--tx1);font-size:11px;outline:none;margin-bottom:8px;cursor:pointer;transition:border-color .2s;}
 .f-sel:focus{border-color:var(--mc);}
-/* Slider */
-.f-slider{width:100%;height:3px;border-radius:2px;background:var(--s3);accent-color:var(--mc);outline:none;margin-bottom:var(--sp2);cursor:pointer;}
-/* Toggle */
-.tog{position:relative;width:36px;height:20px;border-radius:var(--r-full);background:var(--s3);border:1px solid var(--b2);transition:all .2s;cursor:pointer;flex-shrink:0;}
-.tog::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--tx3);transition:all .2s var(--ease-spring);}
+.f-slider{width:100%;height:3px;border-radius:2px;background:var(--s3);accent-color:var(--mc);outline:none;margin-bottom:8px;cursor:pointer;}
+.tog{position:relative;width:34px;height:18px;border-radius:var(--r-full);background:var(--s3);border:1px solid var(--b2);transition:all .2s;cursor:pointer;flex-shrink:0;}
+.tog::after{content:'';position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--tx3);transition:all .2s var(--ease-spring);}
 .tog.on{background:var(--md);border-color:var(--mc);}
 .tog.on::after{left:18px;background:var(--mc);}
-/* Chip group */
-.chip-g{display:flex;flex-wrap:wrap;gap:var(--sp2);margin-bottom:var(--sp3);}
-.chip{padding:3px 8px;border-radius:var(--r-full);border:1px solid var(--b2);font-size:10px;color:var(--tx2);transition:all .15s;cursor:pointer;white-space:nowrap;}
+.chip-g{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;}
+.chip{padding:3px 8px;border-radius:var(--r-full);border:1px solid var(--b2);font-size:9px;color:var(--tx2);transition:all .15s;cursor:pointer;white-space:nowrap;}
 .chip:hover{border-color:var(--mc);color:var(--tx1);}
 .chip.on{background:var(--md);border-color:var(--mc);color:var(--mc);}
-/* Color swatches */
 .swatches{display:grid;grid-template-columns:repeat(5,1fr);gap:var(--sp2);margin-bottom:var(--sp3);}
-.swatch{height:28px;border-radius:var(--r-md);cursor:pointer;border:2px solid transparent;transition:border-color .15s,transform .15s;}
+.swatch{height:24px;border-radius:var(--r-md);cursor:pointer;border:2px solid transparent;transition:border-color .15s,transform .15s;}
 .swatch:hover{transform:scale(1.1);}
 .swatch.on{border-color:#fff;}
-/* Inline text input */
-.f-inp{
-  width:100%;padding:var(--sp2) var(--sp3);height:36px;border-radius:var(--r-md);
-  background:var(--s3);border:1px solid var(--b2);color:var(--tx1);
-  font-size:var(--fs-sm);outline:none;margin-bottom:var(--sp3);transition:border-color .2s;
-}
+.f-inp{width:100%;padding:var(--sp2) var(--sp3);height:34px;border-radius:var(--r-md);background:var(--s3);border:1px solid var(--b2);color:var(--tx1);font-size:var(--fs-sm);outline:none;margin-bottom:10px;transition:border-color .2s;}
 .f-inp:focus{border-color:var(--mc);}
-/* Textarea */
-.f-ta{
-  width:100%;padding:var(--sp2) var(--sp3);border-radius:var(--r-md);
-  background:var(--s3);border:1px solid var(--b2);color:var(--tx1);
-  font-size:var(--fs-sm);outline:none;margin-bottom:var(--sp3);resize:vertical;min-height:72px;
-  transition:border-color .2s;
-}
+.f-ta{width:100%;padding:var(--sp2) var(--sp3);border-radius:var(--r-md);background:var(--s3);border:1px solid var(--b2);color:var(--tx1);font-size:var(--fs-sm);outline:none;margin-bottom:10px;resize:vertical;min-height:64px;transition:border-color .2s;}
 .f-ta:focus{border-color:var(--mc);}
-/* BPM row */
-.bpm-row{display:flex;align-items:center;gap:var(--sp3);margin-bottom:var(--sp3);}
+.bpm-row{display:flex;align-items:center;gap:var(--sp3);margin-bottom:10px;}
 .bpm-val{font-size:var(--fs-lg);font-weight:700;color:var(--mc);min-width:40px;text-align:center;}
+.eb-adj-row{display:flex;align-items:center;gap:6px;margin-bottom:4px;}
+.eb-adj-lbl{font-size:9px;color:rgba(255,255,255,.45);white-space:nowrap;min-width:56px;}
+.eb-adj-val{font-size:9px;color:rgba(255,255,255,.7);min-width:20px;text-align:right;font-weight:600;}
+#eb-filters{display:flex;gap:5px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;}
+#eb-filters::-webkit-scrollbar{display:none;}
+.eb-filter{flex-shrink:0;width:62px;height:44px;border-radius:var(--r-md);cursor:pointer;display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px;font-size:8px;color:rgba(255,255,255,.9);font-weight:700;letter-spacing:.04em;border:2px solid rgba(255,255,255,.12);transition:border-color .15s,transform .15s;text-shadow:0 1px 3px rgba(0,0,0,.8);}
+.eb-filter:hover{transform:scale(1.06);border-color:rgba(255,255,255,.3);}
+.eb-filter.on{border-color:var(--mc);box-shadow:0 0 0 1px var(--mc);}
 
 /* Work Action bar */
 #w-act{
@@ -395,13 +478,16 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
 }
 .btn-sec:hover{border-color:var(--b3);color:var(--tx1);}
 .btn-gen{
-  height:48px;padding:0 var(--sp6);border-radius:var(--r-md);
-  background:linear-gradient(135deg,var(--mc),color-mix(in srgb,var(--mc) 75%,#FF8C35));
-  color:#fff;font-size:var(--fs-sm);font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  height:44px;padding:0 var(--sp6);border-radius:var(--r-md);
+  background:linear-gradient(135deg,#FF5520 0%,var(--mc) 50%,#FF9040 100%);
+  color:#fff;font-size:var(--fs-sm);font-weight:700;letter-spacing:.12em;text-transform:uppercase;
   transition:all .2s var(--ease);display:flex;align-items:center;gap:var(--sp2);
+  box-shadow:0 2px 0 rgba(0,0,0,.35),0 4px 20px color-mix(in srgb,var(--mc) 35%,transparent);
+  border:1px solid rgba(255,255,255,.12);text-shadow:0 1px 2px rgba(0,0,0,.4);
 }
-.btn-gen:disabled{opacity:.3;cursor:not-allowed;}
-.btn-gen:not(:disabled):hover{transform:translateY(-1px);box-shadow:0 8px 24px color-mix(in srgb,var(--mc) 40%,transparent);}
+.btn-gen:disabled{opacity:.25;cursor:not-allowed;box-shadow:none;}
+.btn-gen:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 6px 28px color-mix(in srgb,var(--mc) 55%,transparent),0 2px 0 rgba(0,0,0,.3);}
+.btn-gen:not(:disabled):active{transform:translateY(0);box-shadow:0 1px 8px color-mix(in srgb,var(--mc) 30%,transparent);}
 
 /* Category modal */
 #cat-modal{
@@ -452,6 +538,101 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
 /* ━━━ TREND LOADING ━━━ */
 .trend-loading{font-size:11px;color:var(--tx3);padding:8px 0;text-align:center;animation:pulse 1.5s infinite;}
 @keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   COLOR CURVE (kept for legacy SVG in pnl-pro if needed)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.r-curve-wrap{
+  border:1px solid rgba(255,255,255,.08);border-radius:var(--r-md);
+  overflow:hidden;margin-bottom:12px;
+  background:rgba(0,0,0,.45);cursor:crosshair;position:relative;
+}
+.r-curve-wrap::after{
+  content:'CURVE';position:absolute;top:4px;left:6px;
+  font-size:7px;color:rgba(255,255,255,.18);letter-spacing:.1em;
+}
+#r-curve{width:100%;height:auto;display:block;}
+.r-cp{transition:r .15s var(--ease-spring);}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   HAPTIC SLIDERS (gradient fill)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+.f-slider-fill{
+  -webkit-appearance:none;appearance:none;
+  width:100%;height:3px;border-radius:2px;
+  background:linear-gradient(to right,var(--mc) var(--sl-fill,50%),rgba(255,255,255,.08) var(--sl-fill,50%));
+  outline:none;cursor:pointer;margin-bottom:12px;border:none;
+}
+.f-slider-fill::-webkit-slider-thumb{
+  -webkit-appearance:none;
+  width:18px;height:18px;border-radius:50%;
+  background:radial-gradient(circle at 38% 35%,color-mix(in srgb,var(--mc) 80%,#fff) 0%,var(--mc) 55%,color-mix(in srgb,var(--mc) 70%,#000) 100%);
+  box-shadow:0 0 0 2.5px rgba(5,5,8,.9),0 2px 8px rgba(0,0,0,.5),0 0 12px color-mix(in srgb,var(--mc) 55%,transparent);
+  cursor:pointer;transition:transform .12s var(--ease-spring),box-shadow .12s;
+}
+.f-slider-fill:hover::-webkit-slider-thumb,.f-slider-fill:active::-webkit-slider-thumb{
+  transform:scale(1.25);
+  box-shadow:0 0 0 2.5px rgba(5,5,8,.9),0 3px 14px rgba(0,0,0,.6),0 0 20px var(--mc);
+}
+.f-slider-fill::-moz-range-thumb{
+  width:18px;height:18px;border-radius:50%;border:none;
+  background:var(--mc);cursor:pointer;
+}
+.f-slider-fill::-moz-range-progress{background:var(--mc);height:3px;border-radius:2px;}
+/* Crop overlay */
+#crop-overlay{position:absolute;inset:0;z-index:15;display:none;cursor:crosshair;}
+#crop-overlay.active{display:block;}
+#crop-box{position:absolute;border:2px solid #FF6B1A;box-shadow:0 0 0 9999px rgba(0,0,0,.5);cursor:move;}
+.crop-handle{position:absolute;width:10px;height:10px;background:#FF6B1A;border-radius:2px;}
+.crop-handle.nw{top:-5px;left:-5px;cursor:nw-resize;}
+.crop-handle.ne{top:-5px;right:-5px;cursor:ne-resize;}
+.crop-handle.sw{bottom:-5px;left:-5px;cursor:sw-resize;}
+.crop-handle.se{bottom:-5px;right:-5px;cursor:se-resize;}
+#crop-actions{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:6px;}
+#crop-apply{padding:5px 16px;border-radius:6px;background:#FF6B1A;color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;cursor:pointer;border:none;}
+#crop-cancel{padding:5px 12px;border-radius:6px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.7);font-size:11px;cursor:pointer;border:none;}
+/* Draw tool */
+#draw-canvas{position:absolute;inset:0;z-index:14;display:none;cursor:crosshair;touch-action:none;}
+#draw-canvas.active{display:block;}
+#draw-toolbar{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:none;gap:8px;background:rgba(6,4,10,.85);border:1px solid rgba(255,255,255,.14);backdrop-filter:blur(16px);padding:5px 12px;border-radius:999px;z-index:16;align-items:center;}
+#draw-toolbar.active{display:flex;}
+/* Figür Boyama */
+#fb-canvas{position:absolute;inset:0;z-index:13;display:none;touch-action:none;}
+#fb-canvas.active{display:block;}
+#fb-toolbar{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:none;gap:6px;background:rgba(6,4,10,.9);border:1px solid rgba(168,85,247,.3);backdrop-filter:blur(16px);padding:6px 14px;border-radius:999px;z-index:16;align-items:center;white-space:nowrap;box-shadow:0 4px 20px rgba(168,85,247,.2);}
+#fb-toolbar.active{display:flex;}
+#fb-color{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,.3);cursor:pointer;}
+#fb-size{width:56px;height:3px;accent-color:#A855F7;cursor:pointer;}
+#fb-opacity{width:48px;height:3px;accent-color:#A855F7;cursor:pointer;}
+.fb-preset{font-size:9px;padding:2px 7px;border-radius:999px;border:1px solid rgba(168,85,247,.3);color:rgba(168,85,247,.8);background:rgba(168,85,247,.08);cursor:pointer;letter-spacing:.04em;font-weight:600;transition:all .15s;}
+.fb-preset:hover,.fb-preset.on{background:rgba(168,85,247,.2);border-color:rgba(168,85,247,.6);color:#C084FC;}
+#fb-mode-brush,#fb-mode-fill{font-size:9px;padding:2px 7px;border-radius:999px;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.5);background:transparent;cursor:pointer;font-weight:600;transition:all .15s;}
+#fb-mode-brush.on,#fb-mode-fill.on{background:rgba(168,85,247,.2);border-color:#A855F7;color:#C084FC;}
+.fb-sep{width:1px;height:16px;background:rgba(255,255,255,.1);margin:0 2px;}
+#fb-clear{font-size:9px;color:rgba(255,255,255,.5);cursor:pointer;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);}
+#fb-apply{font-size:9px;color:#fff;cursor:pointer;padding:2px 9px;border-radius:4px;background:linear-gradient(135deg,#A855F7,#7C3AED);border:none;font-weight:700;}
+#fb-cancel{font-size:9px;color:rgba(255,255,255,.5);cursor:pointer;padding:2px 6px;border-radius:4px;background:transparent;border:1px solid rgba(255,255,255,.1);}
+.fb-lbl{font-size:8px;color:rgba(255,255,255,.3);letter-spacing:.06em;}
+#draw-color{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,.3);cursor:pointer;background:#FF6B1A;}
+#draw-size{width:60px;height:3px;accent-color:#FF6B1A;cursor:pointer;}
+#draw-clear{font-size:10px;color:rgba(255,255,255,.6);cursor:pointer;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);}
+#draw-done{font-size:10px;color:#fff;cursor:pointer;padding:2px 8px;border-radius:4px;background:#FF6B1A;border:none;font-weight:700;}
+/* Timeline track rows */
+#wtl-tracks{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.wtl-row{display:flex;align-items:stretch;height:50%;border-bottom:1px solid rgba(255,255,255,.05);}
+.wtl-row:last-child{border-bottom:none;}
+.wtl-row-lbl{width:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:8px;font-weight:700;color:rgba(255,255,255,.25);letter-spacing:.06em;flex-shrink:0;border-right:1px solid rgba(255,255,255,.06);}
+#wtl-mute-btn{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:8px;cursor:pointer;color:rgba(255,255,255,.4);transition:all .15s;flex-shrink:0;}
+#wtl-mute-btn:hover{background:rgba(255,255,255,.12);color:rgba(255,255,255,.8);}
+#wtl-mute-btn.muted{color:rgba(255,80,80,.7);border-color:rgba(255,80,80,.3);}
+.wtl-row-area{flex:1;position:relative;overflow:hidden;}
+.wtl-row-area canvas{display:block;width:100%;height:100%;}
+/* ━━━ FABRIC.JS CANVAS ━━━ */
+#fabric-canvas{position:absolute;inset:0;}
+#eb-video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none;z-index:1;background:#000;}
+#eb-video.eb-vid-active{display:block;}
+#fab-del-btn{position:absolute;top:12px;left:12px;z-index:20;display:none;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;background:rgba(255,60,60,.18);border:1px solid rgba(255,60,60,.3);color:rgba(255,100,100,.9);font-size:10px;font-weight:700;cursor:pointer;backdrop-filter:blur(8px);}
+#fab-del-btn:hover{background:rgba(255,60,60,.3);}
 </style>
 </head>
 <body>
@@ -533,8 +714,22 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
     <div class="cards-title">Ne üretmek istiyorsunuz?</div>
     <div class="cards-grid">
 
+      <!-- Ücretsiz -->
+      <div class="mode-card" data-mode="free" role="button" tabindex="0">
+        <div class="card-icon">✨</div>
+        <div class="card-title">Ücretsiz</div>
+        <div class="card-sub">Temel düzenleme araçları. Kırpma, kesimleme, renk ayarı. AI üretimi yok, watermark var.</div>
+        <div class="card-tags">
+          <span class="card-tag">Kırpma</span><span class="card-tag">Kesim</span>
+          <span class="card-tag">Filtre</span><span class="card-tag">Dışa Aktar</span>
+        </div>
+        <span class="card-pkg pkg-free">ÜCRETSİZ</span>
+        <div class="card-arr">→</div>
+      </div>
+
       <!-- Reels & Fotoğraf -->
       <div class="mode-card" data-mode="reels" role="button" tabindex="0">
+        <div class="card-lock">🔒</div>
         <div class="card-icon">🎬</div>
         <div class="card-title">Reels & Fotoğraf</div>
         <div class="card-sub">Ürün fotoğrafından profesyonel Reels ve sosyal medya içeriği üret. BPM sync, efekt, müzik otomatik.</div>
@@ -542,23 +737,27 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
           <span class="card-tag">9:16 Reels</span><span class="card-tag">BPM Sync</span>
           <span class="card-tag">50+ Efekt</span><span class="card-tag">Müzik</span>
         </div>
+        <span class="card-pkg pkg-paid">REELS PAKETİ</span>
         <div class="card-arr">→</div>
       </div>
 
       <!-- Pro -->
       <div class="mode-card" data-mode="pro" role="button" tabindex="0">
+        <div class="card-lock">🔒</div>
         <div class="card-icon">🎛</div>
         <div class="card-title">Pro Stüdyo</div>
-        <div class="card-sub">LUT renk düzeltme, özel BPM, efekt katmanları, branding ve gelişmiş sahne kontrolü.</div>
+        <div class="card-sub">LUT renk, figür boyama, özel BPM, efekt katmanları, branding ve gelişmiş sahne kontrolü.</div>
         <div class="card-tags">
-          <span class="card-tag">LUT Filtresi</span><span class="card-tag">Renk Düzeltme</span>
+          <span class="card-tag">LUT Filtresi</span><span class="card-tag">Figür Boyama</span>
           <span class="card-tag">Efekt Layer</span><span class="card-tag">Branding</span>
         </div>
+        <span class="card-pkg pkg-paid">PRO PAKETİ</span>
         <div class="card-arr">→</div>
       </div>
 
       <!-- 360° -->
       <div class="mode-card" data-mode="360" role="button" tabindex="0">
+        <div class="card-lock">🔒</div>
         <div class="card-icon">🌐</div>
         <div class="card-title">360° Orbit</div>
         <div class="card-sub">Equirectangular video işleme. Rüzgar sesi filtrele, plaka blur, speed-ramp, orbit tipi seç.</div>
@@ -566,11 +765,13 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
           <span class="card-tag">Orbit Video</span><span class="card-tag">Speed-ramp</span>
           <span class="card-tag">Plaka Blur</span><span class="card-tag">60fps</span>
         </div>
+        <span class="card-pkg pkg-paid">360° PAKETİ</span>
         <div class="card-arr">→</div>
       </div>
 
       <!-- Ses Dublaj -->
       <div class="mode-card" data-mode="ses" role="button" tabindex="0">
+        <div class="card-lock">🔒</div>
         <div class="card-icon">🎙</div>
         <div class="card-title">Ses Dublaj</div>
         <div class="card-sub">Ses klonlama, lip-sync, çok dilli export. Kategoriye özel ton: lüks=yumuşak, spor=enerjik.</div>
@@ -578,11 +779,13 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
           <span class="card-tag">Ses Klonlama</span><span class="card-tag">Lip-sync</span>
           <span class="card-tag">Çok Dil</span><span class="card-tag">Duygu</span>
         </div>
+        <span class="card-pkg pkg-paid">SES PAKETİ</span>
         <div class="card-arr">→</div>
       </div>
 
       <!-- Otonom -->
       <div class="mode-card" data-mode="otonom" role="button" tabindex="0">
+        <div class="card-lock">🔒</div>
         <div class="card-icon">🤖</div>
         <div class="card-title">Otonom Fenix</div>
         <div class="card-sub">Dosyayı at, gerisini Fenix yapar. Kategori, sahne, müzik, ses, branding — sıfır müdahale.</div>
@@ -590,6 +793,7 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
           <span class="card-tag">Sıfır Müdahale</span><span class="card-tag">Tam Otonom</span>
           <span class="card-tag">Öğrenen AI</span><span class="card-tag">Tablet Bildirim</span>
         </div>
+        <span class="card-pkg pkg-paid">FULL PAKETİ</span>
         <div class="card-arr">→</div>
       </div>
 
@@ -597,78 +801,281 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
   </div>
 </div>
 
+<!-- ████ UPGRADE MODAL ████ -->
+<div id="upg-modal" role="dialog" aria-modal="true">
+  <div class="upg-box">
+    <div class="upg-ico" id="upg-ico">🔒</div>
+    <div class="upg-title" id="upg-title">Bu Kart Kilitli</div>
+    <div class="upg-sub" id="upg-sub">Bu kartı kullanmak için ilgili paketi satın almanız gerekiyor.</div>
+    <div class="upg-pkgs">
+      <div class="upg-pkg-row"><span class="upg-pkg-name">✨ Ücretsiz</span><span class="upg-pkg-price">Ücretsiz — temel araçlar</span></div>
+      <div class="upg-pkg-row highlight"><span class="upg-pkg-name">⚡ Reels Paketi</span><span class="upg-pkg-price">AI Reels + BPM sync</span></div>
+      <div class="upg-pkg-row"><span class="upg-pkg-name">🎛 Pro Paketi</span><span class="upg-pkg-price">Figür boyama + LUT + Branding</span></div>
+      <div class="upg-pkg-row"><span class="upg-pkg-name">🌐 360° Paketi</span><span class="upg-pkg-price">Orbit video + plaka blur</span></div>
+      <div class="upg-pkg-row"><span class="upg-pkg-name">🎙 Ses Paketi</span><span class="upg-pkg-price">Klonlama + lip-sync + çok dil</span></div>
+      <div class="upg-pkg-row"><span class="upg-pkg-name">🤖 Full Paket</span><span class="upg-pkg-price">Tüm kartlar + Otonom Fenix</span></div>
+    </div>
+    <div class="upg-actions">
+      <button class="upg-btn-cancel" id="upg-cancel">Kapat</button>
+      <button class="upg-btn-cta" id="upg-cta">İletişime Geç →</button>
+    </div>
+  </div>
+</div>
+
 <!-- ████ SCREEN 3: WORKSPACE ████ -->
 <div id="s-work" class="screen slide-right" data-mode="reels">
 
-  <!-- Header -->
+  <!-- Header (slim) -->
   <header id="w-hdr">
-    <button class="w-back" id="btn-back">← Geri</button>
-    <div class="w-mode-badge" id="w-badge">⚡ NORMAL</div>
+    <button class="w-back" id="btn-back">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 2L4 6l4 4"/></svg>
+      Geri
+    </button>
+    <div class="w-mode-badge" id="w-badge">⚡ REELS</div>
     <div class="w-sep"></div>
     <button class="w-cat-sel" id="btn-cat-sel">🍽 Gıda ▾</button>
     <div class="w-quota">Hak: <strong id="w-quota-n">—</strong></div>
   </header>
 
-  <!-- Main area (left) -->
-  <main id="w-main">
-    <div id="upload-wrap">
-      <!-- GİRİŞ -->
-      <div class="upload-zone" id="upload-zone">
-        <div class="uz-zone-tag">Ürün Girişi</div>
-        <span class="uz-ico">📷</span>
-        <div class="uz-title">Fotoğraf veya Video Yükle</div>
-        <div class="uz-sub">PNG · JPG · WEBP · MP4 · MOV · max 50MB</div>
+  <!-- Toolbar -->
+  <div id="w-toolbar">
+    <!-- Tool group: Selection/Transform -->
+    <button class="wt-btn on" id="wt-select" data-tip="Seç">
+      <svg width="15" height="15" viewBox="0 0 12 14" fill="currentColor"><path d="M0 0l5 13 2.2-4.2L12 7.5z"/></svg>
+    </button>
+    <button class="wt-btn" id="wt-crop" data-tip="Kırp">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+        <rect x="4" y="0" width="2.5" height="10.5" rx="1"/>
+        <rect x="4" y="8" width="10" height="2.5" rx="1"/>
+        <rect x="0" y="4" width="2.5" height="10" rx="1"/>
+        <rect x="0" y="11.5" width="9" height="2.5" rx="1"/>
+      </svg>
+    </button>
+    <button class="wt-btn" id="wt-rotl" data-tip="Sola Döndür">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2v4h4V4.5H4.5A5 5 0 1 1 3 8H1a7 7 0 1 0 1.5-5.1V2H2z"/></svg>
+    </button>
+    <button class="wt-btn" id="wt-rotr" data-tip="Sağa Döndür">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M14 2v2.9A7 7 0 1 0 15 8h-2a5 5 0 1 1-1.5-3.5H9.5V6H14V2h-2z"/></svg>
+    </button>
+    <button class="wt-btn" id="wt-fliph" data-tip="Yatay Çevir">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+        <rect x="7.25" y="1" width="1.5" height="14" rx=".75"/>
+        <path d="M11 4.5l4.5 3.5-4.5 3.5V4.5z"/>
+        <path d="M5 4.5L.5 8 5 11.5V4.5z"/>
+      </svg>
+    </button>
+    <div class="wt-divider"></div>
+    <!-- Tool group: Create -->
+    <button class="wt-btn" id="wt-draw" data-tip="Çizim Yap">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M10.6 1.4a2 2 0 0 1 2.8 2.8L5 12.6H2.4l-.4-2.4L10.6 1.4zm-.8 1.6L3 9.8v1.8h1.8l6.8-6.8-1.8-1.8z"/><path d="M1 15h14v-1H1z"/></svg>
+    </button>
+    <button class="wt-btn" id="wt-text" data-tip="Metin Ekle">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 2.5h13v2.5H9.75v8.5h-3.5V5H1.5V2.5z"/></svg>
+    </button>
+    <button class="wt-btn" id="wt-logo" data-tip="Logo Ekle">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><rect x="1.5" y="1.5" width="13" height="13" rx="3" opacity=".4"/><circle cx="8" cy="8" r="3.8"/></svg>
+    </button>
+    <div class="wt-divider"></div>
+    <!-- Tool group: View -->
+    <button class="wt-btn" id="wt-zoom-in" data-tip="Yakınlaştır">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 1a5.5 5.5 0 1 0 3.45 9.76l3.15 3.15 1.4-1.4-3.15-3.15A5.5 5.5 0 0 0 6.5 1zm0 1.5a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm-.75 2V6H4.25v1.5H5.75V9h1.5V7.5H8.75V6H7.25V4.5z"/></svg>
+    </button>
+    <button class="wt-btn" id="wt-zoom-out" data-tip="Uzaklaştır">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 1a5.5 5.5 0 1 0 3.45 9.76l3.15 3.15 1.4-1.4-3.15-3.15A5.5 5.5 0 0 0 6.5 1zm0 1.5a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM4.25 6.25h4.5V7.75h-4.5z"/></svg>
+    </button>
+    <button class="wt-btn" id="wt-fit" data-tip="Ekrana Sığdır">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M1 1h5v1.5H2.5V5H1V1zm9 0h5v4h-1.5V2.5H10V1zM1 10h1.5v2.5H5V14H1v-4zm9 2.5h2.5V10H14v4h-4v-1.5z"/></svg>
+    </button>
+    <div class="wt-flex"></div>
+    <span class="wt-zoom-info" id="wt-zoom-pct">100%</span>
+  </div>
+
+  <!-- Left — Asset Panel -->
+  <aside id="w-left">
+    <div class="wl-header">YÜKLEME &amp; VARLIKLAR</div>
+    <div class="wl-mode-chips">
+      <button class="wl-chip on" id="wlc-reels">REELS</button>
+      <button class="wl-chip" id="wlc-foto">FOTOĞRAF</button>
+      <button class="wl-chip" id="wlc-video">VİDEO</button>
+    </div>
+    <div class="wl-upload-area">
+      <div class="wl-upload-zone" id="upload-zone">
+        <div class="wl-uz-tag">Ürün Girişi</div>
+        <span class="wl-uz-ico">📷</span>
+        <div class="wl-uz-title">Fotoğraf / Video Yükle</div>
+        <div class="wl-uz-sub">PNG · JPG · MP4 · max 50MB</div>
         <input type="file" id="file-inp" class="hidden" accept="image/*,video/*" multiple>
       </div>
-      <!-- ÇIKIŞ -->
-      <div class="upload-zone" id="output-zone">
-        <div class="uz-zone-tag">Ürün Çıkışı</div>
-        <span class="uz-ico" id="out-ico">🎬</span>
-        <div class="uz-title" id="out-title">Üretilen Video</div>
-        <div class="uz-sub" id="out-sub">Üret tuşuna bas...</div>
-      </div>
     </div>
-    <!-- Edit bench -->
-    <div id="edit-bench">
-      <!-- LEFT: canvas + sliders + filters -->
-      <div id="eb-left">
-      <div id="eb-canvas">
-        <div id="eb-ph"><div id="eb-ph-ico">📐</div><div id="eb-ph-txt">Sol taraftan fotoğraf yükle</div></div>
-        <img id="eb-img" alt="Ürün önizleme">
-        <div id="eb-toolbar">
-          <button class="eb-tool on" id="ebt-select" title="Seç">⊹</button>
-          <button class="eb-tool" id="ebt-crop" title="Kırp">✂</button>
-          <button class="eb-tool" id="ebt-rotl" title="Sola Döndür">↺</button>
-          <button class="eb-tool" id="ebt-rotr" title="Sağa Döndür">↻</button>
-          <button class="eb-tool" id="ebt-fliph" title="Yatay Çevir">↔</button>
-          <div class="eb-tsep"></div>
-          <button class="eb-tool" id="ebt-text" title="Metin Ekle">T</button>
-          <button class="eb-tool" id="ebt-logo" title="Logo">◈</button>
-          <div class="eb-tsep"></div>
-          <button class="eb-tool" id="ebt-zoom-in" title="Yakınlaştır">+</button>
-          <button class="eb-tool" id="ebt-zoom-out" title="Uzaklaştır">−</button>
-          <button class="eb-tool" id="ebt-reset" title="Sıfırla">⊙</button>
+    <div class="wl-assets">
+      <span class="wl-sec-lbl">VARLIKLAR</span>
+      <div class="wl-asset-grid" id="wl-asset-grid">
+        <div class="wl-add-btn" id="wl-add-btn">+</div>
+      </div>
+      <span class="wl-sec-lbl">ÇIKTI</span>
+      <div class="wl-upload-area" style="padding:0 0 8px">
+        <div class="wl-upload-zone wl-output-zone" id="output-zone">
+          <div class="wl-uz-tag">Ürün Çıkışı</div>
+          <span class="wl-uz-ico" id="out-ico">🎬</span>
+          <div class="wl-uz-title" id="out-title">Üretilen Video</div>
+          <div class="wl-uz-sub" id="out-sub">Üret tuşuna bas...</div>
         </div>
       </div>
-      <div class="bench-sec closed">
-        <div class="bench-hd">Işık & Renk Ayarları</div>
-        <div class="bench-body">
-          <div id="eb-adj" style="padding:10px 12px;">
-            <div class="eb-adj-row"><span class="eb-adj-lbl">Parlaklık</span><input type="range" class="f-slider" id="adj-bright" min="-100" max="100" value="0"><span class="eb-adj-val" id="adj-bright-v">0</span></div>
-            <div class="eb-adj-row"><span class="eb-adj-lbl">Kontrast</span><input type="range" class="f-slider" id="adj-contrast" min="-100" max="100" value="0"><span class="eb-adj-val" id="adj-contrast-v">0</span></div>
-            <div class="eb-adj-row"><span class="eb-adj-lbl">Doygunluk</span><input type="range" class="f-slider" id="adj-sat" min="-100" max="100" value="0"><span class="eb-adj-val" id="adj-sat-v">0</span></div>
-            <div class="eb-adj-row"><span class="eb-adj-lbl">Keskinlik</span><input type="range" class="f-slider" id="adj-sharp" min="0" max="100" value="0"><span class="eb-adj-val" id="adj-sharp-v">0</span></div>
-            <div class="eb-adj-row"><span class="eb-adj-lbl">Sıcaklık</span><input type="range" class="f-slider" id="adj-warm" min="-100" max="100" value="0"><span class="eb-adj-val" id="adj-warm-v">0</span></div>
-            <div class="eb-adj-row"><span class="eb-adj-lbl">Gölge</span><input type="range" class="f-slider" id="adj-shadow" min="-100" max="100" value="0"><span class="eb-adj-val" id="adj-shadow-v">0</span></div>
-            <div class="eb-adj-row"><span class="eb-adj-lbl">Işıklar</span><input type="range" class="f-slider" id="adj-high" min="-100" max="100" value="0"><span class="eb-adj-val" id="adj-high-v">0</span></div>
-            <div class="eb-adj-row"><span class="eb-adj-lbl">Vignette</span><input type="range" class="f-slider" id="adj-vign" min="0" max="100" value="0"><span class="eb-adj-val" id="adj-vign-v">0</span></div>
+    </div>
+  </aside>
+
+  <!-- Center — Canvas -->
+  <main id="w-main">
+    <div id="eb-canvas">
+      <div id="eb-ph">
+        <div id="eb-ph-ico">📐</div>
+        <div id="eb-ph-txt">Sol taraftan fotoğraf yükle</div>
+      </div>
+      <img id="eb-img" alt="">
+      <video id="eb-video" loop playsinline></video>
+      <canvas id="fabric-canvas"></canvas>
+      <!-- Figür boyama overlay canvas -->
+      <canvas id="fb-canvas"></canvas>
+      <!-- Figür boyama floating toolbar -->
+      <div id="fb-toolbar">
+        <span class="fb-lbl">BOYA</span>
+        <input type="color" id="fb-color" value="#a855f7" title="Renk">
+        <span class="fb-lbl">BOY</span><input type="range" id="fb-size" min="4" max="80" value="20">
+        <span class="fb-lbl">OPA</span><input type="range" id="fb-opacity" min="5" max="100" value="60">
+        <div class="fb-sep"></div>
+        <button id="fb-mode-brush" class="on">🖌 Fırça</button>
+        <button id="fb-mode-fill">🪣 Doldur</button>
+        <div class="fb-sep"></div>
+        <button class="fb-preset on" data-color="#F4C2A1">Deri</button>
+        <button class="fb-preset" data-color="#3D2B1F">Saç</button>
+        <button class="fb-preset" data-color="#1e40af">Kıyafet</button>
+        <button class="fb-preset" data-color="#e5e7eb">Arka Plan</button>
+        <div class="fb-sep"></div>
+        <button id="fb-clear">Temizle</button>
+        <button id="fb-apply">Uygula</button>
+        <button id="fb-cancel">✕</button>
+      </div>
+      <!-- Delete button for selected fabric objects -->
+      <button id="fab-del-btn">✕ Sil</button>
+      <!-- Histogram overlay (top-right corner) -->
+      <div id="cv-hist-wrap">
+        <canvas id="cv-hist" width="116" height="52"></canvas>
+        <div id="cv-hist-lbl">HISTOGRAM</div>
+      </div>
+      <!-- Canvas toolbar (top-center, floating pill) -->
+      <div id="eb-toolbar">
+        <button class="eb-tool on" id="ebt-select" title="Seç">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3 1.5L13.5 8 9 9.2 6.5 14.5z"/></svg>
+        </button>
+        <button class="eb-tool" id="ebt-crop" title="Kırp">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M5 1v8.5H13.5v1.5H5a1.5 1.5 0 01-1.5-1.5V1zm7 4.5V14h-1.5V6.5H4V5z"/></svg>
+        </button>
+        <button class="eb-tool" id="ebt-rotl" title="Sola">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M5.5 2.5A5.5 5.5 0 018 2v1.5A4 4 0 104 8H2.5A5.5 5.5 0 015.5 2.5z"/><path d="M2 2h3v3H2z"/></svg>
+        </button>
+        <button class="eb-tool" id="ebt-rotr" title="Sağa">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M10.5 2.5A5.5 5.5 0 018 2v1.5A4 4 0 1112 8h1.5a5.5 5.5 0 01-3-5.5z"/><path d="M11 2h3v3h-3z"/></svg>
+        </button>
+        <button class="eb-tool" id="ebt-fliph" title="Çevir">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M7.5 2v12h-1V2zm2.5 0l3 3-3 3V2zm-6 6l3-3v6L4 8z"/></svg>
+        </button>
+        <div class="eb-tsep"></div>
+        <button class="eb-tool" id="ebt-text" title="Metin">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v2H9.5v8h-3V5H2z"/></svg>
+        </button>
+        <button class="eb-tool" id="ebt-logo" title="Logo">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="2" width="12" height="12" rx="2.5" opacity=".4"/><circle cx="8" cy="8" r="3"/></svg>
+        </button>
+        <div class="eb-tsep"></div>
+        <button class="eb-tool" id="ebt-zoom-in" title="Yakın">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M7 2a5 5 0 100 10A5 5 0 007 2zm0 1.5a3.5 3.5 0 110 7 3.5 3.5 0 010-7zm-.75 1.5v1.5H4.75v1.5H6.25V9.5h1.5V7.5H9.25V6H7.75V4.5z"/><path d="M11 11l3.5 3.5-1.1 1.1L9.9 12z"/></svg>
+        </button>
+        <button class="eb-tool" id="ebt-zoom-out" title="Uzak">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M7 2a5 5 0 100 10A5 5 0 007 2zm0 1.5a3.5 3.5 0 110 7 3.5 3.5 0 010-7zm-2.25 3h4.5v1.5h-4.5z"/><path d="M11 11l3.5 3.5-1.1 1.1L9.9 12z"/></svg>
+        </button>
+        <button class="eb-tool" id="ebt-reset" title="Sıfırla">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 2a6 6 0 100 12A6 6 0 008 2zm0 1.5a4.5 4.5 0 110 9 4.5 4.5 0 010-9zm0 2a2.5 2.5 0 100 5 2.5 2.5 0 000-5z"/></svg>
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- Right — Parameter Panel -->
+  <aside id="w-panel">
+
+    <!-- REELS panel — ACCORDION -->
+    <div class="pnl on" id="pnl-reels">
+
+      <!-- 1. IŞIK & TAZELIK -->
+      <div class="pnl-sec">
+        <div class="pnl-hd">Işık &amp; Tazelik Ayarları</div>
+        <div class="pnl-body">
+          <label class="f-lbl">Pozlama <span class="pnl-val" id="r-exp-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="r-exp" min="-100" max="100" value="0">
+          <label class="f-lbl">Parlaklık <span class="pnl-val" id="adj-bright-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="adj-bright" min="-100" max="100" value="0">
+          <label class="f-lbl">Kontrast <span class="pnl-val" id="r-cont-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="r-cont" min="-100" max="100" value="0">
+          <label class="f-lbl">Gölge <span class="pnl-val" id="adj-shadow-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="adj-shadow" min="-100" max="100" value="0">
+          <label class="f-lbl">Vurgular <span class="pnl-val" id="r-highl-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="r-highl" min="-100" max="100" value="0">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+            <div><div style="font-size:8px;color:var(--tx3);margin-bottom:5px">Beyazlar</div><input type="range" class="f-slider-fill" id="r-whites" min="-100" max="100" value="0"></div>
+            <div><div style="font-size:8px;color:var(--tx3);margin-bottom:5px">Siyahlar</div><input type="range" class="f-slider-fill" id="r-blacks" min="-100" max="100" value="0"></div>
           </div>
         </div>
       </div>
-      <div class="bench-sec closed">
-        <div class="bench-hd">Filtre Önayarları</div>
-        <div class="bench-body">
-          <div id="eb-filters" style="padding:10px 10px;">
+
+      <!-- 2. KROMATİK GRUP -->
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Kromatik Grup</div>
+        <div class="pnl-body">
+          <label class="f-lbl">Doygunluk <span class="pnl-val" id="adj-sat-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="adj-sat" min="-100" max="100" value="0">
+          <label class="f-lbl">Canlılık <span class="pnl-val" id="r-vib-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="r-vib" min="-100" max="100" value="0">
+          <label class="f-lbl">Kelvin (Beyaz Dengesi) <span class="pnl-val" id="r-wb-v">5500K</span></label>
+          <input type="range" class="f-slider-fill" id="r-wb" min="2000" max="10000" value="5500">
+          <label class="f-lbl">Ton (Y↔Mac) <span class="pnl-val" id="r-tint-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="r-tint" min="-100" max="100" value="0">
+          <label class="f-lbl">Sıcaklık <span class="pnl-val" id="adj-warm-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="adj-warm" min="-100" max="100" value="0">
+          <label class="f-lbl">HSL Renk Seçici</label>
+          <div class="chip-g" id="hsl-color-sel">
+            <button class="chip on" data-hsl="red" style="color:#FF4444">K</button>
+            <button class="chip" data-hsl="orange" style="color:#FF8C00">T</button>
+            <button class="chip" data-hsl="yellow" style="color:#FFD700">S</button>
+            <button class="chip" data-hsl="green" style="color:#22C55E">Y</button>
+            <button class="chip" data-hsl="blue" style="color:#3B82F6">M</button>
+            <button class="chip" data-hsl="purple" style="color:#A855F7">Mo</button>
+          </div>
+          <div style="display:grid;gap:4px">
+            <div class="eb-adj-row"><span class="eb-adj-lbl">Ton</span><input type="range" class="f-slider-fill" min="-100" max="100" value="0"><span class="eb-adj-val">0</span></div>
+            <div class="eb-adj-row"><span class="eb-adj-lbl">Doygunluk</span><input type="range" class="f-slider-fill" min="-100" max="100" value="0"><span class="eb-adj-val">0</span></div>
+            <div class="eb-adj-row"><span class="eb-adj-lbl">Parlaklık</span><input type="range" class="f-slider-fill" min="-100" max="100" value="0"><span class="eb-adj-val">0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. DOKU & NETLİK -->
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Doku &amp; Netlik</div>
+        <div class="pnl-body">
+          <label class="f-lbl">Netlik <span class="pnl-val" id="r-clar-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="r-clar" min="-100" max="100" value="0">
+          <label class="f-lbl">Sis Giderme <span class="pnl-val" id="r-dehaze-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="r-dehaze" min="-100" max="100" value="0">
+          <label class="f-lbl">Keskinlik <span class="pnl-val" id="adj-sharp-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="adj-sharp" min="0" max="100" value="0">
+          <label class="f-lbl">Doku <span class="pnl-val" id="r-tex-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="r-tex" min="0" max="100" value="0">
+          <label class="f-lbl">Film Grain <span class="pnl-val" id="r-grain-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="r-grain" min="0" max="100" value="0">
+          <label class="f-lbl">Vignette <span class="pnl-val" id="adj-vign-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="adj-vign" min="0" max="100" value="0">
+          <label class="f-lbl">Filtre Önayarı</label>
+          <div id="eb-filters" style="display:flex;gap:5px;overflow-x:auto;padding-bottom:2px;scrollbar-width:none;">
             <div class="eb-filter on" style="background:linear-gradient(135deg,#1a1a2e,#16213e)">Orijinal</div>
             <div class="eb-filter" style="background:linear-gradient(135deg,#0d1b2a,#1b4332)">Sinematik</div>
             <div class="eb-filter" style="background:linear-gradient(135deg,#6b3a2a,#c97d4a)">Vintage</div>
@@ -682,245 +1089,261 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
           </div>
         </div>
       </div>
-      </div><!-- /eb-left -->
 
-      <!-- RIGHT: mode tool panels -->
-      <div id="eb-right"></div>
-    </div><!-- /edit-bench -->
-    <div id="main-extras"></div>
-  </main>
-
-  <!-- Right panel — mode specific (now rendered into #eb-right via JS) -->
-  <aside id="w-panel" style="display:none">
-
-    <!-- REELS panel -->
-    <div class="pnl on" id="pnl-reels">
-
-      <!-- 1. KADRAJ GRUBU -->
-      <div class="pnl-sec">
-        <div class="pnl-hd">Kadraj & Yapı</div>
-        <label class="f-lbl">En Boy Oranı</label>
-        <div class="chip-g">
-          <button class="chip on">9:16</button><button class="chip">4:5</button>
-          <button class="chip">1:1</button><button class="chip">16:9</button>
-        </div>
-        <label class="f-lbl">Kalite & Süre</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <select class="f-sel" id="r-qual"><option>1080p</option><option>4K</option><option>720p</option></select>
-          <select class="f-sel" id="r-dur"><option>15s</option><option>30s</option><option>60s</option></select>
-        </div>
-        <label class="f-lbl">Kırpma & Ölçek <span class="pnl-val" id="r-crop-v">0%</span></label>
-        <input type="range" class="f-slider" id="r-crop" min="0" max="50" value="0">
-        <label class="f-lbl">Hizalama (Straighten) <span class="pnl-val" id="r-straight-v">0°</span></label>
-        <input type="range" class="f-slider" id="r-straight" min="-15" max="15" value="0">
-        <label class="f-lbl">Dönüştürme</label>
-        <div class="chip-g">
-          <button class="chip">↺ Sol</button><button class="chip">↻ Sağ</button>
-          <button class="chip">↔ Yatay</button><button class="chip">↕ Dikey</button>
-        </div>
-        <label class="f-lbl">Perspektif Düzeltme</label>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div>
-            <div style="font-size:9px;color:var(--tx3);margin-bottom:3px">Dikey</div>
-            <input type="range" class="f-slider" min="-100" max="100" value="0">
+      <!-- 4. KADRAJ & YAPISI -->
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Kadraj &amp; Yapısı</div>
+        <div class="pnl-body">
+          <label class="f-lbl">En Boy Oranı</label>
+          <div class="chip-g">
+            <button class="chip on">9:16</button><button class="chip">4:5</button>
+            <button class="chip">1:1</button><button class="chip">16:9</button>
           </div>
-          <div>
-            <div style="font-size:9px;color:var(--tx3);margin-bottom:3px">Yatay</div>
-            <input type="range" class="f-slider" min="-100" max="100" value="0">
+          <label class="f-lbl">Kalite &amp; Süre</label>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px">
+            <select class="f-sel" id="r-qual"><option>1080p</option><option>4K</option><option>720p</option></select>
+            <select class="f-sel" id="r-dur"><option>15s</option><option>30s</option><option>60s</option></select>
+          </div>
+          <label class="f-lbl">Kırpma <span class="pnl-val" id="r-crop-v">0%</span></label>
+          <input type="range" class="f-slider-fill" id="r-crop" min="0" max="50" value="0">
+          <label class="f-lbl">Hizalama <span class="pnl-val" id="r-straight-v">0°</span></label>
+          <input type="range" class="f-slider-fill" id="r-straight" min="-15" max="15" value="0">
+          <label class="f-lbl">Dönüştürme</label>
+          <div class="chip-g">
+            <button class="chip">↺ Sol</button><button class="chip">↻ Sağ</button>
+            <button class="chip">↔ Yatay</button><button class="chip">↕ Dikey</button>
           </div>
         </div>
       </div>
 
-      <!-- 2. POZLAMA GRUBU -->
-      <div class="pnl-sec">
-        <div class="pnl-hd">Işık & Tonlama</div>
-        <label class="f-lbl">Pozlama <span class="pnl-val" id="r-exp-v">0</span></label>
-        <input type="range" class="f-slider" id="r-exp" min="-100" max="100" value="0">
-        <label class="f-lbl">Kontrast <span class="pnl-val" id="r-cont-v">0</span></label>
-        <input type="range" class="f-slider" id="r-cont" min="-100" max="100" value="0">
-        <label class="f-lbl">Vurgular <span class="pnl-val" id="r-highl-v">0</span></label>
-        <input type="range" class="f-slider" id="r-highl" min="-100" max="100" value="0">
-        <label class="f-lbl">Gölgeler <span class="pnl-val" id="r-shad-v">0</span></label>
-        <input type="range" class="f-slider" id="r-shad" min="-100" max="100" value="0">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div>
-            <div style="font-size:9px;color:var(--tx3);margin-bottom:3px">Beyazlar</div>
-            <input type="range" class="f-slider" id="r-whites" min="-100" max="100" value="0">
+      <!-- 5. VİDEO & BPM -->
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Video &amp; BPM</div>
+        <div class="pnl-body">
+          <label class="f-lbl">Hız <span class="pnl-val" id="r-spd-v">1.0x</span></label>
+          <input type="range" class="f-slider-fill" id="r-spd" min="25" max="400" value="100">
+          <div class="pnl-row" style="margin-bottom:10px">
+            <span class="pnl-lbl">Ters Oynatma</span><div class="tog" role="switch"></div>
           </div>
-          <div>
-            <div style="font-size:9px;color:var(--tx3);margin-bottom:3px">Siyahlar</div>
-            <input type="range" class="f-slider" id="r-blacks" min="-100" max="100" value="0">
+          <div class="pnl-row" style="margin-bottom:10px">
+            <span class="pnl-lbl">Freeze</span><div class="tog" role="switch"></div>
+          </div>
+          <label class="f-lbl">BPM Senkron</label>
+          <div class="bpm-row">
+            <input type="range" class="f-slider-fill" id="r-bpm" min="60" max="180" value="120" style="flex:1;margin:0">
+            <div class="bpm-val" id="r-bpm-v">120</div>
+          </div>
+          <div class="pnl-row"><span class="pnl-lbl">Beat Kilitle</span><div class="tog on" role="switch"></div></div>
+          <label class="f-lbl">Hız Rampası</label>
+          <div class="chip-g">
+            <button class="chip on">Sabit</button><button class="chip">Y→H→Y</button>
+            <button class="chip">H→Y</button><button class="chip">Özel</button>
+          </div>
+          <label class="f-lbl">Geçiş Efektleri</label>
+          <div class="chip-g">
+            <button class="chip on">Zoom</button><button class="chip">Glitch</button>
+            <button class="chip">Parallax</button><button class="chip">Morph</button>
+            <button class="chip">Blur Pan</button><button class="chip">Shake</button>
+            <button class="chip">Strobe</button><button class="chip">Whip</button>
+            <button class="chip">Speed Ramp</button><button class="chip">Chromatic</button>
+          </div>
+          <label class="f-lbl">Müzik Türü</label>
+          <div class="chip-g">
+            <button class="chip on">Otomatik</button><button class="chip">Enerjik</button>
+            <button class="chip">Dramatik</button><button class="chip">Minimal</button><button class="chip">Lo-fi</button>
           </div>
         </div>
       </div>
 
-      <!-- 3. KROMATİK GRUP -->
-      <div class="pnl-sec">
-        <div class="pnl-hd">Renk & Atmosfer</div>
-        <label class="f-lbl">Beyaz Dengesi — Sıcaklık <span class="pnl-val" id="r-wb-v">5500K</span></label>
-        <input type="range" class="f-slider" id="r-wb" min="2000" max="10000" value="5500">
-        <label class="f-lbl">Ton (Yeşil ↔ Macenta) <span class="pnl-val" id="r-tint-v">0</span></label>
-        <input type="range" class="f-slider" id="r-tint" min="-100" max="100" value="0">
-        <label class="f-lbl">Canlılık (Vibrance) <span class="pnl-val" id="r-vib-v">0</span></label>
-        <input type="range" class="f-slider" id="r-vib" min="-100" max="100" value="0">
-        <label class="f-lbl">Doygunluk <span class="pnl-val" id="r-sat-v">0</span></label>
-        <input type="range" class="f-slider" id="r-sat" min="-100" max="100" value="0">
-        <label class="f-lbl">HSL Renk Karıştırıcı</label>
-        <div class="chip-g" id="hsl-color-sel">
-          <button class="chip on" data-hsl="red" style="color:#FF4444">K</button>
-          <button class="chip" data-hsl="orange" style="color:#FF8C00">T</button>
-          <button class="chip" data-hsl="yellow" style="color:#FFD700">S</button>
-          <button class="chip" data-hsl="green" style="color:#22C55E">Y</button>
-          <button class="chip" data-hsl="blue" style="color:#3B82F6">M</button>
-          <button class="chip" data-hsl="purple" style="color:#A855F7">Mo</button>
-        </div>
-        <div style="display:grid;gap:4px;margin-top:6px">
-          <div class="eb-adj-row"><span class="eb-adj-lbl">Ton</span><input type="range" class="f-slider" min="-100" max="100" value="0"><span class="eb-adj-val">0</span></div>
-          <div class="eb-adj-row"><span class="eb-adj-lbl">Doygunluk</span><input type="range" class="f-slider" min="-100" max="100" value="0"><span class="eb-adj-val">0</span></div>
-          <div class="eb-adj-row"><span class="eb-adj-lbl">Parlaklık</span><input type="range" class="f-slider" min="-100" max="100" value="0"><span class="eb-adj-val">0</span></div>
+      <!-- 6. METİN & BRANDING -->
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Metin &amp; Branding</div>
+        <div class="pnl-body">
+          <label class="f-lbl">Kanca Metni</label>
+          <input type="text" class="f-inp" id="r-hook" placeholder="İlk 3 sn kanca...">
+          <label class="f-lbl">Alt Yazı Stili</label>
+          <select class="f-sel"><option>Otomatik</option><option>Büyük &amp; Kalın</option><option>İnce &amp; Zarif</option><option>Yok</option></select>
+          <label class="f-lbl">Marka Adı</label>
+          <input type="text" class="f-inp" id="r-brand" placeholder="ör: TechStore">
+          <div class="pnl-row"><span class="pnl-lbl">Watermark</span><div class="tog on" role="switch"></div></div>
+          <div class="pnl-row"><span class="pnl-lbl">Bitiş Kartı</span><div class="tog on" role="switch"></div></div>
         </div>
       </div>
 
-      <!-- 4. VİDEO / REELS AKIŞ GRUBU -->
-      <div class="pnl-sec">
-        <div class="pnl-hd">Zaman & Akış</div>
-        <div class="pnl-row"><span class="pnl-lbl">Ters Oynatma</span><div class="tog" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Dondurma (Freeze)</span><div class="tog" role="switch"></div></div>
-        <label class="f-lbl">Hız <span class="pnl-val" id="r-spd-v">1.0x</span></label>
-        <input type="range" class="f-slider" id="r-spd" min="25" max="400" value="100">
-        <label class="f-lbl">Hız Rampası</label>
-        <div class="chip-g">
-          <button class="chip on">Sabit</button><button class="chip">Y→H→Y</button>
-          <button class="chip">H→Y</button><button class="chip">Özel</button>
-        </div>
-        <label class="f-lbl">BPM Senkron</label>
-        <div class="bpm-row">
-          <input type="range" class="f-slider" id="r-bpm" min="60" max="180" value="120" style="flex:1">
-          <div class="bpm-val" id="r-bpm-v">120</div>
-        </div>
-        <div class="pnl-row"><span class="pnl-lbl">Beat Kilitle</span><div class="tog on" role="switch"></div></div>
-        <label class="f-lbl">Müzik Türü</label>
-        <div class="chip-g">
-          <button class="chip on">Otomatik</button><button class="chip">Enerjik</button>
-          <button class="chip">Dramatik</button><button class="chip">Minimal</button>
-          <button class="chip">Lo-fi</button><button class="chip">Özel</button>
-        </div>
-      </div>
-
-      <!-- 5. DOKU & NETLİK GRUBU -->
-      <div class="pnl-sec">
-        <div class="pnl-hd">Doku & Netlik</div>
-        <label class="f-lbl">Doku (Texture) <span class="pnl-val" id="r-tex-v">0</span></label>
-        <input type="range" class="f-slider" id="r-tex" min="0" max="100" value="0">
-        <label class="f-lbl">Netlik (Clarity) <span class="pnl-val" id="r-clar-v">0</span></label>
-        <input type="range" class="f-slider" id="r-clar" min="-100" max="100" value="0">
-        <label class="f-lbl">Sis Giderme (Dehaze) <span class="pnl-val" id="r-dehaze-v">0</span></label>
-        <input type="range" class="f-slider" id="r-dehaze" min="-100" max="100" value="0">
-        <label class="f-lbl">Keskinleştirme <span class="pnl-val" id="r-sharp-v">0</span></label>
-        <input type="range" class="f-slider" id="r-sharp" min="0" max="100" value="0">
-        <label class="f-lbl">Film Grain <span class="pnl-val" id="r-grain-v">0</span></label>
-        <input type="range" class="f-slider" id="r-grain" min="0" max="100" value="0">
-        <label class="f-lbl">Vignette <span class="pnl-val" id="r-vig-v">0</span></label>
-        <input type="range" class="f-slider" id="r-vig" min="0" max="100" value="0">
-      </div>
-
-      <!-- 6. GEÇİŞ & ETKİLER -->
-      <div class="pnl-sec">
-        <div class="pnl-hd">Geçiş Efektleri</div>
-        <div class="chip-g">
-          <button class="chip on">Zoom</button><button class="chip">Glitch</button>
-          <button class="chip">Parallax</button><button class="chip">Morph</button>
-          <button class="chip">Blur Pan</button><button class="chip">Shake</button>
-          <button class="chip">Strobe</button><button class="chip">Whip</button>
-          <button class="chip">Speed Ramp</button><button class="chip">Chromatic</button>
+      <!-- 7. SES PARAMETRELERİ -->
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Ses Parametreleri</div>
+        <div class="pnl-body">
+          <label class="f-lbl">Ses Seviyesi <span class="pnl-val" id="aud-vol-v">100%</span></label>
+          <input type="range" class="f-slider-fill" id="aud-vol" min="0" max="200" value="100">
+          <label class="f-lbl">Bas <span class="pnl-val" id="aud-bass-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="aud-bass" min="-10" max="10" value="0">
+          <label class="f-lbl">Orta <span class="pnl-val" id="aud-mid-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="aud-mid" min="-10" max="10" value="0">
+          <label class="f-lbl">Tiz <span class="pnl-val" id="aud-treble-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="aud-treble" min="-10" max="10" value="0">
+          <div class="pnl-row" style="margin-top:6px">
+            <span class="pnl-lbl">Fade In</span><div class="tog" id="aud-fadein" role="switch"></div>
+          </div>
+          <div class="pnl-row">
+            <span class="pnl-lbl">Fade Out</span><div class="tog" id="aud-fadeout" role="switch"></div>
+          </div>
+          <div class="pnl-row">
+            <span class="pnl-lbl">Gürültü Gider</span><div class="tog" id="aud-denoise" role="switch"></div>
+          </div>
+          <label class="f-lbl" style="margin-top:8px">Ses Kesme</label>
+          <div style="display:flex;gap:6px;margin-top:4px">
+            <button id="aud-cut-start-btn" style="flex:1;padding:5px 0;border-radius:6px;background:rgba(255,107,26,.15);border:1px solid rgba(255,107,26,.3);color:rgba(255,107,26,.9);font-size:9px;font-weight:700;cursor:pointer">✂ Baştan Kes</button>
+            <button id="aud-cut-end-btn" style="flex:1;padding:5px 0;border-radius:6px;background:rgba(255,107,26,.15);border:1px solid rgba(255,107,26,.3);color:rgba(255,107,26,.9);font-size:9px;font-weight:700;cursor:pointer">Sondan Kes ✂</button>
+          </div>
         </div>
       </div>
 
-      <!-- 7. METİN & BRANDING -->
-      <div class="pnl-sec">
-        <div class="pnl-hd">Metin & Branding</div>
-        <label class="f-lbl">Kanca Metni</label>
-        <input type="text" class="f-inp" id="r-hook" placeholder="İlk 3 sn kanca...">
-        <label class="f-lbl">Alt Yazı Stili</label>
-        <select class="f-sel"><option>Otomatik</option><option>Büyük & Kalın</option><option>İnce & Zarif</option><option>Yok</option></select>
-        <label class="f-lbl">Marka Adı</label>
-        <input type="text" class="f-inp" id="r-brand" placeholder="ör: TechStore">
-        <div class="pnl-row"><span class="pnl-lbl">Watermark</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Bitiş Kartı</span><div class="tog on" role="switch"></div></div>
-      </div>
-
-    </div>
+    </div><!-- /pnl-reels -->
 
     <!-- PRO panel -->
     <div class="pnl" id="pnl-pro">
+
+      <!-- AI VIDEO ÜRETİMİ — Pro kullanıcı Reels de üretebilir -->
       <div class="pnl-sec">
-        <div class="pnl-hd">Renk & LUT</div>
-        <label class="f-lbl">LUT Filtresi</label>
-        <select class="f-sel"><option>Kategoriye Göre</option><option>Cinematic Teal</option><option>Luxury Gold</option><option>Sport Orange</option><option>Food Warm</option><option>Cool Blue</option><option>Vintage Film</option><option>Noir B&W</option></select>
-        <label class="f-lbl">Renk Sıcaklığı</label>
-        <input type="range" class="f-slider" min="-100" max="100" value="0">
-        <label class="f-lbl">Kontrast</label>
-        <input type="range" class="f-slider" min="-100" max="100" value="0">
-        <label class="f-lbl">Doygunluk</label>
-        <input type="range" class="f-slider" min="-100" max="100" value="0">
-        <label class="f-lbl">Parlaklık</label>
-        <input type="range" class="f-slider" min="-100" max="100" value="0">
-        <label class="f-lbl">Gölge</label>
-        <input type="range" class="f-slider" min="-100" max="100" value="0">
+        <div class="pnl-hd">AI Video Üretimi</div>
+        <div class="pnl-body">
+          <p class="pnl-desc" style="font-size:10px;color:var(--tx3);line-height:1.5;margin-bottom:8px;">Pro paket Reels üretimini kapsar. Fotoğrafı yükle, üret düğmesine bas.</p>
+          <label class="f-lbl">Marka Adı</label>
+          <input type="text" class="f-inp" id="pro-brand" placeholder="ör: NikeTR">
+          <label class="f-lbl">Ürün Kategorisi</label>
+          <select class="f-sel" id="pro-cat-sel">
+            <option value="gida">Gıda</option><option value="icecek">İçecek</option>
+            <option value="kozmetik">Kozmetik</option><option value="parfum">Parfüm</option>
+            <option value="giyim">Giyim</option><option value="ayakkabi">Ayakkabı</option>
+            <option value="elektronik">Elektronik</option><option value="spor">Spor</option>
+            <option value="taki">Takı</option><option value="aksesuar">Aksesuar</option>
+            <option value="ev-yasam">Ev &amp; Yaşam</option><option value="genel">Genel</option>
+          </select>
+          <label class="f-lbl">Format</label>
+          <div class="chip-g" id="pro-fmt-chips">
+            <button class="chip on">9:16 Reels</button>
+            <button class="chip">1:1 Kare</button>
+            <button class="chip">16:9 Yatay</button>
+          </div>
+          <p style="font-size:9px;color:var(--tx3);margin-top:8px;">↓ Alttaki "ÜRETİME BAŞLA" butonu ile üret</p>
+        </div>
       </div>
+
+      <!-- SES DÜZENLEMESİ -->
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Ses Düzenleme</div>
+        <div class="pnl-body">
+          <label class="f-lbl">Ses Seviyesi <span class="pnl-val" id="pro-aud-vol-v">100%</span></label>
+          <input type="range" class="f-slider-fill" id="pro-aud-vol" min="0" max="200" value="100">
+          <label class="f-lbl">Bas <span class="pnl-val" id="pro-aud-bass-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="pro-aud-bass" min="-10" max="10" value="0">
+          <label class="f-lbl">Orta <span class="pnl-val" id="pro-aud-mid-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="pro-aud-mid" min="-10" max="10" value="0">
+          <label class="f-lbl">Tiz <span class="pnl-val" id="pro-aud-treble-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="pro-aud-treble" min="-10" max="10" value="0">
+          <div class="pnl-row" style="margin-top:6px">
+            <span class="pnl-lbl">Fade In</span><div class="tog" id="pro-aud-fadein" role="switch"></div>
+          </div>
+          <div class="pnl-row">
+            <span class="pnl-lbl">Fade Out</span><div class="tog" id="pro-aud-fadeout" role="switch"></div>
+          </div>
+          <div class="pnl-row">
+            <span class="pnl-lbl">Gürültü Gider</span><div class="tog" id="pro-aud-denoise" role="switch"></div>
+          </div>
+          <label class="f-lbl" style="margin-top:8px">Zaman Çizelgesi Kesim</label>
+          <p style="font-size:9px;color:var(--tx3);line-height:1.5;">Alttaki zaman çizelgesinde ✂ KES ile video, 🎵 SES KES ile ses kes.</p>
+        </div>
+      </div>
+
+      <!-- VIDEO MONTAJ / BİRLEŞTİRME -->
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Video Montaj</div>
+        <div class="pnl-body">
+          <p class="pnl-desc" style="font-size:10px;color:var(--tx3);line-height:1.5;margin-bottom:8px;">İki videoyu birleştir. Ana video sol panelde yüklü olmalı.</p>
+          <label class="f-lbl">2. Video Seç</label>
+          <input type="file" id="pro-merge-inp" accept="video/*" style="display:none">
+          <button class="auth-btn" id="pro-merge-sel-btn" style="height:34px;font-size:11px;background:rgba(168,85,247,.12);border:1px solid rgba(168,85,247,.3);color:#C084FC;letter-spacing:.06em;">
+            📂 Video Seç
+          </button>
+          <div id="pro-merge-name" style="font-size:9px;color:var(--tx3);margin-top:4px;min-height:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></div>
+          <label class="f-lbl" style="margin-top:8px">Birleştirme Sırası</label>
+          <div class="chip-g">
+            <button class="chip on" id="pro-merge-order-ab">1→2</button>
+            <button class="chip" id="pro-merge-order-ba">2→1</button>
+          </div>
+          <button class="auth-btn" id="pro-merge-btn" style="height:36px;font-size:11px;margin-top:10px;background:linear-gradient(135deg,#A855F7,#7C3AED);" disabled>
+            ⚡ Birleştir
+          </button>
+        </div>
+      </div>
+
       <div class="pnl-sec">
+        <div class="pnl-hd">Renk &amp; LUT</div>
+        <div class="pnl-body">
+          <label class="f-lbl">LUT Filtresi</label>
+          <select class="f-sel"><option>Kategoriye Göre</option><option>Cinematic Teal</option><option>Luxury Gold</option><option>Sport Orange</option><option>Food Warm</option><option>Cool Blue</option><option>Vintage Film</option><option>Noir B&amp;W</option></select>
+          <label class="f-lbl">Renk Sıcaklığı</label><input type="range" class="f-slider-fill" min="-100" max="100" value="0">
+          <label class="f-lbl">Kontrast</label><input type="range" class="f-slider-fill" min="-100" max="100" value="0">
+          <label class="f-lbl">Doygunluk</label><input type="range" class="f-slider-fill" min="-100" max="100" value="0">
+          <label class="f-lbl">Parlaklık</label><input type="range" class="f-slider-fill" min="-100" max="100" value="0">
+        </div>
+      </div>
+      <div class="pnl-sec closed">
         <div class="pnl-hd">Gelişmiş BPM</div>
-        <div class="bpm-row">
-          <input type="range" class="f-slider" id="pp-bpm" min="60" max="200" value="120" style="flex:1">
-          <div class="bpm-val" id="pp-bpm-v">120</div>
-        </div>
-        <div class="pnl-row"><span class="pnl-lbl">Beat Kilitleme</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Frame Perfect Geçiş</span><div class="tog on" role="switch"></div></div>
-        <label class="f-lbl">Tempo Rampa</label>
-        <div class="chip-g"><button class="chip on">Sabit</button><button class="chip">Hızlanan</button><button class="chip">Yavaşlayan</button><button class="chip">Dinamik</button></div>
-      </div>
-      <div class="pnl-sec">
-        <div class="pnl-hd">Trend Geçişler <span class="trend-badge" style="font-size:8px;margin-left:4px">CANLI</span></div>
-        <div class="chip-g" id="trend-trans-pro"><div class="trend-loading">Trendler yükleniyor...</div></div>
-        <div class="pnl-row" style="margin-top:10px"><span class="pnl-lbl">Geçiş Yoğunluğu</span><span class="pnl-val" id="ef-val">7</span></div>
-        <input type="range" class="f-slider" id="ef-int" min="1" max="10" value="7">
-      </div>
-      <div class="pnl-sec">
-        <div class="pnl-hd">Efekt Katmanları</div>
-        <div class="chip-g">
-          <button class="chip on">Zoom Punch</button><button class="chip">Glitch</button>
-          <button class="chip">Parallax 3D</button><button class="chip">Morph Cut</button>
-          <button class="chip">Blur Transition</button><button class="chip">Light Leak</button>
-          <button class="chip">Film Grain</button><button class="chip">Vignette</button>
-          <button class="chip">Lens Flare</button><button class="chip">Chromatic</button>
+        <div class="pnl-body">
+          <div class="bpm-row"><input type="range" class="f-slider-fill" id="pp-bpm" min="60" max="200" value="120" style="flex:1;margin:0"><div class="bpm-val" id="pp-bpm-v">120</div></div>
+          <div class="pnl-row"><span class="pnl-lbl">Beat Kilitleme</span><div class="tog on" role="switch"></div></div>
+          <div class="pnl-row"><span class="pnl-lbl">Frame Perfect Geçiş</span><div class="tog on" role="switch"></div></div>
+          <label class="f-lbl">Tempo Rampa</label>
+          <div class="chip-g"><button class="chip on">Sabit</button><button class="chip">Hızlanan</button><button class="chip">Yavaşlayan</button><button class="chip">Dinamik</button></div>
         </div>
       </div>
-      <div class="pnl-sec">
-        <div class="pnl-hd">Trend Müzik <span class="trend-badge" style="font-size:8px;margin-left:4px">CANLI</span></div>
-        <div id="trend-music-pro"><div class="trend-loading">Müzik trendleri yükleniyor...</div></div>
-      </div>
-      <div class="pnl-sec">
-        <div class="pnl-hd">Arka Plan</div>
-        <label class="f-lbl">Tür</label>
-        <select class="f-sel"><option>AI Üretim (Flux)</option><option>Düz Renk</option><option>Gradient</option><option>Blur Ürün</option></select>
-        <label class="f-lbl">Renk Paleti</label>
-        <div class="swatches">
-          <div class="swatch on" style="background:linear-gradient(135deg,#1a0a00,#3d1f00)"></div>
-          <div class="swatch" style="background:linear-gradient(135deg,#000,#1a1a2e)"></div>
-          <div class="swatch" style="background:linear-gradient(135deg,#0d1b2a,#1b2838)"></div>
-          <div class="swatch" style="background:linear-gradient(135deg,#1a001a,#2d0050)"></div>
-          <div class="swatch" style="background:linear-gradient(135deg,#fff,#e8e8e8)"></div>
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Trend Geçişler <span class="trend-badge" style="margin-left:4px">CANLI</span></div>
+        <div class="pnl-body">
+          <div class="chip-g" id="trend-trans-pro"><div class="trend-loading">Trendler yükleniyor...</div></div>
+          <div class="pnl-row"><span class="pnl-lbl">Yoğunluk</span><span class="pnl-val" id="ef-val">7</span></div>
+          <input type="range" class="f-slider-fill" id="ef-int" min="1" max="10" value="7">
         </div>
       </div>
-      <div class="pnl-sec">
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Trend Müzik <span class="trend-badge" style="margin-left:4px">CANLI</span></div>
+        <div class="pnl-body"><div id="trend-music-pro"><div class="trend-loading">Müzik trendleri yükleniyor...</div></div></div>
+      </div>
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Figür Boyama <span class="trend-badge" style="margin-left:4px;background:rgba(168,85,247,.15);border-color:rgba(168,85,247,.3);color:#C084FC;">PRO</span></div>
+        <div class="pnl-body">
+          <p class="pnl-desc" style="font-size:10px;color:var(--tx3);line-height:1.6;margin-bottom:8px;">Fotoğraftaki deri, saç, kıyafet veya arka planı seçip renk ver. Fırça ile boyama veya alan doldurma.</p>
+          <label class="f-lbl">Renk Seç</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+            <button class="fb-preset on" data-color="#F4C2A1" onclick="fbSetPreset(this)" style="font-size:10px">Deri</button>
+            <button class="fb-preset" data-color="#3D2B1F" onclick="fbSetPreset(this)" style="font-size:10px">Saç</button>
+            <button class="fb-preset" data-color="#1e40af" onclick="fbSetPreset(this)" style="font-size:10px">Mavi Kıyafet</button>
+            <button class="fb-preset" data-color="#dc2626" onclick="fbSetPreset(this)" style="font-size:10px">Kırmızı</button>
+            <button class="fb-preset" data-color="#e5e7eb" onclick="fbSetPreset(this)" style="font-size:10px">Beyaz</button>
+            <button class="fb-preset" data-color="#111827" onclick="fbSetPreset(this)" style="font-size:10px">Siyah</button>
+          </div>
+          <label class="f-lbl">Özel Renk</label>
+          <input type="color" id="pro-fb-color" value="#a855f7" class="f-inp" style="height:36px;padding:2px 6px;cursor:pointer;">
+          <label class="f-lbl">Fırça Boyutu <span class="pnl-val" id="pro-fb-size-v">20px</span></label>
+          <input type="range" class="f-slider-fill" id="pro-fb-size" min="4" max="80" value="20">
+          <label class="f-lbl">Opaklık <span class="pnl-val" id="pro-fb-opa-v">60%</span></label>
+          <input type="range" class="f-slider-fill" id="pro-fb-opa" min="5" max="100" value="60">
+          <div style="display:flex;gap:6px;margin-top:10px;">
+            <button class="auth-btn" id="pro-fb-open-btn" style="height:36px;font-size:11px;flex:2;background:linear-gradient(135deg,#A855F7,#7C3AED);">🖌 Boyamayı Aç</button>
+            <button class="auth-btn" id="pro-fb-apply-btn" style="height:36px;font-size:11px;flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);" disabled>✓ Uygula</button>
+          </div>
+        </div>
+      </div>
+      <div class="pnl-sec closed">
         <div class="pnl-hd">Branding Pro</div>
-        <label class="f-lbl">Marka Adı</label>
-        <input type="text" class="f-inp" placeholder="ör: NikeTR">
-        <label class="f-lbl">Slogan</label>
-        <input type="text" class="f-inp" placeholder="ör: Gücünü Hisset">
-        <div class="pnl-row"><span class="pnl-lbl">Logo Sol Alt</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Bitiş Kartı</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Watermark</span><div class="tog" role="switch"></div></div>
+        <div class="pnl-body">
+          <label class="f-lbl">Marka Adı</label><input type="text" class="f-inp" placeholder="ör: NikeTR">
+          <label class="f-lbl">Slogan</label><input type="text" class="f-inp" placeholder="ör: Gücünü Hisset">
+          <div class="pnl-row"><span class="pnl-lbl">Logo Sol Alt</span><div class="tog on" role="switch"></div></div>
+          <div class="pnl-row"><span class="pnl-lbl">Bitiş Kartı</span><div class="tog on" role="switch"></div></div>
+        </div>
       </div>
     </div>
 
@@ -928,67 +1351,50 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
     <div class="pnl" id="pnl-360">
       <div class="pnl-sec">
         <div class="pnl-hd">Orbit Tipi</div>
-        <div class="chip-g">
-          <button class="chip on">Low-angle</button><button class="chip">Surround</button>
-          <button class="chip">Follow-cam</button><button class="chip">Horizon</button>
-          <button class="chip">Cockpit</button><button class="chip">Free-fall</button>
+        <div class="pnl-body">
+          <div class="chip-g"><button class="chip on">Low-angle</button><button class="chip">Surround</button><button class="chip">Follow-cam</button><button class="chip">Horizon</button><button class="chip">Cockpit</button><button class="chip">Free-fall</button></div>
+          <label class="f-lbl">Orbit Yönü</label>
+          <select class="f-sel"><option>Soldan Sağa</option><option>Sağdan Sola</option><option>Otomatik</option></select>
+          <label class="f-lbl">Orbit Hızı</label>
+          <input type="range" class="f-slider-fill" id="s360-speed" min="1" max="10" value="5">
+          <div class="pnl-row"><span class="pnl-lbl">Smooth Stabilizasyon</span><div class="tog on" role="switch"></div></div>
+          <div class="pnl-row"><span class="pnl-lbl">Gyro Kompanzasyon</span><div class="tog on" role="switch"></div></div>
         </div>
-        <label class="f-lbl">Orbit Yönü</label>
-        <select class="f-sel"><option value="sol">Soldan Sağa</option><option value="sag">Sağdan Sola</option><option value="oto">Otomatik</option></select>
-        <label class="f-lbl">Orbit Hızı</label>
-        <input type="range" class="f-slider" id="s360-speed" min="1" max="10" value="5">
-        <div class="pnl-row" style="margin-top:4px"><span class="pnl-lbl">Smooth Stabilizasyon</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Gyro Kompanzasyon</span><div class="tog on" role="switch"></div></div>
       </div>
-      <div class="pnl-sec">
-        <div class="pnl-hd">Trend Geçişler <span class="trend-badge" style="font-size:8px;margin-left:4px">AKSİYON</span></div>
-        <div class="chip-g" id="trend-trans-360"><div class="trend-loading">Trendler yükleniyor...</div></div>
-        <div class="pnl-row" style="margin-top:10px"><span class="pnl-lbl">Geçiş Sertliği</span><span class="pnl-val" id="s360-trans-v">6</span></div>
-        <input type="range" class="f-slider" id="s360-trans" min="1" max="10" value="6">
-      </div>
-      <div class="pnl-sec">
-        <div class="pnl-hd">Speed-Ramp Kontrol</div>
-        <div class="pnl-row"><span class="pnl-lbl">Speed-ramp Aktif</span><div class="tog on" role="switch"></div></div>
-        <label class="f-lbl">Rampa Tipi</label>
-        <div class="chip-g">
-          <button class="chip on">Agresif</button><button class="chip">Orta</button>
-          <button class="chip">Hafif</button><button class="chip">Özel</button>
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Trend Geçişler <span class="trend-badge" style="margin-left:4px">AKSİYON</span></div>
+        <div class="pnl-body">
+          <div class="chip-g" id="trend-trans-360"><div class="trend-loading">Trendler yükleniyor...</div></div>
+          <div class="pnl-row"><span class="pnl-lbl">Geçiş Sertliği</span><span class="pnl-val" id="s360-trans-v">6</span></div>
+          <input type="range" class="f-slider-fill" id="s360-trans" min="1" max="10" value="6">
         </div>
-        <label class="f-lbl">Giriş Hızı</label>
-        <input type="range" class="f-slider" min="1" max="10" value="3">
-        <label class="f-lbl">Doruk Hızı</label>
-        <input type="range" class="f-slider" min="1" max="10" value="9">
-        <label class="f-lbl">Çıkış Hızı</label>
-        <input type="range" class="f-slider" min="1" max="10" value="4">
       </div>
-      <div class="pnl-sec">
-        <div class="pnl-hd">Ses Filtreleri</div>
-        <div class="pnl-row"><span class="pnl-lbl">Rüzgar Sesi Filtre</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Gürültü Azaltma</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Dolby Atmos Sim</span><div class="tog" role="switch"></div></div>
-        <label class="f-lbl">Highpass Frekans (Hz)</label>
-        <input type="range" class="f-slider" min="80" max="400" value="200">
-        <label class="f-lbl">Lowpass Frekans (Hz)</label>
-        <input type="range" class="f-slider" min="5000" max="16000" value="8000">
-        <label class="f-lbl">Kompresör Eşiği (dB)</label>
-        <input type="range" class="f-slider" min="-40" max="0" value="-18">
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Speed-Ramp</div>
+        <div class="pnl-body">
+          <div class="pnl-row"><span class="pnl-lbl">Speed-ramp Aktif</span><div class="tog on" role="switch"></div></div>
+          <label class="f-lbl">Rampa Tipi</label>
+          <div class="chip-g"><button class="chip on">Agresif</button><button class="chip">Orta</button><button class="chip">Hafif</button><button class="chip">Özel</button></div>
+          <label class="f-lbl">Giriş Hızı</label><input type="range" class="f-slider-fill" min="1" max="10" value="3">
+          <label class="f-lbl">Doruk Hızı</label><input type="range" class="f-slider-fill" min="1" max="10" value="9">
+          <label class="f-lbl">Çıkış Hızı</label><input type="range" class="f-slider-fill" min="1" max="10" value="4">
+        </div>
       </div>
-      <div class="pnl-sec">
-        <div class="pnl-hd">Görsel İşleme</div>
-        <div class="pnl-row"><span class="pnl-lbl">Plaka Blur</span><div class="tog" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">HDR Tone Map</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Lens Distortion Düzelt</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Equirectangular Doğrula</span><div class="tog on" role="switch"></div></div>
-        <label class="f-lbl">Horizon Line</label>
-        <input type="range" class="f-slider" min="-20" max="20" value="0">
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Ses &amp; Görsel Filtreleri</div>
+        <div class="pnl-body">
+          <div class="pnl-row"><span class="pnl-lbl">Rüzgar Sesi Filtre</span><div class="tog on" role="switch"></div></div>
+          <div class="pnl-row"><span class="pnl-lbl">Gürültü Azaltma</span><div class="tog on" role="switch"></div></div>
+          <div class="pnl-row"><span class="pnl-lbl">Plaka Blur</span><div class="tog" role="switch"></div></div>
+          <div class="pnl-row"><span class="pnl-lbl">HDR Tone Map</span><div class="tog on" role="switch"></div></div>
+          <div class="pnl-row"><span class="pnl-lbl">Lens Distortion Düzelt</span><div class="tog on" role="switch"></div></div>
+        </div>
       </div>
-      <div class="pnl-sec">
+      <div class="pnl-sec closed">
         <div class="pnl-hd">Export</div>
-        <select class="f-sel"><option>MP4 H.264 · 60fps</option><option>MP4 H.265 · 60fps</option><option>MP4 H.264 · 30fps</option><option>MP4 H.265 · 120fps</option></select>
-        <select class="f-sel"><option>4K · 3840×1920</option><option>2K · 2560×1280</option><option>1080p · 1920×960</option><option>8K · 7680×3840</option></select>
-        <label class="f-lbl">Codec Profili</label>
-        <div class="chip-g">
-          <button class="chip on">Baseline</button><button class="chip">Main</button><button class="chip">High</button>
+        <div class="pnl-body">
+          <select class="f-sel"><option>MP4 H.264 · 60fps</option><option>MP4 H.265 · 60fps</option><option>MP4 H.264 · 30fps</option></select>
+          <select class="f-sel"><option>4K · 3840×1920</option><option>2K · 2560×1280</option><option>1080p · 1920×960</option></select>
         </div>
       </div>
     </div>
@@ -997,89 +1403,67 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
     <div class="pnl" id="pnl-ses">
       <div class="pnl-sec">
         <div class="pnl-hd">Ses Profili</div>
-        <label class="f-lbl">Ses Tonu</label>
-        <div class="chip-g">
-          <button class="chip on">Yumuşak</button><button class="chip">Enerjik</button>
-          <button class="chip">Net & Temiz</button><button class="chip">Sıcak</button>
-          <button class="chip">Otoriter</button><button class="chip">Samimi</button>
-          <button class="chip">Dramatik</button><button class="chip">Nötr</button>
-        </div>
-        <label class="f-lbl">Cinsiyet / Karakter</label>
-        <div class="chip-g">
-          <button class="chip on">Kadın Genç</button><button class="chip">Erkek Olgun</button>
-          <button class="chip">Kadın Olgun</button><button class="chip">Erkek Genç</button>
-          <button class="chip">Çocuk</button><button class="chip">Robot</button>
-        </div>
-        <label class="f-lbl">Duygu Yoğunluğu</label>
-        <div class="chip-g">
-          <button class="chip on">Nötr</button><button class="chip">Heyecanlı</button>
-          <button class="chip">Sakin</button><button class="chip">Güvenli</button>
-          <button class="chip">Eğlenceli</button><button class="chip">Ciddi</button>
-          <button class="chip">Melankolik</button><button class="chip">Coşkulu</button>
+        <div class="pnl-body">
+          <label class="f-lbl">Ses Tonu</label>
+          <div class="chip-g"><button class="chip on">Yumuşak</button><button class="chip">Enerjik</button><button class="chip">Net &amp; Temiz</button><button class="chip">Sıcak</button><button class="chip">Otoriter</button><button class="chip">Dramatik</button></div>
+          <label class="f-lbl">Cinsiyet / Karakter</label>
+          <div class="chip-g"><button class="chip on">Kadın Genç</button><button class="chip">Erkek Olgun</button><button class="chip">Kadın Olgun</button><button class="chip">Erkek Genç</button></div>
         </div>
       </div>
-      <div class="pnl-sec">
+      <div class="pnl-sec closed">
         <div class="pnl-hd">Ses İşleme</div>
-        <label class="f-lbl">Perde (Pitch) <span id="ses-pitch-v" style="color:var(--tx2)">0 st</span></label>
-        <input type="range" class="f-slider" id="ses-pitch" min="-12" max="12" value="0">
-        <label class="f-lbl">Hız (Rate) <span id="ses-rate-v" style="color:var(--tx2)">1.0x</span></label>
-        <input type="range" class="f-slider" id="ses-rate" min="50" max="200" value="100">
-        <label class="f-lbl">Reverb (Alan) <span id="ses-reverb-v" style="color:var(--tx2)">20%</span></label>
-        <input type="range" class="f-slider" id="ses-reverb" min="0" max="100" value="20">
-        <label class="f-lbl">Echo (ms) <span id="ses-echo-v" style="color:var(--tx2)">0</span></label>
-        <input type="range" class="f-slider" id="ses-echo" min="0" max="500" value="0">
-        <div class="pnl-row"><span class="pnl-lbl">Nefes Sesi Ekle</span><div class="tog" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Gürültü Kapısı</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">De-esser</span><div class="tog on" role="switch"></div></div>
-      </div>
-      <div class="pnl-sec">
-        <div class="pnl-hd">Ses Klonlama</div>
-        <label class="f-lbl">Klonlama Motoru</label>
-        <div class="chip-g">
-          <button class="chip on">ElevenLabs</button><button class="chip">Xtts-v2</button>
-          <button class="chip">OpenVoice</button><button class="chip">Fenix Native</button>
+        <div class="pnl-body">
+          <label class="f-lbl">Perde (Pitch) <span id="ses-pitch-v">0 st</span></label>
+          <input type="range" class="f-slider-fill" id="ses-pitch" min="-12" max="12" value="0">
+          <label class="f-lbl">Hız (Rate) <span id="ses-rate-v">1.0x</span></label>
+          <input type="range" class="f-slider-fill" id="ses-rate" min="50" max="200" value="100">
+          <label class="f-lbl">Reverb <span id="ses-reverb-v">20%</span></label>
+          <input type="range" class="f-slider-fill" id="ses-reverb" min="0" max="100" value="20">
+          <div class="pnl-row"><span class="pnl-lbl">Nefes Sesi Ekle</span><div class="tog" role="switch"></div></div>
+          <div class="pnl-row"><span class="pnl-lbl">Gürültü Kapısı</span><div class="tog on" role="switch"></div></div>
         </div>
-        <div class="pnl-row"><span class="pnl-lbl">Referans Sesi Yükle</span><div class="tog" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Stil Transferi</span><div class="tog on" role="switch"></div></div>
-        <label class="f-lbl">Benzerlik Oranı</label>
-        <input type="range" class="f-slider" min="0" max="100" value="75">
       </div>
-      <div class="pnl-sec">
-        <div class="pnl-hd">Dil & Senkron</div>
-        <label class="f-lbl">Kaynak Dil</label>
-        <select class="f-sel"><option>Otomatik Algıla</option><option>Türkçe</option><option>İngilizce</option><option>Almanca</option><option>Arapça</option><option>Fransızca</option><option>İspanyolca</option><option>Japonca</option><option>Rusça</option></select>
-        <label class="f-lbl">Hedef Dil</label>
-        <select class="f-sel"><option>Türkçe</option><option>İngilizce</option><option>Almanca</option><option>Arapça</option><option>Fransızca</option><option>İspanyolca</option><option>Japonca</option><option>Rusça</option></select>
-        <div class="pnl-row"><span class="pnl-lbl">Lip-sync (Video)</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Duygu Koru</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Aksan / Vurgu Koru</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Senkron Zamanlama</span><div class="tog on" role="switch"></div></div>
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Dil &amp; Senkron</div>
+        <div class="pnl-body">
+          <label class="f-lbl">Kaynak Dil</label>
+          <select class="f-sel"><option>Otomatik Algıla</option><option>Türkçe</option><option>İngilizce</option><option>Almanca</option><option>Arapça</option></select>
+          <label class="f-lbl">Hedef Dil</label>
+          <select class="f-sel"><option>Türkçe</option><option>İngilizce</option><option>Almanca</option><option>Arapça</option></select>
+          <div class="pnl-row"><span class="pnl-lbl">Lip-sync</span><div class="tog on" role="switch"></div></div>
+          <div class="pnl-row"><span class="pnl-lbl">Duygu Koru</span><div class="tog on" role="switch"></div></div>
+        </div>
       </div>
-      <div class="pnl-sec">
+      <div class="pnl-sec closed">
         <div class="pnl-hd">Ses Karışımı</div>
-        <div class="pnl-row"><span class="pnl-lbl">BG Müziği Koru</span><div class="tog on" role="switch"></div></div>
-        <label class="f-lbl">Ses / Müzik Dengesi <span id="ses-mix-v" style="color:var(--tx2)">70%</span></label>
-        <input type="range" class="f-slider" id="ses-mix" min="0" max="100" value="70">
-        <label class="f-lbl">Trend BG Müzik <span class="trend-badge" style="margin-left:4px">CANLI</span></label>
-        <div id="trend-music-ses"><div class="trend-loading">Müzik önerileri yükleniyor...</div></div>
-        <label class="f-lbl" style="margin-top:8px">Çıktı Formatı</label>
-        <select class="f-sel"><option>MP4 + Senkron Ses</option><option>Sadece Ses (MP3)</option><option>Sadece Ses (WAV)</option><option>Her ikisi</option></select>
-        <label class="f-lbl">Çıktı Kalitesi</label>
-        <div class="chip-g">
-          <button class="chip">128kbps</button><button class="chip on">256kbps</button><button class="chip">320kbps</button><button class="chip">Lossless</button>
+        <div class="pnl-body">
+          <label class="f-lbl">Ses / Müzik Dengesi <span id="ses-mix-v">70%</span></label>
+          <input type="range" class="f-slider-fill" id="ses-mix" min="0" max="100" value="70">
+          <label class="f-lbl">Trend BG Müzik <span class="trend-badge" style="margin-left:4px">CANLI</span></label>
+          <div id="trend-music-ses"><div class="trend-loading">Müzik önerileri yükleniyor...</div></div>
         </div>
       </div>
+    </div>
+
+    <!-- FREE panel -->
+    <div class="pnl" id="pnl-free">
       <div class="pnl-sec">
-        <div class="pnl-hd">Script & AI Yazar</div>
-        <label class="f-lbl">Özel Metin (opsiyonel)</label>
-        <textarea class="f-ta" placeholder="Boş bırakırsan Fenix otomatik yazar..."></textarea>
-        <div class="pnl-row"><span class="pnl-lbl">AI Script Yaz</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">SEO Hook Ekle</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">CTA Cümlesi</span><div class="tog on" role="switch"></div></div>
-        <label class="f-lbl">Ton / Stil</label>
-        <div class="chip-g">
-          <button class="chip on">Profesyonel</button><button class="chip">Konuşma</button>
-          <button class="chip">Viral Hook</button><button class="chip">Hikaye</button>
+        <div class="pnl-hd">Temel Araçlar</div>
+        <div class="pnl-body">
+          <p class="pnl-desc" style="color:#6EE7B7;font-size:11px;line-height:1.6;">Ücretsiz kart — kırpma, kesme ve temel filtreler. AI üretimi için paket al.</p>
+          <label class="f-lbl">Parlaklık <span class="pnl-val" id="free-bright-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="free-bright" min="-100" max="100" value="0">
+          <label class="f-lbl">Kontrast <span class="pnl-val" id="free-contrast-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="free-contrast" min="-100" max="100" value="0">
+          <label class="f-lbl">Doygunluk <span class="pnl-val" id="free-sat-v">0</span></label>
+          <input type="range" class="f-slider-fill" id="free-sat" min="-100" max="100" value="0">
+        </div>
+      </div>
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Export</div>
+        <div class="pnl-body">
+          <p class="pnl-desc" style="font-size:10px;color:var(--tx3);">Watermark ile 720p MP4 veya JPG</p>
+          <select class="f-sel"><option>720p MP4</option><option>JPG</option><option>PNG</option></select>
         </div>
       </div>
     </div>
@@ -1088,41 +1472,58 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
     <div class="pnl" id="pnl-otonom">
       <div class="pnl-sec">
         <div class="pnl-hd">Otonom Kontrol</div>
-        <p class="pnl-desc">Dosyayı yükle ve "Başlat" a bas. Fenix geri kalanını halleder.</p>
-        <div class="pnl-row"><span class="pnl-lbl">Kategori Tarama</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Sahne AI Üretimi</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Müzik Seçimi</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Otomatik Branding</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Ses Dublaj</span><div class="tog" role="switch"></div></div>
-      </div>
-      <div class="pnl-sec">
-        <div class="pnl-hd">Kalite Ayarı</div>
-        <label class="f-lbl">Çıktı Kalitesi</label>
-        <select class="f-sel"><option>1080p Full HD</option><option>4K Ultra HD</option><option>720p Hızlı</option></select>
-        <label class="f-lbl">Format</label>
-        <select class="f-sel"><option>9:16 Reels</option><option>1:1 Kare</option><option>16:9 Yatay</option></select>
-      </div>
-      <div class="pnl-sec">
-        <div class="pnl-hd">Onay & Öğrenme</div>
-        <div class="pnl-row"><span class="pnl-lbl">Beğenmezse Yeniden Üret</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Tablet Bildirim</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Eğitimi Kaydet</span><div class="tog on" role="switch"></div></div>
-      </div>
-      <div class="pnl-sec">
-        <div class="pnl-hd">Fenix Durumu</div>
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-          <div style="width:8px;height:8px;border-radius:50%;background:#10B981;box-shadow:0 0 8px #10B981"></div>
-          <span style="font-size:12px;color:#10B981">Hazır · Öğrenme aktif</span>
+        <div class="pnl-body">
+          <p class="pnl-desc">Dosyayı yükle ve "Başlat" a bas. Fenix geri kalanını halleder.</p>
+          <div class="pnl-row"><span class="pnl-lbl">Kategori Tarama</span><div class="tog on" role="switch"></div></div>
+          <div class="pnl-row"><span class="pnl-lbl">Sahne AI Üretimi</span><div class="tog on" role="switch"></div></div>
+          <div class="pnl-row"><span class="pnl-lbl">Müzik Seçimi</span><div class="tog on" role="switch"></div></div>
+          <div class="pnl-row"><span class="pnl-lbl">Otomatik Branding</span><div class="tog on" role="switch"></div></div>
+          <div class="pnl-row"><span class="pnl-lbl">Ses Dublaj</span><div class="tog" role="switch"></div></div>
         </div>
-        <div style="font-size:11px;color:var(--tx3);line-height:1.7">
-          Shadow Learning: Aktif<br>
-          Otonom Optimizasyon: 5dk periyodik<br>
-          Circuit Breaker: Kapalı
+      </div>
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Kalite &amp; Format</div>
+        <div class="pnl-body">
+          <select class="f-sel"><option>1080p Full HD</option><option>4K Ultra HD</option><option>720p Hızlı</option></select>
+          <select class="f-sel"><option>9:16 Reels</option><option>1:1 Kare</option><option>16:9 Yatay</option></select>
+        </div>
+      </div>
+      <div class="pnl-sec closed">
+        <div class="pnl-hd">Fenix Durumu</div>
+        <div class="pnl-body">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><div style="width:7px;height:7px;border-radius:50%;background:#10B981;box-shadow:0 0 8px #10B981"></div><span style="font-size:11px;color:#10B981">Hazır · Öğrenme aktif</span></div>
+          <div style="font-size:10px;color:var(--tx3);line-height:1.7">Shadow Learning: Aktif<br>Otonom Optimizasyon: 5dk periyodik<br>Circuit Breaker: Kapalı</div>
         </div>
       </div>
     </div>
 
   </aside>
+
+  <!-- Timeline -->
+  <div id="w-timeline">
+    <div id="wtl-header">
+      <button id="wtl-play">▶</button>
+      <span id="wtl-time">0:00 / 0:15</span>
+      <button id="wtl-cut-btn">✂ KES</button>
+      <button id="wtl-audio-cut-btn">🎵 SES KES</button>
+      <span id="wtl-cut-info"></span>
+      <div id="wtl-dur-chips">
+        <button class="wtl-dur on" data-dur="15">15s</button>
+        <button class="wtl-dur" data-dur="30">30s</button>
+        <button class="wtl-dur" data-dur="60">60s</button>
+      </div>
+    </div>
+    <div id="wtl-tracks">
+      <div class="wtl-row" id="wtl-video-row">
+        <span class="wtl-row-lbl">V</span>
+        <div class="wtl-row-area"><canvas id="wtl-canvas"></canvas></div>
+      </div>
+      <div class="wtl-row" id="wtl-audio-row">
+        <span class="wtl-row-lbl">A<button id="wtl-mute-btn" title="Sesi Aç/Kapat">🔊</button></span>
+        <div class="wtl-row-area"><canvas id="wtl-audio-canvas"></canvas></div>
+      </div>
+    </div>
+  </div>
 
   <!-- Action Bar -->
   <div id="w-act">
@@ -1156,8 +1557,19 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
 const S = {
   customerId: localStorage.getItem('fx_cid') || null,
   quota: parseInt(localStorage.getItem('fx_quota') || '0', 10),
+  pkg: localStorage.getItem('fx_pkg') || 'free',
   mode: 'reels', cat: 'gida', file: null, fileBase64: null, files: [], generating: false
 };
+
+// Paket hiyerarşisi — her paket üstteki kartlara da erişim verir
+const PKG_TIERS = ['free','reels','pro','360','ses','full'];
+// Her kart hangi minimum paketi gerektirir
+const PKG_REQUIRED = { free:'free', reels:'reels', pro:'pro', '360':'360', ses:'ses', otonom:'full' };
+function pkgHasAccess(userPkg, mode) {
+  const reqIdx = PKG_TIERS.indexOf(PKG_REQUIRED[mode] || 'full');
+  const userIdx = PKG_TIERS.indexOf(userPkg || 'free');
+  return userIdx >= reqIdx;
+}
 
 const CATS = [
   {id:'gida',lbl:'Gıda',ico:'🍽'},{id:'icecek',lbl:'İçecek',ico:'🥤'},
@@ -1170,7 +1582,7 @@ const CATS = [
   {id:'snowboard',lbl:'Snowboard',ico:'🏂'},{id:'tekne',lbl:'Tekne',ico:'⛵'},
   {id:'pist',lbl:'Pist',ico:'🏎'}
 ];
-const MODE_LABELS = {reels:'⚡ REELS',pro:'🎛 PRO',360:'🌐 360°',ses:'🎙 SES',otonom:'🤖 OTONOM'};
+const MODE_LABELS = {free:'✨ ÜCRETSİZ',reels:'⚡ REELS',pro:'🎛 PRO',360:'🌐 360°',ses:'🎙 SES',otonom:'🤖 OTONOM'};
 
 /* ━━━ FIRE CANVAS ━━━ */
 (function(){
@@ -1231,9 +1643,9 @@ async function startApp(){
     const r=await fetch('/api/customer/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const d=await r.json();spin.classList.add('hidden');
     if(!d.ok){toast(d.error||'Hata');btn.disabled=false;return;}
-    S.customerId=d.customerId;S.quota=d.remaining;
-    localStorage.setItem('fx_cid',S.customerId);localStorage.setItem('fx_quota',S.quota);
-    if(S.quota<=0){toast('Hakkın bitti. Abone olmak için iletişime geç.',5000);btn.disabled=false;return;}
+    S.customerId=d.customerId;S.quota=d.remaining;S.pkg=d.pkg||'free';
+    localStorage.setItem('fx_cid',S.customerId);localStorage.setItem('fx_quota',S.quota);localStorage.setItem('fx_pkg',S.pkg);
+    if(S.quota<=0&&S.pkg==='free'){toast('Hakkın bitti. Abone olmak için iletişime geç.',5000);btn.disabled=false;return;}
     toast(d.isNew?`Hoş geldin! ${S.quota} hak tanımlandı.`:`Tekrar hoş geldin! ${S.quota} hak kaldı.`);
     goCards();
   }catch(e){spin.classList.add('hidden');toast('Bağlantı hatası');btn.disabled=false;}
@@ -1242,6 +1654,16 @@ async function startApp(){
 /* ━━━ CARDS ━━━ */
 function goCards(){
   updateQuotaUI();
+  // Lock/unlock cards based on package
+  document.querySelectorAll('.mode-card').forEach(card=>{
+    const mode=card.dataset.mode;
+    const hasAccess=pkgHasAccess(S.pkg,mode);
+    card.classList.toggle('locked',!hasAccess);
+    // hide lock icon if unlocked
+    const lockEl=card.querySelector('.card-lock');
+    if(lockEl)lockEl.style.display=hasAccess?'none':'';
+    card.setAttribute('tabindex',hasAccess?'0':'-1');
+  });
   showScreen('s-cards');
 }
 function updateQuotaUI(){
@@ -1251,26 +1673,44 @@ function updateQuotaUI(){
 }
 
 /* ━━━ WORKSPACE ━━━ */
+/* Kart → ayrı sayfa eşlemesi */
+const CARD_PAGES = { reels: '/workspace-reels', pro: '/workspace-pro' };
+
 function goWork(mode){
+  if(!pkgHasAccess(S.pkg,mode)){showUpgradeModal(mode);return;}
+  // Ayrı workspace sayfası varsa oraya yönlendir
+  if(CARD_PAGES[mode]){
+    const cid = S.customerId || '';
+    const pkg = S.pkg || 'free';
+    location.href = CARD_PAGES[mode] + '?cid=' + encodeURIComponent(cid) + '&pkg=' + encodeURIComponent(pkg);
+    return;
+  }
   S.mode=mode;
-  // set data-mode on workspace
   const ws=document.getElementById('s-work');
   ws.dataset.mode=mode;
-  // badge
   document.getElementById('w-badge').textContent=MODE_LABELS[mode]||mode;
-  // move correct panel into #eb-right
-  const ebRight=document.getElementById('eb-right');
-  document.querySelectorAll('.pnl').forEach(p=>{p.classList.remove('on');document.getElementById('w-panel').appendChild(p);});
+  document.querySelectorAll('.pnl').forEach(p=>p.classList.remove('on'));
   const pnl=document.getElementById('pnl-'+mode);
-  if(pnl){pnl.classList.add('on');ebRight.appendChild(pnl);}
-  // cat label
+  if(pnl)pnl.classList.add('on');
   updateCatBtn();
-  // reset upload zone
   resetUpload();
-  // load trends for this category
   renderTrends(S.cat);
   showScreen('s-work');
+  setTimeout(initFabric,50);
 }
+
+/* ━━━ UPGRADE MODAL ━━━ */
+const PKG_LABEL={free:'Ücretsiz',reels:'Reels Paketi',pro:'Pro Paketi','360':'360° Paketi',ses:'Ses Paketi',full:'Full Paket'};
+const MODE_ICO={free:'✨',reels:'🎬',pro:'🎛','360':'🌐',ses:'🎙',otonom:'🤖'};
+function showUpgradeModal(mode){
+  const modal=document.getElementById('upg-modal');
+  const req=PKG_REQUIRED[mode]||'full';
+  document.getElementById('upg-ico').textContent=MODE_ICO[mode]||'🔒';
+  document.getElementById('upg-title').textContent=(MODE_LABELS[mode]||mode)+' — Kilitli';
+  document.getElementById('upg-sub').textContent='Bu kartı kullanmak için en az '+PKG_LABEL[req]+' gerekiyor. Paket almak için iletişime geç.';
+  modal.classList.add('open');
+}
+function closeUpgradeModal(){document.getElementById('upg-modal').classList.remove('open');}
 
 /* ━━━ CATEGORY ━━━ */
 function buildCatGrid(){
@@ -1301,16 +1741,15 @@ function resetUpload(){
   S.file=null;S.fileBase64=null;S.files=[];
   const uz=document.getElementById('upload-zone');
   uz.classList.remove('has-file');
-  uz.querySelectorAll('.uz-grid,.uz-preview,.uz-clear').forEach(el=>el.remove());
-  uz.querySelector('.uz-ico').style.display='';
-  uz.querySelector('.uz-title').style.display='';
-  uz.querySelector('.uz-sub').style.display='';
   const out=document.getElementById('output-zone');
   out.classList.remove('has-file');
-  out.querySelectorAll('.uz-preview,a').forEach(el=>el.remove());
+  out.querySelectorAll('.wl-uz-preview,a,video').forEach(el=>el.remove());
   document.getElementById('out-ico').style.display='';
   document.getElementById('out-title').style.display='';
   document.getElementById('out-sub').style.display='';
+  // Reset asset grid
+  const grid=document.getElementById('wl-asset-grid');
+  if(grid)grid.querySelectorAll('.wl-asset-item').forEach(el=>el.remove());
   document.getElementById('btn-gen').disabled=true;
   ebReset();
 }
@@ -1335,28 +1774,46 @@ function loadFiles(fileList){
   }
 }
 function renderGrid(){
-  const uz=document.getElementById('upload-zone');
-  uz.classList.add('has-file');
-  uz.querySelector('.uz-ico').style.display='none';
-  uz.querySelector('.uz-title').style.display='none';
-  uz.querySelector('.uz-sub').style.display='none';
-  uz.querySelectorAll('.uz-grid,.uz-clear').forEach(el=>el.remove());
-  // update edit bench preview with first file
-  if(S.fileBase64)ebShowImage(S.fileBase64);
-  else if(S.files[0]&&S.files[0].type.startsWith('video/'))ebShowImage('');
-  const grid=document.createElement('div');grid.className='uz-grid';
+  const grid=document.getElementById('wl-asset-grid');
+  if(!grid)return;
+  // clear existing items (keep add button)
+  grid.querySelectorAll('.wl-asset-item').forEach(el=>el.remove());
+  // prepend before add btn
+  const addBtn=document.getElementById('wl-add-btn');
   S.files.forEach((file,idx)=>{
-    const item=document.createElement('div');item.className='uz-grid-item';
-    const src=file.type.startsWith('video/')?URL.createObjectURL(file):null;
-    if(src){
-      const v=document.createElement('video');v.src=src;v.style.cssText='width:100%;height:100%;object-fit:cover;';
-      item.appendChild(v);
+    const item=document.createElement('div');
+    item.className='wl-asset-item';
+    const url=URL.createObjectURL(file);
+    if(file.type.startsWith('video/')){
+      // Capture first frame as thumbnail
+      const canvas=document.createElement('canvas');
+      canvas.style.cssText='width:100%;height:100%;object-fit:cover;';
+      const tmpV=document.createElement('video');
+      tmpV.src=url;tmpV.preload='metadata';tmpV.muted=true;
+      tmpV.addEventListener('loadeddata',()=>{
+        tmpV.currentTime=0.5;
+      });
+      tmpV.addEventListener('seeked',()=>{
+        canvas.width=tmpV.videoWidth||120;canvas.height=tmpV.videoHeight||120;
+        canvas.getContext('2d').drawImage(tmpV,0,0,canvas.width,canvas.height);
+        tmpV.src='';
+      });
+      item.appendChild(canvas);
+      // Video badge
+      const badge=document.createElement('div');
+      badge.style.cssText='position:absolute;bottom:3px;left:3px;background:rgba(0,0,0,.7);border-radius:3px;padding:1px 4px;font-size:7px;color:#fff;font-weight:700;letter-spacing:.04em;';
+      badge.textContent='VİDEO';item.appendChild(badge);
+      // Play icon overlay
+      const playIco=document.createElement('div');
+      playIco.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;color:rgba(255,255,255,.7);pointer-events:none;';
+      playIco.textContent='▶';item.appendChild(playIco);
     } else {
-      const url=URL.createObjectURL(file);
-      const img=document.createElement('img');img.src=url;img.alt='';
+      const img=document.createElement('img');
+      img.src=url;img.alt='';
       item.appendChild(img);
     }
-    const del=document.createElement('button');del.className='ugd';del.textContent='✕';del.setAttribute('aria-label','Sil');
+    const del=document.createElement('button');
+    del.className='wl-asset-del';del.textContent='✕';del.setAttribute('aria-label','Sil');
     del.addEventListener('click',e=>{
       e.stopPropagation();
       S.files.splice(idx,1);
@@ -1364,16 +1821,18 @@ function renderGrid(){
       S.file=S.files[0];
       const r=new FileReader();
       r.onload=ev=>{S.fileBase64=ev.target.result;renderGrid();};
-      if(S.files[0].type.startsWith('image/'))r.readAsDataURL(S.files[0]);else{S.fileBase64=null;renderGrid();}
+      if(S.files[0].type.startsWith('image/'))r.readAsDataURL(S.files[0]);
+      else{S.fileBase64=null;S.file=S.files[0];renderGrid();}
     });
     item.appendChild(del);
-    grid.appendChild(item);
+    attachAssetClick(item,file,idx);
+    grid.insertBefore(item,addBtn);
   });
-  // + more button
-  const add=document.createElement('div');add.className='uz-grid-add';add.textContent='+';
-  add.addEventListener('click',e=>{e.stopPropagation();document.getElementById('file-inp').click();});
-  grid.appendChild(add);
-  uz.appendChild(grid);
+  // show first file on canvas
+  const firstFile=S.files[0];
+  if(firstFile&&firstFile.type.startsWith('video/')){ebShowVideo(firstFile);}
+  else if(S.fileBase64){ebShowImage(S.fileBase64);}
+  document.getElementById('upload-zone').classList.add('has-file');
   document.getElementById('btn-gen').disabled=false;
 }
 function loadFile(file){loadFiles([file]);}
@@ -1382,6 +1841,7 @@ function loadFile(file){loadFiles([file]);}
 async function generate(){
   if(S.generating)return;
   if(!S.file){toast('Önce dosya yükle.');return;}
+  if(S.mode==='free'){showUpgradeModal('reels');return;}
   if(S.quota<=0){toast('Hakkın bitti.',4000);return;}
   S.generating=true;
   const btn=document.getElementById('btn-gen'),spin=document.getElementById('gen-spin');
@@ -1421,15 +1881,15 @@ function done(ok){
 }
 function showResult(url){
   const out=document.getElementById('output-zone');
-  out.querySelectorAll('.uz-preview,a').forEach(el=>el.remove());
+  out.querySelectorAll('.wl-uz-preview,a,video').forEach(el=>el.remove());
   document.getElementById('out-ico').style.display='none';
   document.getElementById('out-title').style.display='none';
   document.getElementById('out-sub').style.display='none';
   out.classList.add('has-file');
-  const v=document.createElement('video');v.src=url;v.className='uz-preview';v.controls=true;v.autoplay=true;
+  const v=document.createElement('video');v.src=url;v.className='wl-uz-preview';v.controls=true;v.autoplay=true;
   out.appendChild(v);
   const dl=document.createElement('a');dl.href=url;dl.download='fenix-video.mp4';
-  dl.style.cssText='position:absolute;top:12px;left:12px;padding:4px 12px;border-radius:999px;background:rgba(16,185,129,.2);border:1px solid rgba(16,185,129,.4);font-size:11px;color:#10B981;text-decoration:none;z-index:2;';
+  dl.style.cssText='position:absolute;bottom:4px;left:50%;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(16,185,129,.2);border:1px solid rgba(16,185,129,.4);font-size:9px;color:#10B981;text-decoration:none;z-index:2;white-space:nowrap;';
   dl.textContent='⬇ İndir';out.appendChild(dl);
 }
 
@@ -1520,19 +1980,19 @@ function renderTrends(cat){
 
 /* ━━━ ACCORDION INIT ━━━ */
 (function initAccordion(){
-  // Right panel sections — all closed except first
-  document.querySelectorAll('.pnl-sec').forEach((sec,i)=>{
-    if(i>0)sec.classList.add('closed');
+  // All panels: just wire up click handlers (all panels now have pnl-body in HTML already)
+  document.querySelectorAll('.pnl-sec').forEach(sec=>{
     const hd=sec.querySelector('.pnl-hd');
     if(!hd)return;
-    // wrap all siblings after hd into .pnl-body
-    const body=document.createElement('div');body.className='pnl-body';
-    const children=Array.from(sec.children);
-    children.forEach(ch=>{if(ch!==hd)body.appendChild(ch);});
-    sec.appendChild(body);
+    // For panels without pre-built pnl-body, wrap children
+    if(!sec.querySelector('.pnl-body')){
+      const body=document.createElement('div');body.className='pnl-body';
+      Array.from(sec.children).forEach(ch=>{if(ch!==hd)body.appendChild(ch);});
+      sec.appendChild(body);
+    }
     hd.addEventListener('click',()=>sec.classList.toggle('closed'));
   });
-  // Bench sections
+  // Bench sections (if any remain)
   document.querySelectorAll('.bench-sec').forEach(sec=>{
     const hd=sec.querySelector('.bench-hd');
     if(!hd)return;
@@ -1540,107 +2000,475 @@ function renderTrends(cat){
   });
 })();
 
-/* ━━━ EDIT BENCH ━━━ */
-function ebShowImage(src){
+/* initReelsTabs removed — pnl-reels now uses accordion, not tabs */
+
+/* ━━━ HAPTIC SLIDERS ━━━ */
+(function initHapticSliders(){
+  function updateFill(sl){
+    const min=parseFloat(sl.min)||0,max=parseFloat(sl.max)||100,val=parseFloat(sl.value)||0;
+    const pct=((val-min)/(max-min))*100;
+    sl.style.setProperty('--sl-fill',pct.toFixed(1)+'%');
+  }
+  document.querySelectorAll('.f-slider-fill').forEach(sl=>{
+    updateFill(sl);
+    sl.addEventListener('input',()=>updateFill(sl));
+  });
+})();
+
+/* ━━━ HISTOGRAM ━━━ */
+function drawHistogram(){
+  const canvas=document.getElementById('r-histogram');
+  if(!canvas)return;
+  const W=canvas.offsetWidth||240,H=64;
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
   const img=document.getElementById('eb-img');
-  document.getElementById('eb-ph').style.display='none';
-  img.src=src;img.style.display='block';
+  if(img&&img.src&&img.src!==window.location.href&&img.complete&&img.naturalWidth>0){
+    // Try to draw from real image pixels
+    try{
+      const tmp=document.createElement('canvas');
+      const scale=Math.min(1,240/img.naturalWidth,240/img.naturalHeight);
+      tmp.width=Math.round(img.naturalWidth*scale);
+      tmp.height=Math.round(img.naturalHeight*scale);
+      tmp.getContext('2d').drawImage(img,0,0,tmp.width,tmp.height);
+      const data=tmp.getContext('2d').getImageData(0,0,tmp.width,tmp.height).data;
+      const bins=256,rB=new Uint32Array(bins),gB=new Uint32Array(bins),bB=new Uint32Array(bins),lB=new Uint32Array(bins);
+      for(let i=0;i<data.length;i+=4){
+        rB[data[i]]++;gB[data[i+1]]++;bB[data[i+2]]++;
+        lB[Math.round(.299*data[i]+.587*data[i+1]+.114*data[i+2])]++;
+      }
+      const mx=Math.max(...Array.from(lB));
+      // luma fill
+      ctx.fillStyle='rgba(255,255,255,.07)';
+      for(let x=0;x<W;x++){
+        const bi=Math.floor(x/W*255);const h=(lB[bi]/mx)*H;
+        ctx.fillRect(x,H-h,1,h);
+      }
+      // RGB lines
+      [[rB,'rgba(255,70,70,.65)'],[gB,'rgba(70,210,70,.5)'],[bB,'rgba(70,110,255,.6)']].forEach(([bins,color])=>{
+        const mx2=Math.max(...Array.from(bins));if(!mx2)return;
+        ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=1;
+        for(let x=0;x<W;x++){const bi=Math.floor(x/W*255);const y=H-(bins[bi]/mx2)*H*.9;x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+        ctx.stroke();
+      });
+      return;
+    }catch(e){}
+  }
+  // Fallback: decorative histogram
+  const shapes=[[.3,.08,.7,'rgba(255,70,70,.55)'],[.5,.1,.65,'rgba(70,210,70,.45)'],[.65,.08,.55,'rgba(70,110,255,.55)']];
+  shapes.forEach(([peak,spread,amp,color])=>{
+    ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=1.5;
+    for(let x=0;x<=W;x++){
+      const t=x/W;
+      const y=H-H*amp*Math.exp(-Math.pow(t-peak,2)/(2*spread*spread));
+      x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+  });
+}
+
+/* ━━━ FABRIC.JS CANVAS ━━━ */
+let _fc = null; // global fabric canvas instance
+
+function initFabric() {
+  const container = document.getElementById('eb-canvas');
+  if (!container) return;
+  const W = container.offsetWidth || 800;
+  const H = container.offsetHeight || 600;
+  // Zaten var ama boyutu sıfırsa güncelle
+  if (_fc) {
+    if (W > 10 && (_fc.width < 10 || _fc.height < 10)) {
+      _fc.setWidth(W); _fc.setHeight(H); _fc.renderAll();
+      if (_fc.wrapperEl) { _fc.wrapperEl.style.position='absolute';_fc.wrapperEl.style.inset='0';_fc.wrapperEl.style.width='100%';_fc.wrapperEl.style.height='100%'; }
+    }
+    return;
+  }
+  _fc = new fabric.Canvas('fabric-canvas', {
+    width: W,
+    height: H,
+    backgroundColor: 'transparent',
+    preserveObjectStacking: true,
+    selection: true,
+  });
+  // Fabric wrapper — dokunma, Fabric kendi yönetsin
+  // Resize on window resize
+  window.addEventListener('resize', () => {
+    if (!_fc) return;
+    const cW = container.offsetWidth;
+    const cH = container.offsetHeight;
+    _fc.setWidth(cW);
+    _fc.setHeight(cH);
+    _fc.renderAll();
+  });
+  // Show/hide delete button on selection
+  _fc.on('selection:created', updateFabricControls);
+  _fc.on('selection:updated', updateFabricControls);
+  _fc.on('selection:cleared', () => {
+    const delBtn = document.getElementById('fab-del-btn');
+    if (delBtn) delBtn.style.display = 'none';
+  });
+}
+
+function updateFabricControls() {
+  const delBtn = document.getElementById('fab-del-btn');
+  if (delBtn) delBtn.style.display = 'flex';
+}
+
+function fabAddImage(src) {
+  // Fotoğrafı direkt <img> ile göster — Fabric overlay olarak üstünde
+  const imgEl = document.getElementById('eb-img');
+  const ph    = document.getElementById('eb-ph');
+  if (!imgEl) return;
+  imgEl.src = src;
+  imgEl.classList.add('eb-img-active');
+  if (ph) ph.style.display = 'none';
+  // Fabric filtreler için de yükle (opsiyonel, hata olursa geç)
+  try {
+    if (!_fc) initFabric();
+    if (_fc && _fc.width > 0) {
+      fabric.Image.fromURL(src, (img) => {
+        if (!img || !img.width) return;
+        _fc.clear();
+        const scale = Math.min(_fc.width / img.width, _fc.height / img.height) * 0.9;
+        img.set({ left:_fc.width/2, top:_fc.height/2, originX:'center', originY:'center', scaleX:scale, scaleY:scale, selectable:true, id:'main-image' });
+        _fc.add(img); _fc.setActiveObject(img); _fc.renderAll();
+        window._fabricMainImg = img;
+      });
+    }
+  } catch(e) {}
+  drawCvHist();
+  drawTimeline();
+}
+
+function fabAddVideo(file) {
+  const vid = document.getElementById('eb-video');
+  const ph  = document.getElementById('eb-ph');
+  if (!vid) return;
+  vid.pause();
+  if (vid._blobUrl) { try { URL.revokeObjectURL(vid._blobUrl); } catch(e){} }
+  vid._blobUrl = URL.createObjectURL(file);
+  vid.src = vid._blobUrl;
+  vid.classList.add('eb-vid-active');
+  _hideImage();
+  if (ph) ph.style.display = 'none';
+  vid.load();
+  vid.play().catch(() => {});
+  vid.addEventListener('loadedmetadata', drawTimeline, { once: true });
+  window._fabricMainImg = null;
+  if (_fc) { _fc.clear(); _fc.renderAll(); }
+}
+
+function fabApplyFilters() {
+  if (!window._fabricMainImg || !_fc) return;
+  const img = window._fabricMainImg;
+  const bright = parseFloat((document.getElementById('adj-bright') || { value: 0 }).value) / 100;
+  const contrast = parseFloat((document.getElementById('r-cont') || { value: 0 }).value) / 100;
+  const sat = parseFloat((document.getElementById('adj-sat') || { value: 0 }).value) / 100;
+  const sharp = parseFloat((document.getElementById('adj-sharp') || { value: 0 }).value) / 100;
+  const warm = parseFloat((document.getElementById('adj-warm') || { value: 0 }).value) / 100;
+  const exp = parseFloat((document.getElementById('r-exp') || { value: 0 }).value) / 100;
+  const vib = parseFloat((document.getElementById('r-vib') || { value: 0 }).value) / 100;
+
+  img.filters = [];
+  if (bright !== 0 || exp !== 0) img.filters.push(new fabric.Image.filters.Brightness({ brightness: bright + exp * 0.5 }));
+  if (contrast !== 0) img.filters.push(new fabric.Image.filters.Contrast({ contrast: contrast }));
+  if (sat !== 0 || vib !== 0) img.filters.push(new fabric.Image.filters.Saturation({ saturation: sat + vib * 0.5 }));
+  if (warm !== 0) {
+    img.filters.push(new fabric.Image.filters.ColorMatrix({
+      matrix: [
+        1 + warm * 0.2, 0, 0, 0, 0,
+        0, 1, 0, 0, 0,
+        0, 0, 1 - warm * 0.2, 0, 0,
+        0, 0, 0, 1, 0
+      ]
+    }));
+  }
+  if (sharp > 0) {
+    img.filters.push(new fabric.Image.filters.Convolute({
+      matrix: [0, -sharp, 0, -sharp, 1 + 4 * sharp, -sharp, 0, -sharp, 0]
+    }));
+  }
+  img.applyFilters();
+  _fc.renderAll();
+}
+
+function fabGetBase64() {
+  if (!_fc) return null;
+  return _fc.toDataURL({ format: 'jpeg', quality: 0.92 });
+}
+
+/* ━━━ EDIT BENCH ━━━ */
+function _hideVideo(){
+  const vid=document.getElementById('eb-video');
+  if(!vid)return;
+  vid.pause();
+  vid.classList.remove('eb-vid-active');
+}
+function _hideImage(){
+  const img=document.getElementById('eb-img');
+  if(img){img.src='';img.classList.remove('eb-img-active');}
+}
+function ebShowImage(src){
+  _hideVideo();
+  _hideImage();
+  fabAddImage(src);
+}
+function ebShowVideo(file){
+  fabAddVideo(file);
+  drawAudioWave(null);
+  if(file&&file.arrayBuffer){
+    file.arrayBuffer().then(buf=>{
+      try{
+        const ac=new(window.AudioContext||window.webkitAudioContext)();
+        ac.decodeAudioData(buf.slice(0),decoded=>{
+          drawAudioWave(decoded.getChannelData(0));
+          ac.close();
+        },()=>drawAudioWave(null));
+      }catch(e){drawAudioWave(null);}
+    }).catch(()=>drawAudioWave(null));
+  }
 }
 function ebReset(){
   document.getElementById('eb-ph').style.display='';
-  const img=document.getElementById('eb-img');img.src='';img.style.display='none';
-  ['bright','contrast','sat','sharp','warm','shadow','high','vign'].forEach(k=>{
-    const el=document.getElementById('adj-'+k);if(el){el.value=0;document.getElementById('adj-'+k+'-v').textContent='0';}
-  });
-  document.querySelectorAll('.eb-filter').forEach((f,i)=>{f.classList.toggle('on',i===0);});
+  if(_fc){_fc.clear();_fc.renderAll();}
+  window._fabricMainImg=null;
+  _hideVideo();
+  _hideImage();
+  drawCvHist();
 }
 (function initEditBench(){
-  // Apply CSS filters to preview image
-  function applyImgFilter(){
-    const img=document.getElementById('eb-img');
-    if(!img||img.style.display==='none')return;
-    const bright=parseFloat(document.getElementById('adj-bright').value);
-    const contrast=parseFloat(document.getElementById('adj-contrast').value);
-    const sat=parseFloat(document.getElementById('adj-sat').value);
-    const warm=parseFloat(document.getElementById('adj-warm').value);
-    const shadow=parseFloat(document.getElementById('adj-shadow').value);
-    const high=parseFloat(document.getElementById('adj-high').value);
-    const sharp=parseFloat(document.getElementById('adj-sharp').value);
-    const vign=parseFloat(document.getElementById('adj-vign').value);
-    // Map -100..100 → CSS values
-    const brightness=1+(bright/100)*1.5;
-    const contrastV=1+(contrast/100)*1.5;
-    const saturate=Math.max(0,1+(sat/100)*2);
-    const hueRot=warm*-1.2;
-    const sepiaV=warm>0?Math.min(warm/200,0.4):0;
-    // shadow lifts blacks; highlights boosts whites (approximate via brightness on extremes)
-    const brightnessAdj=brightness+(shadow/500)+(high/500);
-    img.style.filter=`brightness(${brightnessAdj.toFixed(2)}) contrast(${contrastV.toFixed(2)}) saturate(${saturate.toFixed(2)}) hue-rotate(${hueRot.toFixed(1)}deg) sepia(${sepiaV.toFixed(2)}) blur(${sharp<0?Math.abs(sharp)*0.03:0}px)`;
-    // Vignette via box-shadow on parent
-    const canvas=document.getElementById('eb-canvas');
-    if(vign>0){
-      const v=vign/100;
-      canvas.style.boxShadow=`inset 0 0 ${80*v}px ${30*v}px rgba(0,0,0,${0.7*v})`;
-    } else {
-      canvas.style.boxShadow='';
-    }
+  // Ses parametreleri
+  const audVol=document.getElementById('aud-vol');
+  if(audVol){
+    audVol.addEventListener('input',()=>{
+      const vid=document.getElementById('eb-video');
+      if(vid)vid.volume=Math.min(audVol.value/100,1);
+      const v=document.getElementById('aud-vol-v');
+      if(v)v.textContent=audVol.value+'%';
+    });
   }
-  // Sliders — update display AND apply filter
-  ['bright','contrast','sat','sharp','warm','shadow','high','vign'].forEach(k=>{
-    const el=document.getElementById('adj-'+k),vEl=document.getElementById('adj-'+k+'-v');
-    if(el&&vEl)el.addEventListener('input',()=>{vEl.textContent=el.value;applyImgFilter();});
-  });
-  // Filters (CSS filter presets)
-  const FILTER_PRESETS={
-    'Orijinal':'none',
-    'Sinematik':'brightness(0.9) contrast(1.2) saturate(0.8) hue-rotate(-10deg)',
-    'Vintage':'brightness(1.05) contrast(0.9) saturate(0.7) sepia(0.35)',
-    'Doğal':'brightness(1.05) contrast(1.05) saturate(1.2)',
-    'Gece':'brightness(0.7) contrast(1.3) saturate(0.6) hue-rotate(220deg)',
-    'Altın':'brightness(1.1) contrast(1.1) saturate(1.3) sepia(0.3)',
-    'Serin':'brightness(1.0) contrast(1.1) saturate(0.9) hue-rotate(200deg)',
-    'Dramatik':'brightness(0.8) contrast(1.5) saturate(0.7)',
-    'Mono':'brightness(1.0) contrast(1.2) saturate(0)',
-    'Neon':'brightness(1.1) contrast(1.3) saturate(2) hue-rotate(280deg)'
-  };
-  // Filters — apply CSS preset
-  document.querySelectorAll('.eb-filter').forEach(f=>{
-    f.addEventListener('click',()=>{
-      document.querySelectorAll('.eb-filter').forEach(x=>x.classList.remove('on'));
-      f.classList.add('on');
-      const img=document.getElementById('eb-img');
-      if(img&&img.style.display!=='none'){
-        const preset=FILTER_PRESETS[f.textContent.trim()]||'none';
-        img.style.filter=preset;
-        // reset sliders to 0 when preset applied
-        ['bright','contrast','sat','sharp','warm','shadow','high','vign'].forEach(k=>{
-          const el=document.getElementById('adj-'+k),vEl=document.getElementById('adj-'+k+'-v');
-          if(el){el.value=0;if(vEl)vEl.textContent='0';}
-        });
-        document.getElementById('eb-canvas').style.boxShadow='';
-      }
+  ['aud-bass','aud-mid','aud-treble'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.addEventListener('input',()=>{
+      const v=document.getElementById(id+'-v');
+      if(v)v.textContent=el.value;
+      // EQ bilgisini S'e kaydet (üretimde sunucuya gönderilecek)
+      if(!window._audioEQ)window._audioEQ={};
+      window._audioEQ[id]=parseFloat(el.value);
     });
   });
-  // Toolbar tools
+  // Ses kesme kısayol butonları
+  const cutStartBtn=document.getElementById('aud-cut-start-btn');
+  const cutEndBtn=document.getElementById('aud-cut-end-btn');
+  if(cutStartBtn){cutStartBtn.addEventListener('click',()=>{
+    const vid=document.getElementById('eb-video');
+    if(!vid||!vid.duration){toast('Önce video yükle');return;}
+    window._trimIn=vid.currentTime/vid.duration;
+    drawTimeline();
+    const cb=document.getElementById('wtl-audio-cut-btn');
+    const vb=document.getElementById('wtl-cut-btn');
+    if(cb)cb.classList.add('visible');
+    if(vb)vb.classList.add('visible');
+    toast('Başlangıç noktası ayarlandı: '+(vid.currentTime.toFixed(1))+'s');
+  });}
+  if(cutEndBtn){cutEndBtn.addEventListener('click',()=>{
+    const vid=document.getElementById('eb-video');
+    if(!vid||!vid.duration){toast('Önce video yükle');return;}
+    window._trimOut=vid.currentTime/vid.duration;
+    drawTimeline();
+    const cb=document.getElementById('wtl-audio-cut-btn');
+    const vb=document.getElementById('wtl-cut-btn');
+    if(cb)cb.classList.add('visible');
+    if(vb)vb.classList.add('visible');
+    toast('Bitiş noktası ayarlandı: '+(vid.currentTime.toFixed(1))+'s');
+  });}
+
+  // Helper to update slider fill (already defined by initHapticSliders, but guard here)
+  function updateSliderFill(sl){
+    const min=parseFloat(sl.min)||0,max=parseFloat(sl.max)||100,val=parseFloat(sl.value)||0;
+    const pct=((val-min)/(max-min))*100;
+    sl.style.setProperty('--sl-fill',pct.toFixed(1)+'%');
+  }
+
+  // Slider-driven Fabric filters
+  const filterSliders = ['adj-bright','r-cont','adj-sat','adj-sharp','adj-warm','r-exp','r-vib','r-clar','r-dehaze','adj-shadow','r-highl','r-whites','r-blacks','r-wb','r-tint'];
+  filterSliders.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', () => {
+      const vEl = document.getElementById(id + '-v');
+      if (vEl) vEl.textContent = id === 'r-wb' ? el.value + 'K' : el.value;
+      updateSliderFill(el);
+      fabApplyFilters();
+    });
+  });
+
+  // Toolbar tools (canvas toolbar pill)
   document.querySelectorAll('.eb-tool').forEach(t=>{
     t.addEventListener('click',()=>{
       document.querySelectorAll('.eb-tool').forEach(x=>x.classList.remove('on'));
       t.classList.add('on');
     });
   });
-  // Rotate left/right (just visual tilt on img)
-  let _rot=0;
-  document.getElementById('ebt-rotl').addEventListener('click',()=>{_rot-=90;const img=document.getElementById('eb-img');if(img)img.style.transform=`rotate(${_rot}deg)`;});
-  document.getElementById('ebt-rotr').addEventListener('click',()=>{_rot+=90;const img=document.getElementById('eb-img');if(img)img.style.transform=`rotate(${_rot}deg)`;});
-  document.getElementById('ebt-reset').addEventListener('click',()=>{_rot=0;const img=document.getElementById('eb-img');if(img)img.style.transform='';});
-  // Zoom
-  let _scale=1;
-  document.getElementById('ebt-zoom-in').addEventListener('click',()=>{_scale=Math.min(_scale+.2,3);const img=document.getElementById('eb-img');if(img)img.style.transform=`scale(${_scale}) rotate(${_rot}deg)`;});
-  document.getElementById('ebt-zoom-out').addEventListener('click',()=>{_scale=Math.max(_scale-.2,.3);const img=document.getElementById('eb-img');if(img)img.style.transform=`scale(${_scale}) rotate(${_rot}deg)`;});
-  // Flip horizontal
-  let _flipH=false;
-  document.getElementById('ebt-fliph').addEventListener('click',()=>{_flipH=!_flipH;const img=document.getElementById('eb-img');if(img)img.style.transform=`scaleX(${_flipH?-1:1}) rotate(${_rot}deg)`;});
+
+  // ebt-rotl / ebt-rotr / ebt-fliph / ebt-zoom-in / ebt-zoom-out / ebt-reset
+  const ebtRotl=document.getElementById('ebt-rotl');
+  if(ebtRotl)ebtRotl.addEventListener('click',()=>{if(_fc){const obj=_fc.getActiveObject()||window._fabricMainImg;if(obj){obj.rotate((obj.angle||0)-90);_fc.renderAll();}}});
+  const ebtRotr=document.getElementById('ebt-rotr');
+  if(ebtRotr)ebtRotr.addEventListener('click',()=>{if(_fc){const obj=_fc.getActiveObject()||window._fabricMainImg;if(obj){obj.rotate((obj.angle||0)+90);_fc.renderAll();}}});
+  const ebtFliph=document.getElementById('ebt-fliph');
+  if(ebtFliph)ebtFliph.addEventListener('click',()=>{if(_fc){const obj=_fc.getActiveObject()||window._fabricMainImg;if(obj){obj.set('flipX',!obj.flipX);_fc.renderAll();}}});
+  const ebtZoomIn=document.getElementById('ebt-zoom-in');
+  if(ebtZoomIn)ebtZoomIn.addEventListener('click',()=>{if(_fc){const z=Math.min((_fc.getZoom()||1)+0.2,4);_fc.setZoom(z);}});
+  const ebtZoomOut=document.getElementById('ebt-zoom-out');
+  if(ebtZoomOut)ebtZoomOut.addEventListener('click',()=>{if(_fc){const z=Math.max((_fc.getZoom()||1)-0.2,0.2);_fc.setZoom(z);}});
+  const ebtReset=document.getElementById('ebt-reset');
+  if(ebtReset)ebtReset.addEventListener('click',()=>{if(_fc){_fc.setZoom(1);_fc.setViewportTransform([1,0,0,1,0,0]);}});
+
+  // ebt-text: add text via Fabric
+  const ebtText=document.getElementById('ebt-text');
+  if(ebtText)ebtText.addEventListener('click',()=>{
+    if(!_fc)return;
+    const text=new fabric.IText('Metni düzenle',{
+      left:_fc.width/2,top:_fc.height/2,
+      originX:'center',originY:'center',
+      fontSize:36,fontFamily:'Inter',fill:'#ffffff',fontWeight:'bold',
+      shadow:new fabric.Shadow({color:'rgba(0,0,0,0.8)',blur:8,offsetX:2,offsetY:2}),
+    });
+    _fc.add(text);_fc.setActiveObject(text);text.enterEditing();_fc.renderAll();
+  });
 })();
+
+/* ━━━ TOOLBAR TOOLTIP ━━━ */
+(function initTooltip(){
+  const tip=document.createElement('div');
+  tip.id='wt-tip';
+  tip.style.cssText='position:fixed;background:rgba(10,8,18,.97);border:1px solid rgba(255,255,255,.16);color:rgba(255,255,255,.92);font-size:10px;font-weight:600;letter-spacing:.05em;padding:4px 10px;border-radius:6px;white-space:nowrap;z-index:9999;pointer-events:none;opacity:0;transition:opacity .15s;font-family:Inter,sans-serif;';
+  document.body.appendChild(tip);
+  document.querySelectorAll('.wt-btn[data-tip]').forEach(btn=>{
+    btn.addEventListener('mouseenter',()=>{
+      tip.textContent=btn.dataset.tip;
+      tip.style.opacity='1';
+    });
+    btn.addEventListener('mousemove',e=>{
+      tip.style.left=(e.clientX - tip.offsetWidth/2)+'px';
+      tip.style.top=(e.clientY + 20)+'px';
+    });
+    btn.addEventListener('mouseleave',()=>{tip.style.opacity='0';});
+  });
+})();
+
+/* ━━━ TOOLBAR ACTIONS ━━━ */
+(function initToolbarActions(){
+  const toolBtns=['wt-select','wt-crop','wt-draw','wt-text','wt-logo'];
+  function setActiveTool(id){
+    toolBtns.forEach(tid=>{const b=document.getElementById(tid);if(b)b.classList.remove('on');});
+    const b=document.getElementById(id);if(b)b.classList.add('on');
+    // Disable fabric drawing mode when not draw tool
+    if(_fc&&id!=='wt-draw'){_fc.isDrawingMode=false;}
+  }
+
+  // Select
+  document.getElementById('wt-select').addEventListener('click',()=>{
+    setActiveTool('wt-select');
+    if(_fc){_fc.isDrawingMode=false;_fc.selection=true;}
+  });
+
+  // Crop — use fabric clipRect
+  document.getElementById('wt-crop').addEventListener('click',()=>{
+    setActiveTool('wt-crop');
+    if(window._openCrop)window._openCrop();
+  });
+
+  // Rotate left
+  document.getElementById('wt-rotl').addEventListener('click',()=>{
+    if(_fc){
+      const obj=_fc.getActiveObject()||window._fabricMainImg;
+      if(obj){obj.rotate((obj.angle||0)-90);_fc.renderAll();}
+    }
+  });
+
+  // Rotate right
+  document.getElementById('wt-rotr').addEventListener('click',()=>{
+    if(_fc){
+      const obj=_fc.getActiveObject()||window._fabricMainImg;
+      if(obj){obj.rotate((obj.angle||0)+90);_fc.renderAll();}
+    }
+  });
+
+  // Flip horizontal
+  document.getElementById('wt-fliph').addEventListener('click',()=>{
+    if(_fc){
+      const obj=_fc.getActiveObject()||window._fabricMainImg;
+      if(obj){obj.set('flipX',!obj.flipX);_fc.renderAll();}
+    }
+  });
+
+  // Draw
+  document.getElementById('wt-draw').addEventListener('click',()=>{
+    setActiveTool('wt-draw');
+    if(!_fc)return;
+    _fc.isDrawingMode=true;
+    _fc.freeDrawingBrush.color='#FF6B1A';
+    _fc.freeDrawingBrush.width=4;
+    if(window._openDraw)window._openDraw();
+  });
+
+  // Text
+  document.getElementById('wt-text').addEventListener('click',()=>{
+    setActiveTool('wt-text');
+    if(!_fc)return;
+    const text=new fabric.IText('Metni düzenle',{
+      left:_fc.width/2,top:_fc.height/2,
+      originX:'center',originY:'center',
+      fontSize:36,fontFamily:'Inter',fill:'#ffffff',fontWeight:'bold',
+      shadow:new fabric.Shadow({color:'rgba(0,0,0,0.8)',blur:8,offsetX:2,offsetY:2}),
+    });
+    _fc.add(text);_fc.setActiveObject(text);text.enterEditing();_fc.renderAll();
+  });
+
+  // Logo / image overlay
+  document.getElementById('wt-logo').addEventListener('click',()=>{
+    setActiveTool('wt-logo');
+    toast('Sol panelden logo/görsel yükle, varlığa tıkla → tezgaha ekler');
+  });
+
+  // Zoom in
+  document.getElementById('wt-zoom-in').addEventListener('click',()=>{
+    if(_fc){const z=Math.min((_fc.getZoom()||1)+0.2,4);_fc.setZoom(z);document.getElementById('wt-zoom-pct').textContent=Math.round(z*100)+'%';}
+  });
+
+  // Zoom out
+  document.getElementById('wt-zoom-out').addEventListener('click',()=>{
+    if(_fc){const z=Math.max((_fc.getZoom()||1)-0.2,0.2);_fc.setZoom(z);document.getElementById('wt-zoom-pct').textContent=Math.round(z*100)+'%';}
+  });
+
+  // Fit
+  document.getElementById('wt-fit').addEventListener('click',()=>{
+    if(_fc){_fc.setZoom(1);_fc.setViewportTransform([1,0,0,1,0,0]);document.getElementById('wt-zoom-pct').textContent='100%';}
+  });
+})();
+
+/* ━━━ ASSET CLICK — tezgaha yükle ━━━ */
+function attachAssetClick(item, file, idx){
+  item.addEventListener('click',e=>{
+    if(e.target.closest('.wl-asset-del'))return;
+    S.file=file;
+    if(file.type.startsWith('video/')){
+      S.fileBase64=null;
+      ebShowVideo(file);
+    } else {
+      const r=new FileReader();
+      r.onload=ev=>{S.fileBase64=ev.target.result;ebShowImage(ev.target.result);};
+      r.readAsDataURL(file);
+    }
+    // highlight selected
+    document.querySelectorAll('.wl-asset-item').forEach(i=>i.style.outline='none');
+    item.style.outline='2px solid var(--mc)';
+  });
+}
 
 /* ━━━ TOGGLES ━━━ */
 document.querySelectorAll('.tog').forEach(t=>{
@@ -1668,10 +2496,13 @@ if(efEl)efEl.addEventListener('input',()=>{document.getElementById('ef-val').tex
 // Reels panel sliders
 [['r-crop','r-crop-v','%'],['r-straight','r-straight-v','°'],
  ['r-exp','r-exp-v',''],['r-cont','r-cont-v',''],['r-highl','r-highl-v',''],
- ['r-shad','r-shad-v',''],['r-vib','r-vib-v',''],['r-sat','r-sat-v',''],
- ['r-tint','r-tint-v',''],['r-tex','r-tex-v',''],['r-clar','r-clar-v',''],
- ['r-dehaze','r-dehaze-v',''],['r-sharp','r-sharp-v',''],['r-grain','r-grain-v',''],
- ['r-vig','r-vig-v','']].forEach(([id,vid,unit])=>{
+ ['r-vib','r-vib-v',''],['r-tint','r-tint-v',''],
+ ['r-tex','r-tex-v',''],['r-clar','r-clar-v',''],
+ ['r-dehaze','r-dehaze-v',''],['r-grain','r-grain-v',''],
+ ['adj-sat','adj-sat-v',''],['adj-shadow','adj-shadow-v',''],
+ ['adj-sharp','adj-sharp-v',''],['adj-vign','adj-vign-v',''],
+ ['adj-bright','adj-bright-v',''],['adj-warm','adj-warm-v','']
+].forEach(([id,vid,unit])=>{
   const el=document.getElementById(id),vel=document.getElementById(vid);
   if(el&&vel)el.addEventListener('input',()=>vel.textContent=el.value+unit);
 });
@@ -1696,6 +2527,727 @@ const sesEchoEl=document.getElementById('ses-echo');
 if(sesEchoEl)sesEchoEl.addEventListener('input',()=>{document.getElementById('ses-echo-v').textContent=sesEchoEl.value;});
 const sesMixEl=document.getElementById('ses-mix');
 if(sesMixEl)sesMixEl.addEventListener('input',()=>{document.getElementById('ses-mix-v').textContent=sesMixEl.value+'%';});
+
+/* ━━━ TIMELINE ━━━ */
+function drawTimeline(){
+  const canvas=document.getElementById('wtl-canvas');
+  if(!canvas)return;
+  const W=canvas.offsetWidth,H=canvas.offsetHeight;
+  if(!W||!H)return;
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  canvas.style.width=W+'px';canvas.style.height=H+'px';
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  ctx.clearRect(0,0,W,H);
+  // Dark base
+  ctx.fillStyle='rgba(3,2,6,1)';ctx.fillRect(0,0,W,H);
+  // Ruler ticks
+  const dur=parseInt(document.querySelector('.wtl-dur.on')?.dataset.dur||'15');
+  ctx.font='600 8px Inter,sans-serif';
+  for(let s=0;s<=dur;s++){
+    const x=Math.round(s/dur*W);
+    const isMajor=s%5===0;
+    ctx.fillStyle=isMajor?'rgba(255,255,255,.25)':'rgba(255,255,255,.1)';
+    ctx.fillRect(x,0,1,isMajor?8:4);
+    if(isMajor&&s>0){ctx.fillStyle='rgba(255,255,255,.3)';ctx.fillText(s+'s',x+2,14);}
+  }
+  // Waveform — seed for determinism
+  const seed=42;
+  const midY=Math.round(H/2)+6;
+  const waveH=H*.32;
+  // Pre-compute amplitudes with seeded noise
+  const amps=[];
+  for(let x=0;x<W;x++){
+    const t=x/W;
+    const n=(Math.sin(t*73+seed)*0.31+Math.sin(t*137+seed*1.3)*0.22+Math.sin(t*29+seed*.7)*0.18+Math.sin(t*211+seed*2.1)*0.12+Math.sin(t*17)*0.09)*waveH;
+    amps.push(Math.max(1.5,Math.abs(n)));
+  }
+  // Glow pass (wide, low opacity)
+  ctx.globalAlpha=0.18;
+  ctx.fillStyle='#FF6B1A';
+  for(let x=0;x<W;x++){
+    ctx.fillRect(x,midY-amps[x]-2,1,amps[x]*2+4);
+  }
+  ctx.globalAlpha=1;
+  // Main waveform bars
+  const wGrad=ctx.createLinearGradient(0,midY-waveH,0,midY+waveH);
+  wGrad.addColorStop(0,'rgba(255,140,60,.55)');
+  wGrad.addColorStop(.5,'rgba(255,107,26,.9)');
+  wGrad.addColorStop(1,'rgba(255,140,60,.55)');
+  ctx.fillStyle=wGrad;
+  for(let x=0;x<W;x++){ctx.fillRect(x,midY-amps[x],1,amps[x]*2);}
+  // Beat markers (stronger peaks every ~13px)
+  ctx.fillStyle='rgba(255,200,100,.6)';
+  for(let x=0;x<W;x+=13){
+    if(amps[x]>amps[x-1]&&amps[x]>amps[x+1]){
+      ctx.fillRect(x,midY-amps[x]-1,2,amps[x]*2+2);
+    }
+  }
+  // Keyframe diamonds
+  const keyframes=[0.15,0.3,0.5,0.72,0.88];
+  keyframes.forEach(pos=>{
+    const x=Math.round(pos*W);
+    const ky=midY;
+    const sz=6;
+    ctx.fillStyle='rgba(255,107,26,.95)';
+    ctx.strokeStyle='rgba(255,220,150,.8)';
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(x,ky-sz);ctx.lineTo(x+sz,ky);ctx.lineTo(x,ky+sz);ctx.lineTo(x-sz,ky);
+    ctx.closePath();ctx.fill();ctx.stroke();
+  });
+  // Trim handles (in/out points)
+  const inPt=window._trimIn||0,outPt=(window._trimOut!=null?window._trimOut:1);
+  const inX=Math.round(inPt*W),outX=Math.round(outPt*W);
+  // In handle
+  ctx.fillStyle='rgba(255,220,80,.9)';
+  ctx.fillRect(inX,0,3,H);
+  ctx.beginPath();ctx.moveTo(inX,0);ctx.lineTo(inX+10,0);ctx.lineTo(inX+10,8);ctx.lineTo(inX,0);ctx.closePath();ctx.fill();
+  // Out handle
+  ctx.fillStyle='rgba(255,220,80,.9)';
+  ctx.fillRect(outX-2,0,3,H);
+  ctx.beginPath();ctx.moveTo(outX,0);ctx.lineTo(outX-10,0);ctx.lineTo(outX-10,8);ctx.lineTo(outX,0);ctx.closePath();ctx.fill();
+  // Shaded areas outside trim
+  ctx.fillStyle='rgba(0,0,0,.35)';
+  ctx.fillRect(0,0,inX,H);
+  ctx.fillRect(outX,0,W-outX,H);
+  // Playhead line
+  const ph=Math.round(W*(window._playheadPos||0.12));
+  const phGrad=ctx.createLinearGradient(ph,0,ph,H);
+  phGrad.addColorStop(0,'rgba(255,255,255,.9)');
+  phGrad.addColorStop(1,'rgba(255,255,255,.2)');
+  ctx.fillStyle=phGrad;
+  ctx.fillRect(ph,0,1.5,H);
+  // Playhead arrow
+  ctx.fillStyle='rgba(255,255,255,.9)';
+  ctx.beginPath();ctx.moveTo(ph-5,0);ctx.lineTo(ph+5,0);ctx.lineTo(ph+0.75,7);ctx.closePath();ctx.fill();
+  // Draw decorative audio waveform if no video loaded
+  const _vidEl=document.getElementById('eb-video');
+  if(!_vidEl||_vidEl.style.display==='none'){if(typeof drawAudioWave==='function')drawAudioWave(null);}
+}
+
+/* ━━━ AUDIO WAVEFORM ━━━ */
+function drawAudioWave(channelData){
+  const canvas=document.getElementById('wtl-audio-canvas');
+  if(!canvas)return;
+  const W=canvas.offsetWidth,H=canvas.offsetHeight;
+  if(!W||!H)return;
+  const dpr=window.devicePixelRatio||1;
+  canvas.width=W*dpr;canvas.height=H*dpr;
+  canvas.style.width=W+'px';canvas.style.height=H+'px';
+  const ctx=canvas.getContext('2d');
+  ctx.scale(dpr,dpr);
+  ctx.fillStyle='rgba(3,2,6,1)';ctx.fillRect(0,0,W,H);
+  if(!channelData||channelData.length===0){
+    // decorative fallback
+    const mid=H/2;
+    ctx.strokeStyle='rgba(100,180,255,.35)';ctx.lineWidth=1;
+    ctx.beginPath();
+    for(let x=0;x<W;x++){
+      const t=x/W;
+      const a=(Math.sin(t*80+1.1)*.28+Math.sin(t*160+2.3)*.18+Math.sin(t*40)*.12)*H*.38;
+      if(x===0)ctx.moveTo(x,mid-Math.abs(a));else ctx.lineTo(x,mid-Math.abs(a));
+    }
+    ctx.stroke();
+    ctx.beginPath();
+    for(let x=0;x<W;x++){
+      const t=x/W;
+      const a=(Math.sin(t*80+1.1)*.28+Math.sin(t*160+2.3)*.18+Math.sin(t*40)*.12)*H*.38;
+      if(x===0)ctx.moveTo(x,mid+Math.abs(a));else ctx.lineTo(x,mid+Math.abs(a));
+    }
+    ctx.stroke();
+    return;
+  }
+  // Real waveform from decoded audio
+  const step=Math.ceil(channelData.length/W);
+  const mid=H/2;
+  const aGrad=ctx.createLinearGradient(0,0,0,H);
+  aGrad.addColorStop(0,'rgba(80,160,255,.7)');
+  aGrad.addColorStop(.5,'rgba(120,200,255,.9)');
+  aGrad.addColorStop(1,'rgba(80,160,255,.7)');
+  ctx.fillStyle=aGrad;
+  for(let x=0;x<W;x++){
+    let max=0;
+    for(let j=0;j<step;j++){const v=Math.abs(channelData[x*step+j]||0);if(v>max)max=v;}
+    const amp=max*mid*.9;
+    ctx.fillRect(x,mid-amp,1,amp*2||1);
+  }
+}
+
+/* ━━━ CROP TOOL ━━━ */
+(function initCrop(){
+  const overlay=document.getElementById('crop-overlay');
+  const box=document.getElementById('crop-box');
+  if(!overlay||!box)return;
+  let cw,ch,bx=20,by=20,bw,bh;
+  function openCrop(){
+    const main=document.getElementById('eb-canvas');
+    cw=main.offsetWidth;ch=main.offsetHeight;
+    bw=Math.round(cw*.6);bh=Math.round(ch*.6);
+    bx=Math.round((cw-bw)/2);by=Math.round((ch-bh)/2);
+    applyBox();
+    overlay.classList.add('active');
+  }
+  function applyBox(){
+    box.style.cssText=`position:absolute;left:${bx}px;top:${by}px;width:${bw}px;height:${bh}px;border:2px solid #FF6B1A;box-shadow:0 0 0 9999px rgba(0,0,0,.5);cursor:move;`;
+    // re-append handles
+    box.querySelectorAll('.crop-handle').forEach(h=>h.style.cssText='');
+  }
+  function closeCrop(){overlay.classList.remove('active');}
+  // Move box
+  box.addEventListener('mousedown',e=>{
+    if(e.target.classList.contains('crop-handle'))return;
+    e.preventDefault();
+    const sx=e.clientX-bx,sy=e.clientY-by;
+    const onMove=ev=>{bx=Math.max(0,Math.min(cw-bw,ev.clientX-sx));by=Math.max(0,Math.min(ch-bh,ev.clientY-sy));applyBox();};
+    const onUp=()=>{document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);};
+    document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
+  });
+  // SE resize handle
+  box.querySelector('.crop-handle.se').addEventListener('mousedown',e=>{
+    e.preventDefault();e.stopPropagation();
+    const sx=e.clientX,sy=e.clientY,ibw=bw,ibh=bh;
+    const onMove=ev=>{bw=Math.max(40,ibw+(ev.clientX-sx));bh=Math.max(40,ibh+(ev.clientY-sy));applyBox();};
+    const onUp=()=>{document.removeEventListener('mousemove',onMove);document.removeEventListener('mouseup',onUp);};
+    document.addEventListener('mousemove',onMove);document.addEventListener('mouseup',onUp);
+  });
+  document.getElementById('crop-apply').addEventListener('click',()=>{
+    const img=document.getElementById('eb-img');
+    if(!img||img.style.display==='none'){closeCrop();return;}
+    // compute crop relative to displayed image bounds
+    const imgRect=img.getBoundingClientRect();
+    const canvRect=document.getElementById('eb-canvas').getBoundingClientRect();
+    const offX=imgRect.left-canvRect.left,offY=imgRect.top-canvRect.top;
+    const scaleX=img.naturalWidth/imgRect.width,scaleY=img.naturalHeight/imgRect.height;
+    const cx=Math.round((bx-offX)*scaleX),cy=Math.round((by-offY)*scaleY);
+    const cwidth=Math.round(bw*scaleX),cheight=Math.round(bh*scaleY);
+    const tmp=document.createElement('canvas');
+    tmp.width=Math.max(1,cwidth);tmp.height=Math.max(1,cheight);
+    tmp.getContext('2d').drawImage(img,cx,cy,cwidth,cheight,0,0,cwidth,cheight);
+    ebShowImage(tmp.toDataURL());
+    closeCrop();
+  });
+  document.getElementById('crop-cancel').addEventListener('click',closeCrop);
+  // Expose so toolbar can call it
+  window._openCrop=openCrop;
+})();
+
+/* ━━━ PRO PANEL — ses + montaj ━━━ */
+(function initProPanel(){
+  // Ses slider sync (pro-aud-* → video element)
+  const vid=()=>document.getElementById('eb-video');
+  const proVol=document.getElementById('pro-aud-vol');
+  if(proVol){
+    proVol.addEventListener('input',e=>{
+      const v=e.target.value;
+      document.getElementById('pro-aud-vol-v').textContent=v+'%';
+      const el=vid();if(el)el.volume=Math.min(1,v/100);
+      // sync with reels panel if exists
+      const reelsVol=document.getElementById('aud-vol');
+      if(reelsVol)reelsVol.value=v;
+    });
+  }
+  ['pro-aud-bass','pro-aud-mid','pro-aud-treble'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.addEventListener('input',e=>{
+      document.getElementById(id+'-v').textContent=e.target.value;
+    });
+  });
+
+  // Pro category select → update S.cat
+  const proCatSel=document.getElementById('pro-cat-sel');
+  if(proCatSel){
+    proCatSel.addEventListener('change',()=>{
+      if(S.mode==='pro')S.cat=proCatSel.value;
+    });
+  }
+
+  // Pro format chips
+  document.querySelectorAll('#pro-fmt-chips .chip').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('#pro-fmt-chips .chip').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+    });
+  });
+
+  // Video birleştirme
+  let mergeFile2=null;
+  let mergeOrder='ab';
+  const mergeInp=document.getElementById('pro-merge-inp');
+  const mergeSelBtn=document.getElementById('pro-merge-sel-btn');
+  const mergeName=document.getElementById('pro-merge-name');
+  const mergeBtn=document.getElementById('pro-merge-btn');
+
+  if(mergeSelBtn&&mergeInp){
+    mergeSelBtn.addEventListener('click',()=>mergeInp.click());
+    mergeInp.addEventListener('change',()=>{
+      mergeFile2=mergeInp.files[0]||null;
+      if(mergeName)mergeName.textContent=mergeFile2?mergeFile2.name:'';
+      if(mergeBtn)mergeBtn.disabled=!mergeFile2;
+      mergeInp.value='';
+    });
+  }
+  document.getElementById('pro-merge-order-ab')?.addEventListener('click',function(){
+    mergeOrder='ab';this.classList.add('on');document.getElementById('pro-merge-order-ba').classList.remove('on');
+  });
+  document.getElementById('pro-merge-order-ba')?.addEventListener('click',function(){
+    mergeOrder='ba';this.classList.add('on');document.getElementById('pro-merge-order-ab').classList.remove('on');
+  });
+  if(mergeBtn){
+    mergeBtn.addEventListener('click',async()=>{
+      if(!S.file||!mergeFile2){toast('İki video de gerekli');return;}
+      const fileA=mergeOrder==='ab'?S.file:mergeFile2;
+      const fileB=mergeOrder==='ab'?mergeFile2:S.file;
+      mergeBtn.disabled=true;mergeBtn.textContent='⏳ Birleştiriliyor…';
+      try{
+        const fd=new FormData();
+        fd.append('fileA',fileA,fileA.name||'a.mp4');
+        fd.append('fileB',fileB,fileB.name||'b.mp4');
+        const resp=await fetch('/api/merge-upload',{method:'POST',body:fd});
+        if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error||'Birleştirme başarısız');}
+        const blob=await resp.blob();
+        const merged=new File([blob],'merged.mp4',{type:'video/mp4'});
+        S.file=merged;S.files=[merged];S.fileBase64=null;
+        ebShowVideo(merged);
+        toast('✅ Videolar birleştirildi');
+        mergeFile2=null;if(mergeName)mergeName.textContent='';
+        mergeBtn.textContent='⚡ Birleştir';mergeBtn.disabled=true;
+      }catch(e){
+        toast('❌ '+e.message);
+        mergeBtn.textContent='⚡ Birleştir';mergeBtn.disabled=false;
+      }
+    });
+  }
+})();
+
+/* ━━━ FİGÜR BOYAMA ━━━ */
+(function initFigurBoya(){
+  const fbc=document.getElementById('fb-canvas');
+  const fbt=document.getElementById('fb-toolbar');
+  if(!fbc||!fbt)return;
+  let ctx,painting=false,fbMode='brush';
+
+  function hex2rgba(hex,a){
+    const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  function getColor(){return document.getElementById('fb-color').value||'#a855f7';}
+  function getSize(){return parseInt(document.getElementById('fb-size').value)||20;}
+  function getOpacity(){return (parseInt(document.getElementById('fb-opacity').value)||60)/100;}
+
+  function openFB(){
+    const main=document.getElementById('eb-canvas');
+    fbc.width=main.offsetWidth;fbc.height=main.offsetHeight;
+    fbc.style.width='100%';fbc.style.height='100%';
+    fbc.classList.add('active');
+    fbt.classList.add('active');
+    ctx=fbc.getContext('2d');
+    fbc.style.cursor='crosshair';
+    // enable apply btn
+    const applyBtn=document.getElementById('pro-fb-apply-btn');
+    if(applyBtn)applyBtn.disabled=false;
+    const openBtn=document.getElementById('pro-fb-open-btn');
+    if(openBtn)openBtn.textContent='🖌 Boyama Açık';
+  }
+  function closeFB(){
+    fbc.classList.remove('active');
+    fbt.classList.remove('active');
+    painting=false;
+    const openBtn=document.getElementById('pro-fb-open-btn');
+    if(openBtn)openBtn.textContent='🖌 Boyamayı Aç';
+    const applyBtn=document.getElementById('pro-fb-apply-btn');
+    if(applyBtn)applyBtn.disabled=true;
+  }
+  function applyFB(){
+    // Merge fb-canvas onto eb-img using a temp canvas
+    const img=document.getElementById('eb-img');
+    if(!img||!img.src||img.src===window.location.href){closeFB();return;}
+    const tmp=document.createElement('canvas');
+    tmp.width=img.naturalWidth;tmp.height=img.naturalHeight;
+    const tc=tmp.getContext('2d');
+    tc.drawImage(img,0,0);
+    // scale fb overlay to natural size
+    const scaleX=img.naturalWidth/fbc.width,scaleY=img.naturalHeight/fbc.height;
+    tc.save();tc.scale(scaleX,scaleY);tc.drawImage(fbc,0,0);tc.restore();
+    const newSrc=tmp.toDataURL('image/png');
+    ebShowImage(newSrc);
+    ctx.clearRect(0,0,fbc.width,fbc.height);
+    closeFB();
+    toast('✅ Boyama uygulandı');
+  }
+
+  // flood fill helper
+  function floodFill(x,y,fillHex,tolerance){
+    const w=fbc.width,h=fbc.height;
+    const imgData=ctx.getImageData(0,0,w,h);
+    const d=imgData.data;
+    const idx=(px,py)=>(py*w+px)*4;
+    // target is always transparent (0,0,0,0) since we paint on blank canvas
+    const fill=[parseInt(fillHex.slice(1,3),16),parseInt(fillHex.slice(3,5),16),parseInt(fillHex.slice(5,7),16),Math.round(getOpacity()*255)];
+    const start=idx(Math.floor(x),Math.floor(y));
+    const tr=d[start],tg=d[start+1],tb=d[start+2],ta=d[start+3];
+    if(tr===fill[0]&&tg===fill[1]&&tb===fill[2]&&ta===fill[3])return;
+    const stack=[[Math.floor(x),Math.floor(y)]];
+    const visited=new Uint8Array(w*h);
+    const MAX=150000;let count=0;
+    while(stack.length&&count<MAX){
+      const [cx,cy]=stack.pop();
+      if(cx<0||cx>=w||cy<0||cy>=h)continue;
+      const i=cy*w+cx;
+      if(visited[i])continue;
+      visited[i]=1;
+      const pi=i*4;
+      const diff=Math.abs(d[pi]-tr)+Math.abs(d[pi+1]-tg)+Math.abs(d[pi+2]-tb)+Math.abs(d[pi+3]-ta);
+      if(diff>tolerance)continue;
+      d[pi]=fill[0];d[pi+1]=fill[1];d[pi+2]=fill[2];d[pi+3]=fill[3];
+      count++;
+      stack.push([cx+1,cy],[cx-1,cy],[cx,cy+1],[cx,cy-1]);
+    }
+    ctx.putImageData(imgData,0,0);
+  }
+
+  function paint(e){
+    if(!ctx||fbMode!=='brush')return;
+    const r=fbc.getBoundingClientRect();
+    const x=e.clientX-r.left,y=e.clientY-r.top;
+    ctx.globalAlpha=getOpacity();
+    ctx.fillStyle=getColor();
+    ctx.beginPath();
+    ctx.arc(x,y,getSize()/2,0,Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha=1;
+  }
+
+  fbc.addEventListener('mousedown',e=>{
+    if(!ctx)return;
+    painting=true;
+    if(fbMode==='fill'){
+      const r=fbc.getBoundingClientRect();
+      floodFill(e.clientX-r.left,e.clientY-r.top,getColor(),80);
+    } else {paint(e);}
+  });
+  fbc.addEventListener('mousemove',e=>{if(painting)paint(e);});
+  fbc.addEventListener('mouseup',()=>{painting=false;});
+  fbc.addEventListener('mouseleave',()=>{painting=false;});
+  // Touch
+  fbc.addEventListener('touchstart',e=>{e.preventDefault();painting=true;const t=e.touches[0];const r=fbc.getBoundingClientRect();if(fbMode==='fill')floodFill(t.clientX-r.left,t.clientY-r.top,getColor(),80);else paint({clientX:t.clientX,clientY:t.clientY});},{passive:false});
+  fbc.addEventListener('touchmove',e=>{e.preventDefault();if(!painting)return;const t=e.touches[0];paint({clientX:t.clientX,clientY:t.clientY});},{passive:false});
+  fbc.addEventListener('touchend',()=>{painting=false;});
+
+  // Mode buttons
+  document.getElementById('fb-mode-brush').addEventListener('click',()=>{fbMode='brush';document.getElementById('fb-mode-brush').classList.add('on');document.getElementById('fb-mode-fill').classList.remove('on');fbc.style.cursor='crosshair';});
+  document.getElementById('fb-mode-fill').addEventListener('click',()=>{fbMode='fill';document.getElementById('fb-mode-fill').classList.add('on');document.getElementById('fb-mode-brush').classList.remove('on');fbc.style.cursor='cell';});
+  // Preset buttons in toolbar
+  fbt.querySelectorAll('.fb-preset').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.getElementById('fb-color').value=btn.dataset.color;
+      fbt.querySelectorAll('.fb-preset').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+    });
+  });
+  // Sync color picker to toolbar color
+  document.getElementById('fb-color').addEventListener('input',e=>{fbt.querySelectorAll('.fb-preset').forEach(b=>b.classList.remove('on'));});
+  // Toolbar buttons
+  document.getElementById('fb-clear').addEventListener('click',()=>{if(ctx)ctx.clearRect(0,0,fbc.width,fbc.height);});
+  document.getElementById('fb-apply').addEventListener('click',applyFB);
+  document.getElementById('fb-cancel').addEventListener('click',closeFB);
+  // Panel buttons
+  document.getElementById('pro-fb-open-btn').addEventListener('click',()=>{if(fbc.classList.contains('active'))closeFB();else openFB();});
+  document.getElementById('pro-fb-apply-btn').addEventListener('click',applyFB);
+  // Panel color/size sync to toolbar
+  const panelColor=document.getElementById('pro-fb-color');
+  const panelSize=document.getElementById('pro-fb-size');
+  const panelOpa=document.getElementById('pro-fb-opa');
+  const fbColorInp=document.getElementById('fb-color');
+  const fbSizeInp=document.getElementById('fb-size');
+  const fbOpaInp=document.getElementById('fb-opacity');
+  if(panelColor)panelColor.addEventListener('input',e=>{fbColorInp.value=e.target.value;});
+  if(panelSize)panelSize.addEventListener('input',e=>{fbSizeInp.value=e.target.value;document.getElementById('pro-fb-size-v').textContent=e.target.value+'px';});
+  if(panelOpa)panelOpa.addEventListener('input',e=>{fbOpaInp.value=e.target.value;document.getElementById('pro-fb-opa-v').textContent=e.target.value+'%';});
+
+  // Expose
+  window._openFigurBoya=openFB;
+  window._closeFigurBoya=closeFB;
+})();
+
+/* fbSetPreset — panel'deki preset butonları */
+function fbSetPreset(btn){
+  const color=btn.dataset.color;
+  const fbColorInp=document.getElementById('fb-color');
+  const panelColor=document.getElementById('pro-fb-color');
+  if(fbColorInp)fbColorInp.value=color;
+  if(panelColor)panelColor.value=color;
+  document.querySelectorAll('.fb-preset').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+}
+
+/* ━━━ DRAW TOOL ━━━ */
+(function initDraw(){
+  const dc=document.getElementById('draw-canvas');
+  const dt=document.getElementById('draw-toolbar');
+  if(!dc||!dt)return;
+  let drawing=false,ctx;
+  function openDraw(){
+    const main=document.getElementById('eb-canvas');
+    dc.width=main.offsetWidth;dc.height=main.offsetHeight;
+    dc.style.width='100%';dc.style.height='100%';
+    dc.classList.add('active');dt.classList.add('active');
+    ctx=dc.getContext('2d');
+  }
+  function closeDraw(){dc.classList.remove('active');dt.classList.remove('active');}
+  dc.addEventListener('mousedown',e=>{
+    if(!ctx)return;
+    drawing=true;
+    const r=dc.getBoundingClientRect();
+    ctx.beginPath();
+    ctx.strokeStyle=document.getElementById('draw-color').value;
+    ctx.lineWidth=parseInt(document.getElementById('draw-size').value);
+    ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.moveTo(e.clientX-r.left,e.clientY-r.top);
+  });
+  dc.addEventListener('mousemove',e=>{
+    if(!drawing||!ctx)return;
+    const r=dc.getBoundingClientRect();
+    ctx.lineTo(e.clientX-r.left,e.clientY-r.top);
+    ctx.stroke();
+  });
+  dc.addEventListener('mouseup',()=>{drawing=false;});
+  dc.addEventListener('mouseleave',()=>{drawing=false;});
+  document.getElementById('draw-clear').addEventListener('click',()=>{if(ctx)ctx.clearRect(0,0,dc.width,dc.height);});
+  document.getElementById('draw-done').addEventListener('click',closeDraw);
+  window._openDraw=openDraw;
+})();
+
+/* ━━━ TIMELINE INTERACTION ━━━ */
+(function initTimelineInteraction(){
+  window._trimIn=0;window._trimOut=1;
+  const track=document.getElementById('wtl-canvas');
+  if(!track)return;
+  track.style.cursor='pointer';
+  track.addEventListener('click',e=>{
+    const r=track.getBoundingClientRect();
+    const pos=(e.clientX-r.left)/r.width;
+    // update playhead
+    window._playheadPos=Math.max(0,Math.min(1,pos));
+    const vid=document.getElementById('eb-video');
+    if(vid&&vid.duration){vid.currentTime=pos*vid.duration;}
+    drawTimeline();
+  });
+  // Drag in/out handles
+  let dragging=null;
+  track.addEventListener('mousedown',e=>{
+    const r=track.getBoundingClientRect();
+    const pos=(e.clientX-r.left)/r.width;
+    const inX=window._trimIn*r.width,outX=window._trimOut*r.width;
+    const x=e.clientX-r.left;
+    if(Math.abs(x-inX)<12)dragging='in';
+    else if(Math.abs(x-outX)<12)dragging='out';
+  });
+  document.addEventListener('mousemove',e=>{
+    if(!dragging)return;
+    const r=track.getBoundingClientRect();
+    const pos=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width));
+    if(dragging==='in')window._trimIn=Math.min(pos,window._trimOut-.05);
+    else window._trimOut=Math.max(pos,window._trimIn+.05);
+    drawTimeline();
+    // Show cut button when trim handles moved
+    const cutBtn=document.getElementById('wtl-cut-btn');
+    const cutInfo=document.getElementById('wtl-cut-info');
+    const audioCutBtn=document.getElementById('wtl-audio-cut-btn');
+    if(cutBtn&&(window._trimIn>0||window._trimOut<1)){
+      cutBtn.classList.add('visible');
+      if(audioCutBtn)audioCutBtn.classList.add('visible');
+      if(cutInfo){
+        const vid=document.getElementById('eb-video');
+        const dur=vid&&vid.duration?vid.duration:15;
+        const inSec=(window._trimIn*dur).toFixed(1);
+        const outSec=(window._trimOut*dur).toFixed(1);
+        cutInfo.textContent=inSec+'s – '+outSec+'s';
+        cutInfo.classList.add('visible');
+      }
+    }
+  });
+  document.addEventListener('mouseup',()=>{dragging=null;});
+  // Play button — single handler
+  const playBtn=document.getElementById('wtl-play');
+  if(playBtn){
+    let _playing=false;
+    // sync with video events
+    const vid2=document.getElementById('eb-video');
+    if(vid2){
+      vid2.addEventListener('pause',()=>{_playing=false;playBtn.textContent='▶';});
+      vid2.addEventListener('play',()=>{_playing=true;playBtn.textContent='⏸';});
+      vid2.addEventListener('ended',()=>{_playing=false;playBtn.textContent='▶';});
+      // update time display & playhead while playing
+      vid2.addEventListener('timeupdate',()=>{
+        const d=vid2.duration||1;
+        window._playheadPos=vid2.currentTime/d;
+        const mm=Math.floor(vid2.currentTime/60).toString().padStart(1,'0');
+        const ss=(vid2.currentTime%60).toFixed(0).padStart(2,'0');
+        const el=document.getElementById('wtl-time');
+        const dur=parseInt(document.querySelector('.wtl-dur.on')?.dataset.dur||'15');
+        if(el)el.textContent=mm+':'+ss+' / 0:'+dur;
+        drawTimeline();
+        // stop at trim out point
+        if(vid2.currentTime>=d*window._trimOut){vid2.pause();}
+      });
+    }
+    playBtn.addEventListener('click',()=>{
+      const vid=document.getElementById('eb-video');
+      if(!vid||!vid.src){toast('Önce video yükle');return;}
+      if(_playing){vid.pause();}
+      else{
+        if(vid.currentTime>=vid.duration*(window._trimOut||1))vid.currentTime=vid.duration*(window._trimIn||0);
+        vid.play().catch(()=>{});
+      }
+    });
+  }
+  // Cut button — FFmpeg trim (gerçek kesim)
+  const cutBtn2=document.getElementById('wtl-cut-btn');
+  if(cutBtn2){
+    cutBtn2.addEventListener('click',async()=>{
+      const vid=document.getElementById('eb-video');
+      if(!S.file||!S.file.type||!S.file.type.startsWith('video/')){toast('Önce video yükle');return;}
+      if(window._trimIn===0&&window._trimOut===1){toast('Önce sarmaldan kesim noktalarını ayarla');return;}
+      const dur=vid.duration||15;
+      const startSec=parseFloat((window._trimIn*dur).toFixed(3));
+      const endSec=parseFloat((window._trimOut*dur).toFixed(3));
+      // UI: yükleniyor
+      cutBtn2.disabled=true;
+      cutBtn2.textContent='⏳ Kesiliyor…';
+      const cutInfo=document.getElementById('wtl-cut-info');
+      if(cutInfo)cutInfo.textContent='';
+      try{
+        const fd=new FormData();
+        fd.append('file',S.file,S.file.name||'video.mp4');
+        fd.append('start',startSec);
+        fd.append('end',endSec);
+        fd.append('mode','video');
+        const resp=await fetch('/api/trim-upload',{method:'POST',body:fd});
+        if(!resp.ok){
+          const err=await resp.json().catch(()=>({error:'Sunucu hatası'}));
+          throw new Error(err.error||'Kesim başarısız');
+        }
+        const blob=await resp.blob();
+        const trimmedFile=new File([blob],S.file.name||'trim.mp4',{type:blob.type||'video/mp4'});
+        // Replace current file
+        S.file=trimmedFile;
+        S.fileBase64=null;
+        window._trimIn=0;window._trimOut=1;
+        window._cutApplied=true;
+        // Reload video on canvas
+        ebShowVideo(trimmedFile);
+        // Re-extract waveform
+        if(trimmedFile.arrayBuffer){
+          trimmedFile.arrayBuffer().then(buf=>{
+            const ac=new(window.AudioContext||window.webkitAudioContext)();
+            ac.decodeAudioData(buf).then(decoded=>{drawAudioWave(decoded.getChannelData(0));}).catch(()=>drawAudioWave(null));
+          }).catch(()=>{});
+        }
+        toast('✂ Video kesildi: '+startSec+'s – '+endSec+'s');
+        cutBtn2.classList.remove('visible');
+        cutBtn2.disabled=false;
+        cutBtn2.textContent='✂ KES';
+      }catch(e){
+        toast('❌ Kesim hatası: '+e.message);
+        cutBtn2.disabled=false;
+        cutBtn2.textContent='✂ KES';
+      }
+    });
+  }
+  // Audio Cut button — FFmpeg ses ayırma + kesim
+  const audioCutBtn2=document.getElementById('wtl-audio-cut-btn');
+  if(audioCutBtn2){
+    audioCutBtn2.addEventListener('click',async()=>{
+      if(!S.file||!S.file.type||!S.file.type.startsWith('video/')){toast('Önce video yükle');return;}
+      const vid=document.getElementById('eb-video');
+      const dur=vid&&vid.duration?vid.duration:15;
+      const startSec=parseFloat((window._trimIn*dur).toFixed(3));
+      const endSec=parseFloat((window._trimOut*dur).toFixed(3));
+      audioCutBtn2.disabled=true;
+      audioCutBtn2.textContent='⏳ Ses Kesiliyor…';
+      try{
+        const fd=new FormData();
+        fd.append('file',S.file,S.file.name||'video.mp4');
+        fd.append('start',startSec);
+        fd.append('end',endSec);
+        fd.append('mode','audio');
+        const resp=await fetch('/api/trim-upload',{method:'POST',body:fd});
+        if(!resp.ok){
+          const err=await resp.json().catch(()=>({error:'Sunucu hatası'}));
+          throw new Error(err.error||'Ses kesimi başarısız');
+        }
+        const blob=await resp.blob();
+        // Download as .wav
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url;a.download='audio_trim.wav';
+        document.body.appendChild(a);a.click();
+        setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},2000);
+        toast('🎵 Ses indirildi: '+startSec+'s – '+endSec+'s');
+        audioCutBtn2.disabled=false;
+        audioCutBtn2.textContent='🎵 SES KES';
+      }catch(e){
+        toast('❌ Ses kesim hatası: '+e.message);
+        audioCutBtn2.disabled=false;
+        audioCutBtn2.textContent='🎵 SES KES';
+      }
+    });
+  }
+  // Mute/Unmute button for audio track
+  const muteBtn=document.getElementById('wtl-mute-btn');
+  if(muteBtn){
+    muteBtn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const vid=document.getElementById('eb-video');
+      if(!vid){toast('Önce video yükle');return;}
+      vid.muted=!vid.muted;
+      muteBtn.textContent=vid.muted?'🔇':'🔊';
+      muteBtn.classList.toggle('muted',vid.muted);
+    });
+  }
+})();
+
+/* ━━━ CANVAS HISTOGRAM ━━━ */
+function drawCvHist(){
+  const canvas=document.getElementById('cv-hist');
+  if(!canvas)return;
+  const W=canvas.offsetWidth||116,H=52;
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const img=document.getElementById('eb-img');
+  if(img&&img.src&&img.src!==window.location.href&&img.complete&&img.naturalWidth>0){
+    try{
+      const tmp=document.createElement('canvas');
+      const sc=Math.min(1,200/img.naturalWidth,200/img.naturalHeight);
+      tmp.width=Math.round(img.naturalWidth*sc);tmp.height=Math.round(img.naturalHeight*sc);
+      tmp.getContext('2d').drawImage(img,0,0,tmp.width,tmp.height);
+      const data=tmp.getContext('2d').getImageData(0,0,tmp.width,tmp.height).data;
+      const rB=new Uint32Array(W),gB=new Uint32Array(W),bB=new Uint32Array(W);
+      for(let i=0;i<data.length;i+=4){
+        rB[Math.floor(data[i]/256*W)]++;
+        gB[Math.floor(data[i+1]/256*W)]++;
+        bB[Math.floor(data[i+2]/256*W)]++;
+      }
+      [[rB,'rgba(255,70,70,.65)'],[gB,'rgba(70,200,70,.5)'],[bB,'rgba(70,110,255,.6)']].forEach(([bins,color])=>{
+        const mx=Math.max(...Array.from(bins));if(!mx)return;
+        ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=1;
+        for(let x=0;x<W;x++){const y=H-(bins[x]/mx)*H*.9;x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+        ctx.stroke();
+      });
+      return;
+    }catch(e){}
+  }
+  // Decorative fallback
+  [[.3,.08,.7,'rgba(255,70,70,.55)'],[.5,.1,.65,'rgba(70,200,70,.45)'],[.65,.08,.55,'rgba(70,110,255,.55)']].forEach(([peak,sp,amp,color])=>{
+    ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=1.2;
+    for(let x=0;x<=W;x++){const t=x/W;const y=H-H*amp*Math.exp(-Math.pow(t-peak,2)/(2*sp*sp));x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.stroke();
+  });
+}
 
 /* ━━━ WIRE UP ━━━ */
 (function init(){
@@ -1722,26 +3274,75 @@ if(sesMixEl)sesMixEl.addEventListener('input',()=>{document.getElementById('ses-
   // Upload zone
   const uz=document.getElementById('upload-zone');
   const fi=document.getElementById('file-inp');
-  uz.addEventListener('click',e=>{if(!e.target.closest('.uz-clear')&&!e.target.closest('.uz-preview')&&!e.target.closest('video')&&!e.target.closest('a'))fi.click();});
+  uz.addEventListener('click',e=>{if(!e.target.closest('.wl-asset-del')&&!e.target.closest('.wl-uz-preview')&&!e.target.closest('video')&&!e.target.closest('a'))fi.click();});
   fi.addEventListener('change',()=>{if(fi.files.length)loadFiles(fi.files);fi.value='';});
   uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag');});
   uz.addEventListener('dragleave',()=>uz.classList.remove('drag'));
   uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('drag');if(e.dataTransfer.files.length)loadFiles(e.dataTransfer.files);});
+  // Asset panel mode chips
+  ['wlc-reels','wlc-foto','wlc-video'].forEach(id=>{
+    const btn=document.getElementById(id);
+    if(btn)btn.addEventListener('click',()=>{
+      document.querySelectorAll('.wl-chip').forEach(c=>c.classList.remove('on'));
+      btn.classList.add('on');
+    });
+  });
+  // Asset grid add button
+  const wlAdd=document.getElementById('wl-add-btn');
+  if(wlAdd)wlAdd.addEventListener('click',()=>fi.click());
+  // Timeline duration chips
+  document.querySelectorAll('.wtl-dur').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.wtl-dur').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+      const dur=btn.dataset.dur;
+      const tEl=document.getElementById('wtl-time');
+      if(tEl)tEl.textContent='0:00 / 0:'+dur;
+      drawTimeline();
+    });
+  });
+  // Timeline play button — handled in initTimelineInteraction, no duplicate here
+  // Toolbar wt-* buttons
+  document.querySelectorAll('.wt-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.wt-btn').forEach(b=>b.classList.remove('on'));
+      btn.classList.add('on');
+    });
+  });
+  // Draw timeline and histogram on load
+  setTimeout(()=>{drawTimeline();drawCvHist();},200);
+  // Redraw on resize
+  window.addEventListener('resize',()=>{drawTimeline();drawCvHist();});
   // Generate
   document.getElementById('btn-gen').addEventListener('click',generate);
   // Preview (placeholder)
   document.getElementById('btn-preview').addEventListener('click',()=>toast('Önizleme yakında...'));
-  // Admin bypass / returning user
-  if(new URLSearchParams(location.search).get('admin')==='1'){
-    S.customerId='admin';S.quota=999;
-    localStorage.setItem('fx_cid','admin');localStorage.setItem('fx_quota','999');
-    goCards();
-  } else if(S.customerId&&S.quota>0){
+  // Upgrade modal buttons
+  document.getElementById('upg-cancel').addEventListener('click',closeUpgradeModal);
+  document.getElementById('upg-modal').addEventListener('click',e=>{if(e.target===e.currentTarget)closeUpgradeModal();});
+  document.getElementById('upg-cta').addEventListener('click',()=>{
+    closeUpgradeModal();
+    toast('📩 Paket almak için: fenixai@gmail.com veya WhatsApp: +90 5XX XXX XX XX',6000);
+  });
+  // Returning user auto-login
+  if(S.customerId&&(S.quota>0||S.pkg!=='free')){
     goCards();
   }
   // SW
   if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 })();
+
+/* ━━━ FABRIC DELETE BUTTON ━━━ */
+document.addEventListener('DOMContentLoaded',()=>{
+  const delBtn=document.getElementById('fab-del-btn');
+  if(delBtn){
+    delBtn.addEventListener('click',()=>{
+      if(!_fc)return;
+      const obj=_fc.getActiveObject();
+      if(obj){_fc.remove(obj);_fc.discardActiveObject();_fc.renderAll();delBtn.style.display='none';}
+    });
+  }
+});
 </script>
 </body>
 </html>

@@ -346,19 +346,16 @@ function setLang(l){
 }
 
 // ── NOTIFY ──
-async function notify(){
+function notify(){
   const email=document.getElementById('email-input').value.trim();
   if(!email.includes('@')){ shake(); return; }
-  const btn=document.getElementById('btn-notify');
-  btn.disabled=true;
-  btn.textContent='...';
-  try {
-    await fetch('/api/waitlist',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({email,lang})
-    });
-  } catch(e){}
+  document.getElementById('btn-notify').disabled=true;
+  // Fire and forget — don't block on network
+  fetch('/api/waitlist',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({email,lang})
+  }).catch(()=>{});
   document.querySelector('.form-wrap').style.display='none';
   document.getElementById('form-note').style.display='none';
   document.getElementById('success-msg').classList.add('show');

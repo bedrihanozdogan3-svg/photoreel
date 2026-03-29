@@ -201,6 +201,26 @@ app.get('/app', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'app.html'));
 });
 
+// Workspace erişim kontrolü — customerId zorunlu (yoksa /app'e yönlendir)
+function requireCustomer(req, res, next) {
+  const cid = req.query.cid || '';
+  // Basit format kontrolü — boş veya geçersiz format → /app
+  if (!cid || !/^(phone_\d{7,15}|email_.{3,})$/.test(cid)) {
+    return res.redirect('/app');
+  }
+  next();
+}
+
+// Reels workspace — ayrı kart sayfası
+app.get('/workspace-reels', requireCustomer, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'workspace-reels.html'));
+});
+
+// Pro workspace — ayrı kart sayfası
+app.get('/workspace-pro', requireCustomer, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'workspace-pro.html'));
+});
+
 // Müşteri kayıt & quota API
 const customerRoutes = require('./routes/api-customer');
 app.use('/api/customer', customerRoutes);
@@ -971,6 +991,80 @@ app.post('/api/video/trim', async (req, res) => {
     const outPath = await videoProcessor.trimVideo(filePath, start, end);
     res.json({ ok: true, path: outPath });
   } catch(err) { res.status(500).json({ ok: false, error: err.message }); }
+});
+
+// Video yükle + kes + indir (CapCut tarzı frontend trim için)
+const multer = require('multer');
+const _trimUpload = multer({
+  dest: videoProcessor.TEMP_DIR,
+  limits: { fileSize: 500 * 1024 * 1024 } // 500 MB
+});
+app.post('/api/trim-upload', _trimUpload.single('file'), async (req, res) => {
+  const fs = require('fs');
+  let uploadedPath = null;
+  let outPath = null;
+  try {
+    if (!req.file) return res.status(400).json({ ok: false, error: 'Dosya gerekli' });
+    const start = parseFloat(req.body.start);
+    const end   = parseFloat(req.body.end);
+    const mode  = req.body.mode || 'video'; // 'video' | 'audio'
+    if (isNaN(start) || isNaN(end) || end <= start) {
+      return res.status(400).json({ ok: false, error: 'Geçersiz start/end' });
+    }
+    uploadedPath = req.file.path;
+    if (mode === 'audio') {
+      // Video kes → ses ayır
+      const trimmedPath = await videoProcessor.trimVideo(uploadedPath, start, end);
+      outPath = await videoProcessor.extractAudio(trimmedPath);
+      res.setHeader('Content-Disposition', 'attachment; filename="audio_trim.wav"');
+      res.setHeader('Content-Type', 'audio/wav');
+      // trimmedPath'i de sil
+      const stream = fs.createReadStream(outPath);
+      stream.on('close', () => {
+        try { fs.unlinkSync(outPath); } catch(e) {}
+        try { fs.unlinkSync(trimmedPath); } catch(e) {}
+      });
+      stream.pipe(res);
+    } else {
+      outPath = await videoProcessor.trimVideo(uploadedPath, start, end);
+      const ext = (req.file.originalname || 'video.mp4').split('.').pop() || 'mp4';
+      res.setHeader('Content-Disposition', `attachment; filename="trim.${ext}"`);
+      res.setHeader('Content-Type', req.file.mimetype || 'video/mp4');
+      const stream = fs.createReadStream(outPath);
+      stream.on('close', () => { try { fs.unlinkSync(outPath); } catch(e) {} });
+      stream.pipe(res);
+    }
+  } catch(err) {
+    res.status(500).json({ ok: false, error: err.message });
+  } finally {
+    if (uploadedPath) { try { fs.unlinkSync(uploadedPath); } catch(e) {} }
+  }
+});
+
+// Video birleştirme (Pro) — iki video yükle, concat çıktısı
+const _mergeUpload = multer({
+  dest: videoProcessor.TEMP_DIR,
+  limits: { fileSize: 500 * 1024 * 1024 }
+});
+app.post('/api/merge-upload', _mergeUpload.fields([{name:'fileA',maxCount:1},{name:'fileB',maxCount:1}]), async (req, res) => {
+  const fs = require('fs');
+  const pathA = req.files?.fileA?.[0]?.path;
+  const pathB = req.files?.fileB?.[0]?.path;
+  let outPath = null;
+  try {
+    if (!pathA || !pathB) return res.status(400).json({ ok: false, error: 'İki video de gerekli' });
+    outPath = await videoProcessor.concatVideos([pathA, pathB]);
+    res.setHeader('Content-Disposition', 'attachment; filename="merged.mp4"');
+    res.setHeader('Content-Type', 'video/mp4');
+    const stream = require('fs').createReadStream(outPath);
+    stream.on('close', () => { try { fs.unlinkSync(outPath); } catch(e) {} });
+    stream.pipe(res);
+  } catch(err) {
+    res.status(500).json({ ok: false, error: err.message });
+  } finally {
+    if (pathA) { try { fs.unlinkSync(pathA); } catch(e) {} }
+    if (pathB) { try { fs.unlinkSync(pathB); } catch(e) {} }
+  }
 });
 
 // === KULLANICI HAFIZASI API (marka kimliği + stil) ===

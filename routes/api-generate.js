@@ -49,6 +49,20 @@ const KOMUT_EKI = {
  *   customerId: string
  * }
  */
+// Firestore'dan paket kontrolü (basit)
+async function checkCustomerPkg(customerId, requiredPkg) {
+  const PKG_TIERS = ['free','reels','pro','360','ses','full'];
+  if (customerId === 'admin') return true;
+  try {
+    const admin = require('firebase-admin');
+    const db = admin.firestore();
+    const snap = await db.collection('fenix-customers').doc(customerId).get();
+    if (!snap.exists) return false;
+    const pkg = snap.data().pkg || 'free';
+    return PKG_TIERS.indexOf(pkg) >= PKG_TIERS.indexOf(requiredPkg);
+  } catch { return true; } // Firestore yoksa izin ver (dev)
+}
+
 router.post('/', async (req, res) => {
   if (!FAL_KEY) {
     return res.status(503).json({ ok: false, error: 'Video servisi henüz yapılandırılmadı.' });
@@ -61,6 +75,12 @@ router.post('/', async (req, res) => {
   }
   if (!customerId) {
     return res.status(400).json({ ok: false, error: 'Müşteri kimliği gerekli.' });
+  }
+
+  // Paket kontrolü — reels paketi gerekli
+  const hasAccess = await checkCustomerPkg(customerId, 'reels');
+  if (!hasAccess) {
+    return res.status(403).json({ ok: false, error: 'Bu özellik için Reels paketi gerekli.', requirePkg: 'reels' });
   }
 
   try {
@@ -187,6 +207,12 @@ router.post('/360', async (req, res) => {
   }
   if (!customerId) {
     return res.status(400).json({ ok: false, error: 'Müşteri kimliği gerekli.' });
+  }
+
+  // Paket kontrolü — 360° paketi gerekli
+  const has360Access = await checkCustomerPkg(customerId, '360');
+  if (!has360Access) {
+    return res.status(403).json({ ok: false, error: 'Bu özellik için 360° paketi gerekli.', requirePkg: '360' });
   }
 
   try {

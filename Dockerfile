@@ -2,6 +2,9 @@ FROM node:20-slim
 
 WORKDIR /app
 
+# FFmpeg — video kesme + ses ayırma için
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/*
+
 # Package files
 COPY package*.json ./
 RUN npm ci --only=production

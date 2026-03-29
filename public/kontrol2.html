@@ -968,7 +968,7 @@ function loadNabiz() {
     document.getElementById('sb-state-icon').textContent = r.running ? '🔥' : '⏳';
   }).catch(function() {});
 
-  ft('/api/agent/status').then(function(r) {
+  ft('/api/fenix/status').then(function(r) {
     if (!r) return;
     var skills = (r.shadowLearning && r.shadowLearning.skills) || {};
     var keys = Object.keys(skills);
@@ -1010,7 +1010,7 @@ function loadBeyin() {
     'Trend Analizi':  { score: 0, level: 'apprentice', successes: 0, total: 0 }
   };
 
-  ft('/api/agent/status').then(function(r) {
+  ft('/api/fenix/status').then(function(r) {
     var skills = (r && r.shadowLearning && r.shadowLearning.skills) || {};
     // Eğer gerçek veri varsa kullan, yoksa demo
     var finalSkills = Object.keys(skills).length >= 3 ? skills : demoSkills;
@@ -1166,7 +1166,7 @@ function loadDomain() {
     }
   }).catch(function() {});
 
-  ft('/api/agent/status').then(function(r) {
+  ft('/api/fenix/status').then(function(r) {
     setDot('dot-firestore', r ? 'ok' : 'err');
   }).catch(function() { setDot('dot-firestore', 'err'); });
   ft('/api/fenix/train/status').then(function(r) {

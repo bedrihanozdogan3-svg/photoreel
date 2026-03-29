@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FireReels - Video Editor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg-deep: #050508; --bg-panel: #0a0a0f; --bg-elevated: #12121a;
+      --orange-primary: #FF6B1A; --orange-glow: rgba(255,107,26,0.4);
+      --orange-soft: rgba(255,107,26,0.15); --text-primary: #ffffff;
+      --text-secondary: #8a8a9a; --border-color: #1a1a24;
+    }
+    body { font-family:'Inter',-apple-system,sans-serif; background:var(--bg-deep); color:var(--text-primary); height:100vh; overflow:hidden; }
+    .particles-container { position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:0; }
+    .particle { position:absolute; width:4px; height:4px; background:var(--orange-primary); border-radius:50%; opacity:0; filter:blur(1px); animation:rise 8s infinite; }
+    .particle:nth-child(1){left:5%;animation-delay:0s}.particle:nth-child(2){left:15%;animation-delay:1.5s}.particle:nth-child(3){left:25%;animation-delay:0.5s}.particle:nth-child(4){left:35%;animation-delay:2s}.particle:nth-child(5){left:45%;animation-delay:1s}.particle:nth-child(6){left:55%;animation-delay:2.5s}.particle:nth-child(7){left:65%;animation-delay:0.8s}.particle:nth-child(8){left:75%;animation-delay:1.8s}.particle:nth-child(9){left:85%;animation-delay:0.3s}.particle:nth-child(10){left:95%;animation-delay:2.2s}
+    @keyframes rise { 0%{bottom:-10px;opacity:0;transform:scale(0.5)} 10%{opacity:0.8} 50%{opacity:0.4} 100%{bottom:100vh;opacity:0;transform:scale(1.5) translateX(20px)} }
+    .editor-container { display:grid; grid-template-rows:56px 1fr 180px; grid-template-columns:280px 1fr 300px; height:100vh; position:relative; z-index:1; }
+    .toolbar { grid-column:1/-1; background:var(--bg-panel); border-bottom:1px solid var(--border-color); display:flex; align-items:center; padding:0 20px; gap:8px; }
+    .logo { display:flex; align-items:center; gap:10px; padding-right:24px; border-right:1px solid var(--border-color); margin-right:16px; }
+    .logo-icon { width:32px; height:32px; background:linear-gradient(135deg,var(--orange-primary),#ff9a5a); border-radius:8px; display:flex; align-items:center; justify-content:center; }
+    .logo-icon svg { width:18px; height:18px; fill:white; }
+    .logo-text { font-weight:700; font-size:18px; letter-spacing:-0.5px; }
+    .logo-text span { color:var(--orange-primary); }
+    .mode-badge { background:var(--orange-soft); color:var(--orange-primary); padding:4px 12px; border-radius:20px; font-size:12px; font-weight:600; margin-left:8px; }
+    .toolbar-divider { width:1px; height:32px; background:var(--border-color); margin:0 8px; }
+    .tool-btn { width:40px; height:40px; background:transparent; border:none; border-radius:8px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; color:var(--text-secondary); }
+    .tool-btn:hover { background:var(--orange-soft); color:var(--orange-primary); }
+    .tool-btn svg { width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:2; }
+    .toolbar-spacer { flex:1; }
+    .project-name { color:var(--text-secondary); font-size:14px; }
+    .project-name strong { color:var(--text-primary); font-weight:500; }
+    .btn-back { display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:8px; border:1px solid var(--border-color); font-size:12px; color:var(--text-secondary); cursor:pointer; background:transparent; transition:all 0.2s; }
+    .btn-back:hover { border-color:var(--orange-primary); color:var(--orange-primary); }
+
+    .left-panel { background:var(--bg-panel); border-right:1px solid var(--border-color); padding:20px; display:flex; flex-direction:column; gap:16px; overflow-y:auto; }
+    .panel-title { font-size:12px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--text-secondary); margin-bottom:4px; }
+    .upload-zone { border:2px dashed var(--border-color); border-radius:12px; padding:32px 20px; text-align:center; cursor:pointer; transition:all 0.3s; background:var(--bg-elevated); }
+    .upload-zone:hover,.upload-zone.dragover { border-color:var(--orange-primary); background:var(--orange-soft); box-shadow:0 0 30px var(--orange-glow); }
+    .upload-icon { width:48px; height:48px; background:var(--orange-soft); border-radius:12px; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; transition:all 0.3s; }
+    .upload-zone:hover .upload-icon { background:var(--orange-primary); transform:scale(1.1); }
+    .upload-icon svg { width:24px; height:24px; stroke:var(--orange-primary); fill:none; stroke-width:2; transition:stroke 0.3s; }
+    .upload-zone:hover .upload-icon svg { stroke:white; }
+    .upload-text { font-size:14px; font-weight:500; margin-bottom:4px; }
+    .upload-hint { font-size:12px; color:var(--text-secondary); }
+    .media-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-top:12px; }
+    .media-thumb { aspect-ratio:1; background:var(--bg-elevated); border-radius:8px; border:1px solid var(--border-color); display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
+    .media-thumb:hover { border-color:var(--orange-primary); box-shadow:0 0 15px var(--orange-glow); }
+    .media-thumb img,.media-thumb video { width:100%; height:100%; object-fit:cover; }
+    .media-thumb svg { width:24px; height:24px; stroke:var(--text-secondary); fill:none; stroke-width:1.5; }
+
+    .canvas-area { background:var(--bg-deep); display:flex; align-items:center; justify-content:center; padding:40px; position:relative; }
+    .canvas-frame { width:270px; height:480px; background:var(--bg-panel); border-radius:16px; position:relative; display:flex; align-items:center; justify-content:center; animation:pulseGlow 3s ease-in-out infinite; overflow:hidden; }
+    @keyframes pulseGlow { 0%,100%{box-shadow:0 0 0 2px var(--orange-primary),0 0 30px var(--orange-glow)} 50%{box-shadow:0 0 0 3px var(--orange-primary),0 0 50px var(--orange-glow)} }
+    .canvas-ratio { position:absolute; top:-32px; left:50%; transform:translateX(-50%); background:var(--bg-elevated); padding:4px 12px; border-radius:6px; font-size:12px; color:var(--text-secondary); border:1px solid var(--border-color); }
+    #eb-img { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:none; }
+    #eb-img.active { display:block; }
+    #eb-video { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:none; background:#000; }
+    #eb-video.active { display:block; }
+    .canvas-placeholder { text-align:center; color:var(--text-secondary); }
+    .canvas-placeholder svg { width:48px; height:48px; stroke:var(--text-secondary); fill:none; stroke-width:1.5; margin-bottom:12px; opacity:0.5; }
+
+    .right-panel { background:var(--bg-panel); border-left:1px solid var(--border-color); overflow-y:auto; }
+    .accordion-section { border-bottom:1px solid var(--border-color); }
+    .accordion-header { width:100%; padding:16px 20px; background:transparent; border:none; display:flex; align-items:center; justify-content:space-between; cursor:pointer; transition:all 0.2s; color:var(--text-primary); font-family:inherit; }
+    .accordion-header:hover { background:var(--orange-soft); }
+    .accordion-header-left { display:flex; align-items:center; gap:12px; }
+    .accordion-icon { width:32px; height:32px; background:var(--bg-elevated); border-radius:8px; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+    .accordion-header:hover .accordion-icon { background:var(--orange-primary); }
+    .accordion-icon svg { width:16px; height:16px; stroke:var(--orange-primary); fill:none; stroke-width:2; transition:stroke 0.2s; }
+    .accordion-header:hover .accordion-icon svg { stroke:white; }
+    .accordion-title { font-size:14px; font-weight:500; }
+    .accordion-chevron { width:20px; height:20px; stroke:var(--text-secondary); fill:none; stroke-width:2; transition:transform 0.3s; }
+    .accordion-section.open .accordion-chevron { transform:rotate(180deg); }
+    .accordion-content { padding:0 20px 16px; display:none; }
+    .accordion-section.open .accordion-content { display:block; }
+    .slider-control { margin-bottom:12px; }
+    .slider-label { display:flex; justify-content:space-between; font-size:12px; color:var(--text-secondary); margin-bottom:8px; }
+    .f-slider { width:100%; accent-color:var(--orange-primary); cursor:pointer; }
+    .chip-group { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .chip { padding:4px 10px; border-radius:999px; border:1px solid var(--border-color); font-size:11px; color:var(--text-secondary); background:var(--bg-elevated); cursor:pointer; transition:all 0.2s; }
+    .chip.on,.chip:hover { border-color:var(--orange-primary); color:var(--orange-primary); background:var(--orange-soft); }
+    .gen-btn { width:100%; padding:10px; border-radius:8px; background:linear-gradient(135deg,var(--orange-primary),#ff4500); border:none; color:#fff; font-size:12px; font-weight:700; cursor:pointer; letter-spacing:.06em; margin-top:8px; transition:all 0.2s; }
+    .gen-btn:hover { transform:translateY(-1px); box-shadow:0 6px 20px var(--orange-glow); }
+
+    .timeline { grid-column:1/-1; background:var(--bg-panel); border-top:1px solid var(--border-color); display:flex; flex-direction:column; }
+    .timeline-header { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; border-bottom:1px solid var(--border-color); }
+    .timeline-controls { display:flex; align-items:center; gap:8px; }
+    .play-btn { width:40px; height:40px; background:linear-gradient(135deg,var(--orange-primary),#ff9a5a); border:none; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+    .play-btn:hover { transform:scale(1.1); box-shadow:0 0 25px var(--orange-glow); }
+    .play-btn svg { width:18px; height:18px; fill:white; stroke:none; margin-left:2px; }
+    .time-display { font-size:14px; color:var(--text-secondary); }
+    .time-display span { color:var(--text-primary); font-weight:500; }
+    .cta-button { background:linear-gradient(135deg,var(--orange-primary),#ff4500); border:none; padding:12px 32px; border-radius:10px; font-family:inherit; font-size:14px; font-weight:700; color:white; cursor:pointer; transition:all 0.3s; text-transform:uppercase; letter-spacing:0.5px; }
+    .cta-button:hover { transform:translateY(-2px); box-shadow:0 8px 30px var(--orange-glow); }
+    .cta-button:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+    .timeline-tracks { flex:1; padding:16px 20px; position:relative; overflow-x:auto; }
+    .track { height:44px; background:var(--bg-elevated); border-radius:8px; margin-bottom:8px; position:relative; display:flex; align-items:center; padding:0 12px; gap:12px; }
+    .track-label { font-size:11px; font-weight:500; color:var(--text-secondary); text-transform:uppercase; width:60px; flex-shrink:0; }
+    .track-content { flex:1; height:28px; background:var(--bg-panel); border-radius:4px; position:relative; overflow:hidden; }
+    .video-clip { position:absolute; left:5%; width:60%; height:100%; background:linear-gradient(90deg,var(--orange-primary),#ff9a5a); border-radius:4px; opacity:0.8; display:none; }
+    .audio-waveform { position:absolute; inset:0; display:flex; align-items:center; gap:2px; padding:0 8px; }
+    .wave-bar { width:3px; background:var(--orange-primary); border-radius:2px; opacity:0.7; }
+    .cut-btn { padding:6px 14px; border-radius:6px; background:rgba(255,107,26,.15); border:1px solid rgba(255,107,26,.3); color:var(--orange-primary); font-size:11px; font-weight:700; cursor:pointer; display:none; }
+    .cut-btn.visible { display:inline-flex; }
+    ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--bg-elevated)}::-webkit-scrollbar-thumb{background:var(--border-color);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--orange-primary)}
+  </style>
+</head>
+<body>
+<div class="particles-container">
+  <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+  <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+  <div class="particle"></div><div class="particle"></div><div class="particle"></div>
+  <div class="particle"></div>
+</div>
+
+<div class="editor-container">
+  <!-- Toolbar -->
+  <header class="toolbar">
+    <button class="btn-back" onclick="location.href='/app'">← Geri</button>
+    <div class="logo" style="margin-left:12px">
+      <div class="logo-icon"><svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg></div>
+      <span class="logo-text">Fire<span>Reels</span></span>
+    </div>
+    <div class="mode-badge">REELS</div>
+    <div class="toolbar-divider"></div>
+    <button class="tool-btn" id="tb-select" title="Seç"><svg viewBox="0 0 24 24"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg></button>
+    <button class="tool-btn" id="tb-crop" title="Kırp"><svg viewBox="0 0 24 24"><path d="M6.13 1L6 16a2 2 0 002 2h15"/><path d="M1 6.13L16 6a2 2 0 012 2v15"/></svg></button>
+    <button class="tool-btn" id="tb-rotate" title="Döndür"><svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M2.5 22v-6h6"/><path d="M2.5 11.5a10 10 0 0118.8-4.3M21.5 12.5a10 10 0 01-18.8 4.2"/></svg></button>
+    <button class="tool-btn" id="tb-text" title="Metin"><svg viewBox="0 0 24 24"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg></button>
+    <div class="toolbar-spacer"></div>
+    <span class="project-name" id="quota-display">— hak</span>
+  </header>
+
+  <!-- Sol Panel -->
+  <aside class="left-panel">
+    <div>
+      <p class="panel-title">Medya Yükle</p>
+      <div class="upload-zone" id="uploadZone">
+        <div class="upload-icon">
+          <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <p class="upload-text">Sürükle & Bırak</p>
+        <p class="upload-hint">veya tıkla</p>
+        <input type="file" id="fileInp" accept="image/*,video/*" multiple style="display:none">
+      </div>
+    </div>
+    <div>
+      <p class="panel-title">Medya Kütüphanesi</p>
+      <div class="media-grid" id="mediaGrid"></div>
+    </div>
+  </aside>
+
+  <!-- Tezgah -->
+  <main class="canvas-area">
+    <div class="canvas-frame" id="canvasFrame">
+      <span class="canvas-ratio">9:16</span>
+      <img id="eb-img" alt="">
+      <video id="eb-video" loop playsinline muted></video>
+      <canvas id="fabricCanvas"></canvas>
+      <div class="canvas-placeholder" id="canvasPlaceholder">
+        <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+        <p>Video veya fotoğraf ekleyin</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Sağ Panel -->
+  <aside class="right-panel">
+    <!-- Üretim -->
+    <div class="accordion-section open">
+      <button class="accordion-header" onclick="toggleAcc(this)">
+        <div class="accordion-header-left">
+          <div class="accordion-icon"><svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg></div>
+          <span class="accordion-title">AI Üretim</span>
+        </div>
+        <svg class="accordion-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-content">
+        <div class="slider-label" style="margin-bottom:6px"><span>Marka</span></div>
+        <input type="text" id="brandInp" placeholder="ör: NikeTR" style="width:100%;padding:8px 10px;border-radius:6px;background:var(--bg-elevated);border:1px solid var(--border-color);color:#fff;font-size:12px;margin-bottom:10px">
+        <div class="slider-label"><span>Format</span></div>
+        <div class="chip-group">
+          <button class="chip on">9:16 Reels</button>
+          <button class="chip">1:1 Kare</button>
+          <button class="chip">16:9 Yatay</button>
+        </div>
+        <button class="gen-btn" id="genBtn" onclick="generate()">⚡ ÜRETİME BAŞLA</button>
+      </div>
+    </div>
+    <!-- Işık -->
+    <div class="accordion-section open">
+      <button class="accordion-header" onclick="toggleAcc(this)">
+        <div class="accordion-header-left">
+          <div class="accordion-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/></svg></div>
+          <span class="accordion-title">Işık</span>
+        </div>
+        <svg class="accordion-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-content">
+        <div class="slider-control"><div class="slider-label"><span>Parlaklık</span><span id="brightV">0</span></div><input type="range" class="f-slider" min="-100" max="100" value="0" oninput="document.getElementById('brightV').textContent=this.value"></div>
+        <div class="slider-control"><div class="slider-label"><span>Kontrast</span><span id="contV">0</span></div><input type="range" class="f-slider" min="-100" max="100" value="0" oninput="document.getElementById('contV').textContent=this.value"></div>
+        <div class="slider-control"><div class="slider-label"><span>Pozlama</span><span id="expV">0</span></div><input type="range" class="f-slider" min="-100" max="100" value="0" oninput="document.getElementById('expV').textContent=this.value"></div>
+      </div>
+    </div>
+    <!-- Kromatik -->
+    <div class="accordion-section">
+      <button class="accordion-header" onclick="toggleAcc(this)">
+        <div class="accordion-header-left">
+          <div class="accordion-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.555C21.965 6.012 17.461 2 12 2z"/></svg></div>
+          <span class="accordion-title">Kromatik</span>
+        </div>
+        <svg class="accordion-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-content">
+        <div class="slider-control"><div class="slider-label"><span>Doygunluk</span><span id="satV">0</span></div><input type="range" class="f-slider" min="-100" max="100" value="0" oninput="document.getElementById('satV').textContent=this.value"></div>
+        <div class="slider-control"><div class="slider-label"><span>Canlılık</span><span id="vibV">0</span></div><input type="range" class="f-slider" min="-100" max="100" value="0" oninput="document.getElementById('vibV').textContent=this.value"></div>
+        <div class="slider-control"><div class="slider-label"><span>Sıcaklık</span><span id="warmV">0</span></div><input type="range" class="f-slider" min="-100" max="100" value="0" oninput="document.getElementById('warmV').textContent=this.value"></div>
+      </div>
+    </div>
+    <!-- Ses -->
+    <div class="accordion-section">
+      <button class="accordion-header" onclick="toggleAcc(this)">
+        <div class="accordion-header-left">
+          <div class="accordion-icon"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg></div>
+          <span class="accordion-title">Ses</span>
+        </div>
+        <svg class="accordion-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-content">
+        <div class="slider-control"><div class="slider-label"><span>Ses Seviyesi</span><span id="volV">100%</span></div><input type="range" class="f-slider" min="0" max="200" value="100" oninput="document.getElementById('volV').textContent=this.value+'%';setVol(this.value)"></div>
+        <div class="slider-control"><div class="slider-label"><span>Bas</span><span id="bassV">0</span></div><input type="range" class="f-slider" min="-10" max="10" value="0" oninput="document.getElementById('bassV').textContent=this.value"></div>
+        <div class="slider-control"><div class="slider-label"><span>Tiz</span><span id="trebleV">0</span></div><input type="range" class="f-slider" min="-10" max="10" value="0" oninput="document.getElementById('trebleV').textContent=this.value"></div>
+      </div>
+    </div>
+    <!-- BPM -->
+    <div class="accordion-section">
+      <button class="accordion-header" onclick="toggleAcc(this)">
+        <div class="accordion-header-left">
+          <div class="accordion-icon"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+          <span class="accordion-title">BPM</span>
+        </div>
+        <svg class="accordion-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-content">
+        <div class="slider-control"><div class="slider-label"><span>Tempo</span><span id="bpmV">120 BPM</span></div><input type="range" class="f-slider" min="60" max="200" value="120" oninput="document.getElementById('bpmV').textContent=this.value+' BPM'"></div>
+      </div>
+    </div>
+    <!-- Efekt -->
+    <div class="accordion-section">
+      <button class="accordion-header" onclick="toggleAcc(this)">
+        <div class="accordion-header-left">
+          <div class="accordion-icon"><svg viewBox="0 0 24 24"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg></div>
+          <span class="accordion-title">Efekt</span>
+        </div>
+        <svg class="accordion-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-content">
+        <div class="chip-group">
+          <button class="chip on">Zoom Punch</button><button class="chip">Glitch</button>
+          <button class="chip">Flash Cut</button><button class="chip">Shake</button>
+          <button class="chip">Slide</button><button class="chip">Fade</button>
+        </div>
+        <div class="slider-control" style="margin-top:10px"><div class="slider-label"><span>Yoğunluk</span><span id="effV">7</span></div><input type="range" class="f-slider" min="1" max="10" value="7" oninput="document.getElementById('effV').textContent=this.value"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Timeline -->
+  <footer class="timeline">
+    <div class="timeline-header">
+      <div class="timeline-controls">
+        <button class="play-btn" id="playBtn" onclick="togglePlay()">
+          <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+        </button>
+        <span class="time-display"><span id="curTime">0:00</span> / <span id="durTime">0:00</span></span>
+        <button class="cut-btn" id="cutBtn">✂ KES</button>
+        <button class="cut-btn" id="audioCutBtn" style="background:rgba(80,200,255,.12);border-color:rgba(80,200,255,.35);color:rgba(80,200,255,.9)">🎵 SES KES</button>
+      </div>
+      <div>
+        <button class="cta-button" id="genBtn2" onclick="generate()">⚡ ÜRETİME BAŞLA</button>
+      </div>
+    </div>
+    <div class="timeline-tracks">
+      <div class="track">
+        <span class="track-label">Video</span>
+        <div class="track-content"><div class="video-clip" id="videoClip"></div></div>
+      </div>
+      <div class="track">
+        <span class="track-label">Ses</span>
+        <div class="track-content"><div class="audio-waveform" id="waveform"></div></div>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<div id="toast" style="position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(10,8,18,.95);border:1px solid rgba(255,107,26,.3);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;"></div>
+
+<script>
+const _qp = new URLSearchParams(location.search);
+const S = {
+  customerId: _qp.get('cid') || localStorage.getItem('fx_cid'),
+  quota: parseInt(localStorage.getItem('fx_quota')||'0'),
+  pkg: _qp.get('pkg') || localStorage.getItem('fx_pkg')||'free',
+  file: null, fileBase64: null, generating: false
+};
+
+// Auth check
+if (!S.customerId) {
+  location.href = '/app';
+}
+document.getElementById('quota-display').textContent = S.quota + ' hak';
+
+function toast(msg, dur=3000) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.style.opacity='1'; el.style.transform='translateX(-50%) translateY(0)';
+  setTimeout(()=>{el.style.opacity='0';el.style.transform='translateX(-50%) translateY(20px)';},dur);
+}
+
+function toggleAcc(btn) { btn.parentElement.classList.toggle('open'); }
+
+// Chip toggle
+document.querySelectorAll('.chip-group').forEach(g=>{
+  g.querySelectorAll('.chip').forEach(c=>{
+    c.addEventListener('click',()=>{
+      g.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+      c.classList.add('on');
+    });
+  });
+});
+
+// Waveform
+const wf=document.getElementById('waveform');
+for(let i=0;i<60;i++){const b=document.createElement('div');b.className='wave-bar';b.style.height=(Math.random()*20+4)+'px';wf.appendChild(b);}
+
+// Upload
+const uz=document.getElementById('uploadZone');
+const fi=document.getElementById('fileInp');
+uz.addEventListener('click',e=>{if(!e.target.closest('input'))fi.click();});
+fi.addEventListener('change',()=>{if(fi.files[0])loadFile(fi.files[0]);fi.value='';});
+uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('dragover');});
+uz.addEventListener('dragleave',()=>uz.classList.remove('dragover'));
+uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('dragover');if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
+
+function loadFile(file) {
+  S.file=file;
+  const ph=document.getElementById('canvasPlaceholder');
+  if(file.type.startsWith('video/')){
+    const vid=document.getElementById('eb-video');
+    if(vid._blob)URL.revokeObjectURL(vid._blob);
+    vid._blob=URL.createObjectURL(file);
+    vid.src=vid._blob; vid.classList.add('active');
+    document.getElementById('eb-img').classList.remove('active');
+    if(ph)ph.style.display='none';
+    vid.load(); vid.play().catch(()=>{});
+    vid.onloadedmetadata=()=>{
+      const m=Math.floor(vid.duration/60),s=Math.floor(vid.duration%60);
+      document.getElementById('durTime').textContent=m+':'+(s<10?'0':'')+s;
+      document.getElementById('videoClip').style.display='block';
+    };
+    S.fileBase64=null;
+  } else {
+    const reader=new FileReader();
+    reader.onload=e=>{
+      S.fileBase64=e.target.result;
+      const img=document.getElementById('eb-img');
+      img.src=e.target.result; img.classList.add('active');
+      document.getElementById('eb-video').classList.remove('active');
+      if(ph)ph.style.display='none';
+    };
+    reader.readAsDataURL(file);
+  }
+  // Add to media grid
+  addThumb(file);
+}
+
+function addThumb(file) {
+  const grid=document.getElementById('mediaGrid');
+  const item=document.createElement('div'); item.className='media-thumb';
+  if(file.type.startsWith('video/')){
+    const v=document.createElement('video');
+    v.src=URL.createObjectURL(file); v.style.cssText='width:100%;height:100%;object-fit:cover';
+    item.appendChild(v);
+  } else {
+    const img=document.createElement('img');
+    img.src=URL.createObjectURL(file);
+    item.appendChild(img);
+  }
+  item.addEventListener('click',()=>loadFile(file));
+  grid.appendChild(item);
+}
+
+// Play/pause
+function togglePlay(){
+  const vid=document.getElementById('eb-video');
+  if(!vid.src)return;
+  if(vid.paused){vid.play();document.querySelector('.play-btn svg').innerHTML='<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';}
+  else{vid.pause();document.querySelector('.play-btn svg').innerHTML='<polygon points="5,3 19,12 5,21"/>';}
+}
+
+function setVol(v){const vid=document.getElementById('eb-video');if(vid)vid.volume=Math.min(1,v/100);}
+
+// Generate
+async function generate(){
+  if(S.generating)return;
+  if(!S.file){toast('Önce dosya yükle');return;}
+  if(S.quota<=0&&S.pkg==='free'){toast('Hakkın bitti. Paket al.',4000);return;}
+  S.generating=true;
+  const btn=document.getElementById('genBtn'); btn.textContent='⏳ ÜRETİYOR...'; btn.disabled=true;
+  const btn2=document.getElementById('genBtn2'); btn2.textContent='⏳ ÜRETİYOR...'; btn2.disabled=true;
+  try{
+    const qr=await fetch('/api/customer/use-quota',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({customerId:S.customerId})});
+    const qd=await qr.json();
+    if(!qd.ok){toast(qd.error||'Hak hatası');done();return;}
+    S.quota=qd.remaining; localStorage.setItem('fx_quota',S.quota);
+    document.getElementById('quota-display').textContent=S.quota+' hak';
+  }catch(e){toast('Bağlantı hatası');done();return;}
+  const cat=document.getElementById('brandInp')?.value||'genel';
+  const body={kategori:'genel',komutlar:[],sirketAdi:cat,customerId:S.customerId};
+  if(S.fileBase64)body.imageBase64=S.fileBase64;
+  try{
+    const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const d=await r.json();
+    if(d.ok&&d.videoUrl){toast('✅ Video hazır!',5000);window.open(d.videoUrl,'_blank');}
+    else{toast(d.error||'Üretim başarısız');S.quota++;localStorage.setItem('fx_quota',S.quota);}
+  }catch(e){toast('Bağlantı hatası');}
+  done();
+}
+function done(){
+  S.generating=false;
+  const b1=document.getElementById('genBtn');b1.textContent='⚡ ÜRETİME BAŞLA';b1.disabled=false;
+  const b2=document.getElementById('genBtn2');b2.textContent='⚡ ÜRETİME BAŞLA';b2.disabled=false;
+}
+</script>
+</body>
+</html>

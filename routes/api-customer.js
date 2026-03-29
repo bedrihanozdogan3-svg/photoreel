@@ -28,6 +28,11 @@ const memStore = {};
 const FREE_QUOTA = 5;
 const COLLECTION = 'fenix-customers';
 
+// Paket hiyerarşisi: her paket altındakileri kapsar
+const PKG_TIERS = ['free','reels','pro','360','ses','full'];
+// Hangi kartlar hangi minimum paketi gerektiriyor
+const PKG_REQUIRED = { free:'free', reels:'reels', pro:'pro', '360':'360', ses:'ses', otonom:'full' };
+
 // CustomerId format doğrulama — path traversal ve injection engeli
 function isValidCustomerId(id) {
   return typeof id === 'string' && /^(phone_\d{7,15}|email_[a-z0-9._%+\-]{1,64}@[a-z0-9.\-]{1,255}\.[a-z]{2,})$/.test(id);
@@ -95,8 +100,9 @@ router.post('/register', async (req, res) => {
         const data = snap.data();
         const used = data.used || 0;
         const remaining = Math.max(0, FREE_QUOTA - used);
+        const pkg = data.pkg || 'free';
 
-        logger.info('Müşteri giriş yaptı', { customerId, used, remaining });
+        logger.info('Müşteri giriş yaptı', { customerId, used, remaining, pkg });
         return res.json({
           ok: true,
           customerId,
@@ -104,7 +110,8 @@ router.post('/register', async (req, res) => {
           used,
           total: FREE_QUOTA,
           isNew: false,
-          name: data.name || ''
+          name: data.name || '',
+          pkg
         });
       } else {
         // Yeni müşteri — kayıt oluştur
@@ -115,6 +122,7 @@ router.post('/register', async (req, res) => {
           name: name || '',
           used: 0,
           total: FREE_QUOTA,
+          pkg: 'free',
           createdAt: new Date().toISOString(),
           lastUsedAt: null
         };
@@ -128,19 +136,21 @@ router.post('/register', async (req, res) => {
           used: 0,
           total: FREE_QUOTA,
           isNew: true,
-          name: name || ''
+          name: name || '',
+          pkg: 'free'
         });
       }
     } else {
       // Bellek fallback
       if (!memStore[customerId]) {
-        memStore[customerId] = { used: 0, name: name || '', createdAt: Date.now() };
+        memStore[customerId] = { used: 0, name: name || '', pkg: 'free', createdAt: Date.now() };
       }
       const used = memStore[customerId].used;
       const remaining = Math.max(0, FREE_QUOTA - used);
       return res.json({
         ok: true, customerId, remaining, used, total: FREE_QUOTA,
-        isNew: used === 0, name: memStore[customerId].name
+        isNew: used === 0, name: memStore[customerId].name,
+        pkg: memStore[customerId].pkg || 'free'
       });
     }
   } catch (e) {
@@ -230,6 +240,35 @@ router.get('/quota/:customerId', async (req, res) => {
       return res.json({ ok: true, remaining: Math.max(0, FREE_QUOTA - rec.used), used: rec.used, total: FREE_QUOTA });
     }
   } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/**
+ * POST /api/customer/set-pkg
+ * Body: { customerId, pkg }
+ * Admin: müşteriye paket atar.
+ */
+router.post('/set-pkg', requireAdminLocal, async (req, res) => {
+  const { customerId, pkg } = req.body || {};
+  if (!customerId || !PKG_TIERS.includes(pkg)) {
+    return res.status(400).json({ ok: false, error: 'Geçersiz customerId veya pkg.' });
+  }
+  try {
+    const firestore = getDb();
+    if (firestore) {
+      const ref = firestore.collection(COLLECTION).doc(customerId);
+      const snap = await ref.get();
+      if (!snap.exists) return res.status(404).json({ ok: false, error: 'Müşteri bulunamadı.' });
+      await ref.update({ pkg, pkgUpdatedAt: new Date().toISOString() });
+    } else {
+      if (!memStore[customerId]) return res.status(404).json({ ok: false, error: 'Müşteri bulunamadı.' });
+      memStore[customerId].pkg = pkg;
+    }
+    logger.info('Müşteri paketi güncellendi', { customerId, pkg });
+    return res.json({ ok: true, customerId, pkg });
+  } catch (e) {
+    logger.error('set-pkg hatası', { error: e.message });
     res.status(500).json({ ok: false, error: e.message });
   }
 });
