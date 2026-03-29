@@ -714,9 +714,20 @@ canvas#particles{position:fixed;inset:0;pointer-events:none;z-index:0}
         </div>
         <div class="result-meta" id="result-meta"></div>
         <div class="result-quota" id="result-quota" style="display:none"></div>
+
+        <!-- EFEKT SEÇİMİ — video sonrası -->
+        <div id="effects-section" style="display:none;margin-top:16px">
+          <div style="font-size:9px;letter-spacing:2px;color:rgba(196,168,130,0.4);margin-bottom:10px">✦ EFEKT EKLE</div>
+          <div id="effects-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px"></div>
+          <div id="effect-applying" style="display:none;text-align:center;padding:10px;font-size:11px;color:rgba(196,168,130,0.5)">
+            <span style="animation:pulse 1.2s ease-in-out infinite;display:inline-block">⚡</span>
+            Efekt uygulanıyor...
+          </div>
+        </div>
+
         <div class="result-actions">
           <a href="#" class="btn-dl" id="btn-dl" download="fenix-video.png"><span id="dl-text">⬇ İNDİR</span></a>
-          <button class="btn-new" onclick="newVideo()"><span id="new-text">YENİ VİDEO +</span></button>
+          <button class="btn-new" id="btn-new-video"><span id="new-text">YENİ VİDEO +</span></button>
         </div>
       </div>
 
@@ -1320,6 +1331,8 @@ function showResult(videoUrl, data){
   const rb=document.getElementById('result-box');
   rb.classList.add('show');
   showQuota();
+  S._currentVideoUrl = videoUrl; // efektler için sakla
+  loadEffects(videoUrl);         // efekt butonlarını yükle
 
   const wrap = document.getElementById('video-canvas-wrap') || document.querySelector('.video-canvas-wrap');
 
@@ -1469,8 +1482,95 @@ function setupDownload(canvas){
   link.download='fenix-'+(S.company||'video').toLowerCase().replace(/\s+/g,'-')+'.png';
 }
 
+// ── EFEKTLER ──
+const EFFECT_DEFS = [
+  { id:'kamera-titresim',  emoji:'📳', label:'Titreşim',   desc:'Dinamik enerji' },
+  { id:'guclu-titresim',   emoji:'⚡', label:'Sert Titreşim', desc:'Aksiyon hissi' },
+  { id:'motion-blur',      emoji:'💨', label:'Motion Blur',desc:'Sinematik bulanıklık' },
+  { id:'speed-ramp',       emoji:'🚀', label:'Speed Ramp', desc:'Yavaştan hıza' },
+  { id:'barrel-distortion',emoji:'🌀', label:'Geniş Açı',  desc:'İçinde gibi hissiyat' },
+  { id:'sinematik',        emoji:'🎬', label:'Sinematik',  desc:'Film efekti' }
+];
+
+function loadEffects(videoUrl){
+  const sec = document.getElementById('effects-section');
+  const grid = document.getElementById('effects-grid');
+  if(!sec || !grid) return;
+
+  // Sadece gerçek video varsa efektleri göster
+  const isReal = videoUrl && (videoUrl.includes('fal.media') || videoUrl.includes('lumalabs') || videoUrl.includes('luma.video') || videoUrl.endsWith('.mp4'));
+  if(!isReal){ sec.style.display='none'; return; }
+
+  sec.style.display='block';
+  grid.innerHTML = EFFECT_DEFS.map(e => `
+    <button class="effect-btn" data-effect="${e.id}" style="
+      background:rgba(255,69,0,0.04);border:1px solid rgba(255,106,0,0.12);
+      border-radius:6px;padding:9px 6px;text-align:center;cursor:pointer;
+      transition:all .2s;color:rgba(196,168,130,0.7);font-family:inherit;font-size:10px">
+      <div style="font-size:18px;margin-bottom:3px">${e.emoji}</div>
+      <div style="font-weight:600;letter-spacing:.5px">${e.label}</div>
+      <div style="font-size:9px;opacity:.6;margin-top:1px">${e.desc}</div>
+    </button>
+  `).join('');
+
+  // Efekt butonlarına tıklama
+  grid.querySelectorAll('.effect-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyEffect(btn.dataset.effect));
+    btn.addEventListener('mouseenter', () => { btn.style.background='rgba(255,69,0,0.12)'; btn.style.borderColor='rgba(255,106,0,0.3)'; });
+    btn.addEventListener('mouseleave', () => { if(!btn.classList.contains('active')) { btn.style.background='rgba(255,69,0,0.04)'; btn.style.borderColor='rgba(255,106,0,0.12)'; } });
+  });
+}
+
+async function applyEffect(effectId){
+  const videoUrl = S._currentVideoUrl;
+  if(!videoUrl || !S.customerId) return;
+
+  const applying = document.getElementById('effect-applying');
+  const grid = document.getElementById('effects-grid');
+  if(applying) applying.style.display='block';
+  if(grid) grid.style.opacity='0.4';
+
+  // Aktif efekti işaretle
+  document.querySelectorAll('.effect-btn').forEach(b => {
+    b.style.background = b.dataset.effect===effectId ? 'rgba(255,107,26,0.2)' : 'rgba(255,69,0,0.04)';
+    b.style.borderColor = b.dataset.effect===effectId ? 'rgba(255,106,0,0.4)' : 'rgba(255,106,0,0.12)';
+  });
+
+  try {
+    const res = await fetch('/api/effects/apply', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ videoUrl, effectId, customerId: S.customerId })
+    });
+    const data = await res.json();
+
+    if(data.ok){
+      if(data.skipped){
+        toast('Efekt: ' + (data.message || 'Transloadit key gerekli'));
+      } else {
+        // Video'yu güncelle
+        S._currentVideoUrl = data.videoUrl;
+        const wrap = document.querySelector('.video-canvas-wrap');
+        if(wrap){
+          wrap.innerHTML = `<video id="result-video" autoplay loop muted playsinline
+            style="width:100%;height:100%;object-fit:cover;border-radius:8px"
+            src="${data.videoUrl}"></video>`;
+          const dl = document.getElementById('btn-dl');
+          if(dl) dl.onclick = ()=>{ const a=document.createElement('a'); a.href=data.videoUrl; a.download='fenix-efektli.mp4'; a.click(); };
+        }
+        toast('✓ Efekt uygulandı!');
+      }
+    }
+  } catch(e){
+    toast('Efekt hatası, tekrar dene');
+  } finally {
+    if(applying) applying.style.display='none';
+    if(grid) grid.style.opacity='1';
+  }
+}
+
 function newVideo(){
-  S.photo=null;S.photoHash=null;S.presets=[];S.customCmd='';S.category=null;
+  S.photo=null;S.photoHash=null;S.presets=[];S.customCmd='';S.category=null;S._currentVideoUrl=null;
   document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('sel'));
   document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('sel'));
   document.getElementById('cmd-input').value='';
@@ -1484,17 +1584,51 @@ function newVideo(){
 
 // ── PWA ──
 let deferredPrompt=null;
+
+// Zaten kuruluysa banner gösterme
+const isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+if(!isStandalone){
+  // iOS Safari için manuel talimat
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream;
+  if(isIOS){
+    // iOS'ta beforeinstallprompt yok — Safari paylaş butonu talimatı göster
+    setTimeout(()=>{
+      const bar = document.getElementById('pwa-bar');
+      if(bar){
+        bar.classList.add('show');
+        const sub = document.getElementById('pwa-sub');
+        if(sub) sub.textContent = 'Safari → Paylaş → Ana Ekrana Ekle';
+        const btn = document.getElementById('btn-pwa');
+        if(btn){ btn.textContent = 'NASIL?'; btn.addEventListener('click',()=>{
+          toast('Safari\'de: Paylaş → "Ana Ekrana Ekle" ye dokun');
+        });}
+      }
+    }, 3000);
+  }
+}
+
 window.addEventListener('beforeinstallprompt',e=>{
-  e.preventDefault();deferredPrompt=e;
-  document.getElementById('pwa-bar').classList.add('show');
+  e.preventDefault();
+  deferredPrompt=e;
+  if(!isStandalone) document.getElementById('pwa-bar').classList.add('show');
 });
+
+window.addEventListener('appinstalled',()=>{
+  document.getElementById('pwa-bar').classList.remove('show');
+  toast('Uygulama ana ekrana eklendi ✓');
+});
+
 function installPWA(){
   if(deferredPrompt){
     deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(()=>{
+    deferredPrompt.userChoice.then(r=>{
       deferredPrompt=null;
       document.getElementById('pwa-bar').classList.remove('show');
+      if(r.outcome==='accepted') toast('Uygulama eklendi ✓');
     });
+  } else {
+    // Chrome'da daha önce reddedildiyse → yönlendirme
+    toast('Chrome menüsü → "Sayfayı Yükle" veya adres çubuğundaki ⊞ simgesine tıkla');
   }
 }
 
@@ -1555,6 +1689,8 @@ function toast(msg){
   if(orbitSol) orbitSol.addEventListener('click', ()=> selectOrbitDir('sol'));
   if(orbitSag) orbitSag.addEventListener('click', ()=> selectOrbitDir('sag'));
   if(fireBtn)  fireBtn.addEventListener('click', ()=> startProduction());
+  const newBtn = document.getElementById('btn-new-video');
+  if(newBtn) newBtn.addEventListener('click', ()=> newVideo());
 
   // Service worker
   if('serviceWorker' in navigator){

@@ -207,13 +207,16 @@ app.use('/api/customer', customerRoutes);
 const generateRoutes = require('./routes/api-generate');
 app.use('/api/generate', generateRoutes);
 
+const effectsRoutes = require('./routes/api-effects');
+app.use('/api/effects', effectsRoutes);
+
 // Satıcı portalı — sadece admin girebilir
 app.get('/satici', requireAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'satici.html'));
 });
 
-// QR sayfası — sadece admin
-app.get('/qr', requireAdmin, (req, res) => {
+// QR sayfası — herkese açık (müşteri paylaşımı için)
+app.get('/qr', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'qr.html'));
 });
 

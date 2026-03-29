@@ -2,158 +2,112 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fenix — Telefona Kur</title>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fenix AI — QR Kod</title>
+<meta name="theme-color" content="#080507">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@300;400;600&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
 body{
-  background:#050508;color:#F0E6D3;
-  font-family:'Inter',sans-serif;min-height:100vh;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:32px 20px;
+  background:#080507;color:#F0E6D3;
+  font-family:'Inter',system-ui,sans-serif;
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:24px;
 }
-body::before{
-  content:'';position:fixed;inset:0;
-  background:radial-gradient(ellipse 60% 40% at 50% 100%,rgba(255,69,0,0.15),transparent 70%);
-  pointer-events:none;
+.card{
+  background:rgba(12,9,6,0.9);
+  border:1px solid rgba(255,107,26,0.25);
+  border-radius:16px;padding:40px 36px;
+  text-align:center;max-width:380px;width:100%;
+  box-shadow:0 0 60px rgba(255,69,0,0.08);
 }
-.wrap{position:relative;z-index:1;width:100%;max-width:400px;text-align:center}
-
 .logo{
-  font-family:'Cinzel',serif;font-size:28px;font-weight:900;
-  letter-spacing:8px;color:#C4A882;
-  text-shadow:0 0 30px rgba(255,106,0,0.5);
-  margin-bottom:4px;
+  font-family:Georgia,serif;font-size:28px;font-weight:900;
+  letter-spacing:8px;color:#D4A853;
+  text-shadow:0 0 30px rgba(255,106,0,0.5);margin-bottom:4px;
 }
-.tagline{font-size:10px;letter-spacing:3px;color:#7a6a55;margin-bottom:40px}
-
+.tagline{font-size:10px;letter-spacing:3px;color:rgba(196,168,130,0.4);margin-bottom:32px}
 .qr-wrap{
-  background:rgba(255,255,255,0.97);
-  border-radius:8px;padding:20px;
-  display:inline-block;margin-bottom:28px;
-  box-shadow:0 0 60px rgba(255,69,0,0.2);
+  background:#fff;border-radius:12px;padding:16px;
+  display:inline-block;margin-bottom:24px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.4);
 }
-#qr-canvas{display:block}
-
+.qr-wrap img{display:block;width:220px;height:220px}
 .url-box{
-  border:1px solid rgba(255,69,0,0.2);border-radius:4px;
-  padding:12px 16px;font-size:13px;color:#7a6a55;
-  letter-spacing:0.5px;margin-bottom:28px;
-  word-break:break-all;
+  background:rgba(255,107,26,0.06);border:1px solid rgba(255,107,26,0.15);
+  border-radius:8px;padding:10px 14px;font-size:11px;
+  color:rgba(196,168,130,0.7);word-break:break-all;margin-bottom:20px;
+  letter-spacing:.5px;
 }
-.url-box b{color:#C4A882}
-
-.steps{text-align:left;margin-bottom:32px}
-.step-row{
-  display:flex;align-items:flex-start;gap:12px;
-  padding:12px 0;border-bottom:1px solid rgba(255,69,0,0.08);
+.free-tag{
+  display:inline-block;background:rgba(255,69,0,0.1);
+  border:1px solid rgba(255,106,0,0.2);border-radius:20px;
+  padding:6px 16px;font-size:11px;letter-spacing:2px;
+  color:rgba(255,150,0,0.8);margin-bottom:20px;
 }
-.step-row:last-child{border-bottom:none}
-.step-n{
-  font-family:'Cinzel',serif;font-size:11px;
-  color:rgba(255,106,0,0.6);letter-spacing:1px;
-  width:24px;flex-shrink:0;padding-top:1px;
+.steps{text-align:left;margin-bottom:24px}
+.step{display:flex;align-items:flex-start;gap:12px;margin-bottom:12px}
+.step-num{
+  width:22px;height:22px;border-radius:50%;flex-shrink:0;
+  background:rgba(255,107,26,0.2);border:1px solid rgba(255,107,26,0.3);
+  font-size:10px;font-weight:700;color:rgba(255,150,0,0.8);
+  display:flex;align-items:center;justify-content:center;
 }
-.step-text{font-size:13px;color:#7a6a55;line-height:1.6}
-.step-text b{color:#C4A882}
-
-.platform-row{
-  display:flex;gap:12px;justify-content:center;margin-bottom:28px;
+.step-txt{font-size:12px;color:rgba(196,168,130,0.7);line-height:1.5;padding-top:2px}
+.step-txt strong{color:#E8DDD5}
+.btn-open{
+  display:block;width:100%;padding:14px;
+  background:linear-gradient(135deg,rgba(255,69,0,0.2),rgba(255,106,0,0.1));
+  border:1px solid rgba(255,106,0,0.3);border-radius:8px;
+  font-size:12px;letter-spacing:3px;color:rgba(255,150,0,0.9);
+  font-family:Georgia,serif;font-weight:700;text-decoration:none;transition:all .2s;
 }
-.plat{
-  flex:1;padding:12px;border:1px solid rgba(255,69,0,0.12);
-  border-radius:4px;font-size:11px;letter-spacing:1px;
-  color:#7a6a55;background:rgba(255,69,0,0.03);
+.btn-open:hover{background:rgba(255,69,0,0.25);border-color:rgba(255,106,0,0.5)}
+.footer{margin-top:16px;font-size:10px;color:rgba(196,168,130,0.25);letter-spacing:1px}
+@media print{
+  body{background:#fff}
+  .card{border-color:#ddd;box-shadow:none;background:#fff}
+  .logo,.tagline,.url-box,.free-tag,.step-txt,.footer{color:#333!important}
+  .btn-open{display:none}
 }
-.plat-icon{font-size:20px;display:block;margin-bottom:5px}
-
-.note{
-  font-size:11px;color:rgba(122,106,85,0.5);
-  letter-spacing:0.5px;line-height:1.6;
-}
-.note a{color:rgba(255,106,0,0.5);text-decoration:none}
-
-.btn-go{
-  display:inline-block;margin-top:20px;
-  padding:14px 32px;
-  border:1px solid rgba(255,106,0,0.3);border-radius:4px;
-  background:rgba(255,69,0,0.08);
-  font-family:'Cinzel',serif;font-size:11px;
-  letter-spacing:3px;color:rgba(255,150,0,0.8);
-  text-decoration:none;transition:all .3s;
-}
-.btn-go:hover{background:rgba(255,69,0,0.15);color:#FFAA00}
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="card">
   <div class="logo">FENİX</div>
-  <div class="tagline">TELEFONA YÜKLE · ANA EKRANA EKLE</div>
-
+  <div class="tagline">AI ÜRÜN VİDEO STÜDYOSU</div>
   <div class="qr-wrap">
-    <canvas id="qr-canvas"></canvas>
+    <img id="qr-img" src="" alt="QR Kod" width="220" height="220">
   </div>
-
-  <div class="url-box" id="url-box">
-    <b id="url-text">Yükleniyor...</b>
-  </div>
-
-  <div class="platform-row">
-    <div class="plat">
-      <span class="plat-icon">🍎</span>
-      Safari → Paylaş → Ana Ekrana Ekle
-    </div>
-    <div class="plat">
-      <span class="plat-icon">🤖</span>
-      Chrome → ⋮ → Uygulamayı Yükle
-    </div>
-  </div>
-
+  <div class="free-tag">🔥 İLK 5 VİDEO ÜCRETSİZ</div>
   <div class="steps">
-    <div class="step-row">
-      <div class="step-n">I</div>
-      <div class="step-text">Kamerayı aç, QR kodu okut<br><b>ya da linki kopyala</b></div>
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-txt"><strong>QR kodu tara</strong> — telefon kameranla</div>
     </div>
-    <div class="step-row">
-      <div class="step-n">II</div>
-      <div class="step-text">Tarayıcıda sayfa açılır<br><b>iPhone:</b> Safari alt menü → Paylaş → Ana Ekrana Ekle<br><b>Android:</b> Chrome ⋮ → Uygulamayı Yükle</div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-txt"><strong>Ürün fotoğrafını yükle</strong> — galeriden veya kameradan</div>
     </div>
-    <div class="step-row">
-      <div class="step-n">III</div>
-      <div class="step-text">Fenix ikonu ana ekrana iner<br><b>Tam ekran, uygulama gibi</b> açılır</div>
-    </div>
-    <div class="step-row">
-      <div class="step-n">IV</div>
-      <div class="step-text">Ayarlar'dan <b>şirket adı + logo</b> yükle<br>Bir kez kurulur, her video için otomatik eklenir</div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-txt"><strong>30 saniyede</strong> profesyonel Reels videonu al</div>
     </div>
   </div>
-
-  <a href="/app" class="btn-go">UYGULAMAYA GİT →</a>
-
-  <p class="note" style="margin-top:20px">
-    Play Store'a gerek yok — PWA olarak çalışır.<br>
-    İnternet bağlantısı olmadan bile temel özellikler açık kalır.
-  </p>
+  <div class="url-box" id="url-box">fenixphotoai.com/app</div>
+  <a class="btn-open" href="/app">UYGULAMAYI AÇ →</a>
+  <div class="footer">fenixphotoai.com · Fenix AI ile üretildi</div>
 </div>
-
 <script>
-// Mevcut URL'den QR oluştur
-const appUrl = window.location.origin + '/app';
-document.getElementById('url-text').textContent = appUrl;
-
-QRCode.toCanvas(
-  document.getElementById('qr-canvas'),
-  appUrl,
-  {
-    width: 220,
-    margin: 2,
-    color: { dark: '#050508', light: '#f7f3ee' },
-    errorCorrectionLevel: 'H'
-  },
-  err => { if (err) console.error(err); }
-);
+var appUrl = 'https://fenixphotoai.com/app';
+// Geliştirme ortamında gerçek URL kullan
+if (window.location.hostname !== 'fenixphotoai.com') {
+  appUrl = window.location.origin + '/app';
+}
+document.getElementById('url-box').textContent = appUrl;
+document.getElementById('qr-img').src =
+  'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='
+  + encodeURIComponent(appUrl)
+  + '&bgcolor=ffffff&color=080507&margin=0&format=png';
 </script>
 </body>
 </html>
