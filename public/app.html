@@ -364,6 +364,24 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
   white-space:nowrap;backdrop-filter:blur(12px);
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ━━━ TREND BADGES ━━━ */
+.trend-badge{font-size:9px;padding:1px 5px;border-radius:999px;background:rgba(255,165,0,.18);border:1px solid rgba(255,165,0,.4);color:#FFA500;font-weight:700;white-space:nowrap;flex-shrink:0;}
+.trend-chip{display:flex;align-items:center;gap:6px;}
+.trend-chip span:first-child{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* ━━━ MUSIC CARDS ━━━ */
+.music-card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:10px 12px;margin-bottom:6px;}
+.mc-top{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:2px;}
+.mc-name{font-size:12px;font-weight:600;color:var(--tx1);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px;}
+.mc-meta{font-size:10px;color:var(--tx3);margin-bottom:2px;}
+.mc-vibe{font-size:10px;color:var(--tx2);font-style:italic;margin-bottom:6px;line-height:1.4;}
+.pop-bar{height:2px;background:rgba(255,255,255,.1);border-radius:1px;}
+.pop-fill{height:100%;background:linear-gradient(90deg,#FF6B35,#FFA500);border-radius:1px;transition:width .6s ease;}
+
+/* ━━━ TREND LOADING ━━━ */
+.trend-loading{font-size:11px;color:var(--tx3);padding:8px 0;text-align:center;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
 </style>
 </head>
 <body>
@@ -617,6 +635,12 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
         <div class="chip-g"><button class="chip on">Sabit</button><button class="chip">Hızlanan</button><button class="chip">Yavaşlayan</button><button class="chip">Dinamik</button></div>
       </div>
       <div class="pnl-sec">
+        <div class="pnl-hd">Trend Geçişler <span class="trend-badge" style="font-size:8px;margin-left:4px">CANLI</span></div>
+        <div class="chip-g" id="trend-trans-pro"><div class="trend-loading">Trendler yükleniyor...</div></div>
+        <div class="pnl-row" style="margin-top:10px"><span class="pnl-lbl">Geçiş Yoğunluğu</span><span class="pnl-val" id="ef-val">7</span></div>
+        <input type="range" class="f-slider" id="ef-int" min="1" max="10" value="7">
+      </div>
+      <div class="pnl-sec">
         <div class="pnl-hd">Efekt Katmanları</div>
         <div class="chip-g">
           <button class="chip on">Zoom Punch</button><button class="chip">Glitch</button>
@@ -625,8 +649,10 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
           <button class="chip">Film Grain</button><button class="chip">Vignette</button>
           <button class="chip">Lens Flare</button><button class="chip">Chromatic</button>
         </div>
-        <div class="pnl-row"><span class="pnl-lbl">Efekt Yoğunluğu</span><span class="pnl-val" id="ef-val">7</span></div>
-        <input type="range" class="f-slider" id="ef-int" min="1" max="10" value="7">
+      </div>
+      <div class="pnl-sec">
+        <div class="pnl-hd">Trend Müzik <span class="trend-badge" style="font-size:8px;margin-left:4px">CANLI</span></div>
+        <div id="trend-music-pro"><div class="trend-loading">Müzik trendleri yükleniyor...</div></div>
       </div>
       <div class="pnl-sec">
         <div class="pnl-hd">Arka Plan</div>
@@ -665,29 +691,60 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
         <label class="f-lbl">Orbit Yönü</label>
         <select class="f-sel"><option value="sol">Soldan Sağa</option><option value="sag">Sağdan Sola</option><option value="oto">Otomatik</option></select>
         <label class="f-lbl">Orbit Hızı</label>
-        <input type="range" class="f-slider" min="1" max="10" value="5">
+        <input type="range" class="f-slider" id="s360-speed" min="1" max="10" value="5">
+        <div class="pnl-row" style="margin-top:4px"><span class="pnl-lbl">Smooth Stabilizasyon</span><div class="tog on" role="switch"></div></div>
+        <div class="pnl-row"><span class="pnl-lbl">Gyro Kompanzasyon</span><div class="tog on" role="switch"></div></div>
+      </div>
+      <div class="pnl-sec">
+        <div class="pnl-hd">Trend Geçişler <span class="trend-badge" style="font-size:8px;margin-left:4px">AKSİYON</span></div>
+        <div class="chip-g" id="trend-trans-360"><div class="trend-loading">Trendler yükleniyor...</div></div>
+        <div class="pnl-row" style="margin-top:10px"><span class="pnl-lbl">Geçiş Sertliği</span><span class="pnl-val" id="s360-trans-v">6</span></div>
+        <input type="range" class="f-slider" id="s360-trans" min="1" max="10" value="6">
+      </div>
+      <div class="pnl-sec">
+        <div class="pnl-hd">Speed-Ramp Kontrol</div>
+        <div class="pnl-row"><span class="pnl-lbl">Speed-ramp Aktif</span><div class="tog on" role="switch"></div></div>
+        <label class="f-lbl">Rampa Tipi</label>
+        <div class="chip-g">
+          <button class="chip on">Agresif</button><button class="chip">Orta</button>
+          <button class="chip">Hafif</button><button class="chip">Özel</button>
+        </div>
+        <label class="f-lbl">Giriş Hızı</label>
+        <input type="range" class="f-slider" min="1" max="10" value="3">
+        <label class="f-lbl">Doruk Hızı</label>
+        <input type="range" class="f-slider" min="1" max="10" value="9">
+        <label class="f-lbl">Çıkış Hızı</label>
+        <input type="range" class="f-slider" min="1" max="10" value="4">
       </div>
       <div class="pnl-sec">
         <div class="pnl-hd">Ses Filtreleri</div>
         <div class="pnl-row"><span class="pnl-lbl">Rüzgar Sesi Filtre</span><div class="tog on" role="switch"></div></div>
         <div class="pnl-row"><span class="pnl-lbl">Gürültü Azaltma</span><div class="tog on" role="switch"></div></div>
+        <div class="pnl-row"><span class="pnl-lbl">Dolby Atmos Sim</span><div class="tog" role="switch"></div></div>
         <label class="f-lbl">Highpass Frekans (Hz)</label>
         <input type="range" class="f-slider" min="80" max="400" value="200">
         <label class="f-lbl">Lowpass Frekans (Hz)</label>
         <input type="range" class="f-slider" min="5000" max="16000" value="8000">
+        <label class="f-lbl">Kompresör Eşiği (dB)</label>
+        <input type="range" class="f-slider" min="-40" max="0" value="-18">
       </div>
       <div class="pnl-sec">
         <div class="pnl-hd">Görsel İşleme</div>
         <div class="pnl-row"><span class="pnl-lbl">Plaka Blur</span><div class="tog" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Speed-ramp</span><div class="tog on" role="switch"></div></div>
-        <label class="f-lbl">Speed-ramp Etkisi</label>
-        <div class="chip-g"><button class="chip on">Agresif</button><button class="chip">Orta</button><button class="chip">Hafif</button></div>
+        <div class="pnl-row"><span class="pnl-lbl">HDR Tone Map</span><div class="tog on" role="switch"></div></div>
+        <div class="pnl-row"><span class="pnl-lbl">Lens Distortion Düzelt</span><div class="tog on" role="switch"></div></div>
         <div class="pnl-row"><span class="pnl-lbl">Equirectangular Doğrula</span><div class="tog on" role="switch"></div></div>
+        <label class="f-lbl">Horizon Line</label>
+        <input type="range" class="f-slider" min="-20" max="20" value="0">
       </div>
       <div class="pnl-sec">
         <div class="pnl-hd">Export</div>
-        <select class="f-sel"><option>MP4 H.264 · 60fps</option><option>MP4 H.265 · 60fps</option><option>MP4 H.264 · 30fps</option></select>
-        <select class="f-sel"><option>4K · 3840×1920</option><option>2K · 2560×1280</option><option>1080p · 1920×960</option></select>
+        <select class="f-sel"><option>MP4 H.264 · 60fps</option><option>MP4 H.265 · 60fps</option><option>MP4 H.264 · 30fps</option><option>MP4 H.265 · 120fps</option></select>
+        <select class="f-sel"><option>4K · 3840×1920</option><option>2K · 2560×1280</option><option>1080p · 1920×960</option><option>8K · 7680×3840</option></select>
+        <label class="f-lbl">Codec Profili</label>
+        <div class="chip-g">
+          <button class="chip on">Baseline</button><button class="chip">Main</button><button class="chip">High</button>
+        </div>
       </div>
     </div>
 
@@ -700,35 +757,85 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
           <button class="chip on">Yumuşak</button><button class="chip">Enerjik</button>
           <button class="chip">Net & Temiz</button><button class="chip">Sıcak</button>
           <button class="chip">Otoriter</button><button class="chip">Samimi</button>
+          <button class="chip">Dramatik</button><button class="chip">Nötr</button>
         </div>
-        <label class="f-lbl">Duygu</label>
+        <label class="f-lbl">Cinsiyet / Karakter</label>
+        <div class="chip-g">
+          <button class="chip on">Kadın Genç</button><button class="chip">Erkek Olgun</button>
+          <button class="chip">Kadın Olgun</button><button class="chip">Erkek Genç</button>
+          <button class="chip">Çocuk</button><button class="chip">Robot</button>
+        </div>
+        <label class="f-lbl">Duygu Yoğunluğu</label>
         <div class="chip-g">
           <button class="chip on">Nötr</button><button class="chip">Heyecanlı</button>
           <button class="chip">Sakin</button><button class="chip">Güvenli</button>
           <button class="chip">Eğlenceli</button><button class="chip">Ciddi</button>
+          <button class="chip">Melankolik</button><button class="chip">Coşkulu</button>
         </div>
       </div>
       <div class="pnl-sec">
+        <div class="pnl-hd">Ses İşleme</div>
+        <label class="f-lbl">Perde (Pitch) <span id="ses-pitch-v" style="color:var(--tx2)">0 st</span></label>
+        <input type="range" class="f-slider" id="ses-pitch" min="-12" max="12" value="0">
+        <label class="f-lbl">Hız (Rate) <span id="ses-rate-v" style="color:var(--tx2)">1.0x</span></label>
+        <input type="range" class="f-slider" id="ses-rate" min="50" max="200" value="100">
+        <label class="f-lbl">Reverb (Alan) <span id="ses-reverb-v" style="color:var(--tx2)">20%</span></label>
+        <input type="range" class="f-slider" id="ses-reverb" min="0" max="100" value="20">
+        <label class="f-lbl">Echo (ms) <span id="ses-echo-v" style="color:var(--tx2)">0</span></label>
+        <input type="range" class="f-slider" id="ses-echo" min="0" max="500" value="0">
+        <div class="pnl-row"><span class="pnl-lbl">Nefes Sesi Ekle</span><div class="tog" role="switch"></div></div>
+        <div class="pnl-row"><span class="pnl-lbl">Gürültü Kapısı</span><div class="tog on" role="switch"></div></div>
+        <div class="pnl-row"><span class="pnl-lbl">De-esser</span><div class="tog on" role="switch"></div></div>
+      </div>
+      <div class="pnl-sec">
+        <div class="pnl-hd">Ses Klonlama</div>
+        <label class="f-lbl">Klonlama Motoru</label>
+        <div class="chip-g">
+          <button class="chip on">ElevenLabs</button><button class="chip">Xtts-v2</button>
+          <button class="chip">OpenVoice</button><button class="chip">Fenix Native</button>
+        </div>
+        <div class="pnl-row"><span class="pnl-lbl">Referans Sesi Yükle</span><div class="tog" role="switch"></div></div>
+        <div class="pnl-row"><span class="pnl-lbl">Stil Transferi</span><div class="tog on" role="switch"></div></div>
+        <label class="f-lbl">Benzerlik Oranı</label>
+        <input type="range" class="f-slider" min="0" max="100" value="75">
+      </div>
+      <div class="pnl-sec">
         <div class="pnl-hd">Dil & Senkron</div>
-        <label class="f-lbl">Dil</label>
-        <select class="f-sel"><option>Türkçe</option><option>İngilizce</option><option>Almanca</option><option>Arapça</option><option>Fransızca</option><option>İspanyolca</option></select>
-        <div class="pnl-row"><span class="pnl-lbl">Lip-sync</span><div class="tog on" role="switch"></div></div>
+        <label class="f-lbl">Kaynak Dil</label>
+        <select class="f-sel"><option>Otomatik Algıla</option><option>Türkçe</option><option>İngilizce</option><option>Almanca</option><option>Arapça</option><option>Fransızca</option><option>İspanyolca</option><option>Japonca</option><option>Rusça</option></select>
+        <label class="f-lbl">Hedef Dil</label>
+        <select class="f-sel"><option>Türkçe</option><option>İngilizce</option><option>Almanca</option><option>Arapça</option><option>Fransızca</option><option>İspanyolca</option><option>Japonca</option><option>Rusça</option></select>
+        <div class="pnl-row"><span class="pnl-lbl">Lip-sync (Video)</span><div class="tog on" role="switch"></div></div>
         <div class="pnl-row"><span class="pnl-lbl">Duygu Koru</span><div class="tog on" role="switch"></div></div>
-        <div class="pnl-row"><span class="pnl-lbl">Vurgu Koru</span><div class="tog on" role="switch"></div></div>
+        <div class="pnl-row"><span class="pnl-lbl">Aksan / Vurgu Koru</span><div class="tog on" role="switch"></div></div>
+        <div class="pnl-row"><span class="pnl-lbl">Senkron Zamanlama</span><div class="tog on" role="switch"></div></div>
       </div>
       <div class="pnl-sec">
         <div class="pnl-hd">Ses Karışımı</div>
         <div class="pnl-row"><span class="pnl-lbl">BG Müziği Koru</span><div class="tog on" role="switch"></div></div>
-        <label class="f-lbl">Ses/Müzik Dengesi</label>
-        <input type="range" class="f-slider" min="0" max="100" value="70">
-        <label class="f-lbl">Çıktı Formatı</label>
-        <select class="f-sel"><option>MP4 + Senkron Ses</option><option>Sadece Ses (MP3)</option><option>Her ikisi</option></select>
+        <label class="f-lbl">Ses / Müzik Dengesi <span id="ses-mix-v" style="color:var(--tx2)">70%</span></label>
+        <input type="range" class="f-slider" id="ses-mix" min="0" max="100" value="70">
+        <label class="f-lbl">Trend BG Müzik <span class="trend-badge" style="margin-left:4px">CANLI</span></label>
+        <div id="trend-music-ses"><div class="trend-loading">Müzik önerileri yükleniyor...</div></div>
+        <label class="f-lbl" style="margin-top:8px">Çıktı Formatı</label>
+        <select class="f-sel"><option>MP4 + Senkron Ses</option><option>Sadece Ses (MP3)</option><option>Sadece Ses (WAV)</option><option>Her ikisi</option></select>
+        <label class="f-lbl">Çıktı Kalitesi</label>
+        <div class="chip-g">
+          <button class="chip">128kbps</button><button class="chip on">256kbps</button><button class="chip">320kbps</button><button class="chip">Lossless</button>
+        </div>
       </div>
       <div class="pnl-sec">
-        <div class="pnl-hd">Script</div>
+        <div class="pnl-hd">Script & AI Yazar</div>
         <label class="f-lbl">Özel Metin (opsiyonel)</label>
         <textarea class="f-ta" placeholder="Boş bırakırsan Fenix otomatik yazar..."></textarea>
         <div class="pnl-row"><span class="pnl-lbl">AI Script Yaz</span><div class="tog on" role="switch"></div></div>
+        <div class="pnl-row"><span class="pnl-lbl">SEO Hook Ekle</span><div class="tog on" role="switch"></div></div>
+        <div class="pnl-row"><span class="pnl-lbl">CTA Cümlesi</span><div class="tog on" role="switch"></div></div>
+        <label class="f-lbl">Ton / Stil</label>
+        <div class="chip-g">
+          <button class="chip on">Profesyonel</button><button class="chip">Konuşma</button>
+          <button class="chip">Viral Hook</button><button class="chip">Hikaye</button>
+        </div>
       </div>
     </div>
 
@@ -914,6 +1021,8 @@ function goWork(mode){
   updateCatBtn();
   // reset upload zone
   resetUpload();
+  // load trends for this category
+  renderTrends(S.cat);
   showScreen('s-work');
 }
 
@@ -939,7 +1048,7 @@ function updateCatBtn(){
   document.getElementById('btn-cat-sel').textContent=`${c.ico} ${c.lbl} ▾`;
 }
 function openCatModal(){buildCatGrid();document.getElementById('cat-modal').classList.add('open');}
-function closeCatModal(){document.getElementById('cat-modal').classList.remove('open');}
+function closeCatModal(){document.getElementById('cat-modal').classList.remove('open');renderTrends(S.cat);}
 
 /* ━━━ UPLOAD ━━━ */
 function resetUpload(){
@@ -1040,6 +1149,91 @@ function showResult(url){
   dl.textContent='⬇ İndir';uz.appendChild(dl);
 }
 
+/* ━━━ TRENDS ━━━ */
+const CAT_MAP={
+  gida:'yiyecek',icecek:'yiyecek',kozmetik:'kozmetik',parfum:'kozmetik',
+  giyim:'giyim',ayakkabi:'giyim',elektronik:'elektronik',spor:'spor',
+  taki:'taki',aksesuar:'aksesuar','ev-yasam':'dekor',
+  motor:'arac',suAlti:'spor',parasut:'spor',snowboard:'spor',tekne:'arac',pist:'arac'
+};
+let _trendsDB=null;
+async function loadTrends(){
+  if(_trendsDB)return _trendsDB;
+  try{const r=await fetch('/trends_db.json');_trendsDB=await r.json();}
+  catch(e){_trendsDB={};}
+  return _trendsDB;
+}
+function _makeChips(container,transObjs){
+  container.innerHTML=transObjs.map(t=>`
+    <button class="chip trend-chip" title="${t.desc||''}${t.capcut?'\nCapCut: '+t.capcut:''}">
+      <span>${t.name}</span><span class="trend-badge">${t.popularity||''}%</span>
+    </button>`).join('');
+  let first=true;
+  container.querySelectorAll('.chip').forEach(c=>{
+    if(first){c.classList.add('on');first=false;}
+    c.addEventListener('click',()=>{container.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));c.classList.add('on');});
+  });
+}
+function renderTrends(cat){
+  const dbCat=CAT_MAP[cat]||'giyim';
+  loadTrends().then(db=>{
+    if(!db||!db.trendMusic)return;
+    const allTrans=(db.trendTransitions&&db.trendTransitions.top15_overall)||[];
+    function resolveTransitions(catKey){
+      const catData=db.trendMusic[catKey];
+      if(!catData)return[];
+      return catData.transitions.map(name=>{
+        const found=allTrans.find(t=>t.name.toLowerCase()===name.toLowerCase());
+        return found||{name,popularity:75,desc:'',capcut:''};
+      });
+    }
+    // Pro panel transitions
+    const proEl=document.getElementById('trend-trans-pro');
+    if(proEl)_makeChips(proEl,resolveTransitions(dbCat));
+    // 360° panel — action oriented (arac/spor priority)
+    const el360=document.getElementById('trend-trans-360');
+    if(el360){
+      const actionKey=['arac','spor'].includes(dbCat)?dbCat:'arac';
+      _makeChips(el360,resolveTransitions(actionKey));
+    }
+    // Pro panel music
+    const musicProEl=document.getElementById('trend-music-pro');
+    if(musicProEl){
+      const catData=db.trendMusic[dbCat];
+      const songs=catData?catData.songs.slice(0,4):[];
+      if(songs.length){
+        musicProEl.innerHTML=songs.map(s=>`
+          <div class="music-card">
+            <div class="mc-top"><span class="mc-name">${s.name}</span><span class="trend-badge">${s.popularity}%</span></div>
+            <div class="mc-meta">${s.artist} · ${s.bpm} BPM · ${s.platform}</div>
+            <div class="mc-vibe">${s.vibe}</div>
+            <div class="pop-bar"><div class="pop-fill" style="width:${s.popularity}%"></div></div>
+          </div>`).join('');
+      } else {
+        musicProEl.innerHTML='<div class="trend-loading">Veri yok</div>';
+      }
+    }
+    // Ses panel music
+    const musicSesEl=document.getElementById('trend-music-ses');
+    if(musicSesEl){
+      const catData=db.trendMusic[dbCat];
+      const songs=catData?catData.songs.filter(s=>s.commercial).slice(0,3):[];
+      const allSongs=catData?catData.songs.slice(0,3):[];
+      const display=songs.length?songs:allSongs;
+      if(display.length){
+        musicSesEl.innerHTML=display.map(s=>`
+          <div class="music-card">
+            <div class="mc-top"><span class="mc-name">${s.name}</span><span class="trend-badge">${s.popularity}%</span></div>
+            <div class="mc-meta">${s.artist} · ${s.bpm} BPM${s.commercial?' · ✓ Ticari':''}</div>
+            <div class="pop-bar"><div class="pop-fill" style="width:${s.popularity}%"></div></div>
+          </div>`).join('');
+      } else {
+        musicSesEl.innerHTML='<div class="trend-loading">Veri yok</div>';
+      }
+    }
+  });
+}
+
 /* ━━━ TOGGLES ━━━ */
 document.querySelectorAll('.tog').forEach(t=>{
   t.addEventListener('click',()=>{const on=t.classList.toggle('on');t.setAttribute('aria-checked',on);});
@@ -1063,6 +1257,18 @@ const ppbpmEl=document.getElementById('pp-bpm');
 if(ppbpmEl)ppbpmEl.addEventListener('input',()=>{document.getElementById('pp-bpm-v').textContent=ppbpmEl.value;});
 const efEl=document.getElementById('ef-int');
 if(efEl)efEl.addEventListener('input',()=>{document.getElementById('ef-val').textContent=efEl.value;});
+const s360transEl=document.getElementById('s360-trans');
+if(s360transEl)s360transEl.addEventListener('input',()=>{document.getElementById('s360-trans-v').textContent=s360transEl.value;});
+const sesPitchEl=document.getElementById('ses-pitch');
+if(sesPitchEl)sesPitchEl.addEventListener('input',()=>{document.getElementById('ses-pitch-v').textContent=sesPitchEl.value+' st';});
+const sesRateEl=document.getElementById('ses-rate');
+if(sesRateEl)sesRateEl.addEventListener('input',()=>{document.getElementById('ses-rate-v').textContent=(sesRateEl.value/100).toFixed(1)+'x';});
+const sesReverbEl=document.getElementById('ses-reverb');
+if(sesReverbEl)sesReverbEl.addEventListener('input',()=>{document.getElementById('ses-reverb-v').textContent=sesReverbEl.value+'%';});
+const sesEchoEl=document.getElementById('ses-echo');
+if(sesEchoEl)sesEchoEl.addEventListener('input',()=>{document.getElementById('ses-echo-v').textContent=sesEchoEl.value;});
+const sesMixEl=document.getElementById('ses-mix');
+if(sesMixEl)sesMixEl.addEventListener('input',()=>{document.getElementById('ses-mix-v').textContent=sesMixEl.value+'%';});
 
 /* ━━━ WIRE UP ━━━ */
 (function init(){
