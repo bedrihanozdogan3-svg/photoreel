@@ -194,6 +194,10 @@ router.post('/register', async (req, res) => {
 router.post('/use-quota', async (req, res) => {
   const { customerId, operation = 'video' } = req.body || {};
   if (!customerId) return res.status(400).json({ ok: false, error: 'customerId gerekli.' });
+  // GÜVENLİK: customerId format doğrulama — IDOR engeli
+  if (!isValidCustomerId(customerId)) {
+    return res.status(400).json({ ok: false, error: 'Geçersiz customerId formatı.' });
+  }
 
   // Lip sync kesinlikle quota'dan gitmez — ayrı ödeme
   if (operation === 'lipsync') {

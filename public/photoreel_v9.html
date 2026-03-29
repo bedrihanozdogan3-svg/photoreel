@@ -1150,7 +1150,7 @@ header{display:flex;align-items:center;justify-content:space-between;padding:14p
 <div class="apibar" id="apikeybar" style="display:none;">
   <span class="apibar-label">🔑 Remove.bg:</span>
   <div class="api-status ok" id="apiStatus"></div>
-  <input type="text" id="apiKeyInput" value="pzjLbtmL3BpydT6VepbYC3GG" oninput="checkApiKey(this.value)" style="max-width:180px;">
+  <input type="text" id="apiKeyInput" value="" placeholder="API key girin" oninput="checkApiKey(this.value)" style="max-width:180px;">
   <input type="text" id="geminiKeyInput" value="" placeholder="Gemini API Key" style="display:none;">
 </div>
 
@@ -3648,7 +3648,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ─────────────────────────────────────────
 // STATE
 // ─────────────────────────────────────────
-let apiKey      = 'pzjLbtmL3BpydT6VepbYC3GG'; // pre-loaded
+let apiKey      = ''; // GÜVENLIK: hardcoded key kaldırıldı — kullanıcı girsin
 let uploadedFile = null;
 let removedBgBase64 = null; // şeffaf PNG, base64
 
@@ -3832,7 +3832,7 @@ async function runPipeline() {
       await sleep(200);
       try {
         // Önce Pexels sahne dene (ücretsiz, her zaman çalışır)
-        const pxKey = document.getElementById('pexelsKeyInput')?.value?.trim() || '1MYAYNoyrvJPbT3S6NI9KeCmV9cAhLFUZDsnkmI6boyGK2w9lx30K0Zr';
+        const pxKey = document.getElementById('pexelsKeyInput')?.value?.trim() || '';
         if (pxKey && lastAnalysisResult) {
           setStep('as3','cur','⟳ Pexels sahne aranıyor…');
           const searchTerms = {
@@ -15959,7 +15959,7 @@ const TrendAnalyzer = (() => {
   }
 
   // ═══ INSTAGRAM TREND ANALİZİ — Gerçek hashtag verisi ═══
-  const IG_TOKEN = 'IGAAU1Hn1VezdBZAFp6NU9vSlk3VDl2WTR0NVdYNVJibGloemNyR0d5TW80bU9TZAFc5TkRLTHdsNTVXeTJkc3ZAKenQySUFqMXktOVlhQ0hidE5TRWhycng3SWRTX3owVFY5Y1hsV1I1QjdNWlFUb3FBSFRR';
+  const IG_TOKEN = ''; // GÜVENLIK: token kaldırıldı — sunucu tarafından çekilecek
 
   async function fetchInstagramTrends(category) {
     const categoryHashtags = {

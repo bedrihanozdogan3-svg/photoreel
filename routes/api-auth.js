@@ -21,7 +21,7 @@ router.post('/admin', (req, res) => {
   const ADMIN_USER = process.env.ADMIN_USER;
   const ADMIN_PASS = process.env.ADMIN_PASS;
 
-  if (!ADMIN_USER || !ADMIN_PASS) {
+  if (!ADMIN_USER || !ADMIN_PASS || !process.env.JWT_SECRET) {
     return res.status(503).json({ ok: false, error: 'Admin kimlik bilgileri tanımlı değil.' });
   }
   if (username !== ADMIN_USER || password !== ADMIN_PASS) {
@@ -31,7 +31,7 @@ router.post('/admin', (req, res) => {
 
   const token = jwt.sign(
     { role: 'admin', user: ADMIN_USER },
-    process.env.JWT_SECRET || 'fenix-dev-secret',
+    process.env.JWT_SECRET,
     { expiresIn: '30d' }
   );
 
@@ -61,7 +61,7 @@ router.post('/admin/logout', (req, res) => {
  * Token geçerli mi kontrol et — giris.html auto-login için kullanır.
  */
 router.get('/admin/check', (req, res) => {
-  const jwtSecret = process.env.JWT_SECRET || 'fenix-dev-secret';
+  const jwtSecret = process.env.JWT_SECRET;
   const cookie = req.cookies && req.cookies.fenix_admin;
   const header = req.headers.authorization && req.headers.authorization.replace('Bearer ', '');
   const token = cookie || header;

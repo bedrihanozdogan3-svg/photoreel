@@ -134,17 +134,17 @@ app.use(express.static(path.join(__dirname, 'public'), {
 const chatRoutes = require('./routes/api-chat');
 app.use('/api/chat', chatRoutes(io));
 
-// Agent API (tablet uzaktan kontrol)
+// Agent API (tablet uzaktan kontrol) — ADMIN ONLY
 const agentRoutes = require('./routes/api-agent');
-app.use('/api/agent', agentRoutes);
+app.use('/api/agent', requireAdmin, agentRoutes);
 
 // Local Claude (prompt injection korumalı)
 const localClaudeRoutes = require('./routes/api-local-claude');
 app.use('/api/claude-local', localClaudeRoutes);
 
-// Gemini Kod Asistanı (tablet'ten dosya erişimi)
+// Gemini Kod Asistanı (tablet'ten dosya erişimi) — ADMIN ONLY
 const codeRoutes = require('./routes/api-gemini-code');
-app.use('/api/code', codeRoutes);
+app.use('/api/code', requireAdmin, codeRoutes);
 
 // Fenix Kontrol Paneli v2 (ember tasarım)
 app.get('/kontrol', requireAdmin, (req, res) => {
@@ -306,7 +306,7 @@ app.get('/qr', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'qr.html'));
 });
 
-// Versiyon & sistem sağlığı (kontrol paneli için) — TEK endpoint
+// Versiyon & sistem sağlığı — hassas bilgi gizlendi, temel bilgi herkese açık
 app.get('/api/version', (req, res) => {
   res.set('Cache-Control', 'no-cache');
   const pkg = (() => { try { return require('./package.json'); } catch { return {}; } })();
@@ -314,26 +314,13 @@ app.get('/api/version', (req, res) => {
     ok: true,
     version: pkg.version || '1.0.0',
     name: pkg.name || 'fenix-ai',
-    env: config.env || 'production',
-    uptime: Math.floor(process.uptime()),
-    nodeVersion: process.version,
-    timestamp: new Date().toISOString(),
-    revision: process.env.K_REVISION || 'dev',
-    ts: process.env.DEPLOY_TS || Date.now(),
-    services: {
-      firestore: !!process.env.GOOGLE_APPLICATION_CREDENTIALS || !!process.env.FIREBASE_PROJECT_ID,
-      gemini: !!process.env.GEMINI_API_KEY,
-      fal: !!process.env.FAL_KEY,
-      elevenlabs: !!process.env.ELEVENLABS_API_KEY,
-      deepgram: !!process.env.DEEPGRAM_API_KEY,
-      luma: !!process.env.LUMA_KEY
-    }
+    timestamp: new Date().toISOString()
   });
 });
 
-// Kod Review API (Gemini denetçi)
+// Kod Review API (Gemini denetçi) — ADMIN ONLY
 const codeReviewer = require('./services/code-reviewer');
-app.get('/api/code/review', async (req, res) => {
+app.get('/api/code/review', requireAdmin, async (req, res) => {
   try {
     const minutes = parseInt(req.query.minutes) || 30;
     const result = await codeReviewer.autoReview(config.geminiApiKey, minutes);
@@ -509,14 +496,32 @@ app.post('/api/tools/call', requireAuth, requirePermission('use_tools'), validat
   res.json({ ok: result.success, ...result });
 });
 
-// Auth endpoint (brute force korumalı)
+// Auth endpoint (brute force korumalı) — sadece kayıtlı müşteriler token alabilir
 const { generateToken } = require('./utils/jwt');
 const { recordFailedAttempt, clearFailedAttempts } = require('./middlewares/security');
-app.post('/api/auth/token', authLimiter, bruteForceCheck, auditLog('auth:token'), (req, res) => {
+app.post('/api/auth/token', authLimiter, bruteForceCheck, auditLog('auth:token'), async (req, res) => {
   const { userId } = req.body;
   if (!userId) {
     recordFailedAttempt(req.ip);
     return res.status(400).json({ ok: false, error: 'userId gerekli' });
+  }
+  // userId format doğrulama
+  if (!/^(phone_\d{7,15}|email_[a-z0-9._%+\-]{1,64}@[a-z0-9.\-]{1,255}\.[a-z]{2,})$/.test(userId)) {
+    recordFailedAttempt(req.ip);
+    return res.status(400).json({ ok: false, error: 'Geçersiz userId formatı' });
+  }
+  // Firestore'da kayıtlı mı kontrol et
+  try {
+    const admin = require('firebase-admin');
+    const db = admin.firestore();
+    const snap = await db.collection('fenix-customers').doc(userId).get();
+    if (!snap.exists) {
+      recordFailedAttempt(req.ip);
+      return res.status(404).json({ ok: false, error: 'Kayıtlı kullanıcı bulunamadı' });
+    }
+  } catch(e) {
+    // Firestore yoksa (dev) → devam et ama logla
+    logger.warn('Token: Firestore kontrolü atlandı', { error: e.message });
   }
   clearFailedAttempts(req.ip);
   const token = generateToken({ userId, role: 'user' });
@@ -529,44 +534,44 @@ const { getAllStates: getCircuitStates } = require('./utils/circuit-breaker');
 // Fenix Brain — Orkestrasyon, Shadow Learning, Otonom Optimizasyon, Self-Heal
 const fenixBrain = require('./services/fenix-brain');
 
-// Fenix Brain API
-app.get('/api/fenix/status', (req, res) => {
+// Fenix Brain API — ADMIN ONLY
+app.get('/api/fenix/status', requireAdmin, (req, res) => {
   res.json({ ok: true, ...fenixBrain.getFullStatus() });
 });
 
-app.get('/api/fenix/skills', (req, res) => {
+app.get('/api/fenix/skills', requireAdmin, (req, res) => {
   res.json({ ok: true, ...fenixBrain.getShadowStats() });
 });
 
-app.get('/api/fenix/errors', (req, res) => {
+app.get('/api/fenix/errors', requireAdmin, (req, res) => {
   res.json({ ok: true, ...fenixBrain.getErrorStats() });
 });
 
-app.post('/api/fenix/route', (req, res) => {
+app.post('/api/fenix/route', requireAdmin, (req, res) => {
   const { taskType, complexity } = req.body;
   if (!taskType) return res.status(400).json({ ok: false, error: 'taskType gerekli' });
   const route = fenixBrain.routeTask(taskType, complexity || 'normal');
   res.json({ ok: true, route });
 });
 
-app.post('/api/fenix/shadow', (req, res) => {
+app.post('/api/fenix/shadow', requireAdmin, (req, res) => {
   const { actor, taskType, input, output, outcome } = req.body;
   if (!actor || !taskType) return res.status(400).json({ ok: false, error: 'actor ve taskType gerekli' });
   const entry = fenixBrain.recordShadow(actor, taskType, input, output, outcome || 'success');
   res.json({ ok: true, entry, skillLevel: fenixBrain.getSkillLevel(taskType), skillScore: fenixBrain.getSkillScore(taskType) });
 });
 
-app.post('/api/fenix/optimize', (req, res) => {
+app.post('/api/fenix/optimize', requireAdmin, (req, res) => {
   const recommendations = fenixBrain.autoOptimize();
   res.json({ ok: true, recommendations, count: recommendations.length });
 });
 
-app.post('/api/fenix/rollback', (req, res) => {
+app.post('/api/fenix/rollback', requireAdmin, (req, res) => {
   const result = fenixBrain.rollback();
   res.json(result);
 });
 
-app.get('/api/fenix/escalation', (req, res) => {
+app.get('/api/fenix/escalation', requireAdmin, (req, res) => {
   const result = fenixBrain.checkEscalation();
   res.json({ ok: true, escalation: result });
 });
@@ -595,7 +600,7 @@ app.get('/api/fenix/memory/summary', async (req, res) => {
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-app.post('/api/fenix/memory', async (req, res) => {
+app.post('/api/fenix/memory', requireAdmin, async (req, res) => {
   try {
     const { category, bug, cause, fix, file, actor } = req.body;
     if (!category || !bug || !fix) return res.status(400).json({ ok: false, error: 'category, bug, fix gerekli' });
@@ -622,7 +627,7 @@ global.fenixBrain = fenixBrain;
 // ── Fenix Director — Otonom Video Üretim ──
 const fenixDirector = require('./services/fenix-director');
 
-app.post('/api/fenix/produce', async (req, res) => {
+app.post('/api/fenix/produce', requireAdmin, async (req, res) => {
   try {
     const brief = req.body;
     if (!brief.kategori) return res.status(400).json({ ok: false, error: 'kategori gerekli' });
@@ -637,7 +642,7 @@ app.post('/api/fenix/produce', async (req, res) => {
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
-app.post('/api/fenix/produce/test', async (req, res) => {
+app.post('/api/fenix/produce/test', requireAdmin, async (req, res) => {
   try {
     const kategori = req.body?.kategori || 'spor';
     res.json({ ok: true, message: `Test üretimi başladı — kategori: ${kategori}` });
@@ -651,7 +656,7 @@ app.post('/api/fenix/produce/test', async (req, res) => {
 });
 
 // ── Fenix 360° İşleme — kategoriye özel pipeline ──
-app.post('/api/fenix/360', async (req, res) => {
+app.post('/api/fenix/360', requireAdmin, async (req, res) => {
   try {
     const { kategori, dosyaYolu, sirketIsmi, kanca } = req.body;
     if (!kategori) return res.status(400).json({ ok: false, error: 'kategori gerekli' });
@@ -676,7 +681,7 @@ const fenixTrainer = require('./services/fenix-trainer');
 // MAKSİMUM bütçe kilidi — hiçbir şekilde $10 üstü harcama yapılamaz
 const MAX_TRAIN_BUDGET = 20;
 
-app.post('/api/fenix/train', async (req, res) => {
+app.post('/api/fenix/train', requireAdmin, async (req, res) => {
   const requested = parseFloat(req.body?.budget) || 5;
   // Güvenlik kilidi: max $10, min $1
   const budget = Math.min(MAX_TRAIN_BUDGET, Math.max(1, requested));
@@ -692,7 +697,7 @@ app.post('/api/fenix/train', async (req, res) => {
   );
 });
 
-app.post('/api/fenix/train/stop', (req, res) => {
+app.post('/api/fenix/train/stop', requireAdmin, (req, res) => {
   fenixTrainer.stop();
   res.json({ ok: true, message: 'Durdurma isteği gönderildi' });
 });
@@ -731,11 +736,11 @@ app.get('/api/fenix/health', (req, res) => {
 // Manuel başlatma: POST /api/fenix/train { budget: 5 }
 // setInterval(fenixWatchdog, 5 * 60 * 1000);
 
-// Frontend config — public key'leri expose et (secret değil, client-side API)
+// Frontend config — API key'ler ASLA client'a gönderilmez
 app.get('/api/config', (req, res) => {
   res.json({
-    geminiKey: process.env.GEMINI_API_KEY || '',
-    version: process.env.npm_package_version || '1.0'
+    version: process.env.npm_package_version || '1.0',
+    hasGemini: !!process.env.GEMINI_API_KEY
   });
 });
 

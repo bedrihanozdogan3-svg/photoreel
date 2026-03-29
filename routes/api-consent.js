@@ -54,7 +54,8 @@ function isValidCid(id) {
 
 // ── HMAC imzası oluştur ──
 function signConsent(data) {
-  const secret = process.env.JWT_SECRET || 'fenix-consent-secret';
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET eksik — HMAC imzalama yapılamaz');
   const payload = JSON.stringify({
     userId: data.userId,
     timestamp: data.timestamp,

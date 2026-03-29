@@ -158,6 +158,9 @@ input:focus{border-color:var(--red)}
 </div>
 
 <script>
+// XSS koruması — tüm API verisini sanitize et
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+
 const today = new Date().toISOString().slice(0,10);
 document.getElementById('log-date').value = today;
 
@@ -201,13 +204,13 @@ async function loadAlarms() {
     d.alarms.forEach(a => {
       const typeTag = a.type === 'auto_ban' ? 'red' : a.type === 'multi_account' ? 'yellow' : 'gray';
       html += `<tr>
-        <td><span class="tag ${typeTag}">${a.type}</span></td>
-        <td><code>${a.ip}</code></td>
-        <td style="color:var(--sub);font-size:12px">${a.detail || ''}</td>
+        <td><span class="tag ${typeTag}">${esc(a.type)}</span></td>
+        <td><code>${esc(a.ip)}</code></td>
+        <td style="color:var(--sub);font-size:12px">${esc(a.detail)}</td>
         <td style="color:var(--sub);font-size:12px">${formatTime(a.createdAt)}</td>
         <td style="display:flex;gap:6px">
-          <button class="btn btn-ban" onclick="banFromAlarm('${a.ip}','${a.id}')">Ban Et</button>
-          <button class="btn btn-resolve" onclick="resolveAlarm('${a.id}')">Çözüldü</button>
+          <button class="btn btn-ban" onclick="banFromAlarm('${esc(a.ip)}','${esc(a.id)}')">Ban Et</button>
+          <button class="btn btn-resolve" onclick="resolveAlarm('${esc(a.id)}')">Çözüldü</button>
         </td>
       </tr>`;
     });
@@ -246,11 +249,11 @@ async function loadBanned() {
     let html = '<table><thead><tr><th>IP</th><th>Sebep</th><th>Tip</th><th>Zaman</th><th>İşlem</th></tr></thead><tbody>';
     d.ips.forEach(ip => {
       html += `<tr>
-        <td><code>${ip.ip}</code></td>
-        <td style="color:var(--sub)">${ip.reason || '—'}</td>
+        <td><code>${esc(ip.ip)}</code></td>
+        <td style="color:var(--sub)">${esc(ip.reason) || '—'}</td>
         <td><span class="tag ${ip.auto ? 'red' : 'yellow'}">${ip.auto ? 'Otomatik' : 'Manuel'}</span></td>
         <td style="color:var(--sub);font-size:12px">${formatTime(ip.bannedAt)}</td>
-        <td><button class="btn btn-unban" onclick="unban('${ip.ip}')">Ban Kaldır</button></td>
+        <td><button class="btn btn-unban" onclick="unban('${esc(ip.ip)}')">Ban Kaldır</button></td>
       </tr>`;
     });
     html += '</tbody></table>';
@@ -290,11 +293,11 @@ async function loadLogs() {
     d.logs.forEach(l => {
       const resTag = l.result === 'ok' ? 'green' : 'red';
       html += `<tr>
-        <td><code style="font-size:11px">${l.action}</code></td>
-        <td style="font-size:11px;color:var(--sub)">${l.customerId?.slice(0,20) || '—'}</td>
-        <td style="font-size:11px"><code>${l.ip || '—'}</code></td>
-        <td><span class="tag ${resTag}">${l.result}</span></td>
-        <td style="color:var(--sub);font-size:11px">${l.duration ? l.duration+'ms' : '—'}</td>
+        <td><code style="font-size:11px">${esc(l.action)}</code></td>
+        <td style="font-size:11px;color:var(--sub)">${esc(l.customerId?.slice(0,20)) || '—'}</td>
+        <td style="font-size:11px"><code>${esc(l.ip) || '—'}</code></td>
+        <td><span class="tag ${resTag}">${esc(l.result)}</span></td>
+        <td style="color:var(--sub);font-size:11px">${l.duration ? esc(l.duration)+'ms' : '—'}</td>
         <td style="color:var(--sub);font-size:11px">${formatTime(l.timestamp)}</td>
       </tr>`;
     });
@@ -314,11 +317,11 @@ async function manualBan() {
   const d = await apiFetch('/api/security/ban', { method: 'POST', body: JSON.stringify({ ip, reason: reason || 'manuel' }) });
   const el = document.getElementById('ban-result');
   if (d.ok) {
-    el.innerHTML = `<span style="color:var(--green)">✅ ${ip} başarıyla banlandı.</span>`;
+    el.innerHTML = `<span style="color:var(--green)">✅ ${esc(ip)} başarıyla banlandı.</span>`;
     document.getElementById('ban-ip').value = '';
     document.getElementById('ban-reason').value = '';
   } else {
-    el.innerHTML = `<span style="color:var(--red)">❌ Hata: ${d.error}</span>`;
+    el.innerHTML = `<span style="color:var(--red)">❌ Hata: ${esc(d.error)}</span>`;
   }
 }
 

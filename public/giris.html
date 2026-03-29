@@ -249,7 +249,9 @@ canvas#fire{position:fixed;inset:0;pointer-events:none;z-index:0}
 (function(){
   const token = localStorage.getItem('fenix_token');
   if(token){
-    const next = new URLSearchParams(location.search).get('next') || '/satici';
+    const SAFE_PATHS = ['/kontrol','/satici','/qr','/dashboard','/analytics','/guvenlik'];
+    const raw = new URLSearchParams(location.search).get('next') || '/satici';
+    const next = SAFE_PATHS.includes(raw.split('?')[0]) ? raw : '/satici';
     // Token geçerliliğini backend'e sor
     fetch('/api/auth/admin/check', {
       headers: { 'Authorization': 'Bearer ' + token }
@@ -314,8 +316,10 @@ async function giris(){
     if(data.ok && data.token){
       localStorage.setItem('fenix_token', data.token);
       btn.innerHTML = '✓ GİRİLDİ';
-      const next = new URLSearchParams(location.search).get('next') || '/kontrol';
-      setTimeout(() => { window.location.href = next; }, 300);
+      const SAFE = ['/kontrol','/satici','/qr','/dashboard','/analytics','/guvenlik'];
+      const rawNext = new URLSearchParams(location.search).get('next') || '/kontrol';
+      const safeNext = SAFE.includes(rawNext.split('?')[0]) ? rawNext : '/kontrol';
+      setTimeout(() => { window.location.href = safeNext; }, 300);
     } else {
       if(res.status === 401){
         showErr('❌ Hatalı kullanıcı adı veya şifre.');

@@ -248,7 +248,8 @@ const BLOCKED_COMMANDS = ['rm -rf', 'sudo', 'shutdown', 'reboot', 'format', 'del
 
 async function executeCommand(command, cwd) {
   // Komut güvenlik kontrolü
-  const cmd = command.trim().split(/\s+/)[0].toLowerCase();
+  const parts = command.trim().split(/\s+/);
+  const cmd = parts[0].toLowerCase();
   if (!ALLOWED_COMMANDS.includes(cmd)) {
     throw new Error(`Komut engellendi: "${cmd}" — izin verilen: ${ALLOWED_COMMANDS.join(', ')}`);
   }
@@ -257,16 +258,20 @@ async function executeCommand(command, cwd) {
       throw new Error(`Tehlikeli komut engellendi: ${blocked}`);
     }
   }
+  // Shell metacharacter injection engeli — ;, &&, ||, |, `, $( kullanılamaz
+  if (/[;|&`$]/.test(command)) {
+    throw new Error('Komutta shell metacharacter kullanılamaz: ; | & ` $');
+  }
 
   const execCwd = cwd ? safePath(cwd) : PROJECT_ROOT;
 
   return new Promise((resolve, reject) => {
-    const parts = command.split(/\s+/);
     execFile(parts[0], parts.slice(1), {
       cwd: execCwd,
       timeout: 30000,
       maxBuffer: 1024 * 1024,
-      shell: true
+      shell: false, // GÜVENLİK: shell KAPALI — metacharacter injection engeli
+      windowsHide: true
     }, (err, stdout, stderr) => {
       resolve({
         command,

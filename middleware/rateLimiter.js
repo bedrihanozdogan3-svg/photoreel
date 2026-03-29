@@ -42,7 +42,8 @@ setInterval(() => {
  */
 function rateLimiter(req, res, next) {
   const customerId = req.body?.customerId || req.query?.cid || 'anonymous';
-  const plan = req.body?.plan || req.customerPlan || 'free';
+  // GÜVENLİK: plan bilgisi ASLA client'tan alınmaz — sunucu tarafında çözülür
+  const plan = req.customerPlan || 'free'; // req.body.plan KULLANILMAZ
   const maxPerMin = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free;
   const now = Date.now();
 

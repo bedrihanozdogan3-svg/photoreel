@@ -54,7 +54,8 @@ const KOMUT_EKI = {
 // Firestore'dan paket kontrolü (basit)
 async function checkCustomerPkg(customerId, requiredPkg) {
   const PKG_TIERS = ['free','reels','pro','360','ses','full'];
-  if (customerId === 'admin') return true;
+  // GÜVENLİK: 'admin' string bypass kaldırıldı
+  if (!customerId || typeof customerId !== 'string') return false;
   try {
     const admin = require('firebase-admin');
     const db = admin.firestore();
@@ -62,7 +63,11 @@ async function checkCustomerPkg(customerId, requiredPkg) {
     if (!snap.exists) return false;
     const pkg = snap.data().pkg || 'free';
     return PKG_TIERS.indexOf(pkg) >= PKG_TIERS.indexOf(requiredPkg);
-  } catch { return true; } // Firestore yoksa izin ver (dev)
+  } catch(e) {
+    // GÜVENLİK: Firestore hatası → ENGELLE (fail-closed), loglama yap
+    logger.warn('Paket kontrolü Firestore hatası — erişim engellendi', { customerId, error: e.message });
+    return false;
+  }
 }
 
 router.post('/', rateLimiter, auditLogger('video_generate'), async (req, res) => {
@@ -197,7 +202,7 @@ async function uploadToFal(base64String) {
  * }
  * Luma Dream Machine Ray-2 ile 360° orbit video üretir.
  */
-router.post('/360', async (req, res) => {
+router.post('/360', rateLimiter, auditLogger('video_generate_360'), async (req, res) => {
   if (!LUMA_KEY) {
     return res.status(503).json({ ok: false, error: '360° video servisi henüz yapılandırılmadı. Luma API key gerekli.' });
   }
