@@ -252,6 +252,14 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
 .uz-preview{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:inherit;padding:var(--sp3);}
 .uz-clear{position:absolute;top:var(--sp3);right:var(--sp3);width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;transition:background .15s;}
 .uz-clear:hover{background:rgba(220,38,38,.7);}
+/* Grid mode */
+.uz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px;padding:8px;width:100%;align-content:start;}
+.uz-grid-item{border-radius:8px;overflow:hidden;aspect-ratio:1;position:relative;background:var(--s2);}
+.uz-grid-item img{width:100%;height:100%;object-fit:cover;display:block;}
+.uz-grid-item .ugd{position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.75);font-size:9px;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .15s;}
+.uz-grid-item:hover .ugd{opacity:1;}
+.uz-grid-add{border-radius:8px;aspect-ratio:1;border:1.5px dashed var(--b2);display:flex;align-items:center;justify-content:center;font-size:22px;opacity:.4;cursor:pointer;transition:opacity .2s;}
+.uz-grid-add:hover{opacity:.8;}
 
 /* Work Panel */
 #w-panel{
@@ -555,7 +563,7 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
         <span class="uz-ico">📷</span>
         <div class="uz-title">Fotoğraf veya Video Yükle</div>
         <div class="uz-sub">PNG · JPG · WEBP · MP4 · MOV · max 50MB</div>
-        <input type="file" id="file-inp" class="hidden" accept="image/*,video/*">
+        <input type="file" id="file-inp" class="hidden" accept="image/*,video/*" multiple>
       </div>
       <!-- ÇIKIŞ -->
       <div class="upload-zone" id="output-zone">
@@ -926,7 +934,7 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
 const S = {
   customerId: localStorage.getItem('fx_cid') || null,
   quota: parseInt(localStorage.getItem('fx_quota') || '0', 10),
-  mode: 'reels', cat: 'gida', file: null, fileBase64: null, generating: false
+  mode: 'reels', cat: 'gida', file: null, fileBase64: null, files: [], generating: false
 };
 
 const CATS = [
@@ -1067,14 +1075,13 @@ function closeCatModal(){document.getElementById('cat-modal').classList.remove('
 
 /* ━━━ UPLOAD ━━━ */
 function resetUpload(){
-  S.file=null;S.fileBase64=null;
+  S.file=null;S.fileBase64=null;S.files=[];
   const uz=document.getElementById('upload-zone');
   uz.classList.remove('has-file');
-  uz.querySelectorAll('.uz-preview,.uz-clear').forEach(el=>el.remove());
+  uz.querySelectorAll('.uz-grid,.uz-preview,.uz-clear').forEach(el=>el.remove());
   uz.querySelector('.uz-ico').style.display='';
   uz.querySelector('.uz-title').style.display='';
   uz.querySelector('.uz-sub').style.display='';
-  // reset output zone
   const out=document.getElementById('output-zone');
   out.classList.remove('has-file');
   out.querySelectorAll('.uz-preview,a').forEach(el=>el.remove());
@@ -1083,41 +1090,65 @@ function resetUpload(){
   document.getElementById('out-sub').style.display='';
   document.getElementById('btn-gen').disabled=true;
 }
-function loadFile(file){
-  if(!file){return;}
-  const isImg=file.type.startsWith('image/');
-  const isVid=file.type.startsWith('video/');
-  if(!isImg&&!isVid){toast('Görsel veya video yükleyin.');return;}
-  if(file.size>50*1024*1024){toast('Max 50MB.');return;}
-  S.file=file;
-  if(isImg){
+function loadFiles(fileList){
+  Array.from(fileList).forEach(file=>{
+    if(!file.type.startsWith('image/')&&!file.type.startsWith('video/')){toast('Görsel veya video yükleyin.');return;}
+    if(file.size>50*1024*1024){toast('Max 50MB.');return;}
+    S.files.push(file);
+    if(S.files.length===1){S.file=file;}
+  });
+  if(!S.files.length)return;
+  // read base64 of first image for API
+  const first=S.files[0];
+  if(first.type.startsWith('image/')){
     const r=new FileReader();
-    r.onload=e=>{S.fileBase64=e.target.result;showPreview(S.fileBase64,false);};
-    r.readAsDataURL(file);
+    r.onload=e=>{S.fileBase64=e.target.result;renderGrid();};
+    r.readAsDataURL(first);
   } else {
     S.fileBase64=null;
-    showPreview(URL.createObjectURL(file),true);
+    renderGrid();
   }
 }
-function showPreview(src,isVideo){
+function renderGrid(){
   const uz=document.getElementById('upload-zone');
   uz.classList.add('has-file');
   uz.querySelector('.uz-ico').style.display='none';
   uz.querySelector('.uz-title').style.display='none';
   uz.querySelector('.uz-sub').style.display='none';
-  uz.querySelectorAll('.uz-preview,.uz-clear').forEach(el=>el.remove());
-  if(isVideo){
-    const v=document.createElement('video');v.src=src;v.className='uz-preview';v.controls=true;
-    uz.appendChild(v);
-  } else {
-    const img=document.createElement('img');img.src=src;img.className='uz-preview';img.alt='Ürün';
-    uz.appendChild(img);
-  }
-  const x=document.createElement('button');x.className='uz-clear';x.innerHTML='✕';x.setAttribute('aria-label','Sil');
-  x.addEventListener('click',e=>{e.stopPropagation();resetUpload();});
-  uz.appendChild(x);
+  uz.querySelectorAll('.uz-grid,.uz-clear').forEach(el=>el.remove());
+  const grid=document.createElement('div');grid.className='uz-grid';
+  S.files.forEach((file,idx)=>{
+    const item=document.createElement('div');item.className='uz-grid-item';
+    const src=file.type.startsWith('video/')?URL.createObjectURL(file):null;
+    if(src){
+      const v=document.createElement('video');v.src=src;v.style.cssText='width:100%;height:100%;object-fit:cover;';
+      item.appendChild(v);
+    } else {
+      const url=URL.createObjectURL(file);
+      const img=document.createElement('img');img.src=url;img.alt='';
+      item.appendChild(img);
+    }
+    const del=document.createElement('button');del.className='ugd';del.textContent='✕';del.setAttribute('aria-label','Sil');
+    del.addEventListener('click',e=>{
+      e.stopPropagation();
+      S.files.splice(idx,1);
+      if(!S.files.length){resetUpload();return;}
+      S.file=S.files[0];
+      const r=new FileReader();
+      r.onload=ev=>{S.fileBase64=ev.target.result;renderGrid();};
+      if(S.files[0].type.startsWith('image/'))r.readAsDataURL(S.files[0]);else{S.fileBase64=null;renderGrid();}
+    });
+    item.appendChild(del);
+    grid.appendChild(item);
+  });
+  // + more button
+  const add=document.createElement('div');add.className='uz-grid-add';add.textContent='+';
+  add.addEventListener('click',e=>{e.stopPropagation();document.getElementById('file-inp').click();});
+  grid.appendChild(add);
+  uz.appendChild(grid);
   document.getElementById('btn-gen').disabled=false;
 }
+function loadFile(file){loadFiles([file]);}
 
 /* ━━━ GENERATE ━━━ */
 async function generate(){
@@ -1321,10 +1352,10 @@ if(sesMixEl)sesMixEl.addEventListener('input',()=>{document.getElementById('ses-
   const uz=document.getElementById('upload-zone');
   const fi=document.getElementById('file-inp');
   uz.addEventListener('click',e=>{if(!e.target.closest('.uz-clear')&&!e.target.closest('.uz-preview')&&!e.target.closest('video')&&!e.target.closest('a'))fi.click();});
-  fi.addEventListener('change',()=>{if(fi.files[0])loadFile(fi.files[0]);fi.value='';});
+  fi.addEventListener('change',()=>{if(fi.files.length)loadFiles(fi.files);fi.value='';});
   uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag');});
   uz.addEventListener('dragleave',()=>uz.classList.remove('drag'));
-  uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('drag');if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
+  uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('drag');if(e.dataTransfer.files.length)loadFiles(e.dataTransfer.files);});
   // Generate
   document.getElementById('btn-gen').addEventListener('click',generate);
   // Preview (placeholder)
