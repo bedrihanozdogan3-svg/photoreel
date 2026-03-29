@@ -1092,10 +1092,11 @@ function resetUpload(){
 }
 function loadFiles(fileList){
   Array.from(fileList).forEach(file=>{
+    if(S.files.length>=20){toast('En fazla 20 fotoğraf eklenebilir.');return;}
     if(!file.type.startsWith('image/')&&!file.type.startsWith('video/')){toast('Görsel veya video yükleyin.');return;}
     if(file.size>50*1024*1024){toast('Max 50MB.');return;}
     S.files.push(file);
-    if(S.files.length===1){S.file=file;}
+    if(S.files.length===1)S.file=file;
   });
   if(!S.files.length)return;
   // read base64 of first image for API
