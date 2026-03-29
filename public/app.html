@@ -250,32 +250,32 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
 .eb-filter:hover{transform:scale(1.06);border-color:rgba(255,255,255,.3);}
 .eb-filter.on{border-color:var(--mc);box-shadow:0 0 0 1px var(--mc);}
 
-/* Upload wrap — two stacked zones */
-#upload-wrap{display:flex;flex-direction:column;gap:var(--sp3);width:min(300px,100%);height:min(560px,100%);}
+/* Upload wrap — compact stacked zones */
+#upload-wrap{display:flex;flex-direction:column;gap:var(--sp2);width:min(180px,100%);}
 
-/* Upload zone */
+/* Upload zone — compact */
 .upload-zone{
-  border:1.5px dashed var(--b2);border-radius:var(--r-xl);
+  border:1.5px dashed var(--b2);border-radius:var(--r-lg);
   background:var(--s1);display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:var(--sp2);
-  padding:var(--sp4) var(--sp5);cursor:pointer;
+  align-items:center;justify-content:center;gap:4px;
+  padding:12px 8px;cursor:pointer;height:120px;
   transition:border-color .2s,background .2s;
-  position:relative;overflow:hidden;flex:1;min-height:0;
+  position:relative;overflow:hidden;flex-shrink:0;
 }
 .upload-zone:hover,.upload-zone.drag{border-color:var(--mc);background:var(--md);}
 .upload-zone.has-file{border-style:solid;border-color:var(--mc);}
 #output-zone{cursor:default;border-color:var(--b1);}
 #output-zone.has-file{border-color:#10B981;border-style:solid;}
-.uz-zone-tag{font-size:9px;font-weight:700;letter-spacing:.12em;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.06);color:var(--tx3);text-transform:uppercase;margin-bottom:2px;}
+.uz-zone-tag{font-size:8px;font-weight:700;letter-spacing:.1em;padding:2px 7px;border-radius:999px;background:rgba(255,255,255,.06);color:var(--tx3);text-transform:uppercase;}
 #output-zone .uz-zone-tag{color:#10B981;background:rgba(16,185,129,.1);}
-.uz-ico{font-size:28px;opacity:.4;}
-.uz-title{font-size:var(--fs-sm);font-weight:600;color:var(--tx1);}
-.uz-sub{font-size:var(--fs-xs);color:var(--tx3);}
-.uz-preview{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:inherit;padding:var(--sp3);}
-.uz-clear{position:absolute;top:var(--sp3);right:var(--sp3);width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;transition:background .15s;}
+.uz-ico{font-size:22px;opacity:.5;}
+.uz-title{font-size:10px;font-weight:600;color:var(--tx1);text-align:center;}
+.uz-sub{font-size:9px;color:var(--tx3);text-align:center;line-height:1.4;}
+.uz-preview{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:inherit;padding:6px;}
+.uz-clear{position:absolute;top:5px;right:5px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;transition:background .15s;}
 .uz-clear:hover{background:rgba(220,38,38,.7);}
 /* Grid mode */
-.uz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:6px;padding:8px;width:100%;align-content:start;}
+.uz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr));gap:4px;padding:5px;width:100%;align-content:start;}
 .uz-grid-item{border-radius:8px;overflow:hidden;aspect-ratio:1;position:relative;background:var(--s2);}
 .uz-grid-item img{width:100%;height:100%;object-fit:cover;display:block;}
 .uz-grid-item .ugd{position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.75);font-size:9px;color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;transition:opacity .15s;}
@@ -646,22 +646,110 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
 
     <!-- REELS panel -->
     <div class="pnl on" id="pnl-reels">
+
+      <!-- 1. KADRAJ GRUBU -->
       <div class="pnl-sec">
-        <div class="pnl-hd">Format & Çıktı</div>
-        <label class="f-lbl">Format</label>
-        <select class="f-sel" id="r-format"><option value="9:16">9:16 Reels / TikTok</option><option value="1:1">1:1 Kare</option><option value="4:5">4:5 Instagram</option><option value="16:9">16:9 YouTube</option></select>
-        <label class="f-lbl">Kalite</label>
-        <select class="f-sel" id="r-qual"><option value="1080">1080p Full HD</option><option value="4k">4K Ultra HD</option><option value="720">720p HD</option></select>
-        <label class="f-lbl">Süre</label>
-        <select class="f-sel" id="r-dur"><option value="15">15 saniye</option><option value="30">30 saniye</option><option value="60">60 saniye</option></select>
+        <div class="pnl-hd">Kadraj & Yapı</div>
+        <label class="f-lbl">En Boy Oranı</label>
+        <div class="chip-g">
+          <button class="chip on">9:16</button><button class="chip">4:5</button>
+          <button class="chip">1:1</button><button class="chip">16:9</button>
+        </div>
+        <label class="f-lbl">Kalite & Süre</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <select class="f-sel" id="r-qual"><option>1080p</option><option>4K</option><option>720p</option></select>
+          <select class="f-sel" id="r-dur"><option>15s</option><option>30s</option><option>60s</option></select>
+        </div>
+        <label class="f-lbl">Kırpma & Ölçek <span class="pnl-val" id="r-crop-v">0%</span></label>
+        <input type="range" class="f-slider" id="r-crop" min="0" max="50" value="0">
+        <label class="f-lbl">Hizalama (Straighten) <span class="pnl-val" id="r-straight-v">0°</span></label>
+        <input type="range" class="f-slider" id="r-straight" min="-15" max="15" value="0">
+        <label class="f-lbl">Dönüştürme</label>
+        <div class="chip-g">
+          <button class="chip">↺ Sol</button><button class="chip">↻ Sağ</button>
+          <button class="chip">↔ Yatay</button><button class="chip">↕ Dikey</button>
+        </div>
+        <label class="f-lbl">Perspektif Düzeltme</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div>
+            <div style="font-size:9px;color:var(--tx3);margin-bottom:3px">Dikey</div>
+            <input type="range" class="f-slider" min="-100" max="100" value="0">
+          </div>
+          <div>
+            <div style="font-size:9px;color:var(--tx3);margin-bottom:3px">Yatay</div>
+            <input type="range" class="f-slider" min="-100" max="100" value="0">
+          </div>
+        </div>
       </div>
+
+      <!-- 2. POZLAMA GRUBU -->
       <div class="pnl-sec">
-        <div class="pnl-hd">Müzik & BPM</div>
-        <label class="f-lbl">BPM</label>
+        <div class="pnl-hd">Işık & Tonlama</div>
+        <label class="f-lbl">Pozlama <span class="pnl-val" id="r-exp-v">0</span></label>
+        <input type="range" class="f-slider" id="r-exp" min="-100" max="100" value="0">
+        <label class="f-lbl">Kontrast <span class="pnl-val" id="r-cont-v">0</span></label>
+        <input type="range" class="f-slider" id="r-cont" min="-100" max="100" value="0">
+        <label class="f-lbl">Vurgular <span class="pnl-val" id="r-highl-v">0</span></label>
+        <input type="range" class="f-slider" id="r-highl" min="-100" max="100" value="0">
+        <label class="f-lbl">Gölgeler <span class="pnl-val" id="r-shad-v">0</span></label>
+        <input type="range" class="f-slider" id="r-shad" min="-100" max="100" value="0">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div>
+            <div style="font-size:9px;color:var(--tx3);margin-bottom:3px">Beyazlar</div>
+            <input type="range" class="f-slider" id="r-whites" min="-100" max="100" value="0">
+          </div>
+          <div>
+            <div style="font-size:9px;color:var(--tx3);margin-bottom:3px">Siyahlar</div>
+            <input type="range" class="f-slider" id="r-blacks" min="-100" max="100" value="0">
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. KROMATİK GRUP -->
+      <div class="pnl-sec">
+        <div class="pnl-hd">Renk & Atmosfer</div>
+        <label class="f-lbl">Beyaz Dengesi — Sıcaklık <span class="pnl-val" id="r-wb-v">5500K</span></label>
+        <input type="range" class="f-slider" id="r-wb" min="2000" max="10000" value="5500">
+        <label class="f-lbl">Ton (Yeşil ↔ Macenta) <span class="pnl-val" id="r-tint-v">0</span></label>
+        <input type="range" class="f-slider" id="r-tint" min="-100" max="100" value="0">
+        <label class="f-lbl">Canlılık (Vibrance) <span class="pnl-val" id="r-vib-v">0</span></label>
+        <input type="range" class="f-slider" id="r-vib" min="-100" max="100" value="0">
+        <label class="f-lbl">Doygunluk <span class="pnl-val" id="r-sat-v">0</span></label>
+        <input type="range" class="f-slider" id="r-sat" min="-100" max="100" value="0">
+        <label class="f-lbl">HSL Renk Karıştırıcı</label>
+        <div class="chip-g" id="hsl-color-sel">
+          <button class="chip on" data-hsl="red" style="color:#FF4444">K</button>
+          <button class="chip" data-hsl="orange" style="color:#FF8C00">T</button>
+          <button class="chip" data-hsl="yellow" style="color:#FFD700">S</button>
+          <button class="chip" data-hsl="green" style="color:#22C55E">Y</button>
+          <button class="chip" data-hsl="blue" style="color:#3B82F6">M</button>
+          <button class="chip" data-hsl="purple" style="color:#A855F7">Mo</button>
+        </div>
+        <div style="display:grid;gap:4px;margin-top:6px">
+          <div class="eb-adj-row"><span class="eb-adj-lbl">Ton</span><input type="range" class="f-slider" min="-100" max="100" value="0"><span class="eb-adj-val">0</span></div>
+          <div class="eb-adj-row"><span class="eb-adj-lbl">Doygunluk</span><input type="range" class="f-slider" min="-100" max="100" value="0"><span class="eb-adj-val">0</span></div>
+          <div class="eb-adj-row"><span class="eb-adj-lbl">Parlaklık</span><input type="range" class="f-slider" min="-100" max="100" value="0"><span class="eb-adj-val">0</span></div>
+        </div>
+      </div>
+
+      <!-- 4. VİDEO / REELS AKIŞ GRUBU -->
+      <div class="pnl-sec">
+        <div class="pnl-hd">Zaman & Akış</div>
+        <div class="pnl-row"><span class="pnl-lbl">Ters Oynatma</span><div class="tog" role="switch"></div></div>
+        <div class="pnl-row"><span class="pnl-lbl">Dondurma (Freeze)</span><div class="tog" role="switch"></div></div>
+        <label class="f-lbl">Hız <span class="pnl-val" id="r-spd-v">1.0x</span></label>
+        <input type="range" class="f-slider" id="r-spd" min="25" max="400" value="100">
+        <label class="f-lbl">Hız Rampası</label>
+        <div class="chip-g">
+          <button class="chip on">Sabit</button><button class="chip">Y→H→Y</button>
+          <button class="chip">H→Y</button><button class="chip">Özel</button>
+        </div>
+        <label class="f-lbl">BPM Senkron</label>
         <div class="bpm-row">
           <input type="range" class="f-slider" id="r-bpm" min="60" max="180" value="120" style="flex:1">
           <div class="bpm-val" id="r-bpm-v">120</div>
         </div>
+        <div class="pnl-row"><span class="pnl-lbl">Beat Kilitle</span><div class="tog on" role="switch"></div></div>
         <label class="f-lbl">Müzik Türü</label>
         <div class="chip-g">
           <button class="chip on">Otomatik</button><button class="chip">Enerjik</button>
@@ -669,6 +757,25 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
           <button class="chip">Lo-fi</button><button class="chip">Özel</button>
         </div>
       </div>
+
+      <!-- 5. DOKU & NETLİK GRUBU -->
+      <div class="pnl-sec">
+        <div class="pnl-hd">Doku & Netlik</div>
+        <label class="f-lbl">Doku (Texture) <span class="pnl-val" id="r-tex-v">0</span></label>
+        <input type="range" class="f-slider" id="r-tex" min="0" max="100" value="0">
+        <label class="f-lbl">Netlik (Clarity) <span class="pnl-val" id="r-clar-v">0</span></label>
+        <input type="range" class="f-slider" id="r-clar" min="-100" max="100" value="0">
+        <label class="f-lbl">Sis Giderme (Dehaze) <span class="pnl-val" id="r-dehaze-v">0</span></label>
+        <input type="range" class="f-slider" id="r-dehaze" min="-100" max="100" value="0">
+        <label class="f-lbl">Keskinleştirme <span class="pnl-val" id="r-sharp-v">0</span></label>
+        <input type="range" class="f-slider" id="r-sharp" min="0" max="100" value="0">
+        <label class="f-lbl">Film Grain <span class="pnl-val" id="r-grain-v">0</span></label>
+        <input type="range" class="f-slider" id="r-grain" min="0" max="100" value="0">
+        <label class="f-lbl">Vignette <span class="pnl-val" id="r-vig-v">0</span></label>
+        <input type="range" class="f-slider" id="r-vig" min="0" max="100" value="0">
+      </div>
+
+      <!-- 6. GEÇİŞ & ETKİLER -->
       <div class="pnl-sec">
         <div class="pnl-hd">Geçiş Efektleri</div>
         <div class="chip-g">
@@ -676,22 +783,23 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
           <button class="chip">Parallax</button><button class="chip">Morph</button>
           <button class="chip">Blur Pan</button><button class="chip">Shake</button>
           <button class="chip">Strobe</button><button class="chip">Whip</button>
+          <button class="chip">Speed Ramp</button><button class="chip">Chromatic</button>
         </div>
       </div>
+
+      <!-- 7. METİN & BRANDING -->
       <div class="pnl-sec">
-        <div class="pnl-hd">Metin & Kanca</div>
-        <label class="f-lbl">Açılış Metni</label>
-        <input type="text" class="f-inp" id="r-hook" placeholder="İlk 3 sn kanca metni...">
+        <div class="pnl-hd">Metin & Branding</div>
+        <label class="f-lbl">Kanca Metni</label>
+        <input type="text" class="f-inp" id="r-hook" placeholder="İlk 3 sn kanca...">
         <label class="f-lbl">Alt Yazı Stili</label>
         <select class="f-sel"><option>Otomatik</option><option>Büyük & Kalın</option><option>İnce & Zarif</option><option>Yok</option></select>
-      </div>
-      <div class="pnl-sec">
-        <div class="pnl-hd">Branding</div>
-        <label class="f-lbl">Şirket / Marka</label>
+        <label class="f-lbl">Marka Adı</label>
         <input type="text" class="f-inp" id="r-brand" placeholder="ör: TechStore">
         <div class="pnl-row"><span class="pnl-lbl">Watermark</span><div class="tog on" role="switch"></div></div>
         <div class="pnl-row"><span class="pnl-lbl">Bitiş Kartı</span><div class="tog on" role="switch"></div></div>
       </div>
+
     </div>
 
     <!-- PRO panel -->
@@ -1431,6 +1539,25 @@ const ppbpmEl=document.getElementById('pp-bpm');
 if(ppbpmEl)ppbpmEl.addEventListener('input',()=>{document.getElementById('pp-bpm-v').textContent=ppbpmEl.value;});
 const efEl=document.getElementById('ef-int');
 if(efEl)efEl.addEventListener('input',()=>{document.getElementById('ef-val').textContent=efEl.value;});
+// Reels panel sliders
+[['r-crop','r-crop-v','%'],['r-straight','r-straight-v','°'],
+ ['r-exp','r-exp-v',''],['r-cont','r-cont-v',''],['r-highl','r-highl-v',''],
+ ['r-shad','r-shad-v',''],['r-vib','r-vib-v',''],['r-sat','r-sat-v',''],
+ ['r-tint','r-tint-v',''],['r-tex','r-tex-v',''],['r-clar','r-clar-v',''],
+ ['r-dehaze','r-dehaze-v',''],['r-sharp','r-sharp-v',''],['r-grain','r-grain-v',''],
+ ['r-vig','r-vig-v','']].forEach(([id,vid,unit])=>{
+  const el=document.getElementById(id),vel=document.getElementById(vid);
+  if(el&&vel)el.addEventListener('input',()=>vel.textContent=el.value+unit);
+});
+const rWbEl=document.getElementById('r-wb');
+if(rWbEl)rWbEl.addEventListener('input',()=>{document.getElementById('r-wb-v').textContent=rWbEl.value+'K';});
+const rSpdEl=document.getElementById('r-spd');
+if(rSpdEl)rSpdEl.addEventListener('input',()=>{document.getElementById('r-spd-v').textContent=(rSpdEl.value/100).toFixed(1)+'x';});
+// HSL slider value display
+document.querySelectorAll('#pnl-reels .eb-adj-row').forEach(row=>{
+  const sl=row.querySelector('.f-slider'),vl=row.querySelector('.eb-adj-val');
+  if(sl&&vl)sl.addEventListener('input',()=>vl.textContent=sl.value);
+});
 const s360transEl=document.getElementById('s360-trans');
 if(s360transEl)s360transEl.addEventListener('input',()=>{document.getElementById('s360-trans-v').textContent=s360transEl.value;});
 const sesPitchEl=document.getElementById('ses-pitch');
