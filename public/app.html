@@ -1483,16 +1483,70 @@ function ebReset(){
   document.querySelectorAll('.eb-filter').forEach((f,i)=>{f.classList.toggle('on',i===0);});
 }
 (function initEditBench(){
-  // Sliders
+  // Apply CSS filters to preview image
+  function applyImgFilter(){
+    const img=document.getElementById('eb-img');
+    if(!img||img.style.display==='none')return;
+    const bright=parseFloat(document.getElementById('adj-bright').value);
+    const contrast=parseFloat(document.getElementById('adj-contrast').value);
+    const sat=parseFloat(document.getElementById('adj-sat').value);
+    const warm=parseFloat(document.getElementById('adj-warm').value);
+    const shadow=parseFloat(document.getElementById('adj-shadow').value);
+    const high=parseFloat(document.getElementById('adj-high').value);
+    const sharp=parseFloat(document.getElementById('adj-sharp').value);
+    const vign=parseFloat(document.getElementById('adj-vign').value);
+    // Map -100..100 → CSS values
+    const brightness=1+(bright/100)*1.5;
+    const contrastV=1+(contrast/100)*1.5;
+    const saturate=Math.max(0,1+(sat/100)*2);
+    const hueRot=warm*-1.2;
+    const sepiaV=warm>0?Math.min(warm/200,0.4):0;
+    // shadow lifts blacks; highlights boosts whites (approximate via brightness on extremes)
+    const brightnessAdj=brightness+(shadow/500)+(high/500);
+    img.style.filter=`brightness(${brightnessAdj.toFixed(2)}) contrast(${contrastV.toFixed(2)}) saturate(${saturate.toFixed(2)}) hue-rotate(${hueRot.toFixed(1)}deg) sepia(${sepiaV.toFixed(2)}) blur(${sharp<0?Math.abs(sharp)*0.03:0}px)`;
+    // Vignette via box-shadow on parent
+    const canvas=document.getElementById('eb-canvas');
+    if(vign>0){
+      const v=vign/100;
+      canvas.style.boxShadow=`inset 0 0 ${80*v}px ${30*v}px rgba(0,0,0,${0.7*v})`;
+    } else {
+      canvas.style.boxShadow='';
+    }
+  }
+  // Sliders — update display AND apply filter
   ['bright','contrast','sat','sharp','warm','shadow','high','vign'].forEach(k=>{
     const el=document.getElementById('adj-'+k),vEl=document.getElementById('adj-'+k+'-v');
-    if(el&&vEl)el.addEventListener('input',()=>vEl.textContent=el.value);
+    if(el&&vEl)el.addEventListener('input',()=>{vEl.textContent=el.value;applyImgFilter();});
   });
-  // Filters
+  // Filters (CSS filter presets)
+  const FILTER_PRESETS={
+    'Orijinal':'none',
+    'Sinematik':'brightness(0.9) contrast(1.2) saturate(0.8) hue-rotate(-10deg)',
+    'Vintage':'brightness(1.05) contrast(0.9) saturate(0.7) sepia(0.35)',
+    'Doğal':'brightness(1.05) contrast(1.05) saturate(1.2)',
+    'Gece':'brightness(0.7) contrast(1.3) saturate(0.6) hue-rotate(220deg)',
+    'Altın':'brightness(1.1) contrast(1.1) saturate(1.3) sepia(0.3)',
+    'Serin':'brightness(1.0) contrast(1.1) saturate(0.9) hue-rotate(200deg)',
+    'Dramatik':'brightness(0.8) contrast(1.5) saturate(0.7)',
+    'Mono':'brightness(1.0) contrast(1.2) saturate(0)',
+    'Neon':'brightness(1.1) contrast(1.3) saturate(2) hue-rotate(280deg)'
+  };
+  // Filters — apply CSS preset
   document.querySelectorAll('.eb-filter').forEach(f=>{
     f.addEventListener('click',()=>{
       document.querySelectorAll('.eb-filter').forEach(x=>x.classList.remove('on'));
       f.classList.add('on');
+      const img=document.getElementById('eb-img');
+      if(img&&img.style.display!=='none'){
+        const preset=FILTER_PRESETS[f.textContent.trim()]||'none';
+        img.style.filter=preset;
+        // reset sliders to 0 when preset applied
+        ['bright','contrast','sat','sharp','warm','shadow','high','vign'].forEach(k=>{
+          const el=document.getElementById('adj-'+k),vEl=document.getElementById('adj-'+k+'-v');
+          if(el){el.value=0;if(vEl)vEl.textContent='0';}
+        });
+        document.getElementById('eb-canvas').style.boxShadow='';
+      }
     });
   });
   // Toolbar tools
