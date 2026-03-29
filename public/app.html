@@ -226,21 +226,28 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
 .w-quota strong{color:var(--mc);}
 
 /* Work Main */
-#w-main{grid-area:wm;overflow-y:auto;padding:var(--sp5);scrollbar-width:thin;scrollbar-color:var(--s3) transparent;}
+#w-main{grid-area:wm;overflow:hidden;padding:var(--sp5);display:flex;flex-direction:column;}
+
+/* Upload wrap — two stacked zones */
+#upload-wrap{display:flex;flex-direction:column;gap:var(--sp3);flex:1;min-height:0;}
 
 /* Upload zone */
 .upload-zone{
   border:1.5px dashed var(--b2);border-radius:var(--r-xl);
   background:var(--s1);display:flex;flex-direction:column;
-  align-items:center;justify-content:center;gap:var(--sp3);
-  padding:var(--sp7) var(--sp5);cursor:pointer;
-  transition:border-color .2s,background .2s;margin-bottom:var(--sp5);
-  position:relative;overflow:hidden;
+  align-items:center;justify-content:center;gap:var(--sp2);
+  padding:var(--sp4) var(--sp5);cursor:pointer;
+  transition:border-color .2s,background .2s;
+  position:relative;overflow:hidden;flex:1;min-height:0;
 }
 .upload-zone:hover,.upload-zone.drag{border-color:var(--mc);background:var(--md);}
 .upload-zone.has-file{border-style:solid;border-color:var(--mc);}
-.uz-ico{font-size:36px;opacity:.4;}
-.uz-title{font-size:var(--fs-md);font-weight:600;color:var(--tx1);}
+#output-zone{cursor:default;border-color:var(--b1);}
+#output-zone.has-file{border-color:#10B981;border-style:solid;}
+.uz-zone-tag{font-size:9px;font-weight:700;letter-spacing:.12em;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.06);color:var(--tx3);text-transform:uppercase;margin-bottom:2px;}
+#output-zone .uz-zone-tag{color:#10B981;background:rgba(16,185,129,.1);}
+.uz-ico{font-size:28px;opacity:.4;}
+.uz-title{font-size:var(--fs-sm);font-weight:600;color:var(--tx1);}
 .uz-sub{font-size:var(--fs-xs);color:var(--tx3);}
 .uz-preview{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;border-radius:inherit;padding:var(--sp3);}
 .uz-clear{position:absolute;top:var(--sp3);right:var(--sp3);width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;transition:background .15s;}
@@ -541,15 +548,23 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
 
   <!-- Main area (left) -->
   <main id="w-main">
-    <!-- Upload zone -->
-    <div class="upload-zone" id="upload-zone">
-      <span class="uz-ico">📷</span>
-      <div class="uz-title" id="uz-title">Fotoğraf veya Video Yükle</div>
-      <div class="uz-sub">PNG · JPG · WEBP · MP4 · MOV · max 50MB</div>
-      <input type="file" id="file-inp" class="hidden" accept="image/*,video/*">
+    <div id="upload-wrap">
+      <!-- GİRİŞ -->
+      <div class="upload-zone" id="upload-zone">
+        <div class="uz-zone-tag">Ürün Girişi</div>
+        <span class="uz-ico">📷</span>
+        <div class="uz-title">Fotoğraf veya Video Yükle</div>
+        <div class="uz-sub">PNG · JPG · WEBP · MP4 · MOV · max 50MB</div>
+        <input type="file" id="file-inp" class="hidden" accept="image/*,video/*">
+      </div>
+      <!-- ÇIKIŞ -->
+      <div class="upload-zone" id="output-zone">
+        <div class="uz-zone-tag">Ürün Çıkışı</div>
+        <span class="uz-ico" id="out-ico">🎬</span>
+        <div class="uz-title" id="out-title">Üretilen Video</div>
+        <div class="uz-sub" id="out-sub">Üret tuşuna bas...</div>
+      </div>
     </div>
-
-    <!-- Mode-specific extra controls inside main -->
     <div id="main-extras"></div>
   </main>
 
@@ -1059,6 +1074,13 @@ function resetUpload(){
   uz.querySelector('.uz-ico').style.display='';
   uz.querySelector('.uz-title').style.display='';
   uz.querySelector('.uz-sub').style.display='';
+  // reset output zone
+  const out=document.getElementById('output-zone');
+  out.classList.remove('has-file');
+  out.querySelectorAll('.uz-preview,a').forEach(el=>el.remove());
+  document.getElementById('out-ico').style.display='';
+  document.getElementById('out-title').style.display='';
+  document.getElementById('out-sub').style.display='';
   document.getElementById('btn-gen').disabled=true;
 }
 function loadFile(file){
@@ -1139,14 +1161,17 @@ function done(ok){
   document.getElementById('btn-gen').disabled=!S.file;
 }
 function showResult(url){
-  const uz=document.getElementById('upload-zone');
-  uz.querySelectorAll('.uz-preview').forEach(el=>el.remove());
+  const out=document.getElementById('output-zone');
+  out.querySelectorAll('.uz-preview,a').forEach(el=>el.remove());
+  document.getElementById('out-ico').style.display='none';
+  document.getElementById('out-title').style.display='none';
+  document.getElementById('out-sub').style.display='none';
+  out.classList.add('has-file');
   const v=document.createElement('video');v.src=url;v.className='uz-preview';v.controls=true;v.autoplay=true;
-  uz.appendChild(v);
-  // Download link
+  out.appendChild(v);
   const dl=document.createElement('a');dl.href=url;dl.download='fenix-video.mp4';
   dl.style.cssText='position:absolute;top:12px;left:12px;padding:4px 12px;border-radius:999px;background:rgba(16,185,129,.2);border:1px solid rgba(16,185,129,.4);font-size:11px;color:#10B981;text-decoration:none;z-index:2;';
-  dl.textContent='⬇ İndir';uz.appendChild(dl);
+  dl.textContent='⬇ İndir';out.appendChild(dl);
 }
 
 /* ━━━ TRENDS ━━━ */
