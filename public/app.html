@@ -759,11 +759,11 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
       <div class="mode-card" data-mode="360" role="button" tabindex="0">
         <div class="card-lock">🔒</div>
         <div class="card-icon">🌐</div>
-        <div class="card-title">360° Orbit</div>
-        <div class="card-sub">Equirectangular video işleme. Rüzgar sesi filtrele, plaka blur, speed-ramp, orbit tipi seç.</div>
+        <div class="card-title">360° Ürün Video</div>
+        <div class="card-sub">Ürün görselini 360° döndür, arka planı sil, hotspot etiket ekle. E-ticaret reels, vitrin videosu.</div>
         <div class="card-tags">
-          <span class="card-tag">Orbit Video</span><span class="card-tag">Speed-ramp</span>
-          <span class="card-tag">Plaka Blur</span><span class="card-tag">60fps</span>
+          <span class="card-tag">360° Döndürme</span><span class="card-tag">BG Kaldır</span>
+          <span class="card-tag">Hotspot</span><span class="card-tag">E-ticaret</span>
         </div>
         <span class="card-pkg pkg-paid">360° PAKETİ</span>
         <div class="card-arr">→</div>
@@ -774,10 +774,10 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
         <div class="card-lock">🔒</div>
         <div class="card-icon">🎙</div>
         <div class="card-title">Ses Dublaj</div>
-        <div class="card-sub">Ses klonlama, lip-sync, çok dilli export. Kategoriye özel ton: lüks=yumuşak, spor=enerjik.</div>
+        <div class="card-sub">Sesini ver, 5 video kazan. Kendi sesini 9 dile klonla — videonun sesi senin sesinde konuşsun.</div>
         <div class="card-tags">
-          <span class="card-tag">Ses Klonlama</span><span class="card-tag">Lip-sync</span>
-          <span class="card-tag">Çok Dil</span><span class="card-tag">Duygu</span>
+          <span class="card-tag">Ses Klonlama</span><span class="card-tag">9 Dil</span>
+          <span class="card-tag">Deepfake Koruma</span><span class="card-tag">+5 Kredi</span>
         </div>
         <span class="card-pkg pkg-paid">SES PAKETİ</span>
         <div class="card-arr">→</div>
@@ -835,6 +835,7 @@ canvas#fc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z
     <div class="w-sep"></div>
     <button class="w-cat-sel" id="btn-cat-sel">🍽 Gıda ▾</button>
     <div class="w-quota">Hak: <strong id="w-quota-n">—</strong></div>
+    <a href="/guvenlik" id="sec-link" style="display:none;margin-left:8px;padding:4px 10px;border-radius:6px;background:rgba(239,68,68,.15);color:#ef4444;font-size:11px;font-weight:700;text-decoration:none;border:1px solid rgba(239,68,68,.3)" title="Güvenlik Paneli">🛡</a>
   </header>
 
   <!-- Toolbar -->
@@ -1674,7 +1675,13 @@ function updateQuotaUI(){
 
 /* ━━━ WORKSPACE ━━━ */
 /* Kart → ayrı sayfa eşlemesi */
-const CARD_PAGES = { reels: '/workspace-reels', pro: '/workspace-pro' };
+const CARD_PAGES = {
+  reels: '/workspace-reels',
+  pro: '/workspace-pro',
+  ses: '/workspace-dublaj',
+  '360': '/workspace-360',
+  otonom: '/workspace-otonom'
+};
 
 function goWork(mode){
   if(!pkgHasAccess(S.pkg,mode)){showUpgradeModal(mode);return;}
@@ -3344,5 +3351,6 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 });
 </script>
+<script src="/fenix-security-widget.js"></script>
 </body>
 </html>

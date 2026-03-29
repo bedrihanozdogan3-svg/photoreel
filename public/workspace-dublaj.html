@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>FENIX DUBLAJ</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#05050f;--gold:#F59E0B;--purple:#8B5CF6;--green:#10B981;
+  --border:rgba(139,92,246,0.2);--border2:rgba(139,92,246,0.5);
+  --glass:rgba(8,8,20,0.85);--dim:rgba(255,255,255,0.5);
+  --th:52px;
+}
+html,body{width:100%;min-height:100%;background:var(--bg);color:#fff;font-family:'Inter',sans-serif;overflow-x:hidden}
+
+/* BG */
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(139,92,246,0.03) 0 1px,transparent 1px 48px),repeating-linear-gradient(90deg,rgba(139,92,246,0.03) 0 1px,transparent 1px 48px)}
+.bg-vig{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse at center,transparent 30%,rgba(0,0,0,0.8) 100%)}
+#pcv{position:fixed;inset:0;z-index:1;pointer-events:none}
+
+/* TOOLBAR */
+#tb{position:fixed;top:0;left:0;right:0;height:var(--th);z-index:1000;background:rgba(4,4,14,0.97);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 16px;gap:10px}
+.brand{font-family:'Cinzel',serif;font-size:15px;font-weight:900;letter-spacing:5px;background:linear-gradient(135deg,#C4B5FD,#8B5CF6,#6D28D9);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.badge{font-family:'Cinzel',serif;font-size:8px;letter-spacing:3px;color:var(--purple);background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);padding:2px 8px;border-radius:12px}
+.tb-btn{background:none;border:1px solid var(--border);color:var(--dim);padding:5px 12px;border-radius:7px;cursor:pointer;font-size:11px;transition:all .2s}
+.tb-btn:hover{border-color:var(--border2);color:var(--purple);background:rgba(139,92,246,0.1)}
+.sp{flex:1}
+.qbadge{display:flex;align-items:center;gap:6px;background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);border-radius:20px;padding:4px 12px;font-size:11px;color:var(--purple)}
+.qdot{width:6px;height:6px;border-radius:50%;background:var(--purple);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* PAGE WRAPPER */
+#page{position:relative;z-index:5;padding-top:calc(var(--th) + 24px);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding-bottom:60px}
+
+/* STEP SYSTEM */
+.step{display:none;width:100%;max-width:560px;padding:0 16px;animation:fadeIn .4s ease}
+.step.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* CARD */
+.card{background:var(--glass);backdrop-filter:blur(24px);border:1px solid var(--border);border-radius:16px;padding:28px 24px;box-shadow:0 8px 40px rgba(0,0,0,0.5),0 0 0 1px rgba(139,92,246,0.05) inset}
+
+/* PHOENIX (per step color) */
+.ph-wrap{text-align:center;margin-bottom:20px}
+.ph-wrap svg{filter:drop-shadow(0 0 20px rgba(139,92,246,0.6));animation:phFloat 4s ease-in-out infinite}
+@keyframes phFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+/* STEP TITLE */
+.step-title{font-family:'Cinzel',serif;font-size:18px;font-weight:900;letter-spacing:3px;text-align:center;background:linear-gradient(135deg,#C4B5FD,#8B5CF6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px}
+.step-sub{text-align:center;font-size:13px;color:rgba(255,255,255,0.5);margin-bottom:24px;line-height:1.6}
+
+/* PROGRESS BAR */
+.prog-wrap{display:flex;justify-content:center;gap:8px;margin-bottom:28px}
+.prog-dot{width:8px;height:8px;border-radius:50%;background:rgba(139,92,246,0.2);transition:all .3s}
+.prog-dot.done{background:var(--green)}
+.prog-dot.active{background:var(--purple);box-shadow:0 0 8px var(--purple);transform:scale(1.3)}
+
+/* CHECKBOXES */
+.chk-list{display:flex;flex-direction:column;gap:12px;margin:16px 0}
+.chk-item{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;cursor:pointer;transition:all .2s}
+.chk-item:hover{border-color:rgba(139,92,246,0.3);background:rgba(139,92,246,0.05)}
+.chk-item.checked{border-color:rgba(139,92,246,0.5);background:rgba(139,92,246,0.08)}
+.chk-box{width:20px;height:20px;border-radius:5px;border:2px solid rgba(139,92,246,0.4);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .2s;font-size:12px}
+.chk-item.checked .chk-box{background:var(--purple);border-color:var(--purple)}
+.chk-text{font-size:12px;color:rgba(255,255,255,0.7);line-height:1.5}
+.chk-text strong{color:#fff;display:block;margin-bottom:2px}
+
+/* PROOF TEXT BOX */
+.proof-box{background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.3);border-radius:10px;padding:16px;margin:16px 0;text-align:center}
+.proof-box .proof-label{font-size:10px;letter-spacing:2px;color:rgba(139,92,246,0.7);margin-bottom:8px}
+.proof-text{font-size:14px;color:#fff;line-height:1.7;font-style:italic}
+
+/* RECORDING UI */
+.rec-area{display:flex;flex-direction:column;align-items:center;gap:16px;margin:16px 0}
+.rec-btn{width:80px;height:80px;border-radius:50%;border:3px solid rgba(139,92,246,0.4);background:rgba(139,92,246,0.1);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:28px;transition:all .3s;position:relative}
+.rec-btn:hover{border-color:var(--purple);background:rgba(139,92,246,0.2);box-shadow:0 0 20px rgba(139,92,246,0.3)}
+.rec-btn.recording{border-color:#EF4444;background:rgba(239,68,68,0.15);animation:recPulse 1s infinite}
+@keyframes recPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.4)}50%{box-shadow:0 0 0 15px rgba(239,68,68,0)}}
+.rec-status{font-size:12px;color:var(--dim);letter-spacing:1px}
+.rec-status.active{color:#EF4444}
+.rec-timer{font-family:'Courier New',monospace;font-size:20px;color:var(--purple);letter-spacing:3px}
+.waveform{display:flex;gap:3px;align-items:flex-end;height:40px}
+.wbar{width:4px;background:var(--purple);border-radius:2px;transition:height .1s}
+
+/* SENTENCES */
+.sentence-list{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.sentence{padding:10px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:8px;font-size:12px;color:rgba(255,255,255,0.6);display:flex;align-items:center;gap:10px;transition:all .3s}
+.sentence.current{border-color:rgba(139,92,246,0.5);background:rgba(139,92,246,0.08);color:#fff}
+.sentence.done{border-color:rgba(16,185,129,0.4);color:rgba(16,185,129,0.8)}
+.sentence.done::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0}
+.sentence.current::before{content:'▶';color:var(--purple);flex-shrink:0}
+.sentence-num{font-size:10px;color:var(--dim);flex-shrink:0}
+
+/* AUDIO REVIEW */
+.audio-review{background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:14px;margin:12px 0}
+audio{width:100%;margin-top:8px;filter:invert(0.1)}
+
+/* LANGUAGE GRID */
+.lang-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.lang-card{padding:10px 8px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;cursor:pointer;text-align:center;transition:all .2s;font-size:11px;color:var(--dim)}
+.lang-card:hover{border-color:rgba(139,92,246,0.4);color:#fff}
+.lang-card.sel{border-color:var(--purple);background:rgba(139,92,246,0.1);color:var(--purple)}
+.lang-card .flag{font-size:20px;display:block;margin-bottom:4px}
+
+/* VIDEO UPLOAD */
+.udrop{border:1.5px dashed rgba(139,92,246,0.3);border-radius:10px;padding:24px;text-align:center;color:var(--dim);cursor:pointer;transition:all .2s;font-size:12px}
+.udrop:hover,.udrop.over{border-color:var(--purple);background:rgba(139,92,246,0.06);color:#fff}
+.udrop .di{font-size:28px;display:block;margin-bottom:8px}
+.vthumb{width:100%;aspect-ratio:9/16;max-height:200px;object-fit:cover;border-radius:8px;margin-top:10px;border:1px solid rgba(139,92,246,0.3)}
+
+/* GENERATE BTN */
+@keyframes shimmer{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+.gen-btn{width:100%;padding:14px;background:linear-gradient(90deg,#6D28D9,#8B5CF6,#A78BFA,#8B5CF6,#6D28D9);background-size:300% 100%;border:none;border-radius:10px;color:#fff;font-family:'Cinzel',serif;font-size:12px;letter-spacing:3px;font-weight:900;cursor:pointer;margin-top:14px;animation:shimmer 3s linear infinite;box-shadow:0 4px 20px rgba(139,92,246,0.4);transition:box-shadow .3s,transform .2s}
+.gen-btn:hover{box-shadow:0 6px 30px rgba(139,92,246,0.6);transform:translateY(-2px)}
+.gen-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* NAV BTN */
+.nav-btn{width:100%;padding:12px;background:none;border:1px solid var(--border);color:var(--dim);border-radius:10px;cursor:pointer;font-size:12px;transition:all .2s;margin-top:8px}
+.nav-btn:hover{border-color:var(--border2);color:#fff}
+.nav-btn.prim{border-color:rgba(139,92,246,0.5);color:var(--purple);background:rgba(139,92,246,0.08)}
+.nav-btn.prim:hover{background:rgba(139,92,246,0.15);box-shadow:0 0 15px rgba(139,92,246,0.2)}
+
+/* SUCCESS */
+.success-icon{font-size:48px;text-align:center;display:block;margin-bottom:12px;animation:successPop .5s cubic-bezier(.175,.885,.32,1.275)}
+@keyframes successPop{from{transform:scale(0)}to{transform:scale(1)}}
+.credit-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:20px;padding:8px 16px;font-size:14px;color:var(--green);font-weight:600;margin:8px auto;display:flex;justify-content:center}
+
+/* TOAST */
+#toasts{position:fixed;top:60px;right:16px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+@keyframes tIn{from{transform:translateX(110%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes tOut{from{opacity:1}to{transform:translateX(110%);opacity:0}}
+.toast{min-width:240px;padding:10px 14px;background:rgba(5,5,15,.97);border-radius:8px;border-left:3px solid var(--purple);color:rgba(255,255,255,.8);font-size:12px;cursor:pointer;animation:tIn .3s ease;backdrop-filter:blur(10px)}
+.toast.s{border-left-color:#10B981}
+.toast.e{border-left-color:#EF4444}
+.toast.out{animation:tOut .3s forwards}
+
+/* PROGRESS RING */
+.gen-progress{display:flex;flex-direction:column;align-items:center;gap:12px;padding:20px;display:none}
+.gen-progress.show{display:flex}
+.prog-ring{width:80px;height:80px;position:relative}
+.prog-ring svg{transform:rotate(-90deg)}
+.prog-ring circle{fill:none;stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .3s}
+.prog-ring .track{stroke:rgba(139,92,246,0.15)}
+.prog-ring .fill{stroke:var(--purple)}
+.prog-pct{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--purple)}
+.prog-steps{font-size:11px;color:var(--dim);letter-spacing:1px;text-align:center}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-vig"></div>
+<canvas id="pcv"></canvas>
+
+<!-- TOOLBAR -->
+<div id="tb">
+  <div class="brand">FENIX</div>
+  <div class="badge">DUBLAJ</div>
+  <div class="sp"></div>
+  <div class="qbadge"><div class="qdot"></div><span id="qtxt">— Kredi</span></div>
+  <button class="tb-btn" onclick="history.back()">← Geri</button>
+</div>
+
+<!-- PAGE -->
+<div id="page">
+
+  <!-- PROGRESS DOTS -->
+  <div class="prog-wrap" id="prog-wrap">
+    <div class="prog-dot active" id="pd0"></div>
+    <div class="prog-dot" id="pd1"></div>
+    <div class="prog-dot" id="pd2"></div>
+    <div class="prog-dot" id="pd3"></div>
+    <div class="prog-dot" id="pd4"></div>
+  </div>
+
+  <!-- ADIM 0: KARŞILAMA -->
+  <div class="step active" id="step0">
+    <div class="card">
+      <div class="ph-wrap">
+        <svg width="120" height="120" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="dg1" cx="50%" cy="40%" r="55%">
+              <stop offset="0%" stop-color="#C4B5FD"/>
+              <stop offset="50%" stop-color="#8B5CF6"/>
+              <stop offset="100%" stop-color="#4C1D95"/>
+            </radialGradient>
+            <filter id="dg-glow"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+          </defs>
+          <g filter="url(#dg-glow)">
+            <ellipse cx="100" cy="140" rx="35" ry="45" fill="url(#dg1)"/>
+            <path d="M100 100 Q70 80 40 90 Q55 105 42 120 Q75 95 100 110Z" fill="url(#dg1)" opacity=".9"/>
+            <path d="M100 100 Q130 80 160 90 Q145 105 158 120 Q125 95 100 110Z" fill="url(#dg1)" opacity=".9"/>
+            <ellipse cx="100" cy="80" rx="22" ry="22" fill="url(#dg1)"/>
+            <path d="M100 60 Q96 45 92 32" stroke="#C4B5FD" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <path d="M100 60 Q100 43 100 28" stroke="#A78BFA" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <path d="M100 60 Q104 45 108 32" stroke="#C4B5FD" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <circle cx="100" cy="28" r="4" fill="#C4B5FD" opacity=".8"/>
+            <circle cx="92" cy="32" r="3" fill="#A78BFA" opacity=".7"/>
+            <circle cx="108" cy="32" r="3" fill="#A78BFA" opacity=".7"/>
+            <!-- eye -->
+            <circle cx="108" cy="76" r="6" fill="#1E1B4B"/>
+            <circle cx="108" cy="76" r="4.5" fill="#8B5CF6"/>
+            <circle cx="108" cy="76" r="2.5" fill="#1E1B4B"/>
+            <circle cx="110" cy="74" r="1.5" fill="#fff" opacity=".9"/>
+            <!-- tail -->
+            <path d="M100 185 Q94 210 90 230" stroke="#8B5CF6" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/>
+            <path d="M100 185 Q100 215 100 235" stroke="#A78BFA" stroke-width="4" fill="none" stroke-linecap="round" opacity=".8"/>
+            <path d="M100 185 Q106 210 110 230" stroke="#8B5CF6" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/>
+          </g>
+        </svg>
+      </div>
+      <div class="step-title">SESİNİ VER</div>
+      <div class="step-sub">Sesini bir kez kaydet.<br>Karşılığında <strong style="color:var(--purple)">5 ücretsiz dublaj videosu</strong> kazan.</div>
+      <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:10px;padding:16px;margin:8px 0">
+        <div style="font-size:11px;letter-spacing:2px;color:rgba(139,92,246,0.7);margin-bottom:10px">NE ALACAKSIN?</div>
+        <div style="display:flex;flex-direction:column;gap:7px;font-size:12px;color:rgba(255,255,255,0.7)">
+          <div>🎙 Kendi sesinle her dilde dublaj</div>
+          <div>🌍 30+ dil desteği</div>
+          <div>⚡ 5 ücretsiz video hakkı</div>
+          <div>🔒 Sesin yalnızca senin videolarında</div>
+        </div>
+      </div>
+      <button class="nav-btn prim" onclick="goStep(1)" style="margin-top:16px">Başla →</button>
+      <button class="nav-btn" onclick="history.back()">Geri Dön</button>
+    </div>
+  </div>
+
+  <!-- ADIM 1: HUKUKİ ONAY -->
+  <div class="step" id="step1">
+    <div class="card">
+      <div class="step-title">ONAY GEREKLİ</div>
+      <div class="step-sub">Devam etmeden önce aşağıdaki maddeleri oku ve onayını ver.</div>
+      <div class="chk-list">
+        <div class="chk-item" id="chk0" onclick="toggleChk(0)">
+          <div class="chk-box" id="chkbox0"></div>
+          <div class="chk-text"><strong>Ses klonlamaya izin veriyorum</strong>Sesimin Fenix AI tarafından dijital olarak kopyalanmasını kabul ediyorum.</div>
+        </div>
+        <div class="chk-item" id="chk1" onclick="toggleChk(1)">
+          <div class="chk-box" id="chkbox1"></div>
+          <div class="chk-text"><strong>ElevenLabs altyapısında işleneceğini anlıyorum</strong>Ses verimin ElevenLabs sunucularında işleneceğini ve saklanacağını kabul ediyorum.</div>
+        </div>
+        <div class="chk-item" id="chk2" onclick="toggleChk(2)">
+          <div class="chk-box" id="chkbox2"></div>
+          <div class="chk-text"><strong>Kullanım kapsamını onaylıyorum</strong>Klonlanan sesim yalnızca benim Fenix hesabımdaki videolarda kullanılacak. Başka amaçla kullanılamaz.</div>
+        </div>
+        <div class="chk-item" id="chk3" onclick="toggleChk(3)">
+          <div class="chk-box" id="chkbox3"></div>
+          <div class="chk-text"><strong>5 video limitini anlıyorum</strong>Bu onay karşılığında 5 ücretsiz video hakkı kazanacağımı, fazlası için ücretli sisteme geçeceğimi biliyorum.</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.3);margin-top:8px;line-height:1.5">
+        📋 Bu onay IP adresin, cihaz bilgin ve tarihle birlikte kayıt altına alınır. Hukuki ispat olarak saklanır.
+      </div>
+      <button class="nav-btn prim" id="consent-btn" onclick="submitConsent()" disabled style="margin-top:16px">Onaylıyorum ve Devam Ediyorum →</button>
+      <button class="nav-btn" onclick="goStep(0)">← Geri</button>
+    </div>
+  </div>
+
+  <!-- ADIM 2: DEEPFAKE KORUMA -->
+  <div class="step" id="step2">
+    <div class="card">
+      <div class="step-title">KİMLİK DOĞRULAMA</div>
+      <div class="step-sub">Aşağıdaki metni tam olarak oku ve mikrofona kaydet. Bu, başkasının sesini taklit ederek kayıt yapılmasını engeller.</div>
+      <div class="proof-box">
+        <div class="proof-label">LÜTFEN BU METNİ OKU</div>
+        <div class="proof-text" id="proof-text">Yükleniyor...</div>
+      </div>
+      <div class="rec-area">
+        <div class="rec-timer" id="proof-timer">0:00</div>
+        <div class="waveform" id="proof-wave">
+          <div class="wbar" style="height:8px"></div><div class="wbar" style="height:12px"></div>
+          <div class="wbar" style="height:8px"></div><div class="wbar" style="height:16px"></div>
+          <div class="wbar" style="height:10px"></div><div class="wbar" style="height:8px"></div>
+          <div class="wbar" style="height:14px"></div><div class="wbar" style="height:8px"></div>
+        </div>
+        <button class="rec-btn" id="proof-rec-btn" onclick="toggleProofRec()">🎙</button>
+        <div class="rec-status" id="proof-rec-status">Kayıt için tıkla</div>
+      </div>
+      <div id="proof-audio-wrap" style="display:none">
+        <div class="audio-review">
+          <div style="font-size:11px;color:var(--green);margin-bottom:6px">✓ Doğrulama kaydı alındı</div>
+          <audio id="proof-audio" controls></audio>
+        </div>
+      </div>
+      <button class="nav-btn prim" id="proof-next-btn" onclick="goStep(3)" disabled style="margin-top:12px">Devam Et →</button>
+      <button class="nav-btn" onclick="goStep(1)">← Geri</button>
+    </div>
+  </div>
+
+  <!-- ADIM 3: SES KAYIT (10 CÜMLE) -->
+  <div class="step" id="step3">
+    <div class="card">
+      <div class="step-title">SESİNİ KAYDET</div>
+      <div class="step-sub">Kaliteli bir klon için aşağıdaki cümleleri sırayla oku. Net, sakin bir ortamda kayıt yap.</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span style="font-size:11px;color:var(--dim)">İlerleme</span>
+        <span style="font-size:11px;color:var(--purple)" id="sent-progress">0/10</span>
+      </div>
+      <div style="height:4px;background:rgba(255,255,255,0.06);border-radius:2px;margin-bottom:16px">
+        <div style="height:100%;background:var(--purple);border-radius:2px;transition:width .3s" id="sent-bar" style="width:0%"></div>
+      </div>
+      <div class="sentence-list" id="sent-list"></div>
+      <div class="rec-area" style="margin-top:12px">
+        <div class="rec-timer" id="sent-timer">0:00</div>
+        <div class="waveform" id="sent-wave">
+          <div class="wbar" style="height:8px"></div><div class="wbar" style="height:14px"></div>
+          <div class="wbar" style="height:8px"></div><div class="wbar" style="height:18px"></div>
+          <div class="wbar" style="height:10px"></div><div class="wbar" style="height:8px"></div>
+          <div class="wbar" style="height:16px"></div><div class="wbar" style="height:8px"></div>
+        </div>
+        <button class="rec-btn" id="sent-rec-btn" onclick="toggleSentRec()">🎙</button>
+        <div class="rec-status" id="sent-rec-status">Hazır olunca tıkla</div>
+      </div>
+      <button class="nav-btn prim" id="sent-next-btn" onclick="submitVoice()" disabled style="margin-top:12px">Sesi Gönder →</button>
+      <button class="nav-btn" onclick="goStep(2)">← Geri</button>
+    </div>
+  </div>
+
+  <!-- ADIM 4: DUBLAJ WORKSPACE -->
+  <div class="step" id="step4">
+    <div class="card">
+      <span class="success-icon">🎉</span>
+      <div class="step-title">SES KLONLANDI!</div>
+      <div class="step-sub">Artık istediğin videoya kendi sesinle dublaj yapabilirsin.</div>
+      <div class="credit-badge">✦ 5 Kredi Hesabına Eklendi</div>
+
+      <div style="margin-top:20px">
+        <div style="font-size:10px;letter-spacing:2px;color:var(--dim);margin-bottom:10px">DUBLAJ YAP</div>
+
+        <!-- Video yükle -->
+        <div class="udrop" id="dub-udrop" onclick="document.getElementById('dub-inp').click()">
+          <span class="di">🎬</span>
+          <strong>Video Yükle</strong>
+          <div style="margin-top:4px;font-size:10px;opacity:.6">Dublaj yapılacak videoyu seç</div>
+        </div>
+        <input type="file" id="dub-inp" accept="video/*" style="display:none" onchange="loadDubVideo(this.files[0])">
+        <video id="dub-preview" class="vthumb" style="display:none" controls></video>
+
+        <!-- Dil seçimi -->
+        <div style="font-size:10px;letter-spacing:2px;color:var(--dim);margin:16px 0 8px">HEDEF DİL</div>
+        <div class="lang-grid">
+          <div class="lang-card sel" onclick="selLang(this,'tr')"><span class="flag">🇹🇷</span>Türkçe</div>
+          <div class="lang-card" onclick="selLang(this,'en')"><span class="flag">🇺🇸</span>İngilizce</div>
+          <div class="lang-card" onclick="selLang(this,'de')"><span class="flag">🇩🇪</span>Almanca</div>
+          <div class="lang-card" onclick="selLang(this,'fr')"><span class="flag">🇫🇷</span>Fransızca</div>
+          <div class="lang-card" onclick="selLang(this,'es')"><span class="flag">🇪🇸</span>İspanyolca</div>
+          <div class="lang-card" onclick="selLang(this,'ar')"><span class="flag">🇸🇦</span>Arapça</div>
+          <div class="lang-card" onclick="selLang(this,'it')"><span class="flag">🇮🇹</span>İtalyanca</div>
+          <div class="lang-card" onclick="selLang(this,'pt')"><span class="flag">🇧🇷</span>Portekizce</div>
+          <div class="lang-card" onclick="selLang(this,'ru')"><span class="flag">🇷🇺</span>Rusça</div>
+        </div>
+
+        <!-- Üretim progress -->
+        <div class="gen-progress" id="gen-progress">
+          <div class="prog-ring">
+            <svg width="80" height="80" viewBox="0 0 80 80">
+              <circle class="track" cx="40" cy="40" r="34" stroke-dasharray="214" stroke-dashoffset="0"/>
+              <circle class="fill" id="prog-fill" cx="40" cy="40" r="34" stroke-dasharray="214" stroke-dashoffset="214"/>
+            </svg>
+            <div class="prog-pct" id="prog-pct">0%</div>
+          </div>
+          <div class="prog-steps" id="prog-step-txt">Hazırlanıyor...</div>
+        </div>
+
+        <!-- Sonuç -->
+        <div id="dub-result" style="display:none">
+          <div class="audio-review" style="border-color:rgba(139,92,246,0.3);background:rgba(139,92,246,0.06)">
+            <div style="font-size:11px;color:var(--purple);margin-bottom:8px">✓ Dublaj tamamlandı</div>
+            <video id="dub-output" style="width:100%;border-radius:8px" controls></video>
+          </div>
+          <button class="nav-btn prim" onclick="downloadResult()" style="margin-top:10px">⬇ İndir</button>
+        </div>
+
+        <!-- Dudak Okuma Upsell -->
+        <div style="margin-top:16px;background:rgba(139,92,246,0.06);border:1px solid rgba(139,92,246,0.2);border-radius:12px;padding:14px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <div style="font-size:13px;font-weight:600">👄 Dudak Okuma</div>
+            <div style="font-size:10px;background:rgba(139,92,246,0.15);color:var(--purple);padding:3px 8px;border-radius:20px;font-weight:700">ÜCRETLİ</div>
+          </div>
+          <div style="font-size:11px;color:var(--dim);margin-bottom:10px;line-height:1.6">
+            Sesin videodaki dudakla tam senkron olur. Kısa videolar için ideal.
+            <br><strong style="color:var(--purple)">15 sn = ₺35 &nbsp;|&nbsp; 30 sn = ₺70 &nbsp;|&nbsp; 1 dk = ₺140</strong>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div id="lipsync-toggle" onclick="toggleLipsync()" style="width:44px;height:24px;background:var(--bg);border:1px solid rgba(139,92,246,0.3);border-radius:12px;cursor:pointer;position:relative;transition:all .3s">
+              <div id="lipsync-knob" style="width:18px;height:18px;background:#555;border-radius:50%;position:absolute;top:2px;left:3px;transition:all .3s"></div>
+            </div>
+            <span id="lipsync-label" style="font-size:11px;color:var(--dim)">Kapalı — sadece ses klonlama</span>
+          </div>
+        </div>
+
+        <button class="gen-btn" id="dub-gen-btn" onclick="startDublaj()" disabled>🎙 DUBLAJ YAP</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Dudak Okuma Ödeme Modal -->
+<div id="lipsync-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#0f0f1a;border:1px solid rgba(139,92,246,.4);border-radius:20px;padding:28px;max-width:360px;width:100%">
+    <div style="font-size:20px;text-align:center;margin-bottom:4px">👄</div>
+    <div style="font-size:16px;font-weight:700;text-align:center;margin-bottom:6px">Dudak Okuma Ekle</div>
+    <div style="font-size:12px;color:#9ca3af;text-align:center;margin-bottom:16px;line-height:1.6">
+      Sesin videodaki dudak hareketiyle tam senkron olur.
+    </div>
+
+    <!-- Fiyat tablosu -->
+    <div style="background:rgba(139,92,246,.06);border-radius:10px;padding:12px;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span>15 saniye</span><strong style="color:var(--purple)">₺35</strong></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)"><span>30 saniye</span><strong style="color:var(--purple)">₺70</strong></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:5px 0"><span>1 dakika</span><strong style="color:var(--purple)">₺140</strong></div>
+    </div>
+
+    <!-- Hukuki metin -->
+    <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:8px;padding:10px;margin-bottom:16px;font-size:10px;color:#6b7280;line-height:1.6;max-height:100px;overflow-y:auto">
+      <strong style="color:#9ca3af">Ücretli Hizmet Sözleşmesi</strong><br>
+      Dudak okuma hizmeti, Sync Labs teknolojisi kullanılarak video süresine göre ücretlendirilir. Ödeme işlemi tamamlandıktan sonra hizmet başlar ve ücret iade edilmez. Fenix AI, üretilen içeriğin doğruluğunu garanti etmez. Kullanıcı, bu hizmeti kişisel ve ticari amaçlarla kullanma hakkına sahiptir ancak üçüncü şahısların haklarını ihlal edemez. Bu hizmeti kullanarak Fenix AI Kullanım Koşulları ve Gizlilik Politikası'nı kabul etmiş sayılırsınız.
+    </div>
+
+    <!-- Video süresi seçimi -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:10px;letter-spacing:1px;color:#6b7280;margin-bottom:8px">VİDEO SÜRESİ</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px" id="dur-btns">
+        <button onclick="selectDur(15,35,this)" style="padding:8px 0;border-radius:8px;border:1px solid rgba(139,92,246,.3);background:rgba(139,92,246,.08);color:var(--purple);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">15 sn<br><span style="font-size:10px;font-weight:400">₺35</span></button>
+        <button onclick="selectDur(30,70,this)" style="padding:8px 0;border-radius:8px;border:1px solid rgba(139,92,246,.3);background:rgba(139,92,246,.08);color:var(--purple);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">30 sn<br><span style="font-size:10px;font-weight:400">₺70</span></button>
+        <button onclick="selectDur(60,140,this)" style="padding:8px 0;border-radius:8px;border:1px solid rgba(139,92,246,.3);background:rgba(139,92,246,.08);color:var(--purple);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">1 dk<br><span style="font-size:10px;font-weight:400">₺140</span></button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <button onclick="closeLipsyncModal()" style="flex:1;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:transparent;color:#9ca3af;font-size:12px;cursor:pointer;font-family:inherit">İptal — Sessiz Devam</button>
+      <button onclick="goToPayment()" id="pay-btn" style="flex:1;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--purple),#6d28d9);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Öde ve Ekle →</button>
+    </div>
+  </div>
+</div>
+
+<div id="toasts"></div>
+
+<script>
+// ── LIPSYNC UPSELL ──
+const LS = { enabled: false, duration: 15, price: 35 };
+
+function toggleLipsync() {
+  if (!LS.enabled) {
+    // Kapalıysa modal aç
+    document.getElementById('lipsync-modal').style.display = 'flex';
+  } else {
+    // Açıksa kapat
+    LS.enabled = false;
+    updateLipsyncUI();
+  }
+}
+
+function updateLipsyncUI() {
+  const knob = document.getElementById('lipsync-knob');
+  const toggle = document.getElementById('lipsync-toggle');
+  const label = document.getElementById('lipsync-label');
+  if (LS.enabled) {
+    knob.style.left = '23px';
+    knob.style.background = 'var(--purple)';
+    toggle.style.borderColor = 'var(--purple)';
+    label.style.color = 'var(--purple)';
+    label.textContent = `Açık — ${LS.duration} sn / ₺${LS.price}`;
+  } else {
+    knob.style.left = '3px';
+    knob.style.background = '#555';
+    toggle.style.borderColor = 'rgba(139,92,246,0.3)';
+    label.style.color = 'var(--dim)';
+    label.textContent = 'Kapalı — sadece ses klonlama';
+  }
+}
+
+function selectDur(sec, price, btn) {
+  LS.duration = sec; LS.price = price;
+  document.querySelectorAll('#dur-btns button').forEach(b => b.style.outline = 'none');
+  btn.style.outline = '2px solid var(--purple)';
+}
+
+function closeLipsyncModal() {
+  document.getElementById('lipsync-modal').style.display = 'none';
+  LS.enabled = false;
+  updateLipsyncUI();
+}
+
+function goToPayment() {
+  const cid = S.cid || '';
+  const pkg = S.pkg || 'free';
+  const returnUrl = encodeURIComponent(`/workspace-dublaj?cid=${cid}&pkg=${pkg}&lipsync=1&dur=${LS.duration}`);
+  location.href = `/odeme?service=lipsync&duration=${LS.duration}&price=${LS.price}&cid=${encodeURIComponent(cid)}&return=${returnUrl}`;
+}
+
+// Ödeme dönüşü — URL'de lipsync=1 varsa otomatik aç
+if (new URLSearchParams(location.search).get('lipsync') === '1') {
+  const dur = parseInt(new URLSearchParams(location.search).get('dur')) || 15;
+  const prices = { 15: 35, 30: 70, 60: 140 };
+  LS.enabled = true; LS.duration = dur; LS.price = prices[dur] || 35;
+  updateLipsyncUI();
+}
+
+// ── AUTH ──
+const _q = new URLSearchParams(location.search);
+const S = {
+  cid: _q.get('cid') || localStorage.getItem('fx_cid') || '',
+  pkg: _q.get('pkg') || localStorage.getItem('fx_pkg') || 'free'
+};
+if (!S.cid) location.href = '/app?redirect=workspace-dublaj';
+if (S.cid) { localStorage.setItem('fx_cid', S.cid); localStorage.setItem('fx_pkg', S.pkg); }
+
+// ── STATE ──
+const ST = {
+  step: 0,
+  checkboxes: [false, false, false, false],
+  proofBlob: null,
+  proofRecording: false,
+  proofTimer: null,
+  proofSeconds: 0,
+  sentBlobs: [],
+  sentCurrent: 0,
+  sentRecording: false,
+  sentTimer: null,
+  sentSeconds: 0,
+  selectedLang: 'tr',
+  dubVideoFile: null,
+  dubResultUrl: null
+};
+
+// ── PROOF TEXT (rastgele, sunucudan tarihli) ──
+const proofDate = new Date().toLocaleDateString('tr-TR', { day:'numeric', month:'long', year:'numeric' });
+const proofTexts = [
+  `Bugün ${proofDate} tarihinde, ben kendi özgür irademle sesimi Fenix AI'ya veriyorum.`,
+  `${proofDate} tarihi itibarıyla bu kaydı ben yapıyorum. Sesimi Fenix AI sistemi için kullanılmasına izin veriyorum.`,
+  `Bu kaydı ${proofDate} tarihinde yapıyorum. Fenix AI'nın sesimi işlemesine rıza gösteriyorum.`
+];
+const proofText = proofTexts[Math.floor(Math.random() * proofTexts.length)];
+
+// ── 10 CÜMLE ──
+const SENTENCES = [
+  "Merhaba, bugün sesinizi kaydediyoruz. Lütfen net ve anlaşılır konuşun.",
+  "Yapay zeka teknolojisi hayatımızı kolaylaştıran önemli bir araçtır.",
+  "Fenix AI ile video içeriklerinizi istediğiniz dile çevirebilirsiniz.",
+  "Bu sabah hava oldukça güzel, dışarı çıkmak için ideal bir gün.",
+  "Teknoloji, insanların yaratıcılığını desteklemek için var olmalıdır.",
+  "Sesim dijital ortamda güvende tutulmakta ve sadece benim için kullanılmaktadır.",
+  "İçerik üretmek artık çok daha kolay ve erişilebilir hale geldi.",
+  "Her dil bir dünyaya kapı açar. Şimdi tüm dünyayla konuşabilirim.",
+  "Kaliteli ses kaydı için sessiz bir ortamda olmak çok önemlidir.",
+  "Bu son cümleyle ses kaydım tamamlanmış oluyor. Teşekkür ederim."
+];
+
+// ── PARTICLES ──
+(function(){
+  const cv = document.getElementById('pcv'), ctx = cv.getContext('2d');
+  let W, H, P = [];
+  const R = () => { W = cv.width = innerWidth; H = cv.height = innerHeight; };
+  R(); addEventListener('resize', R);
+  class Pt {
+    constructor() { this.reset(); }
+    reset() { this.x = Math.random()*W; this.y = H+10; this.vy = -(Math.random()*.8+.2); this.vx = (Math.random()-.5)*.3; this.l = 0; this.ml = Math.random()*180+80; this.r = Math.random()*1.8+.3; }
+    upd() { this.x += this.vx; this.y += this.vy; this.l++; if(this.y<-10||this.l>this.ml) this.reset(); }
+    draw() { const a = (this.l/this.ml<.2 ? this.l/this.ml*5 : this.l/this.ml>.8 ? (1-this.l/this.ml)*5 : 1)*.3; ctx.save(); ctx.globalAlpha=a; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fillStyle='rgba(139,92,246,.8)'; ctx.fill(); ctx.restore(); }
+  }
+  for(let i=0;i<60;i++){const p=new Pt();p.l=Math.random()*p.ml;p.y=Math.random()*H;P.push(p);}
+  (function loop(){ctx.clearRect(0,0,W,H);P.forEach(p=>{p.upd();p.draw();});requestAnimationFrame(loop);})();
+})();
+
+// ── STEP NAVIGATION ──
+function goStep(n) {
+  document.getElementById('step' + ST.step).classList.remove('active');
+  ST.step = n;
+  document.getElementById('step' + n).classList.add('active');
+  // Progress dots
+  for(let i=0;i<5;i++){
+    const d = document.getElementById('pd'+i);
+    d.classList.remove('active','done');
+    if(i < n) d.classList.add('done');
+    else if(i === n) d.classList.add('active');
+  }
+  window.scrollTo({top:0,behavior:'smooth'});
+  // Step 2 init
+  if(n === 2) initProofStep();
+  if(n === 3) initSentStep();
+}
+
+// ── STEP 1: CHECKBOX ──
+function toggleChk(i) {
+  ST.checkboxes[i] = !ST.checkboxes[i];
+  const item = document.getElementById('chk'+i);
+  const box = document.getElementById('chkbox'+i);
+  item.classList.toggle('checked', ST.checkboxes[i]);
+  box.textContent = ST.checkboxes[i] ? '✓' : '';
+  document.getElementById('consent-btn').disabled = !ST.checkboxes.every(Boolean);
+}
+
+function submitConsent() {
+  if (!ST.checkboxes.every(Boolean)) return;
+  goStep(2);
+}
+
+// ── STEP 2: PROOF RECORDING ──
+let proofStream, proofRecorder;
+
+function initProofStep() {
+  document.getElementById('proof-text').textContent = proofText;
+}
+
+async function toggleProofRec() {
+  if (ST.proofRecording) {
+    stopProofRec();
+  } else {
+    await startProofRec();
+  }
+}
+
+async function startProofRec() {
+  try {
+    proofStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    proofRecorder = new MediaRecorder(proofStream);
+    const chunks = [];
+    proofRecorder.ondataavailable = e => chunks.push(e.data);
+    proofRecorder.onstop = () => {
+      ST.proofBlob = new Blob(chunks, { type: 'audio/webm' });
+      const url = URL.createObjectURL(ST.proofBlob);
+      document.getElementById('proof-audio').src = url;
+      document.getElementById('proof-audio-wrap').style.display = 'block';
+      document.getElementById('proof-next-btn').disabled = false;
+      animateWave('proof-wave', false);
+    };
+    proofRecorder.start();
+    ST.proofRecording = true;
+    ST.proofSeconds = 0;
+    document.getElementById('proof-rec-btn').classList.add('recording');
+    document.getElementById('proof-rec-btn').textContent = '⏹';
+    document.getElementById('proof-rec-status').textContent = 'Kayıt devam ediyor...';
+    document.getElementById('proof-rec-status').classList.add('active');
+    ST.proofTimer = setInterval(() => {
+      ST.proofSeconds++;
+      document.getElementById('proof-timer').textContent = fmtTime(ST.proofSeconds);
+    }, 1000);
+    animateWave('proof-wave', true);
+  } catch(e) {
+    toast('Mikrofon erişimi reddedildi', 'e');
+  }
+}
+
+function stopProofRec() {
+  proofRecorder.stop();
+  proofStream.getTracks().forEach(t => t.stop());
+  ST.proofRecording = false;
+  clearInterval(ST.proofTimer);
+  document.getElementById('proof-rec-btn').classList.remove('recording');
+  document.getElementById('proof-rec-btn').textContent = '✓';
+  document.getElementById('proof-rec-status').textContent = 'Kayıt alındı';
+  document.getElementById('proof-rec-status').classList.remove('active');
+}
+
+// ── STEP 3: SENTENCE RECORDING ──
+let sentStream, sentRecorder;
+
+function initSentStep() {
+  const list = document.getElementById('sent-list');
+  list.innerHTML = '';
+  SENTENCES.forEach((s, i) => {
+    const d = document.createElement('div');
+    d.className = 'sentence' + (i === 0 ? ' current' : '');
+    d.id = 'sent-' + i;
+    d.innerHTML = `<span class="sentence-num">${i+1}</span>${s}`;
+    list.appendChild(d);
+  });
+  ST.sentBlobs = [];
+  ST.sentCurrent = 0;
+  updateSentProgress();
+}
+
+async function toggleSentRec() {
+  if (ST.sentRecording) {
+    stopSentRec();
+  } else {
+    await startSentRec();
+  }
+}
+
+async function startSentRec() {
+  try {
+    sentStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    sentRecorder = new MediaRecorder(sentStream);
+    const chunks = [];
+    sentRecorder.ondataavailable = e => chunks.push(e.data);
+    sentRecorder.onstop = () => {
+      const blob = new Blob(chunks, { type: 'audio/webm' });
+      ST.sentBlobs[ST.sentCurrent] = blob;
+      // Mark done
+      document.getElementById('sent-' + ST.sentCurrent).className = 'sentence done';
+      ST.sentCurrent++;
+      if(ST.sentCurrent < SENTENCES.length) {
+        document.getElementById('sent-' + ST.sentCurrent).className = 'sentence current';
+        document.getElementById('sent-' + ST.sentCurrent).scrollIntoView({ behavior:'smooth', block:'nearest' });
+      }
+      updateSentProgress();
+      animateWave('sent-wave', false);
+    };
+    sentRecorder.start();
+    ST.sentRecording = true;
+    ST.sentSeconds = 0;
+    document.getElementById('sent-rec-btn').classList.add('recording');
+    document.getElementById('sent-rec-btn').textContent = '⏹';
+    document.getElementById('sent-rec-status').textContent = 'Kayıt devam ediyor...';
+    document.getElementById('sent-rec-status').classList.add('active');
+    ST.sentTimer = setInterval(() => {
+      ST.sentSeconds++;
+      document.getElementById('sent-timer').textContent = fmtTime(ST.sentSeconds);
+    }, 1000);
+    animateWave('sent-wave', true);
+  } catch(e) {
+    toast('Mikrofon erişimi reddedildi', 'e');
+  }
+}
+
+function stopSentRec() {
+  sentRecorder.stop();
+  sentStream.getTracks().forEach(t => t.stop());
+  ST.sentRecording = false;
+  clearInterval(ST.sentTimer);
+  document.getElementById('sent-rec-btn').classList.remove('recording');
+  document.getElementById('sent-rec-btn').textContent = '🎙';
+  document.getElementById('sent-rec-status').textContent = ST.sentCurrent < SENTENCES.length ? 'Sonraki cümle için tıkla' : 'Tüm cümleler tamamlandı!';
+  document.getElementById('sent-rec-status').classList.remove('active');
+}
+
+function updateSentProgress() {
+  const n = Math.min(ST.sentCurrent, SENTENCES.length);
+  document.getElementById('sent-progress').textContent = n + '/' + SENTENCES.length;
+  document.getElementById('sent-bar').style.width = (n / SENTENCES.length * 100) + '%';
+  if (n >= SENTENCES.length) {
+    document.getElementById('sent-next-btn').disabled = false;
+    toast('Tüm cümleler kaydedildi! ✓', 's');
+  }
+  // Kayıt düğmesini gizle son cümle bittiyse
+  if (ST.sentCurrent >= SENTENCES.length) {
+    document.getElementById('sent-rec-btn').style.display = 'none';
+  }
+}
+
+// ── SES GÖNDER ──
+async function submitVoice() {
+  if (ST.sentBlobs.length < SENTENCES.length) {
+    toast('Tüm cümleleri kaydedin', 'e');
+    return;
+  }
+  toast('Ses dosyası hazırlanıyor...');
+
+  // Ses hash'i hesapla (proof blob)
+  const proofArr = await ST.proofBlob.arrayBuffer();
+  const hashBuf = await crypto.subtle.digest('SHA-256', proofArr);
+  const hashArr = Array.from(new Uint8Array(hashBuf));
+  const voiceFileHash = 'sha256:' + hashArr.map(b => b.toString(16).padStart(2,'0')).join('');
+
+  // API'ye gönder
+  try {
+    const r = await fetch('/api/consent/voice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: S.cid,
+        checkboxes: {
+          voice_clone: true,
+          elevenlabs_processing: true,
+          usage_scope: true,
+          credits_limit: true
+        },
+        proofText,
+        voiceFileHash,
+        name: ''
+      })
+    });
+    const d = await r.json();
+    if (!r.ok) {
+      if (d.alreadyConsented) {
+        toast('Zaten ses onayın var. Dublaj yapabilirsin.', 's');
+        goStep(4);
+        return;
+      }
+      toast(d.error || 'Kayıt hatası', 'e');
+      return;
+    }
+    // Krediyi güncelle
+    document.getElementById('qtxt').textContent = (parseInt(document.getElementById('qtxt').textContent) || 0) + 5 + ' Kredi';
+    toast('Ses klonlandı! 5 kredi eklendi ✦', 's');
+    // ElevenLabs'a ses gönder (arka plan)
+    sendToElevenLabs();
+    goStep(4);
+  } catch(e) {
+    toast('Bağlantı hatası: ' + e.message, 'e');
+  }
+}
+
+async function sendToElevenLabs() {
+  // Tüm ses bloblarını birleştir
+  const combined = new Blob(ST.sentBlobs, { type: 'audio/webm' });
+  const fd = new FormData();
+  fd.append('audio', combined, 'voice_sample.webm');
+  fd.append('userId', S.cid);
+  fd.append('name', 'Fenix Voice Clone');
+  try {
+    await fetch('/api/consent/voice-upload', { method: 'POST', body: fd });
+  } catch(e) { /* sessizce hata */ }
+}
+
+// ── DUBLAJ ──
+function loadDubVideo(file) {
+  if (!file) return;
+  ST.dubVideoFile = file;
+  const v = document.getElementById('dub-preview');
+  v.src = URL.createObjectURL(file);
+  v.style.display = 'block';
+  document.getElementById('dub-gen-btn').disabled = false;
+  document.getElementById('dub-udrop').style.display = 'none';
+}
+
+function selLang(el, lang) {
+  document.querySelectorAll('.lang-card').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel');
+  ST.selectedLang = lang;
+}
+
+async function startDublaj() {
+  if (!ST.dubVideoFile) { toast('Önce video yükle', 'e'); return; }
+
+  document.getElementById('dub-gen-btn').disabled = true;
+  const pg = document.getElementById('gen-progress');
+  pg.classList.add('show');
+  document.getElementById('dub-result').style.display = 'none';
+
+  const steps = [
+    'Ses transkript alınıyor...',
+    'Metin çevriliyor...',
+    'Ses sentezleniyor...',
+    'Video senkronize ediliyor...',
+    'Tamamlandı!'
+  ];
+
+  // Simüle progress (gerçek üretim beklenirken)
+  for(let i=0;i<steps.length;i++){
+    await delay(1200);
+    const pct = Math.round((i+1)/steps.length*100);
+    setProgress(pct);
+    document.getElementById('prog-step-txt').textContent = steps[i];
+  }
+
+  // Gerçek API çağrısı
+  try {
+    const fd = new FormData();
+    fd.append('video', ST.dubVideoFile);
+    fd.append('userId', S.cid);
+    fd.append('targetLang', ST.selectedLang);
+
+    const r = await fetch('/api/generate/dublaj', { method: 'POST', body: fd });
+    const d = await r.json();
+
+    pg.classList.remove('show');
+    if (!r.ok) {
+      toast(d.error || 'Dublaj hatası', 'e');
+      document.getElementById('dub-gen-btn').disabled = false;
+      return;
+    }
+
+    if (d.url) {
+      ST.dubResultUrl = d.url;
+      document.getElementById('dub-output').src = d.url;
+    }
+    document.getElementById('dub-result').style.display = 'block';
+    toast('Dublaj tamamlandı! ✦', 's');
+  } catch(e) {
+    pg.classList.remove('show');
+    toast('Bağlantı hatası: ' + e.message, 'e');
+    document.getElementById('dub-gen-btn').disabled = false;
+  }
+}
+
+function downloadResult() {
+  if (!ST.dubResultUrl) return;
+  const a = document.createElement('a');
+  a.href = ST.dubResultUrl;
+  a.download = 'fenix-dublaj.mp4';
+  a.click();
+}
+
+function setProgress(pct) {
+  const r = 34, circ = 2 * Math.PI * r;
+  const offset = circ - (pct / 100) * circ;
+  document.getElementById('prog-fill').style.strokeDashoffset = offset;
+  document.getElementById('prog-pct').textContent = pct + '%';
+}
+
+// ── WAVE ANIMATION ──
+let waveIntervals = {};
+function animateWave(id, active) {
+  clearInterval(waveIntervals[id]);
+  if (!active) return;
+  const bars = document.getElementById(id).querySelectorAll('.wbar');
+  waveIntervals[id] = setInterval(() => {
+    bars.forEach(b => { b.style.height = (Math.random() * 28 + 4) + 'px'; });
+  }, 120);
+}
+
+// ── UTILS ──
+function fmtTime(s) { return Math.floor(s/60) + ':' + String(s%60).padStart(2,'0'); }
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function toast(msg, type='') {
+  const tc = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = 'toast ' + (type==='s'?'s':type==='e'?'e':'');
+  t.textContent = msg; tc.appendChild(t);
+  t.onclick = () => dm(t);
+  setTimeout(() => dm(t), 4500);
+}
+function dm(el) { el.classList.add('out'); setTimeout(() => el.remove(), 300); }
+
+// ── INIT ──
+if (S.cid) {
+  fetch('/api/customer/' + S.cid)
+    .then(r => r.json())
+    .then(d => {
+      if (d.quota !== undefined) document.getElementById('qtxt').textContent = d.quota + ' Kredi';
+      // Zaten onay verdiyse direkt workspace'e at
+      return fetch('/api/consent/check?userId=' + encodeURIComponent(S.cid));
+    })
+    .then(r => r.json())
+    .then(d => { if (d.consented) goStep(4); })
+    .catch(() => {});
+}
+</script>
+<script src="/fenix-security-widget.js"></script>
+</body>
+</html>

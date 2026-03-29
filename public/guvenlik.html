@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fenix — Güvenlik Paneli</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#050508;--panel:#0a0a0f;--elevated:#12121a;
+  --red:#ef4444;--red-soft:rgba(239,68,68,.15);
+  --yellow:#f59e0b;--yellow-soft:rgba(245,158,11,.15);
+  --green:#10b981;--green-soft:rgba(16,185,129,.15);
+  --border:#1a1a24;--text:#fff;--sub:#8a8a9a;
+}
+body{font-family:-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+header{background:var(--panel);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;gap:16px}
+.back-btn{padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--sub);cursor:pointer;font-size:13px}
+.back-btn:hover{color:var(--text)}
+h1{font-size:18px;font-weight:700}
+.badge{background:var(--red-soft);color:var(--red);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+
+.tabs{display:flex;border-bottom:1px solid var(--border);background:var(--panel);padding:0 24px}
+.tab{padding:14px 20px;font-size:13px;font-weight:600;color:var(--sub);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.tab.on{color:var(--red);border-bottom-color:var(--red)}
+
+.content{padding:24px;max-width:1100px;margin:0 auto}
+
+/* Stats bar */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.stat-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px}
+.stat-val{font-size:28px;font-weight:700;margin-bottom:4px}
+.stat-lbl{font-size:12px;color:var(--sub)}
+.stat-card.red .stat-val{color:var(--red)}
+.stat-card.yellow .stat-val{color:var(--yellow)}
+.stat-card.green .stat-val{color:var(--green)}
+
+/* Table */
+.table-wrap{background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.table-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.table-title{font-size:14px;font-weight:600}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--sub);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border)}
+td{padding:12px 16px;font-size:13px;border-bottom:1px solid rgba(255,255,255,.04)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.tag{padding:3px 8px;border-radius:6px;font-size:11px;font-weight:600}
+.tag.red{background:var(--red-soft);color:var(--red)}
+.tag.yellow{background:var(--yellow-soft);color:var(--yellow)}
+.tag.green{background:var(--green-soft);color:var(--green)}
+.tag.gray{background:rgba(255,255,255,.08);color:var(--sub)}
+
+/* Butonlar */
+.btn{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:none;transition:all .2s}
+.btn-ban{background:var(--red-soft);color:var(--red);border:1px solid var(--red)}
+.btn-ban:hover{background:var(--red);color:#fff}
+.btn-unban{background:var(--green-soft);color:var(--green);border:1px solid var(--green)}
+.btn-unban:hover{background:var(--green);color:#fff}
+.btn-resolve{background:var(--yellow-soft);color:var(--yellow);border:1px solid var(--yellow)}
+.btn-resolve:hover{background:var(--yellow);color:#000}
+.btn-primary{background:var(--red);color:#fff;padding:8px 20px;border-radius:8px}
+.btn-primary:hover{opacity:.85}
+
+/* Manuel ban form */
+.ban-form{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.form-group{display:flex;flex-direction:column;gap:6px;flex:1;min-width:180px}
+label{font-size:12px;color:var(--sub)}
+input{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--elevated);color:var(--text);font-size:13px;outline:none}
+input:focus{border-color:var(--red)}
+
+/* Panel visibility */
+.panel-content{display:none}
+.panel-content.on{display:block}
+
+/* Empty state */
+.empty{text-align:center;padding:48px;color:var(--sub);font-size:14px}
+.empty-icon{font-size:40px;margin-bottom:12px}
+
+/* Loading */
+.loading{text-align:center;padding:32px;color:var(--sub)}
+</style>
+</head>
+<body>
+
+<header>
+  <button class="back-btn" onclick="location.href='/app'">← Ana Sayfa</button>
+  <h1>🛡 Güvenlik Paneli</h1>
+  <span class="badge" id="alarm-badge">Yükleniyor...</span>
+</header>
+
+<div class="tabs">
+  <div class="tab on" onclick="switchTab('alarms')">🚨 Alarmlar</div>
+  <div class="tab" onclick="switchTab('banned')">🔒 Banlı IP'ler</div>
+  <div class="tab" onclick="switchTab('logs')">📋 Audit Log</div>
+  <div class="tab" onclick="switchTab('ban-form')">⛔ Manuel Ban</div>
+</div>
+
+<div class="content">
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card red"><div class="stat-val" id="stat-alarms">—</div><div class="stat-lbl">Aktif Alarm</div></div>
+    <div class="stat-card red"><div class="stat-val" id="stat-banned">—</div><div class="stat-lbl">Banlı IP</div></div>
+    <div class="stat-card yellow"><div class="stat-val" id="stat-logs">—</div><div class="stat-lbl">Bugünkü İstek</div></div>
+    <div class="stat-card green"><div class="stat-val" id="stat-blocked">—</div><div class="stat-lbl">Bugün Engellenen</div></div>
+  </div>
+
+  <!-- ALARMLAR -->
+  <div class="panel-content on" id="tab-alarms">
+    <div class="table-wrap">
+      <div class="table-header">
+        <span class="table-title">🚨 Aktif Alarmlar</span>
+        <button class="btn btn-primary" onclick="loadAlarms()">🔄 Yenile</button>
+      </div>
+      <div id="alarms-body"><div class="loading">Yükleniyor...</div></div>
+    </div>
+  </div>
+
+  <!-- BANLI IP'LER -->
+  <div class="panel-content" id="tab-banned">
+    <div class="table-wrap">
+      <div class="table-header">
+        <span class="table-title">🔒 Banlı IP Listesi</span>
+        <button class="btn btn-primary" onclick="loadBanned()">🔄 Yenile</button>
+      </div>
+      <div id="banned-body"><div class="loading">Yükleniyor...</div></div>
+    </div>
+  </div>
+
+  <!-- AUDIT LOG -->
+  <div class="panel-content" id="tab-logs">
+    <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+      <input type="date" id="log-date" value="" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--elevated);color:var(--text)">
+      <input type="text" id="log-cid" placeholder="customerId filtrele..." style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--elevated);color:var(--text);flex:1">
+      <button class="btn btn-primary" onclick="loadLogs()">Filtrele</button>
+    </div>
+    <div class="table-wrap">
+      <div id="logs-body"><div class="loading">Yükleniyor...</div></div>
+    </div>
+  </div>
+
+  <!-- MANUEL BAN -->
+  <div class="panel-content" id="tab-ban-form">
+    <div class="ban-form">
+      <div class="form-group">
+        <label>IP Adresi</label>
+        <input type="text" id="ban-ip" placeholder="ör: 192.168.1.1">
+      </div>
+      <div class="form-group">
+        <label>Sebep</label>
+        <input type="text" id="ban-reason" placeholder="ör: spam, abuse, hack girişimi">
+      </div>
+      <button class="btn btn-ban" style="padding:8px 20px;font-size:13px" onclick="manualBan()">⛔ Banla</button>
+    </div>
+    <div id="ban-result" style="margin-top:12px"></div>
+  </div>
+
+</div>
+
+<script>
+const today = new Date().toISOString().slice(0,10);
+document.getElementById('log-date').value = today;
+
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.remove('on'));
+  document.querySelectorAll('.panel-content').forEach(p => p.classList.remove('on'));
+  const tabs = ['alarms','banned','logs','ban-form'];
+  const idx = tabs.indexOf(tab);
+  document.querySelectorAll('.tab')[idx].classList.add('on');
+  document.getElementById('tab-'+tab).classList.add('on');
+
+  if (tab === 'alarms') loadAlarms();
+  if (tab === 'banned') loadBanned();
+  if (tab === 'logs') loadLogs();
+}
+
+async function apiFetch(url, opts={}) {
+  const r = await fetch(url, {
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    ...opts
+  });
+  return r.json();
+}
+
+// ── Alarmlar ──
+async function loadAlarms() {
+  document.getElementById('alarms-body').innerHTML = '<div class="loading">Yükleniyor...</div>';
+  try {
+    const d = await apiFetch('/api/security/alarms');
+    document.getElementById('stat-alarms').textContent = d.count ?? 0;
+    document.getElementById('alarm-badge').textContent = (d.count > 0) ? `${d.count} Alarm` : 'Temiz';
+    document.getElementById('alarm-badge').style.background = d.count > 0 ? 'var(--red-soft)' : 'var(--green-soft)';
+    document.getElementById('alarm-badge').style.color = d.count > 0 ? 'var(--red)' : 'var(--green)';
+
+    if (!d.alarms?.length) {
+      document.getElementById('alarms-body').innerHTML = '<div class="empty"><div class="empty-icon">✅</div>Aktif alarm yok</div>';
+      return;
+    }
+    let html = '<table><thead><tr><th>Tip</th><th>IP</th><th>Detay</th><th>Zaman</th><th>İşlem</th></tr></thead><tbody>';
+    d.alarms.forEach(a => {
+      const typeTag = a.type === 'auto_ban' ? 'red' : a.type === 'multi_account' ? 'yellow' : 'gray';
+      html += `<tr>
+        <td><span class="tag ${typeTag}">${a.type}</span></td>
+        <td><code>${a.ip}</code></td>
+        <td style="color:var(--sub);font-size:12px">${a.detail || ''}</td>
+        <td style="color:var(--sub);font-size:12px">${formatTime(a.createdAt)}</td>
+        <td style="display:flex;gap:6px">
+          <button class="btn btn-ban" onclick="banFromAlarm('${a.ip}','${a.id}')">Ban Et</button>
+          <button class="btn btn-resolve" onclick="resolveAlarm('${a.id}')">Çözüldü</button>
+        </td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('alarms-body').innerHTML = html;
+  } catch(e) {
+    document.getElementById('alarms-body').innerHTML = '<div class="empty">Yüklenemedi. Admin girişi gerekli.</div>';
+  }
+}
+
+async function resolveAlarm(id) {
+  if (!confirm('Alarm çözümlendi olarak işaretlensin mi?')) return;
+  await apiFetch(`/api/security/alarms/${id}/resolve`, { method: 'POST' });
+  loadAlarms();
+}
+
+async function banFromAlarm(ip, alarmId) {
+  if (!confirm(`${ip} banlanacak. Onaylıyor musun?`)) return;
+  await apiFetch('/api/security/ban', { method: 'POST', body: JSON.stringify({ ip, reason: 'alarm_triggered' }) });
+  await apiFetch(`/api/security/alarms/${alarmId}/resolve`, { method: 'POST' });
+  loadAlarms();
+  alert(`✅ ${ip} banlandı.`);
+}
+
+// ── Banlı IP'ler ──
+async function loadBanned() {
+  document.getElementById('banned-body').innerHTML = '<div class="loading">Yükleniyor...</div>';
+  try {
+    const d = await apiFetch('/api/security/banned-ips');
+    document.getElementById('stat-banned').textContent = d.count ?? 0;
+
+    if (!d.ips?.length) {
+      document.getElementById('banned-body').innerHTML = '<div class="empty"><div class="empty-icon">🔓</div>Banlı IP yok</div>';
+      return;
+    }
+    let html = '<table><thead><tr><th>IP</th><th>Sebep</th><th>Tip</th><th>Zaman</th><th>İşlem</th></tr></thead><tbody>';
+    d.ips.forEach(ip => {
+      html += `<tr>
+        <td><code>${ip.ip}</code></td>
+        <td style="color:var(--sub)">${ip.reason || '—'}</td>
+        <td><span class="tag ${ip.auto ? 'red' : 'yellow'}">${ip.auto ? 'Otomatik' : 'Manuel'}</span></td>
+        <td style="color:var(--sub);font-size:12px">${formatTime(ip.bannedAt)}</td>
+        <td><button class="btn btn-unban" onclick="unban('${ip.ip}')">Ban Kaldır</button></td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('banned-body').innerHTML = html;
+  } catch(e) {
+    document.getElementById('banned-body').innerHTML = '<div class="empty">Yüklenemedi.</div>';
+  }
+}
+
+async function unban(ip) {
+  if (!confirm(`${ip} ban kaldırılacak. Onaylıyor musun?`)) return;
+  await apiFetch('/api/security/unban', { method: 'POST', body: JSON.stringify({ ip }) });
+  loadBanned();
+  alert(`✅ ${ip} ban kaldırıldı.`);
+}
+
+// ── Audit Log ──
+async function loadLogs() {
+  document.getElementById('logs-body').innerHTML = '<div class="loading">Yükleniyor...</div>';
+  const date = document.getElementById('log-date').value;
+  const cid = document.getElementById('log-cid').value;
+  let url = '/api/security/audit-log?limit=100';
+  if (date) url += '&date=' + date;
+  if (cid) url += '&customerId=' + encodeURIComponent(cid);
+  try {
+    const d = await apiFetch(url);
+    document.getElementById('stat-logs').textContent = d.count ?? 0;
+
+    if (!d.logs?.length) {
+      document.getElementById('logs-body').innerHTML = '<div class="empty"><div class="empty-icon">📋</div>Log bulunamadı</div>';
+      return;
+    }
+    const blocked = d.logs.filter(l => l.result !== 'ok').length;
+    document.getElementById('stat-blocked').textContent = blocked;
+
+    let html = '<table><thead><tr><th>İşlem</th><th>Müşteri</th><th>IP</th><th>Sonuç</th><th>Süre</th><th>Zaman</th></tr></thead><tbody>';
+    d.logs.forEach(l => {
+      const resTag = l.result === 'ok' ? 'green' : 'red';
+      html += `<tr>
+        <td><code style="font-size:11px">${l.action}</code></td>
+        <td style="font-size:11px;color:var(--sub)">${l.customerId?.slice(0,20) || '—'}</td>
+        <td style="font-size:11px"><code>${l.ip || '—'}</code></td>
+        <td><span class="tag ${resTag}">${l.result}</span></td>
+        <td style="color:var(--sub);font-size:11px">${l.duration ? l.duration+'ms' : '—'}</td>
+        <td style="color:var(--sub);font-size:11px">${formatTime(l.timestamp)}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('logs-body').innerHTML = html;
+  } catch(e) {
+    document.getElementById('logs-body').innerHTML = '<div class="empty">Yüklenemedi.</div>';
+  }
+}
+
+// ── Manuel Ban ──
+async function manualBan() {
+  const ip = document.getElementById('ban-ip').value.trim();
+  const reason = document.getElementById('ban-reason').value.trim();
+  if (!ip) { alert('IP gir'); return; }
+  if (!confirm(`${ip} banlanacak. Onaylıyor musun?`)) return;
+  const d = await apiFetch('/api/security/ban', { method: 'POST', body: JSON.stringify({ ip, reason: reason || 'manuel' }) });
+  const el = document.getElementById('ban-result');
+  if (d.ok) {
+    el.innerHTML = `<span style="color:var(--green)">✅ ${ip} başarıyla banlandı.</span>`;
+    document.getElementById('ban-ip').value = '';
+    document.getElementById('ban-reason').value = '';
+  } else {
+    el.innerHTML = `<span style="color:var(--red)">❌ Hata: ${d.error}</span>`;
+  }
+}
+
+function formatTime(ts) {
+  if (!ts) return '—';
+  try {
+    const d = new Date(ts);
+    return d.toLocaleDateString('tr-TR') + ' ' + d.toLocaleTimeString('tr-TR', {hour:'2-digit',minute:'2-digit'});
+  } catch { return ts.slice(0,16); }
+}
+
+// ── Tablet Push Bildirimi ──
+let lastAlarmCount = 0;
+let alarmSound = null;
+
+function initNotifications() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+  // Alarm ses dosyası (Web Audio API ile üretilir — harici dosya gerektirmez)
+  const ctx = new (window.AudioContext || window.webkitAudioContext)();
+  alarmSound = () => {
+    // Kısa uyarı tonu: iki bip
+    [0, 0.3].forEach(delay => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(880, ctx.currentTime + delay);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.25);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.25);
+    });
+  };
+}
+
+async function checkAlarmsBackground() {
+  try {
+    const d = await apiFetch('/api/security/alarms');
+    const count = d.count ?? 0;
+
+    if (count > lastAlarmCount) {
+      // Yeni alarm geldi
+      const diff = count - lastAlarmCount;
+
+      // Ses çal
+      if (alarmSound) {
+        try { alarmSound(); } catch(e) {}
+      }
+
+      // Tarayıcı bildirimi
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('🚨 Fenix Güvenlik Alarmı', {
+          body: `${diff} yeni alarm! Güvenlik panelini kontrol et.`,
+          icon: '/fenix-icon-192.png',
+          badge: '/fenix-icon-192.png',
+          tag: 'fenix-security',
+          requireInteraction: true
+        });
+      }
+
+      // Ekranda flash
+      document.body.style.outline = '3px solid #ef4444';
+      setTimeout(() => document.body.style.outline = '', 1000);
+    }
+
+    lastAlarmCount = count;
+    document.getElementById('stat-alarms').textContent = count;
+    document.getElementById('alarm-badge').textContent = count > 0 ? `${count} Alarm` : 'Temiz';
+    document.getElementById('alarm-badge').style.background = count > 0 ? 'var(--red-soft)' : 'var(--green-soft)';
+    document.getElementById('alarm-badge').style.color = count > 0 ? 'var(--red)' : 'var(--green)';
+  } catch(e) {}
+}
+
+// Sayfa açılınca alarmları yükle
+initNotifications();
+loadAlarms();
+
+// Her 30 saniyede alarm kontrolü
+setInterval(checkAlarmsBackground, 30_000);
+</script>
+</body>
+</html>

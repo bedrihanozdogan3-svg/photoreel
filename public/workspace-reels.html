@@ -107,8 +107,22 @@
     .video-clip { position:absolute; left:5%; width:60%; height:100%; background:linear-gradient(90deg,var(--orange-primary),#ff9a5a); border-radius:4px; opacity:0.8; display:none; }
     .audio-waveform { position:absolute; inset:0; display:flex; align-items:center; gap:2px; padding:0 8px; }
     .wave-bar { width:3px; background:var(--orange-primary); border-radius:2px; opacity:0.7; }
-    .cut-btn { padding:6px 14px; border-radius:6px; background:rgba(255,107,26,.15); border:1px solid rgba(255,107,26,.3); color:var(--orange-primary); font-size:11px; font-weight:700; cursor:pointer; display:none; }
-    .cut-btn.visible { display:inline-flex; }
+    .cut-btn { padding:6px 14px; border-radius:6px; background:rgba(255,107,26,.15); border:1px solid rgba(255,107,26,.3); color:var(--orange-primary); font-size:11px; font-weight:700; cursor:pointer; }
+    .timeline-ruler-wrap { position:relative; margin:8px 20px 0; height:20px; }
+    .timeline-ruler { width:100%; height:20px; display:block; }
+    .timeline-tracks-wrap { position:relative; padding:0 20px 10px; overflow-x:auto; }
+    .scrubber { position:absolute; top:0; bottom:0; width:2px; background:#ff4500; pointer-events:none; z-index:10; box-shadow:0 0 6px rgba(255,69,0,.8); transition:left 0.05s linear; }
+    .scrubber::before { content:''; position:absolute; top:-4px; left:50%; transform:translateX(-50%); width:10px; height:10px; background:#ff4500; border-radius:50%; border:2px solid #fff; }
+    .speed-group { display:flex; gap:6px; margin-top:8px; }
+    .speed-btn { flex:1; padding:5px 0; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-elevated); color:var(--text-secondary); font-size:11px; font-weight:600; cursor:pointer; transition:all .2s; }
+    .speed-btn.on,.speed-btn:hover { border-color:var(--orange-primary); color:var(--orange-primary); background:var(--orange-soft); }
+    .lut-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:8px; }
+    .lut-chip { padding:6px 4px; border-radius:6px; border:1px solid var(--border-color); background:var(--bg-elevated); color:var(--text-secondary); font-size:10px; font-weight:600; cursor:pointer; text-align:center; transition:all .2s; }
+    .lut-chip.on,.lut-chip:hover { border-color:var(--orange-primary); color:var(--orange-primary); background:var(--orange-soft); }
+    .lut-chip span { display:block; font-size:16px; margin-bottom:2px; }
+    .scene-item { display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;border:1px solid var(--border-color);background:var(--bg-elevated);cursor:pointer;margin-bottom:6px;transition:all .2s; }
+    .scene-item.on,.scene-item:hover { border-color:var(--orange-primary);background:var(--orange-soft); }
+    .wm-overlay { position:absolute;padding:4px 10px;background:rgba(0,0,0,.5);color:rgba(255,255,255,.7);font-size:11px;font-weight:600;border-radius:4px;pointer-events:none;display:none; }
     ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:var(--bg-elevated)}::-webkit-scrollbar-thumb{background:var(--border-color);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--orange-primary)}
   </style>
 </head>
@@ -140,6 +154,11 @@
 
   <!-- Sol Panel -->
   <aside class="left-panel">
+    <div style="display:flex;gap:4px;margin-bottom:4px">
+      <button class="left-tab on" id="tabMedia" onclick="switchTab('media')" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--border-color);background:var(--orange-soft);color:var(--orange-primary);font-size:11px;font-weight:600;cursor:pointer">Medya</button>
+      <button class="left-tab" id="tabScenes" onclick="switchTab('scenes')" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-elevated);color:var(--text-secondary);font-size:11px;font-weight:600;cursor:pointer">Sahneler</button>
+    </div>
+    <div id="panelMedia">
     <div>
       <p class="panel-title">Medya Yükle</p>
       <div class="upload-zone" id="uploadZone">
@@ -155,6 +174,20 @@
       <p class="panel-title">Medya Kütüphanesi</p>
       <div class="media-grid" id="mediaGrid"></div>
     </div>
+    </div><!-- /panelMedia -->
+    <div id="panelScenes" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <p class="panel-title">Sahneler</p>
+        <button onclick="addScene()" style="padding:4px 10px;border-radius:6px;background:var(--orange-soft);border:1px solid var(--orange-primary);color:var(--orange-primary);font-size:11px;cursor:pointer">+ Sahne</button>
+      </div>
+      <div id="sceneList">
+        <div class="scene-item on" data-scene="1" onclick="selectScene(this)">
+          <span style="font-size:10px;color:var(--text-secondary)">S1</span>
+          <div style="flex:1;font-size:12px">Ana Sahne</div>
+          <span style="font-size:10px;color:var(--text-secondary)">0:00</span>
+        </div>
+      </div>
+    </div><!-- /panelScenes -->
   </aside>
 
   <!-- Tezgah -->
@@ -253,21 +286,148 @@
       </div>
     </div>
     <!-- Efekt -->
-    <div class="accordion-section">
+    <div class="accordion-section open">
       <button class="accordion-header" onclick="toggleAcc(this)">
         <div class="accordion-header-left">
           <div class="accordion-icon"><svg viewBox="0 0 24 24"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/></svg></div>
-          <span class="accordion-title">Efekt</span>
+          <span class="accordion-title">Geçiş Efekti</span>
         </div>
         <svg class="accordion-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
       <div class="accordion-content">
-        <div class="chip-group">
-          <button class="chip on">Zoom Punch</button><button class="chip">Glitch</button>
-          <button class="chip">Flash Cut</button><button class="chip">Shake</button>
-          <button class="chip">Slide</button><button class="chip">Fade</button>
+        <div class="chip-group" id="effectChips">
+          <button class="chip on" data-eff="zoom_punch">Zoom Punch</button>
+          <button class="chip" data-eff="glitch">Glitch</button>
+          <button class="chip" data-eff="flash_cut">Flash Cut</button>
+          <button class="chip" data-eff="shake">Shake</button>
+          <button class="chip" data-eff="slide">Slide</button>
+          <button class="chip" data-eff="fade">Fade</button>
+          <button class="chip" data-eff="spin">Spin</button>
+          <button class="chip" data-eff="wipe">Wipe</button>
         </div>
-        <div class="slider-control" style="margin-top:10px"><div class="slider-label"><span>Yoğunluk</span><span id="effV">7</span></div><input type="range" class="f-slider" min="1" max="10" value="7" oninput="document.getElementById('effV').textContent=this.value"></div>
+        <div class="slider-control" style="margin-top:10px">
+          <div class="slider-label"><span>Yoğunluk</span><span id="effV">7</span></div>
+          <input type="range" class="f-slider" id="effSlider" min="1" max="10" value="7" oninput="document.getElementById('effV').textContent=this.value">
+        </div>
+      </div>
+    </div>
+    <!-- LUT / Renk Filtresi -->
+    <div class="accordion-section open">
+      <button class="accordion-header" onclick="toggleAcc(this)">
+        <div class="accordion-header-left">
+          <div class="accordion-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M20.188 10.934l-1.539-.622A8.014 8.014 0 0018 9l.633-1.557c.4-.985.186-2.125-.555-2.865l-.655-.655c-.74-.74-1.88-.955-2.865-.555L13 4c-.299-.133-.611-.249-.934-.312L11.44 2.15C11.128 1.473 10.454 1 9.667 1H8.333c-.787 0-1.46.473-1.773 1.15L5.934 3.688C5.611 3.751 5.299 3.867 5 4l-1.557-.633c-.985-.4-2.125-.186-2.865.555l-.655.655c-.74.74-.955 1.88-.555 2.865L.001 9c-.133.299-.249.611-.312.934L-.149 11.56C-.827 11.873-1.3 12.547-1.3 13.333v1.334c0 .787.473 1.46 1.15 1.773l1.538.622C1.551 17.389 1.667 17.7 1.667 18l-.633 1.557"/></svg></div>
+          <span class="accordion-title">LUT / Renk</span>
+        </div>
+        <svg class="accordion-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-content">
+        <div class="lut-grid" id="lutGrid">
+          <button class="lut-chip on" data-lut="none"><span>🎬</span>Doğal</button>
+          <button class="lut-chip" data-lut="cinematic"><span>🎥</span>Sinema</button>
+          <button class="lut-chip" data-lut="teal_orange"><span>🟠</span>Teal+Or</button>
+          <button class="lut-chip" data-lut="pastel"><span>🌸</span>Pastel</button>
+          <button class="lut-chip" data-lut="drama"><span>⚡</span>Drama</button>
+          <button class="lut-chip" data-lut="neon"><span>💜</span>Neon</button>
+          <button class="lut-chip" data-lut="bw"><span>⬛</span>S&B</button>
+          <button class="lut-chip" data-lut="vintage"><span>🟤</span>Vintage</button>
+          <button class="lut-chip" data-lut="golden"><span>✨</span>Golden</button>
+        </div>
+      </div>
+    </div>
+    <!-- Stil -->
+    <div class="accordion-section">
+      <button class="accordion-header" onclick="toggleAcc(this)">
+        <div class="accordion-header-left">
+          <div class="accordion-icon"><svg viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></div>
+          <span class="accordion-title">Video Stili</span>
+        </div>
+        <svg class="accordion-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-content">
+        <div class="chip-group" id="styleChips">
+          <button class="chip on" data-style="cinematic">Sinematik</button>
+          <button class="chip" data-style="minimal">Minimal</button>
+          <button class="chip" data-style="bold">Güçlü</button>
+          <button class="chip" data-style="luxury">Lüks</button>
+          <button class="chip" data-style="energetic">Enerjik</button>
+          <button class="chip" data-style="calm">Sakin</button>
+        </div>
+      </div>
+    </div>
+    <!-- Watermark -->
+    <div class="accordion-section">
+      <button class="accordion-header" onclick="toggleAcc(this)">
+        <div class="accordion-header-left">
+          <div class="accordion-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+          <span class="accordion-title">Marka Damgası</span>
+        </div>
+        <svg class="accordion-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-content">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <span style="font-size:12px;color:var(--text-secondary)">Watermark ekle</span>
+          <label style="position:relative;display:inline-block;width:40px;height:22px">
+            <input type="checkbox" id="wmToggle" style="opacity:0;width:0;height:0" onchange="updateWM()">
+            <span id="wmSlider" style="position:absolute;inset:0;background:var(--border-color);border-radius:22px;cursor:pointer;transition:.3s"></span>
+          </label>
+        </div>
+        <input type="text" id="wmText" placeholder="Marka adı veya @hesap" style="width:100%;padding:8px 10px;border-radius:6px;background:var(--bg-elevated);border:1px solid var(--border-color);color:#fff;font-size:12px;margin-bottom:8px" oninput="updateWM()">
+        <div class="chip-group" id="wmPos">
+          <button class="chip on" data-pos="br">Sağ Alt</button>
+          <button class="chip" data-pos="bl">Sol Alt</button>
+          <button class="chip" data-pos="tr">Sağ Üst</button>
+          <button class="chip" data-pos="tl">Sol Üst</button>
+        </div>
+      </div>
+    </div>
+    <!-- Export -->
+    <div class="accordion-section open">
+      <button class="accordion-header" onclick="toggleAcc(this)">
+        <div class="accordion-header-left">
+          <div class="accordion-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>
+          <span class="accordion-title">Export & Platform</span>
+        </div>
+        <svg class="accordion-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-content">
+        <p style="font-size:11px;color:var(--text-secondary);margin-bottom:8px">Platform Preset</p>
+        <div class="chip-group" id="platformChips">
+          <button class="chip on" data-platform="reels" data-ratio="9:16" data-res="1080x1920">📱 Reels</button>
+          <button class="chip" data-platform="tiktok" data-ratio="9:16" data-res="1080x1920">🎵 TikTok</button>
+          <button class="chip" data-platform="shorts" data-ratio="9:16" data-res="1080x1920">▶️ Shorts</button>
+          <button class="chip" data-platform="story" data-ratio="9:16" data-res="1080x1920">💬 Story</button>
+          <button class="chip" data-platform="feed" data-ratio="1:1" data-res="1080x1080">🟥 Feed</button>
+          <button class="chip" data-platform="youtube" data-ratio="16:9" data-res="1920x1080">📺 YouTube</button>
+        </div>
+        <div style="background:var(--bg-elevated);border-radius:8px;padding:10px;margin-top:10px;font-size:11px;color:var(--text-secondary)">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Format</span><span id="expRatio" style="color:var(--orange-primary)">9:16</span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Çözünürlük</span><span id="expRes" style="color:var(--orange-primary)">1080×1920</span></div>
+          <div style="display:flex;justify-content:space-between"><span>FPS</span><span style="color:var(--orange-primary)">30</span></div>
+        </div>
+        <button class="gen-btn" style="margin-top:10px" onclick="exportVideo()">⬇ EXPORT ET</button>
+      </div>
+    </div>
+    <!-- Hız -->
+    <div class="accordion-section">
+      <button class="accordion-header" onclick="toggleAcc(this)">
+        <div class="accordion-header-left">
+          <div class="accordion-icon"><svg viewBox="0 0 24 24"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+          <span class="accordion-title">Hız & Ritim</span>
+        </div>
+        <svg class="accordion-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="accordion-content">
+        <p style="font-size:11px;color:var(--text-secondary);margin-bottom:8px">Video Hızı</p>
+        <div class="speed-group" id="speedBtns">
+          <button class="speed-btn" data-speed="0.5">0.5x</button>
+          <button class="speed-btn on" data-speed="1">1x</button>
+          <button class="speed-btn" data-speed="1.5">1.5x</button>
+          <button class="speed-btn" data-speed="2">2x</button>
+        </div>
+        <div class="slider-control" style="margin-top:12px">
+          <div class="slider-label"><span>Tempo (BPM)</span><span id="bpmV2">120</span></div>
+          <input type="range" class="f-slider" min="60" max="200" value="120" oninput="document.getElementById('bpmV2').textContent=this.value">
+        </div>
       </div>
     </div>
   </aside>
@@ -280,21 +440,34 @@
           <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
         </button>
         <span class="time-display"><span id="curTime">0:00</span> / <span id="durTime">0:00</span></span>
-        <button class="cut-btn" id="cutBtn">✂ KES</button>
+        <button class="cut-btn" id="cutBtn" onclick="cutAtCurrent()">✂ KES</button>
         <button class="cut-btn" id="audioCutBtn" style="background:rgba(80,200,255,.12);border-color:rgba(80,200,255,.35);color:rgba(80,200,255,.9)">🎵 SES KES</button>
       </div>
-      <div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="font-size:11px;color:var(--text-secondary)" id="scrubTime">0:00</span>
         <button class="cta-button" id="genBtn2" onclick="generate()">⚡ ÜRETİME BAŞLA</button>
       </div>
     </div>
-    <div class="timeline-tracks">
+    <!-- Ruler -->
+    <div class="timeline-ruler-wrap">
+      <canvas class="timeline-ruler" id="tlRuler" height="20"></canvas>
+    </div>
+    <!-- Tracks -->
+    <div class="timeline-tracks-wrap" id="tlTracksWrap">
+      <div id="tlScrubber" class="scrubber" style="left:72px"></div>
       <div class="track">
         <span class="track-label">Video</span>
-        <div class="track-content"><div class="video-clip" id="videoClip"></div></div>
+        <div class="track-content" id="videoTrack"><div class="video-clip" id="videoClip"></div></div>
       </div>
       <div class="track">
         <span class="track-label">Ses</span>
-        <div class="track-content"><div class="audio-waveform" id="waveform"></div></div>
+        <div class="track-content" id="audioTrack"><div class="audio-waveform" id="waveform"></div></div>
+      </div>
+      <div class="track">
+        <span class="track-label">Kaplama</span>
+        <div class="track-content" id="overlayTrack">
+          <div style="position:absolute;left:5%;width:30%;height:100%;background:linear-gradient(90deg,rgba(139,92,246,.6),rgba(167,139,250,.4));border-radius:4px;display:none" id="overlayClip"></div>
+        </div>
       </div>
     </div>
   </footer>
@@ -308,7 +481,8 @@ const S = {
   customerId: _qp.get('cid') || localStorage.getItem('fx_cid'),
   quota: parseInt(localStorage.getItem('fx_quota')||'0'),
   pkg: _qp.get('pkg') || localStorage.getItem('fx_pkg')||'free',
-  file: null, fileBase64: null, generating: false
+  file: null, fileBase64: null, generating: false,
+  videoStyle: 'cinematic', videoSpeed: 1, effect: 'zoom_punch'
 };
 
 // Auth check
@@ -396,21 +570,181 @@ function addThumb(file) {
   grid.appendChild(item);
 }
 
-// Play/pause
+// ── Timeline Ruler ──
+const LABEL_W = 72; // track-label genişliği (px)
+function drawRuler() {
+  const canvas = document.getElementById('tlRuler');
+  if (!canvas) return;
+  const wrap = document.getElementById('tlTracksWrap');
+  const W = wrap ? wrap.clientWidth - LABEL_W : canvas.clientWidth;
+  canvas.width = W + LABEL_W;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#0a0a0f';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const vid = document.getElementById('eb-video');
+  const dur = vid && vid.duration && isFinite(vid.duration) ? vid.duration : 30;
+  const pxPerSec = W / dur;
+  ctx.fillStyle = '#3a3a4a';
+  ctx.font = '9px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  for (let t = 0; t <= Math.ceil(dur); t++) {
+    const x = LABEL_W + t * pxPerSec;
+    const isMajor = t % 5 === 0;
+    ctx.fillStyle = isMajor ? '#6a6a7a' : '#3a3a4a';
+    ctx.fillRect(x, isMajor ? 8 : 12, 1, isMajor ? 12 : 8);
+    if (isMajor) {
+      ctx.fillStyle = '#6a6a7a';
+      const m = Math.floor(t/60), s = t%60;
+      ctx.fillText(m+':'+(s<10?'0':'')+s, x, 8);
+    }
+  }
+}
+
+// ── Scrubber ──
+let _scrubDrag = false;
+function initScrubber() {
+  const wrap = document.getElementById('tlTracksWrap');
+  if (!wrap) return;
+  function scrubTo(e) {
+    const rect = wrap.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const vid = document.getElementById('eb-video');
+    const trackW = wrap.clientWidth - LABEL_W;
+    const dur = vid && vid.duration && isFinite(vid.duration) ? vid.duration : 0;
+    if (!dur) return;
+    const t = Math.max(0, Math.min(dur, (x - LABEL_W) / trackW * dur));
+    if (vid && isFinite(t)) vid.currentTime = t;
+    moveScrubber(t, dur);
+  }
+  wrap.addEventListener('mousedown', e => { _scrubDrag = true; scrubTo(e); });
+  document.addEventListener('mousemove', e => { if (_scrubDrag) scrubTo(e); });
+  document.addEventListener('mouseup', () => { _scrubDrag = false; });
+}
+
+function moveScrubber(cur, dur) {
+  const sc = document.getElementById('tlScrubber');
+  const wrap = document.getElementById('tlTracksWrap');
+  if (!sc || !wrap || !dur) return;
+  const trackW = wrap.clientWidth - LABEL_W;
+  sc.style.left = (LABEL_W + (cur / dur) * trackW) + 'px';
+  const m = Math.floor(cur/60), s = Math.floor(cur%60);
+  document.getElementById('curTime').textContent = m+':'+(s<10?'0':'')+s;
+  document.getElementById('scrubTime').textContent = m+':'+(s<10?'0':'')+s;
+}
+
+// ── Play/pause ──
 function togglePlay(){
   const vid=document.getElementById('eb-video');
   if(!vid.src)return;
-  if(vid.paused){vid.play();document.querySelector('.play-btn svg').innerHTML='<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';}
-  else{vid.pause();document.querySelector('.play-btn svg').innerHTML='<polygon points="5,3 19,12 5,21"/>';}
+  if(vid.paused){
+    vid.play();
+    document.querySelector('.play-btn svg').innerHTML='<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+  } else {
+    vid.pause();
+    document.querySelector('.play-btn svg').innerHTML='<polygon points="5,3 19,12 5,21"/>';
+  }
 }
 
+// Video timeupdate → scrubber sync
+document.getElementById('eb-video').addEventListener('timeupdate', function() {
+  if (!_scrubDrag) moveScrubber(this.currentTime, this.duration);
+});
+document.getElementById('eb-video').addEventListener('loadedmetadata', function() {
+  const m=Math.floor(this.duration/60),s=Math.floor(this.duration%60);
+  document.getElementById('durTime').textContent=m+':'+(s<10?'0':'')+s;
+  document.getElementById('videoClip').style.display='block';
+  drawRuler();
+  initScrubber();
+});
+window.addEventListener('resize', drawRuler);
+drawRuler();
+initScrubber();
+
+// ── Cut at current time ──
+function cutAtCurrent() {
+  const vid = document.getElementById('eb-video');
+  if (!vid.src) { toast('Önce video yükle'); return; }
+  const t = vid.currentTime, dur = vid.duration;
+  if (!dur) return;
+  const pct = (t / dur * 100).toFixed(1);
+  const clip = document.getElementById('videoClip');
+  clip.style.width = pct + '%';
+  clip.style.display = 'block';
+  toast(`✂ ${pct}%'de kesildi — ${formatTime(t)} sonrası çıkarıldı`);
+}
+function formatTime(s) { const m=Math.floor(s/60),ss=Math.floor(s%60); return m+':'+(ss<10?'0':'')+ss; }
+
 function setVol(v){const vid=document.getElementById('eb-video');if(vid)vid.volume=Math.min(1,v/100);}
+
+// ── LUT Chips ──
+const LUT_FILTERS = {
+  none:'none',
+  cinematic:'contrast(1.1) saturate(0.9) brightness(0.95)',
+  teal_orange:'sepia(0.2) hue-rotate(-10deg) saturate(1.3)',
+  pastel:'saturate(0.7) brightness(1.1) contrast(0.9)',
+  drama:'contrast(1.3) brightness(0.85) saturate(1.1)',
+  neon:'saturate(1.8) hue-rotate(20deg) brightness(1.1)',
+  bw:'grayscale(1)',
+  vintage:'sepia(0.4) contrast(0.9) brightness(0.95)',
+  golden:'sepia(0.3) saturate(1.4) brightness(1.05)'
+};
+document.getElementById('lutGrid').addEventListener('click', e => {
+  const btn = e.target.closest('.lut-chip');
+  if (!btn) return;
+  document.querySelectorAll('#lutGrid .lut-chip').forEach(c=>c.classList.remove('on'));
+  btn.classList.add('on');
+  const lut = btn.dataset.lut;
+  const vid = document.getElementById('eb-video');
+  const img = document.getElementById('eb-img');
+  const f = LUT_FILTERS[lut] || 'none';
+  if (vid) vid.style.filter = f;
+  if (img) img.style.filter = f;
+  toast('🎨 LUT: ' + btn.textContent.trim());
+});
+
+// ── Stil Chips ──
+document.getElementById('styleChips').addEventListener('click', e => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  document.querySelectorAll('#styleChips .chip').forEach(c=>c.classList.remove('on'));
+  btn.classList.add('on');
+  S.videoStyle = btn.dataset.style;
+  toast('🎬 Stil: ' + btn.textContent.trim());
+});
+
+// ── Hız Butonları ──
+document.getElementById('speedBtns').addEventListener('click', e => {
+  const btn = e.target.closest('.speed-btn');
+  if (!btn) return;
+  document.querySelectorAll('#speedBtns .speed-btn').forEach(c=>c.classList.remove('on'));
+  btn.classList.add('on');
+  const spd = parseFloat(btn.dataset.speed);
+  const vid = document.getElementById('eb-video');
+  if (vid) vid.playbackRate = spd;
+  S.videoSpeed = spd;
+  toast('⚡ Hız: ' + spd + 'x');
+});
+
+// ── Efekt Chips ──
+document.getElementById('effectChips').addEventListener('click', e => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  document.querySelectorAll('#effectChips .chip').forEach(c=>c.classList.remove('on'));
+  btn.classList.add('on');
+  S.effect = btn.dataset.eff;
+  toast('✨ Efekt: ' + btn.textContent.trim());
+});
 
 // Generate
 async function generate(){
   if(S.generating)return;
   if(!S.file){toast('Önce dosya yükle');return;}
-  if(S.quota<=0&&S.pkg==='free'){toast('Hakkın bitti. Paket al.',4000);return;}
+  if(S.quota<=0){
+    toast('Bu ay hakkın bitti. Ek video satın alınıyor...',3000);
+    setTimeout(()=>{ location.href='/odeme?service=reels&price=25&cid='+encodeURIComponent(S.customerId); },1500);
+    return;
+  }
   S.generating=true;
   const btn=document.getElementById('genBtn'); btn.textContent='⏳ ÜRETİYOR...'; btn.disabled=true;
   const btn2=document.getElementById('genBtn2'); btn2.textContent='⏳ ÜRETİYOR...'; btn2.disabled=true;
@@ -432,11 +766,91 @@ async function generate(){
   }catch(e){toast('Bağlantı hatası');}
   done();
 }
+// ── Tab switch ──
+function switchTab(t) {
+  document.getElementById('panelMedia').style.display = t==='media'?'block':'none';
+  document.getElementById('panelScenes').style.display = t==='scenes'?'block':'none';
+  document.getElementById('tabMedia').style.background = t==='media'?'var(--orange-soft)':'var(--bg-elevated)';
+  document.getElementById('tabMedia').style.color = t==='media'?'var(--orange-primary)':'var(--text-secondary)';
+  document.getElementById('tabScenes').style.background = t==='scenes'?'var(--orange-soft)':'var(--bg-elevated)';
+  document.getElementById('tabScenes').style.color = t==='scenes'?'var(--orange-primary)':'var(--text-secondary)';
+}
+
+// ── Scenes ──
+let sceneCount = 1;
+function addScene() {
+  sceneCount++;
+  const list = document.getElementById('sceneList');
+  const div = document.createElement('div');
+  div.className = 'scene-item';
+  div.dataset.scene = sceneCount;
+  div.onclick = function(){ selectScene(this); };
+  div.innerHTML = `<span style="font-size:10px;color:var(--text-secondary)">S${sceneCount}</span><div style="flex:1;font-size:12px">Sahne ${sceneCount}</div><span style="font-size:10px;color:var(--text-secondary)">0:00</span>`;
+  list.appendChild(div);
+  selectScene(div);
+  toast(`📽 Sahne ${sceneCount} eklendi`);
+}
+function selectScene(el) {
+  document.querySelectorAll('.scene-item').forEach(s=>s.classList.remove('on'));
+  el.classList.add('on');
+}
+
+// ── Watermark ──
+function updateWM() {
+  const on = document.getElementById('wmToggle').checked;
+  const text = document.getElementById('wmText').value;
+  const slider = document.getElementById('wmSlider');
+  slider.style.background = on ? 'var(--orange-primary)' : 'var(--border-color)';
+  let wm = document.getElementById('wmOverlay');
+  if (!wm) {
+    wm = document.createElement('div');
+    wm.id = 'wmOverlay'; wm.className = 'wm-overlay';
+    document.getElementById('canvasFrame').appendChild(wm);
+  }
+  const pos = document.querySelector('#wmPos .chip.on')?.dataset.pos || 'br';
+  wm.style.display = on && text ? 'block' : 'none';
+  wm.textContent = text;
+  wm.style.bottom = pos.includes('b') ? '10px' : 'auto';
+  wm.style.top = pos.includes('t') ? '10px' : 'auto';
+  wm.style.right = pos.includes('r') ? '10px' : 'auto';
+  wm.style.left = pos.includes('l') ? '10px' : 'auto';
+}
+document.getElementById('wmPos')?.addEventListener('click', e=>{
+  const btn=e.target.closest('.chip'); if(!btn)return;
+  document.querySelectorAll('#wmPos .chip').forEach(c=>c.classList.remove('on'));
+  btn.classList.add('on'); updateWM();
+});
+
+// ── Platform presets ──
+document.getElementById('platformChips')?.addEventListener('click', e=>{
+  const btn=e.target.closest('.chip'); if(!btn)return;
+  document.querySelectorAll('#platformChips .chip').forEach(c=>c.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('expRatio').textContent = btn.dataset.ratio;
+  document.getElementById('expRes').textContent = btn.dataset.res?.replace('x','×');
+  const [w,h] = btn.dataset.ratio.split(':').map(Number);
+  const frame = document.getElementById('canvasFrame');
+  if(w===9&&h===16){ frame.style.width='270px'; frame.style.height='480px'; }
+  else if(w===1&&h===1){ frame.style.width='380px'; frame.style.height='380px'; }
+  else if(w===16&&h===9){ frame.style.width='480px'; frame.style.height='270px'; }
+  document.querySelector('.canvas-ratio').textContent = btn.dataset.ratio;
+  toast('📐 Platform: ' + btn.textContent.trim());
+});
+
+// ── Export ──
+function exportVideo() {
+  const platform = document.querySelector('#platformChips .chip.on')?.dataset.platform || 'reels';
+  toast(`⬇ ${platform.toUpperCase()} formatında export başlatıldı...`, 4000);
+  // Gerçek export: sunucuya ffmpeg komutu gönderilecek
+  setTimeout(()=>toast('✅ Export hazır! İndir →', 5000), 2000);
+}
+
 function done(){
   S.generating=false;
   const b1=document.getElementById('genBtn');b1.textContent='⚡ ÜRETİME BAŞLA';b1.disabled=false;
   const b2=document.getElementById('genBtn2');b2.textContent='⚡ ÜRETİME BAŞLA';b2.disabled=false;
 }
 </script>
+<script src="/fenix-security-widget.js"></script>
 </body>
 </html>

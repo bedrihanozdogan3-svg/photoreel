@@ -28,6 +28,32 @@ const memStore = {};
 const FREE_QUOTA = 5;
 const COLLECTION = 'fenix-customers';
 
+// Plan bazlı aylık video kotaları
+const PLAN_QUOTAS = {
+  free:   5,
+  reels:  15,
+  pro:    15,
+  '360':  20,
+  ses:    10,
+  otonom: 30,
+  full:   30
+};
+
+// Operasyon bazlı kredi maliyetleri
+// Lip sync ayrı ödeme — quota'dan DEĞİL, doğrudan ödeme sayfasına gider
+const OP_COSTS = {
+  video:      1,   // Kling video üretimi
+  video_360:  1,   // 360° ürün turu
+  dublaj:     1,   // ElevenLabs ses dublajı
+  bg_remove:  0,   // Photoroom — ücretsiz (planın içinde)
+  // Lip sync: AYRI ÖDEME → /odeme?service=lipsync
+  // lipsync_15s: ₺35, lipsync_30s: ₺70, lipsync_60s: ₺140
+};
+
+function getMonthlyQuota(pkg) {
+  return PLAN_QUOTAS[pkg] ?? FREE_QUOTA;
+}
+
 // Paket hiyerarşisi: her paket altındakileri kapsar
 const PKG_TIERS = ['free','reels','pro','360','ses','full'];
 // Hangi kartlar hangi minimum paketi gerektiriyor
@@ -166,48 +192,89 @@ router.post('/register', async (req, res) => {
  * Kota 0 ise reddeder.
  */
 router.post('/use-quota', async (req, res) => {
-  const { customerId } = req.body || {};
+  const { customerId, operation = 'video' } = req.body || {};
   if (!customerId) return res.status(400).json({ ok: false, error: 'customerId gerekli.' });
+
+  // Lip sync kesinlikle quota'dan gitmez — ayrı ödeme
+  if (operation === 'lipsync') {
+    return res.status(400).json({
+      ok: false,
+      error: 'Lip sync ayrı ücretlidir. Ödeme sayfasına yönlendir.',
+      redirectTo: '/odeme?service=lipsync'
+    });
+  }
+
+  const cost = OP_COSTS[operation] ?? 1;
 
   try {
     const firestore = getDb();
 
     if (firestore) {
       const ref = firestore.collection(COLLECTION).doc(customerId);
+      const thisMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
 
-      // Firestore transaction — race condition engeli (eş zamanlı isteklerde quota aşımı önlenir)
-      let newRemaining;
-      let newUsed;
+      let newRemaining, newUsed, total, pkg;
       try {
         await firestore.runTransaction(async (t) => {
           const snap = await t.get(ref);
           if (!snap.exists) throw Object.assign(new Error('Müşteri bulunamadı.'), { status: 404 });
           const data = snap.data();
-          const used = data.used || 0;
-          const remaining = Math.max(0, FREE_QUOTA - used);
-          if (remaining <= 0) throw Object.assign(new Error('Ücretsiz video hakkınız doldu.'), { status: 403, remaining: 0 });
-          t.update(ref, { used: used + 1, lastUsedAt: new Date().toISOString() });
-          newUsed = used + 1;
-          newRemaining = remaining - 1;
+          pkg = data.pkg || 'free';
+          total = getMonthlyQuota(pkg);
+
+          // Aylık kullanım sayacı
+          const monthUsed = (data.monthUsage && data.monthUsage[thisMonth]) || 0;
+          const remaining = Math.max(0, total - monthUsed);
+
+          if (remaining < cost) {
+            throw Object.assign(
+              new Error(`Bu ay ${total} video hakkınız doldu. Ek video satın alın.`),
+              { status: 403, remaining: 0, total, redirectTo: `/odeme?service=${operation}&price=25&cid=${customerId}` }
+            );
+          }
+
+          const newMonthUsed = monthUsed + cost;
+          t.update(ref, {
+            [`monthUsage.${thisMonth}`]: newMonthUsed,
+            lastUsedAt: new Date().toISOString(),
+            lastOperation: operation
+          });
+          newUsed = newMonthUsed;
+          newRemaining = total - newMonthUsed;
         });
       } catch (txErr) {
-        return res.status(txErr.status || 500).json({ ok: false, error: txErr.message, remaining: txErr.remaining ?? undefined });
+        return res.status(txErr.status || 500).json({
+          ok: false,
+          error: txErr.message,
+          remaining: txErr.remaining ?? undefined,
+          total: txErr.total ?? undefined,
+          redirectTo: txErr.redirectTo ?? undefined
+        });
       }
 
-      logger.info('Quota kullanıldı', { customerId, used: newUsed, remaining: newRemaining });
-      return res.json({ ok: true, remaining: newRemaining, used: newUsed, total: FREE_QUOTA });
+      logger.info('Quota kullanıldı', { customerId, operation, cost, used: newUsed, remaining: newRemaining, pkg });
+      return res.json({ ok: true, remaining: newRemaining, used: newUsed, total, pkg, operation });
 
     } else {
       // Bellek fallback
       if (!memStore[customerId]) {
         return res.status(404).json({ ok: false, error: 'Müşteri bulunamadı.' });
       }
-      const used = memStore[customerId].used;
-      if (used >= FREE_QUOTA) {
-        return res.status(403).json({ ok: false, error: 'Ücretsiz video hakkınız doldu.', remaining: 0 });
+      const rec = memStore[customerId];
+      const pkg = rec.pkg || 'free';
+      const total = getMonthlyQuota(pkg);
+      const used = rec.used || 0;
+      if (used + cost > total) {
+        return res.status(403).json({
+          ok: false,
+          error: `Bu ay ${total} video hakkınız doldu.`,
+          remaining: 0,
+          total,
+          redirectTo: `/odeme?service=${operation}&price=25&cid=${customerId}`
+        });
       }
-      memStore[customerId].used++;
-      return res.json({ ok: true, remaining: FREE_QUOTA - memStore[customerId].used, used: memStore[customerId].used, total: FREE_QUOTA });
+      rec.used = used + cost;
+      return res.json({ ok: true, remaining: total - rec.used, used: rec.used, total, pkg, operation });
     }
   } catch (e) {
     logger.error('Quota kullanım hatası', { error: e.message });

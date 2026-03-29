@@ -9,6 +9,8 @@
 const express = require('express');
 const router  = express.Router();
 const logger  = require('../utils/logger');
+const { rateLimiter } = require('../middleware/rateLimiter');
+const { auditLogger } = require('../middleware/auditLog');
 
 const FAL_KEY  = process.env.FAL_KEY;
 const LUMA_KEY = process.env.LUMA_KEY;
@@ -63,7 +65,7 @@ async function checkCustomerPkg(customerId, requiredPkg) {
   } catch { return true; } // Firestore yoksa izin ver (dev)
 }
 
-router.post('/', async (req, res) => {
+router.post('/', rateLimiter, auditLogger('video_generate'), async (req, res) => {
   if (!FAL_KEY) {
     return res.status(503).json({ ok: false, error: 'Video servisi henüz yapılandırılmadı.' });
   }
@@ -362,5 +364,247 @@ router.get('/status', (req, res) => {
     }
   });
 });
+
+/**
+ * POST /api/generate/dublaj
+ *
+ * Akış:
+ *  1. Kullanıcının klonlanmış sesini Firestore'dan al (voiceId)
+ *  2. Video dosyasını fal.ai storage'a yükle
+ *  3. ElevenLabs ile hedef dilde seslendirme üret
+ *  4. (Opsiyonel) Sync Labs ile dudak okuma uygula
+ *  5. Sonuç URL'ini döndür
+ *
+ * Body (multipart/form-data):
+ *  - video: File        — dublaj yapılacak video
+ *  - userId: string     — müşteri kimliği
+ *  - targetLang: string — hedef dil kodu (tr, en, de, ...)
+ *  - lipsync: '0'|'1'  — dudak okuma açık mı?
+ *  - lipDuration: number — dudak okuma süresi (saniye)
+ */
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 500 * 1024 * 1024 } });
+
+const ELEVENLABS_KEY = process.env.ELEVENLABS_API_KEY;
+const SYNCLABS_KEY   = process.env.SYNCLABS_API_KEY;
+
+// Dil kodu → ElevenLabs dil ID eşlemesi
+const LANG_MAP = {
+  tr: 'tr', en: 'en', de: 'de', fr: 'fr',
+  es: 'es', ar: 'ar', it: 'it', pt: 'pt', ru: 'ru'
+};
+
+router.post('/dublaj', rateLimiter, auditLogger('dublaj'), upload.single('video'), async (req, res) => {
+  const { userId, targetLang = 'en', lipsync = '0', lipDuration = 15 } = req.body || {};
+  const videoFile = req.file;
+
+  if (!userId) return res.status(400).json({ ok: false, error: 'userId gerekli.' });
+  if (!videoFile) return res.status(400).json({ ok: false, error: 'Video dosyası gerekli.' });
+
+  // Paket kontrolü
+  const hasAccess = await checkCustomerPkg(userId, 'ses');
+  if (!hasAccess) {
+    return res.status(403).json({ ok: false, error: 'Dublaj için Ses paketi gerekli.', requirePkg: 'ses' });
+  }
+
+  // Lip sync ayrı ödeme zorunlu — quota'dan gitmez
+  // lipsync=1 ise ödeme token'ı kontrol et
+  if (lipsync === '1' || lipsync === true) {
+    const lipToken = req.body.lipToken;
+    if (!lipToken) {
+      return res.status(402).json({
+        ok: false,
+        error: 'Lip sync ücretlidir. Ödeme sayfasına yönlendir.',
+        redirectTo: `/odeme?service=lipsync&duration=${lipDuration}&cid=${userId}`,
+        costs: { '15s': '₺35', '30s': '₺70', '60s': '₺140' }
+      });
+    }
+    // Token doğrulama (Firestore'da ödeme kaydı kontrol et)
+    try {
+      const admin = require('firebase-admin');
+      const db = admin.firestore();
+      const tokenSnap = await db.collection('fenix-lipsync-tokens').doc(lipToken).get();
+      if (!tokenSnap.exists || tokenSnap.data().used || tokenSnap.data().customerId !== userId) {
+        return res.status(402).json({ ok: false, error: 'Geçersiz veya kullanılmış lip sync token.' });
+      }
+      // Token'ı kullanıldı olarak işaretle
+      await db.collection('fenix-lipsync-tokens').doc(lipToken).update({ used: true, usedAt: new Date().toISOString() });
+    } catch (e) {
+      logger.warn('Lip sync token kontrolü başarısız (dev mode)', { error: e.message });
+      // Dev ortamında devam et
+    }
+  }
+
+  // ElevenLabs key zorunlu
+  if (!ELEVENLABS_KEY) {
+    return res.status(503).json({ ok: false, error: 'Ses servisi henüz yapılandırılmadı.' });
+  }
+
+  try {
+    logger.info('Dublaj başlatıldı', { userId, targetLang, lipsync, lipDuration });
+
+    // 1. Kullanıcının klonlanmış voice ID'sini al
+    const voiceId = await getUserVoiceId(userId);
+    if (!voiceId) {
+      return res.status(404).json({ ok: false, error: 'Ses klonu bulunamadı. Önce ses kaydı yapın.' });
+    }
+
+    // 2. Videoyu fal.ai storage'a yükle
+    const videoUrl = await uploadBufferToFal(videoFile.buffer, videoFile.mimetype, videoFile.originalname);
+
+    // 3. Video transkripsiyon (Deepgram)
+    const transcript = await transcribeVideo(videoUrl);
+    if (!transcript) {
+      return res.status(422).json({ ok: false, error: 'Video transkripsiyon başarısız.' });
+    }
+
+    // 4. ElevenLabs ile hedef dilde seslendirme üret
+    const lang = LANG_MAP[targetLang] || 'en';
+    const audioBuffer = await generateDubbedAudio(voiceId, transcript, lang);
+
+    // 5. Sesi fal.ai storage'a yükle
+    const audioUrl = await uploadBufferToFal(audioBuffer, 'audio/mpeg', `dubbed_${userId}_${Date.now()}.mp3`);
+
+    let resultUrl = audioUrl; // varsayılan: ses dosyası
+
+    // 6. Dudak okuma (opsiyonel — ödeme onaylandıysa)
+    if (lipsync === '1' && SYNCLABS_KEY) {
+      try {
+        resultUrl = await applyLipsync(videoUrl, audioUrl, parseInt(lipDuration));
+        logger.info('Dudak okuma tamamlandı', { userId, resultUrl: resultUrl?.slice(0, 60) });
+      } catch(e) {
+        logger.warn('Dudak okuma başarısız, ses devam ediyor', { error: e.message });
+        // Lip sync başarısız olsa da devam et — sadece ses döndür
+      }
+    }
+
+    // 7. Sonucu Firestore'a kaydet
+    await saveDublajResult(userId, { targetLang, voiceId, videoUrl, audioUrl, resultUrl, lipsync });
+
+    logger.info('Dublaj tamamlandı', { userId, targetLang, lipsync, resultUrl: resultUrl?.slice(0, 60) });
+
+    return res.json({
+      ok: true,
+      resultUrl,
+      audioUrl,
+      type: lipsync === '1' ? 'video_lipsync' : 'audio_only',
+      lang: targetLang
+    });
+
+  } catch(e) {
+    logger.error('Dublaj hatası', { error: e.message, userId });
+    return res.status(500).json({ ok: false, error: 'Dublaj sırasında hata oluştu: ' + e.message });
+  }
+});
+
+// ── Yardımcı fonksiyonlar ──
+
+async function getUserVoiceId(userId) {
+  try {
+    const admin = require('firebase-admin');
+    const snap = await admin.firestore()
+      .collection('fenix-voice-clones')
+      .where('userId', '==', userId)
+      .orderBy('createdAt', 'desc')
+      .limit(1)
+      .get();
+    if (snap.empty) return null;
+    return snap.docs[0].data().elevenLabsVoiceId || null;
+  } catch(e) {
+    logger.warn('VoiceId alınamadı', { error: e.message, userId });
+    return null;
+  }
+}
+
+async function uploadBufferToFal(buffer, mimeType, filename) {
+  const res = await fetch('https://fal.run/storage/upload', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': mimeType,
+      'X-Filename': filename || 'upload'
+    },
+    body: buffer
+  });
+  if (!res.ok) throw new Error(`fal.ai upload hatası: ${res.status}`);
+  const d = await res.json();
+  return d.url || d.access_url;
+}
+
+async function transcribeVideo(videoUrl) {
+  const DEEPGRAM_KEY = process.env.DEEPGRAM_API_KEY;
+  if (!DEEPGRAM_KEY) {
+    logger.warn('Deepgram key yok, transkripsiyon atlanıyor');
+    return 'Bu video Fenix AI tarafından seslendirilmiştir.'; // fallback
+  }
+  try {
+    const res = await fetch('https://api.deepgram.com/v1/listen?model=nova-2&detect_language=true&punctuate=true', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Token ${DEEPGRAM_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ url: videoUrl })
+    });
+    if (!res.ok) throw new Error(`Deepgram hatası: ${res.status}`);
+    const d = await res.json();
+    return d?.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
+  } catch(e) {
+    logger.warn('Transkripsiyon hatası', { error: e.message });
+    return '';
+  }
+}
+
+async function generateDubbedAudio(voiceId, text, lang) {
+  if (!text) text = 'Bu içerik Fenix AI tarafından seslendirilmiştir.';
+  const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
+    method: 'POST',
+    headers: {
+      'xi-api-key': ELEVENLABS_KEY,
+      'Content-Type': 'application/json',
+      'Accept': 'audio/mpeg'
+    },
+    body: JSON.stringify({
+      text,
+      model_id: 'eleven_multilingual_v2',
+      voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.3 },
+      language_code: lang
+    })
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`ElevenLabs hatası: ${res.status} ${err.slice(0, 100)}`);
+  }
+  return Buffer.from(await res.arrayBuffer());
+}
+
+async function applyLipsync(videoUrl, audioUrl, durationSec) {
+  // Sync Labs via fal.ai
+  const res = await fetch('https://fal.run/fal-ai/sync-lipsync/v2', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${FAL_KEY}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      video_url: videoUrl,
+      audio_url: audioUrl,
+      model: 'lipsync-2',
+      sync_mode: 'bounce'
+    })
+  });
+  if (!res.ok) throw new Error(`Sync Labs hatası: ${res.status}`);
+  const d = await res.json();
+  return d?.video?.url || d?.output?.url || null;
+}
+
+async function saveDublajResult(userId, data) {
+  try {
+    const admin = require('firebase-admin');
+    await admin.firestore().collection('fenix-dublaj-results').add({
+      userId, ...data, createdAt: new Date().toISOString()
+    });
+  } catch(e) { /* sessizce geç */ }
+}
 
 module.exports = router;

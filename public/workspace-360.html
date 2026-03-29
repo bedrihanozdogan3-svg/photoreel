@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fenix 360° — Ürün Videosu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{
+      --bg-deep:#050508;--bg-panel:#0a0a0f;--bg-elevated:#12121a;
+      --teal:#00C9A7;--teal-glow:rgba(0,201,167,.4);--teal-soft:rgba(0,201,167,.12);
+      --blue:#3B82F6;--blue-soft:rgba(59,130,246,.15);
+      --text-primary:#ffffff;--text-secondary:#8a8a9a;--border-color:#1a1a24;
+      --lw:270px;--rw:290px;--th:56px;
+    }
+    body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg-deep);color:var(--text-primary);height:100vh;overflow:hidden}
+    /* Particles */
+    .particles{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+    .pt{position:absolute;width:3px;height:3px;background:var(--teal);border-radius:50%;opacity:0;filter:blur(1px);animation:rise2 10s infinite}
+    .pt:nth-child(1){left:8%;animation-delay:0s}.pt:nth-child(2){left:20%;animation-delay:2s}.pt:nth-child(3){left:33%;animation-delay:.7s}.pt:nth-child(4){left:47%;animation-delay:1.5s}.pt:nth-child(5){left:62%;animation-delay:3s}.pt:nth-child(6){left:75%;animation-delay:.3s}.pt:nth-child(7){left:88%;animation-delay:2.5s}.pt:nth-child(8){left:14%;animation-delay:4s}
+    @keyframes rise2{0%{bottom:-10px;opacity:0}10%{opacity:.6}90%{opacity:.2}100%{bottom:100vh;opacity:0}}
+
+    /* Layout */
+    .layout{display:grid;grid-template-rows:var(--th) 1fr;grid-template-columns:var(--lw) 1fr var(--rw);height:100vh;position:relative;z-index:1}
+
+    /* Toolbar */
+    .toolbar{grid-column:1/-1;background:var(--bg-panel);border-bottom:1px solid var(--border-color);display:flex;align-items:center;padding:0 20px;gap:10px}
+    .btn-back{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid var(--border-color);font-size:12px;color:var(--text-secondary);cursor:pointer;background:transparent;transition:all .2s;font-family:inherit}
+    .btn-back:hover{border-color:var(--teal);color:var(--teal)}
+    .logo{display:flex;align-items:center;gap:8px;padding:0 20px;border-left:1px solid var(--border-color);border-right:1px solid var(--border-color)}
+    .logo-badge{background:linear-gradient(135deg,var(--teal),var(--blue));width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px}
+    .logo-text{font-weight:700;font-size:16px}
+    .logo-text span{color:var(--teal)}
+    .mode-pill{background:var(--teal-soft);color:var(--teal);padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.5px}
+    .tb-spacer{flex:1}
+    .quota-badge{font-size:12px;color:var(--text-secondary)}
+    .quota-badge strong{color:var(--text-primary)}
+
+    /* Left Sidebar */
+    .left-sidebar{background:var(--bg-panel);border-right:1px solid var(--border-color);overflow-y:auto;display:flex;flex-direction:column}
+    .sidebar-tabs{display:flex;border-bottom:1px solid var(--border-color)}
+    .stab{flex:1;padding:10px 0;text-align:center;font-size:11px;font-weight:600;color:var(--text-secondary);cursor:pointer;border:none;background:transparent;transition:all .2s;font-family:inherit}
+    .stab.active{color:var(--teal);border-bottom:2px solid var(--teal)}
+    .tab-panel{display:none;flex:1;padding:16px;flex-direction:column;gap:12px}
+    .tab-panel.active{display:flex}
+    .panel-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);margin-bottom:4px}
+    .upload-zone{border:2px dashed var(--border-color);border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;transition:all .3s;background:var(--bg-elevated)}
+    .upload-zone:hover{border-color:var(--teal);background:var(--teal-soft);box-shadow:0 0 24px var(--teal-glow)}
+    .uz-icon{width:44px;height:44px;background:var(--teal-soft);border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;transition:all .3s}
+    .upload-zone:hover .uz-icon{background:var(--teal)}
+    .uz-icon svg{width:22px;height:22px;stroke:var(--teal);fill:none;stroke-width:2;transition:stroke .2s}
+    .upload-zone:hover .uz-icon svg{stroke:#fff}
+    .uz-text{font-size:13px;font-weight:500;margin-bottom:3px}
+    .uz-hint{font-size:11px;color:var(--text-secondary)}
+    .media-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
+    .media-thumb{aspect-ratio:1;background:var(--bg-elevated);border-radius:8px;border:1px solid var(--border-color);overflow:hidden;cursor:pointer;transition:all .2s;position:relative}
+    .media-thumb:hover{border-color:var(--teal);box-shadow:0 0 12px var(--teal-glow)}
+    .media-thumb img,.media-thumb video{width:100%;height:100%;object-fit:cover}
+    .media-thumb .thumb-badge{position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,.7);color:#fff;font-size:9px;padding:2px 5px;border-radius:4px;font-weight:600}
+    /* Scene list */
+    .scene-list{display:flex;flex-direction:column;gap:6px}
+    .scene-item{background:var(--bg-elevated);border-radius:8px;border:1px solid var(--border-color);padding:10px 12px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:10px}
+    .scene-item.active,.scene-item:hover{border-color:var(--teal);background:var(--teal-soft)}
+    .scene-num{width:24px;height:24px;background:var(--teal-soft);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--teal);flex-shrink:0}
+    .scene-info{flex:1}
+    .scene-name{font-size:12px;font-weight:500}
+    .scene-dur{font-size:10px;color:var(--text-secondary)}
+    .add-scene-btn{width:100%;padding:8px;border-radius:8px;border:1px dashed var(--border-color);background:transparent;color:var(--text-secondary);font-size:12px;cursor:pointer;transition:all .2s;font-family:inherit;margin-top:4px}
+    .add-scene-btn:hover{border-color:var(--teal);color:var(--teal)}
+
+    /* Center Canvas */
+    .canvas-area{background:var(--bg-deep);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:30px;position:relative}
+    .canvas-frame{width:280px;height:280px;background:var(--bg-panel);border-radius:50%;position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 0 0 2px var(--teal),0 0 40px var(--teal-glow);animation:rotatePulse 4s ease-in-out infinite}
+    @keyframes rotatePulse{0%,100%{box-shadow:0 0 0 2px var(--teal),0 0 30px var(--teal-glow)}50%{box-shadow:0 0 0 3px var(--teal),0 0 60px var(--teal-glow)}}
+    .canvas-frame.square{border-radius:16px}
+    .canvas-frame.portrait{border-radius:16px;width:210px;height:280px}
+    #cv-img{width:100%;height:100%;object-fit:cover;display:none}
+    #cv-img.active{display:block}
+    #cv-video{width:100%;height:100%;object-fit:cover;display:none;background:#000}
+    #cv-video.active{display:block}
+    .cv-placeholder{text-align:center;color:var(--text-secondary)}
+    .cv-placeholder svg{width:44px;height:44px;stroke:var(--text-secondary);fill:none;stroke-width:1.5;margin-bottom:10px;opacity:.4}
+    .rotate-controls{display:flex;gap:12px;align-items:center}
+    .rot-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--border-color);background:var(--bg-elevated);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;color:var(--text-secondary)}
+    .rot-btn:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-soft)}
+    .rot-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2}
+    .format-pills{display:flex;gap:6px}
+    .fpill{padding:5px 14px;border-radius:20px;border:1px solid var(--border-color);background:var(--bg-elevated);font-size:11px;font-weight:600;color:var(--text-secondary);cursor:pointer;transition:all .2s}
+    .fpill.on,.fpill:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-soft)}
+    .progress-ring-wrap{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);display:none;align-items:center;gap:12px;background:rgba(10,10,15,.9);padding:10px 20px;border-radius:30px;border:1px solid var(--border-color)}
+    .progress-ring-wrap.active{display:flex}
+    .pring{width:36px;height:36px}
+    .pring circle{fill:none;stroke-width:3;transition:stroke-dashoffset .3s}
+    .pring .bg{stroke:#1a1a24}
+    .pring .fg{stroke:var(--teal);stroke-dasharray:100;stroke-dashoffset:100;stroke-linecap:round;transform:rotate(-90deg);transform-origin:center}
+    .pring-pct{font-size:12px;font-weight:700;color:var(--teal)}
+    .pring-label{font-size:11px;color:var(--text-secondary)}
+
+    /* Right Sidebar */
+    .right-sidebar{background:var(--bg-panel);border-left:1px solid var(--border-color);overflow-y:auto}
+    .acc-section{border-bottom:1px solid var(--border-color)}
+    .acc-header{width:100%;padding:14px 18px;background:transparent;border:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:all .2s;color:var(--text-primary);font-family:inherit}
+    .acc-header:hover{background:var(--teal-soft)}
+    .acc-left{display:flex;align-items:center;gap:10px}
+    .acc-icon{width:30px;height:30px;background:var(--bg-elevated);border-radius:7px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+    .acc-header:hover .acc-icon{background:var(--teal)}
+    .acc-icon svg{width:15px;height:15px;stroke:var(--teal);fill:none;stroke-width:2;transition:stroke .2s}
+    .acc-header:hover .acc-icon svg{stroke:#fff}
+    .acc-title{font-size:13px;font-weight:500}
+    .acc-chev{width:18px;height:18px;stroke:var(--text-secondary);fill:none;stroke-width:2;transition:transform .3s}
+    .acc-section.open .acc-chev{transform:rotate(180deg)}
+    .acc-body{padding:0 18px 14px;display:none}
+    .acc-section.open .acc-body{display:block}
+    .slider-row{margin-bottom:10px}
+    .slider-lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--text-secondary);margin-bottom:6px}
+    input[type=range]{width:100%;accent-color:var(--teal);cursor:pointer}
+    .chip-row{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+    .chip{padding:4px 10px;border-radius:999px;border:1px solid var(--border-color);font-size:11px;color:var(--text-secondary);background:var(--bg-elevated);cursor:pointer;transition:all .2s}
+    .chip.on,.chip:hover{border-color:var(--teal);color:var(--teal);background:var(--teal-soft)}
+    .gen-btn{width:100%;padding:10px;border-radius:8px;background:linear-gradient(135deg,var(--teal),var(--blue));border:none;color:#fff;font-size:12px;font-weight:700;cursor:pointer;margin-top:10px;transition:all .2s;font-family:inherit}
+    .gen-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px var(--teal-glow)}
+    .gen-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+    .input-field{width:100%;padding:8px 10px;border-radius:6px;background:var(--bg-elevated);border:1px solid var(--border-color);color:#fff;font-size:12px;font-family:inherit;margin-bottom:8px}
+    .input-field:focus{outline:none;border-color:var(--teal)}
+    .hotspot-list{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+    .hotspot-item{background:var(--bg-elevated);border-radius:6px;padding:8px 10px;font-size:11px;color:var(--text-secondary);display:flex;justify-content:space-between;align-items:center;border:1px solid var(--border-color)}
+    .hotspot-item .hs-del{background:none;border:none;cursor:pointer;color:#ff4444;font-size:14px;padding:0}
+    .color-row{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-top:6px}
+    .color-dot{width:28px;height:28px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:all .2s}
+    .color-dot.on,.color-dot:hover{border-color:#fff;transform:scale(1.1)}
+    ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg-elevated)}::-webkit-scrollbar-thumb{background:var(--border-color);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:var(--teal)}
+  </style>
+</head>
+<body>
+<div class="particles">
+  <div class="pt"></div><div class="pt"></div><div class="pt"></div><div class="pt"></div>
+  <div class="pt"></div><div class="pt"></div><div class="pt"></div><div class="pt"></div>
+</div>
+
+<div class="layout">
+  <!-- Toolbar -->
+  <header class="toolbar">
+    <button class="btn-back" onclick="location.href='/app'">← Geri</button>
+    <div class="logo">
+      <div class="logo-badge">360</div>
+      <span class="logo-text">Fenix <span>360°</span></span>
+    </div>
+    <div class="mode-pill">ÜRÜN VİDEO</div>
+    <div class="tb-spacer"></div>
+    <span class="quota-badge" id="quotaDisplay">— hak</span>
+  </header>
+
+  <!-- Left Sidebar -->
+  <aside class="left-sidebar">
+    <div class="sidebar-tabs">
+      <button class="stab active" onclick="switchTab('medya',this)">Medya</button>
+      <button class="stab" onclick="switchTab('sahneler',this)">Sahneler</button>
+    </div>
+    <!-- Medya Tab -->
+    <div class="tab-panel active" id="tab-medya">
+      <div>
+        <p class="panel-label">Ürün Görseli</p>
+        <div class="upload-zone" id="uploadZone">
+          <div class="uz-icon">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <p class="uz-text">Sürükle & Bırak</p>
+          <p class="uz-hint">PNG, JPG, MP4 — maks 50MB</p>
+          <input type="file" id="fileInp" accept="image/*,video/*" multiple style="display:none">
+        </div>
+      </div>
+      <div>
+        <p class="panel-label">Kütüphane</p>
+        <div class="media-grid" id="mediaGrid"></div>
+      </div>
+    </div>
+    <!-- Sahneler Tab -->
+    <div class="tab-panel" id="tab-sahneler">
+      <div>
+        <p class="panel-label">Sahne Sırası</p>
+        <div class="scene-list" id="sceneList">
+          <div class="scene-item active">
+            <div class="scene-num">1</div>
+            <div class="scene-info">
+              <div class="scene-name">360° Döndürme</div>
+              <div class="scene-dur">3s — tam tur</div>
+            </div>
+          </div>
+          <div class="scene-item">
+            <div class="scene-num">2</div>
+            <div class="scene-info">
+              <div class="scene-name">Ürün Yakın Plan</div>
+              <div class="scene-dur">2s — zoom-in</div>
+            </div>
+          </div>
+          <div class="scene-item">
+            <div class="scene-num">3</div>
+            <div class="scene-info">
+              <div class="scene-name">Özellik Vurgusu</div>
+              <div class="scene-dur">2s — hotspot</div>
+            </div>
+          </div>
+          <div class="scene-item">
+            <div class="scene-num">4</div>
+            <div class="scene-info">
+              <div class="scene-name">Fiyat + CTA</div>
+              <div class="scene-dur">2s — kapanış</div>
+            </div>
+          </div>
+        </div>
+        <button class="add-scene-btn" onclick="addScene()">+ Sahne Ekle</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Center Canvas -->
+  <main class="canvas-area">
+    <!-- Format pills -->
+    <div class="format-pills">
+      <button class="fpill on" onclick="setFormat('circle',this)">⭕ 360°</button>
+      <button class="fpill" onclick="setFormat('square',this)">⬛ 1:1</button>
+      <button class="fpill" onclick="setFormat('portrait',this)">📱 9:16</button>
+    </div>
+
+    <!-- Canvas -->
+    <div class="canvas-frame" id="canvasFrame">
+      <img id="cv-img" alt="">
+      <video id="cv-video" loop muted playsinline></video>
+      <div class="cv-placeholder" id="cvPlaceholder">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        <p style="font-size:13px">Ürün görseli yükle</p>
+        <p style="font-size:11px;margin-top:4px">360° döndürme otomatik</p>
+      </div>
+    </div>
+
+    <!-- Rotate Controls -->
+    <div class="rotate-controls">
+      <button class="rot-btn" onclick="rotateManual(-90)" title="Sol 90°">
+        <svg viewBox="0 0 24 24"><path d="M2.5 2v6h6M2.66 15.57a10 10 0 1010.78 6.37"/></svg>
+      </button>
+      <button class="rot-btn" onclick="startRotate()" id="rotBtn" title="Oto Döndür">
+        <svg viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
+      </button>
+      <button class="rot-btn" onclick="rotateManual(90)" title="Sağ 90°">
+        <svg viewBox="0 0 24 24"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 11-10.78 6.37"/></svg>
+      </button>
+    </div>
+
+    <!-- Progress Ring -->
+    <div class="progress-ring-wrap" id="progressWrap">
+      <svg class="pring" viewBox="0 0 36 36">
+        <circle class="bg" cx="18" cy="18" r="15.9"/>
+        <circle class="fg" id="pringFg" cx="18" cy="18" r="15.9"/>
+      </svg>
+      <div>
+        <div class="pring-pct" id="pringPct">0%</div>
+        <div class="pring-label" id="pringLabel">İşleniyor…</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Right Sidebar -->
+  <aside class="right-sidebar">
+    <!-- Ürün Bilgisi -->
+    <div class="acc-section open">
+      <button class="acc-header" onclick="toggleAcc(this)">
+        <div class="acc-left">
+          <div class="acc-icon"><svg viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z"/><path d="M16 3H8a2 2 0 00-2 2v2h12V5a2 2 0 00-2-2z"/></svg></div>
+          <span class="acc-title">Ürün Bilgisi</span>
+        </div>
+        <svg class="acc-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="acc-body">
+        <input class="input-field" id="productName" placeholder="Ürün adı (ör: Nike Air Max)">
+        <input class="input-field" id="productPrice" placeholder="Fiyat (ör: 2.499 ₺)">
+        <input class="input-field" id="productBrand" placeholder="Marka (ör: Nike)">
+        <input class="input-field" id="productCta" placeholder="CTA (ör: Şimdi Al, Keşfet)">
+        <button class="gen-btn" id="genBtn" onclick="generate()">⚡ 360° VİDEO ÜRET</button>
+      </div>
+    </div>
+    <!-- 360° Ayarları -->
+    <div class="acc-section open">
+      <button class="acc-header" onclick="toggleAcc(this)">
+        <div class="acc-left">
+          <div class="acc-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z"/><path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg></div>
+          <span class="acc-title">360° Ayarları</span>
+        </div>
+        <svg class="acc-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="acc-body">
+        <div class="slider-row">
+          <div class="slider-lbl"><span>Döndürme Hızı</span><span id="rotSpeedV">1 tur/sn</span></div>
+          <input type="range" min="0.5" max="3" step="0.5" value="1" oninput="document.getElementById('rotSpeedV').textContent=this.value+' tur/sn';S.rotSpeed=parseFloat(this.value)">
+        </div>
+        <div class="slider-row">
+          <div class="slider-lbl"><span>Döndürme Açısı</span><span id="rotAngleV">360°</span></div>
+          <input type="range" min="90" max="360" step="90" value="360" oninput="document.getElementById('rotAngleV').textContent=this.value+'°';S.rotAngle=parseInt(this.value)">
+        </div>
+        <p style="font-size:11px;color:var(--text-secondary);margin-bottom:6px">Döndürme Yönü</p>
+        <div class="chip-row" id="rotDirChips">
+          <button class="chip on" data-dir="cw">↻ Saat Yönü</button>
+          <button class="chip" data-dir="ccw">↺ Ters Yön</button>
+          <button class="chip" data-dir="pingpong">⇄ Ping-Pong</button>
+        </div>
+      </div>
+    </div>
+    <!-- Arka Plan -->
+    <div class="acc-section open">
+      <button class="acc-header" onclick="toggleAcc(this)">
+        <div class="acc-left">
+          <div class="acc-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+          <span class="acc-title">Arka Plan</span>
+        </div>
+        <svg class="acc-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="acc-body">
+        <p style="font-size:11px;color:var(--text-secondary);margin-bottom:6px">Renk Paleti</p>
+        <div class="color-row" id="bgColorRow">
+          <div class="color-dot on" style="background:#050508" data-color="#050508" onclick="setBgColor(this)" title="Siyah"></div>
+          <div class="color-dot" style="background:#fff" data-color="#fff" onclick="setBgColor(this)" title="Beyaz"></div>
+          <div class="color-dot" style="background:#1a1a2e" data-color="#1a1a2e" onclick="setBgColor(this)" title="Koyu Mavi"></div>
+          <div class="color-dot" style="background:#0f3460" data-color="#0f3460" onclick="setBgColor(this)" title="Mavi"></div>
+          <div class="color-dot" style="background:#16213e" data-color="#16213e" onclick="setBgColor(this)" title="Lacivert"></div>
+          <div class="color-dot" style="background:#1b1b2f" data-color="#1b1b2f" onclick="setBgColor(this)" title="Mor"></div>
+          <div class="color-dot" style="background:linear-gradient(135deg,#00C9A7,#3B82F6)" data-color="teal-blue" onclick="setBgColor(this)" title="Teal-Mavi"></div>
+          <div class="color-dot" style="background:linear-gradient(135deg,#f093fb,#f5576c)" data-color="pink" onclick="setBgColor(this)" title="Pembe"></div>
+          <div class="color-dot" style="background:linear-gradient(135deg,#4facfe,#00f2fe)" data-color="sky" onclick="setBgColor(this)" title="Gök"></div>
+          <div class="color-dot" style="background:linear-gradient(135deg,#43e97b,#38f9d7)" data-color="green" onclick="setBgColor(this)" title="Yeşil"></div>
+          <div class="color-dot" style="background:linear-gradient(135deg,#f7971e,#ffd200)" data-color="gold" onclick="setBgColor(this)" title="Altın"></div>
+          <div class="color-dot" style="background:transparent;border:1px dashed var(--border-color)" data-color="transparent" onclick="setBgColor(this)" title="Şeffaf"></div>
+        </div>
+        <p style="font-size:11px;color:var(--text-secondary);margin:10px 0 6px">Arka Plan Tipi</p>
+        <div class="chip-row" id="bgTypeChips">
+          <button class="chip on" data-bg="solid">Düz</button>
+          <button class="chip" data-bg="gradient">Degrade</button>
+          <button class="chip" data-bg="removed">Kaldır (AI)</button>
+          <button class="chip" data-bg="studio">Stüdyo</button>
+        </div>
+      </div>
+    </div>
+    <!-- Hotspot / Etiket -->
+    <div class="acc-section">
+      <button class="acc-header" onclick="toggleAcc(this)">
+        <div class="acc-left">
+          <div class="acc-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></div>
+          <span class="acc-title">Hotspot Etiket</span>
+        </div>
+        <svg class="acc-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="acc-body">
+        <input class="input-field" id="hsText" placeholder="Etiket metni (ör: Nefes Kumaş)">
+        <input class="input-field" id="hsTime" placeholder="Zaman (ör: 2s)" type="number" min="0" max="30">
+        <button class="gen-btn" style="background:linear-gradient(135deg,rgba(0,201,167,.2),rgba(59,130,246,.2));border:1px solid var(--teal)" onclick="addHotspot()">+ Hotspot Ekle</button>
+        <div class="hotspot-list" id="hotspotList"></div>
+      </div>
+    </div>
+    <!-- Ses -->
+    <div class="acc-section">
+      <button class="acc-header" onclick="toggleAcc(this)">
+        <div class="acc-left">
+          <div class="acc-icon"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/></svg></div>
+          <span class="acc-title">Arka Plan Müziği</span>
+        </div>
+        <svg class="acc-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="acc-body">
+        <div class="chip-row" id="musicChips">
+          <button class="chip on" data-music="product">Ürün</button>
+          <button class="chip" data-music="luxury">Lüks</button>
+          <button class="chip" data-music="tech">Teknoloji</button>
+          <button class="chip" data-music="energetic">Enerjik</button>
+          <button class="chip" data-music="none">Sessiz</button>
+        </div>
+        <div class="slider-row" style="margin-top:10px">
+          <div class="slider-lbl"><span>Ses Seviyesi</span><span id="musicVolV">80%</span></div>
+          <input type="range" min="0" max="100" value="80" oninput="document.getElementById('musicVolV').textContent=this.value+'%'">
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div id="toast" style="position:fixed;bottom:70px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(10,8,18,.95);border:1px solid rgba(0,201,167,.3);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap"></div>
+
+<script>
+const _qp = new URLSearchParams(location.search);
+const S = {
+  customerId: _qp.get('cid') || localStorage.getItem('fx_cid'),
+  quota: parseInt(localStorage.getItem('fx_quota')||'0'),
+  pkg: _qp.get('pkg') || localStorage.getItem('fx_pkg')||'free',
+  file: null, fileBase64: null, generating: false,
+  rotSpeed: 1, rotAngle: 360, rotDir: 'cw',
+  bgColor: '#050508', bgType: 'solid',
+  musicMood: 'product', videoStyle: 'product_showcase',
+  hotspots: [], rotFrame: 0, rotAnim: null
+};
+
+if (!S.customerId) location.href = '/app';
+document.getElementById('quotaDisplay').textContent = (S.quota || 0) + ' hak';
+
+function toast(msg, dur=3000) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.style.opacity='1'; el.style.transform='translateX(-50%) translateY(0)';
+  setTimeout(()=>{el.style.opacity='0';el.style.transform='translateX(-50%) translateY(20px)';},dur);
+}
+
+// ── Tabs ──
+function switchTab(id, btn) {
+  document.querySelectorAll('.stab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+// ── Accordion ──
+function toggleAcc(btn) { btn.parentElement.classList.toggle('open'); }
+
+// ── Format ──
+function setFormat(type, btn) {
+  document.querySelectorAll('.fpill').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  const frame = document.getElementById('canvasFrame');
+  frame.className = 'canvas-frame' + (type !== 'circle' ? ' ' + type : '');
+  S.format = type;
+}
+
+// ── Arka Plan Rengi ──
+function setBgColor(dot) {
+  document.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('on'));
+  dot.classList.add('on');
+  S.bgColor = dot.dataset.color;
+  const frame = document.getElementById('canvasFrame');
+  const grad = {
+    'teal-blue':'linear-gradient(135deg,#00C9A7,#3B82F6)',
+    'pink':'linear-gradient(135deg,#f093fb,#f5576c)',
+    'sky':'linear-gradient(135deg,#4facfe,#00f2fe)',
+    'green':'linear-gradient(135deg,#43e97b,#38f9d7)',
+    'gold':'linear-gradient(135deg,#f7971e,#ffd200)',
+    'transparent':'transparent'
+  };
+  frame.style.background = grad[S.bgColor] || S.bgColor;
+}
+
+// ── Chip Generic ──
+function initChips(id, key) {
+  document.getElementById(id).addEventListener('click', e=>{
+    const btn=e.target.closest('.chip'); if(!btn) return;
+    document.querySelectorAll('#'+id+' .chip').forEach(c=>c.classList.remove('on'));
+    btn.classList.add('on');
+    S[key] = btn.dataset[key] || btn.textContent.trim();
+  });
+}
+initChips('rotDirChips','dir');
+initChips('bgTypeChips','bg');
+initChips('musicChips','music');
+
+// ── Upload ──
+const uz=document.getElementById('uploadZone');
+const fi=document.getElementById('fileInp');
+uz.addEventListener('click',e=>{if(!e.target.closest('input'))fi.click();});
+fi.addEventListener('change',()=>{if(fi.files[0])loadFile(fi.files[0]);fi.value='';});
+uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('dragover');});
+uz.addEventListener('dragleave',()=>uz.classList.remove('dragover'));
+uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('dragover');if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
+
+function loadFile(file) {
+  S.file = file;
+  const ph = document.getElementById('cvPlaceholder');
+  if (file.type.startsWith('video/')) {
+    const vid = document.getElementById('cv-video');
+    if (vid._url) URL.revokeObjectURL(vid._url);
+    vid._url = URL.createObjectURL(file);
+    vid.src = vid._url; vid.classList.add('active');
+    document.getElementById('cv-img').classList.remove('active');
+    if (ph) ph.style.display='none';
+    vid.load(); vid.play().catch(()=>{});
+    S.fileBase64 = null;
+  } else {
+    const reader = new FileReader();
+    reader.onload = e => {
+      S.fileBase64 = e.target.result;
+      const img = document.getElementById('cv-img');
+      img.src = e.target.result; img.classList.add('active');
+      document.getElementById('cv-video').classList.remove('active');
+      if (ph) ph.style.display='none';
+      startRotate(); // Görsel yüklenince otomatik döndür
+    };
+    reader.readAsDataURL(file);
+  }
+  addThumb(file);
+}
+
+function addThumb(file) {
+  const grid = document.getElementById('mediaGrid');
+  const item = document.createElement('div'); item.className='media-thumb';
+  if (file.type.startsWith('video/')) {
+    const v = document.createElement('video'); v.src=URL.createObjectURL(file); item.appendChild(v);
+    const b = document.createElement('div'); b.className='thumb-badge'; b.textContent='VİD'; item.appendChild(b);
+  } else {
+    const img = document.createElement('img'); img.src=URL.createObjectURL(file); item.appendChild(img);
+  }
+  item.addEventListener('click',()=>loadFile(file));
+  grid.appendChild(item);
+}
+
+// ── 360° Döndürme (CSS + JS) ──
+function rotateManual(deg) {
+  const img = document.getElementById('cv-img');
+  const cur = parseInt(img.style.transform?.match(/-?\d+/)?.[0]||0);
+  img.style.transform = `rotate(${cur + deg}deg)`;
+}
+
+let _rotPlaying = false;
+function startRotate() {
+  const btn = document.getElementById('rotBtn');
+  if (_rotPlaying) {
+    _rotPlaying = false;
+    if (S.rotAnim) cancelAnimationFrame(S.rotAnim);
+    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg>';
+    return;
+  }
+  _rotPlaying = true;
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+  let last = null;
+  function step(ts) {
+    if (!_rotPlaying) return;
+    if (!last) last = ts;
+    const dt = ts - last; last = ts;
+    S.rotFrame += (dt / 1000) * 360 * S.rotSpeed * (S.rotDir === 'ccw' ? -1 : 1);
+    if (S.rotAngle < 360) S.rotFrame = S.rotFrame % S.rotAngle;
+    const el = document.getElementById('cv-img').classList.contains('active')
+      ? document.getElementById('cv-img') : document.getElementById('cv-video');
+    if (el) el.style.transform = `rotateY(${S.rotFrame}deg)`;
+    S.rotAnim = requestAnimationFrame(step);
+  }
+  S.rotAnim = requestAnimationFrame(step);
+}
+
+// ── Hotspot ──
+function addHotspot() {
+  const text = document.getElementById('hsText').value.trim();
+  const time = parseFloat(document.getElementById('hsTime').value)||0;
+  if (!text) { toast('Etiket metni gir'); return; }
+  S.hotspots.push({ text, time });
+  renderHotspots();
+  document.getElementById('hsText').value='';
+  document.getElementById('hsTime').value='';
+  toast('📍 Hotspot eklendi: ' + text);
+}
+
+function renderHotspots() {
+  const list = document.getElementById('hotspotList');
+  list.innerHTML = S.hotspots.map((h,i)=>`
+    <div class="hotspot-item">
+      <span>⏱ ${h.time}s — ${h.text}</span>
+      <button class="hs-del" onclick="removeHotspot(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+function removeHotspot(i) {
+  S.hotspots.splice(i,1); renderHotspots();
+}
+
+// ── Sahne ──
+let _sceneCount = 4;
+function addScene() {
+  _sceneCount++;
+  const list = document.getElementById('sceneList');
+  const item = document.createElement('div'); item.className='scene-item';
+  item.innerHTML = `<div class="scene-num">${_sceneCount}</div>
+    <div class="scene-info">
+      <div class="scene-name">Yeni Sahne ${_sceneCount}</div>
+      <div class="scene-dur">2s</div>
+    </div>`;
+  item.addEventListener('click',()=>{
+    document.querySelectorAll('.scene-item').forEach(s=>s.classList.remove('active'));
+    item.classList.add('active');
+  });
+  list.appendChild(item);
+}
+document.querySelectorAll('.scene-item').forEach(item=>{
+  item.addEventListener('click',()=>{
+    document.querySelectorAll('.scene-item').forEach(s=>s.classList.remove('active'));
+    item.classList.add('active');
+  });
+});
+
+// ── Progress Ring ──
+function setProgress(pct, label) {
+  const fg = document.getElementById('pringFg');
+  const offset = 100 - pct;
+  fg.style.strokeDashoffset = offset;
+  document.getElementById('pringPct').textContent = Math.round(pct) + '%';
+  if (label) document.getElementById('pringLabel').textContent = label;
+  document.getElementById('progressWrap').classList.toggle('active', pct > 0 && pct < 100);
+}
+
+// ── Generate ──
+async function generate() {
+  if (S.generating) return;
+  if (!S.file) { toast('Önce ürün görseli yükle'); return; }
+  if (S.quota <= 0 && S.pkg === 'free') { toast('Hakkın bitti. Paket al.', 4000); return; }
+  S.generating = true;
+  const btn = document.getElementById('genBtn');
+  btn.textContent = '⏳ ÜRETİYOR...'; btn.disabled = true;
+  setProgress(5, '360° hazırlanıyor…');
+
+  try {
+    const qr = await fetch('/api/customer/use-quota', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({customerId: S.customerId})
+    });
+    const qd = await qr.json();
+    if (!qd.ok) { toast(qd.error||'Hak hatası'); done360(); return; }
+    S.quota = qd.remaining;
+    localStorage.setItem('fx_quota', S.quota);
+    document.getElementById('quotaDisplay').textContent = S.quota + ' hak';
+  } catch(e) { toast('Bağlantı hatası'); done360(); return; }
+
+  setProgress(20, 'Arka plan kaldırılıyor…');
+
+  const body = {
+    kategori: 'urun_360',
+    sirketAdi: document.getElementById('productBrand').value || 'Marka',
+    komutlar: [
+      document.getElementById('productName').value,
+      document.getElementById('productPrice').value,
+      document.getElementById('productCta').value || 'Şimdi Al'
+    ].filter(Boolean),
+    customerId: S.customerId,
+    options: {
+      rotSpeed: S.rotSpeed, rotAngle: S.rotAngle, rotDir: S.rotDir,
+      bgColor: S.bgColor, bgType: S.bgType, musicMood: S.musicMood,
+      hotspots: S.hotspots, format: S.format || 'circle'
+    }
+  };
+  if (S.fileBase64) body.imageBase64 = S.fileBase64;
+
+  // Progress simulation
+  let prog = 20;
+  const progInt = setInterval(()=>{
+    prog = Math.min(prog + 8, 85);
+    const labels = {20:'AI analiz…',40:'360° oluşturuluyor…',60:'Efektler ekleniyor…',80:'Video derleniyor…'};
+    setProgress(prog, labels[Math.round(prog/20)*20] || 'İşleniyor…');
+  }, 1200);
+
+  try {
+    const r = await fetch('/api/generate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    clearInterval(progInt);
+    const d = await r.json();
+    if (d.ok && d.videoUrl) {
+      setProgress(100, 'Tamamlandı! ✅');
+      toast('✅ 360° Video hazır!', 5000);
+      setTimeout(()=>window.open(d.videoUrl,'_blank'), 500);
+    } else {
+      setProgress(0);
+      toast(d.error || 'Üretim başarısız');
+      S.quota++; localStorage.setItem('fx_quota', S.quota);
+    }
+  } catch(e) {
+    clearInterval(progInt);
+    setProgress(0);
+    toast('Bağlantı hatası');
+  }
+  done360();
+}
+
+function done360() {
+  S.generating = false;
+  const btn = document.getElementById('genBtn');
+  btn.textContent = '⚡ 360° VİDEO ÜRET'; btn.disabled = false;
+  setTimeout(()=>setProgress(0),3000);
+}
+</script>
+<script src="/fenix-security-widget.js"></script>
+</body>
+</html>

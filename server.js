@@ -221,9 +221,36 @@ app.get('/workspace-pro', requireCustomer, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'workspace-pro.html'));
 });
 
+// Dublaj workspace — ses klonlama + çoklu dil
+app.get('/workspace-dublaj', requireCustomer, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'workspace-dublaj.html'));
+});
+
+// 360° workspace — ürün videosu + e-ticaret
+app.get('/workspace-360', requireCustomer, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'workspace-360.html'));
+});
+
+// Otonom workspace — pipeline görünümü, Fenix tam kontrol
+app.get('/workspace-otonom', requireCustomer, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'workspace-otonom.html'));
+});
+
+// Güvenlik middleware — tüm API'lerde IP ban kontrolü
+const { ipBanCheck, auditLogger } = require('./middleware/auditLog');
+app.use('/api', ipBanCheck);
+
+// Güvenlik admin API
+const securityRoutes = require('./routes/api-security');
+app.use('/api/security', securityRoutes);
+
 // Müşteri kayıt & quota API
 const customerRoutes = require('./routes/api-customer');
 app.use('/api/customer', customerRoutes);
+
+// Hukuki onay & ses klonlama API
+const consentRoutes = require('./routes/api-consent');
+app.use('/api/consent', consentRoutes);
 
 // Video üretim API — fal.ai Kling
 const generateRoutes = require('./routes/api-generate');
@@ -231,6 +258,43 @@ app.use('/api/generate', generateRoutes);
 
 const effectsRoutes = require('./routes/api-effects');
 app.use('/api/effects', effectsRoutes);
+
+// Güvenlik paneli — sadece tablet cihaz anahtarıyla
+const TABLET_KEY = process.env.TABLET_KEY || '';
+const TABLET_COOKIE = 'fenix_tablet';
+const COOKIE_MAX_AGE = 365 * 24 * 60 * 60 * 1000; // 1 yıl
+
+function requireTablet(req, res, next) {
+  const queryKey = req.query.key;
+  const cookieKey = req.cookies && req.cookies[TABLET_COOKIE];
+
+  // İlk kez doğru key ile geldi → cookie yaz
+  if (queryKey && TABLET_KEY && queryKey === TABLET_KEY) {
+    res.cookie(TABLET_COOKIE, TABLET_KEY, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: COOKIE_MAX_AGE
+    });
+    return next();
+  }
+
+  // Cookie varsa ve doğruysa izin ver
+  if (cookieKey && TABLET_KEY && cookieKey === TABLET_KEY) {
+    return next();
+  }
+
+  // Hiçbiri yoksa → engelle
+  return res.status(403).send(`
+    <html><body style="background:#050508;color:#ef4444;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center">
+      <div><div style="font-size:48px">🛡</div><h2 style="margin:16px 0">Erişim Engellendi</h2><p style="color:#8a8a9a">Bu sayfa yalnızca yetkili cihazdan erişilebilir.</p></div>
+    </body></html>
+  `);
+}
+
+app.get('/guvenlik', requireTablet, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'guvenlik.html'));
+});
 
 // Satıcı portalı — sadece admin girebilir
 app.get('/satici', requireAdmin, (req, res) => {

@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fenix Otonom — Pipeline Kontrol</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    :root{
+      --bg-deep:#020205;--bg-panel:#080810;--bg-elevated:#0f0f1a;--bg-card:#121220;
+      --gold:#F59E0B;--gold-glow:rgba(245,158,11,.4);--gold-soft:rgba(245,158,11,.1);
+      --green:#10B981;--green-soft:rgba(16,185,129,.12);--green-glow:rgba(16,185,129,.4);
+      --red:#EF4444;--red-soft:rgba(239,68,68,.1);
+      --blue:#3B82F6;--blue-soft:rgba(59,130,246,.12);
+      --purple:#8B5CF6;--purple-soft:rgba(139,92,246,.12);
+      --text-primary:#ffffff;--text-secondary:#6b7280;--text-dim:#374151;
+      --border-color:#1a1a2e;
+      --status-pending:#374151;--status-processing:#3B82F6;
+      --status-completed:#10B981;--status-failed:#EF4444;--status-cancelled:#6b7280;
+    }
+    body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg-deep);color:var(--text-primary);height:100vh;overflow:hidden}
+
+    /* ── Grid Layout ── */
+    .layout{display:grid;grid-template-rows:54px 1fr;grid-template-columns:300px 1fr 280px;height:100vh}
+
+    /* ── Toolbar ── */
+    .toolbar{grid-column:1/-1;background:var(--bg-panel);border-bottom:1px solid var(--border-color);display:flex;align-items:center;padding:0 20px;gap:12px;position:relative}
+    .btn-back{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;border:1px solid var(--border-color);font-size:12px;color:var(--text-secondary);cursor:pointer;background:transparent;transition:all .2s;font-family:inherit}
+    .btn-back:hover{border-color:var(--gold);color:var(--gold)}
+    .fenix-logo{display:flex;align-items:center;gap:10px;padding:0 16px;border-left:1px solid var(--border-color);border-right:1px solid var(--border-color)}
+    .fenix-bird{width:30px;height:30px}
+    .fenix-name{font-weight:800;font-size:16px;letter-spacing:-.3px}
+    .fenix-name span{color:var(--gold)}
+    .mode-pill{background:var(--gold-soft);color:var(--gold);padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.5px;border:1px solid rgba(245,158,11,.2)}
+    .tb-spacer{flex:1}
+    .stats-bar{display:flex;gap:16px;align-items:center}
+    .stat-item{text-align:center}
+    .stat-val{font-size:15px;font-weight:700;font-family:'JetBrains Mono',monospace}
+    .stat-lbl{font-size:9px;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.5px}
+    .stat-item.green .stat-val{color:var(--green)}
+    .stat-item.blue .stat-val{color:var(--blue)}
+    .stat-item.gold .stat-val{color:var(--gold)}
+    .stat-item.red .stat-val{color:var(--red)}
+    .tb-divider{width:1px;height:28px;background:var(--border-color)}
+    /* Fenix brain pulse */
+    .brain-indicator{display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;border:1px solid var(--border-color);background:var(--bg-elevated);font-size:11px}
+    .brain-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:brainPulse 2s ease-in-out infinite}
+    @keyframes brainPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 var(--green-glow)}50%{opacity:.7;box-shadow:0 0 0 4px rgba(16,185,129,0)}}
+
+    /* ── Left Panel: Queue ── */
+    .queue-panel{background:var(--bg-panel);border-right:1px solid var(--border-color);display:flex;flex-direction:column;overflow:hidden}
+    .queue-header{padding:16px;border-bottom:1px solid var(--border-color);display:flex;align-items:center;justify-content:space-between}
+    .queue-title{font-size:13px;font-weight:600}
+    .queue-count{background:var(--gold-soft);color:var(--gold);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace}
+    .queue-actions{display:flex;gap:6px;padding:10px 14px;border-bottom:1px solid var(--border-color)}
+    .qa-btn{flex:1;padding:6px 0;border-radius:6px;border:1px solid var(--border-color);background:transparent;color:var(--text-secondary);font-size:11px;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit}
+    .qa-btn:hover{border-color:var(--gold);color:var(--gold);background:var(--gold-soft)}
+    .qa-btn.danger:hover{border-color:var(--red);color:var(--red);background:var(--red-soft)}
+    .queue-list{flex:1;overflow-y:auto;padding:10px}
+    .queue-empty{text-align:center;padding:40px 20px;color:var(--text-secondary)}
+    .queue-empty svg{width:40px;height:40px;stroke:var(--text-dim);fill:none;stroke-width:1.5;margin-bottom:12px;opacity:.5}
+    /* Job card */
+    .job-card{background:var(--bg-card);border-radius:10px;border:1px solid var(--border-color);padding:12px;margin-bottom:8px;transition:all .2s;cursor:pointer;position:relative;overflow:hidden}
+    .job-card:hover{border-color:rgba(245,158,11,.3);background:var(--bg-elevated)}
+    .job-card.active{border-color:var(--gold);box-shadow:0 0 15px var(--gold-glow)}
+    .job-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px}
+    .job-card[data-status="pending"]::before{background:var(--status-pending)}
+    .job-card[data-status="processing"]::before{background:var(--status-processing);animation:pulseLine 1s ease-in-out infinite}
+    .job-card[data-status="completed"]::before{background:var(--status-completed)}
+    .job-card[data-status="failed"]::before{background:var(--status-failed)}
+    .job-card[data-status="cancelled"]::before{background:var(--status-cancelled)}
+    @keyframes pulseLine{0%,100%{opacity:1}50%{opacity:.4}}
+    .job-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px}
+    .job-name{font-size:12px;font-weight:500;flex:1;margin-right:8px}
+    .job-status-badge{padding:2px 7px;border-radius:5px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+    .badge-pending{background:rgba(55,65,81,.3);color:#9ca3af}
+    .badge-processing{background:var(--blue-soft);color:var(--blue)}
+    .badge-completed{background:var(--green-soft);color:var(--green)}
+    .badge-failed{background:var(--red-soft);color:var(--red)}
+    .badge-cancelled{background:rgba(107,114,128,.1);color:#6b7280}
+    .job-meta{font-size:10px;color:var(--text-secondary);margin-bottom:6px}
+    .job-progress{height:3px;background:var(--border-color);border-radius:2px;overflow:hidden}
+    .job-progress-bar{height:100%;background:linear-gradient(90deg,var(--blue),var(--purple));transition:width .3s;border-radius:2px}
+    .job-card[data-status="completed"] .job-progress-bar{background:var(--green);width:100%!important}
+    .job-card[data-status="failed"] .job-progress-bar{background:var(--red)}
+    .job-result-link{display:inline-flex;align-items:center;gap:4px;margin-top:6px;font-size:10px;color:var(--green);text-decoration:none}
+    .job-result-link:hover{text-decoration:underline}
+
+    /* ── Center: Pipeline View ── */
+    .center-panel{background:var(--bg-deep);display:flex;flex-direction:column;overflow:hidden}
+    /* Active job detail */
+    .active-job-banner{background:var(--bg-panel);border-bottom:1px solid var(--border-color);padding:14px 20px;display:flex;align-items:center;gap:16px}
+    .aj-preview{width:48px;height:48px;background:var(--bg-elevated);border-radius:8px;overflow:hidden;flex-shrink:0;border:1px solid var(--border-color)}
+    .aj-preview img{width:100%;height:100%;object-fit:cover}
+    .aj-info{flex:1}
+    .aj-name{font-size:13px;font-weight:600;margin-bottom:3px}
+    .aj-sub{font-size:11px;color:var(--text-secondary)}
+    .aj-pct{font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--gold)}
+    /* Pipeline stages */
+    .pipeline-area{flex:1;overflow-y:auto;padding:20px}
+    .pipeline-stages{display:flex;flex-direction:column;gap:10px}
+    .stage{background:var(--bg-card);border-radius:10px;border:1px solid var(--border-color);padding:14px 16px;transition:all .3s;position:relative}
+    .stage.active{border-color:var(--blue);box-shadow:0 0 20px rgba(59,130,246,.2)}
+    .stage.done{border-color:rgba(16,185,129,.3);background:rgba(16,185,129,.03)}
+    .stage.failed{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.03)}
+    .stage-row{display:flex;align-items:center;gap:12px}
+    .stage-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;background:var(--bg-elevated);transition:all .3s}
+    .stage.active .stage-icon{background:var(--blue-soft);animation:stageGlow 1s ease-in-out infinite alternate}
+    .stage.done .stage-icon{background:var(--green-soft)}
+    @keyframes stageGlow{from{box-shadow:none}to{box-shadow:0 0 12px var(--blue)}}
+    .stage-info{flex:1}
+    .stage-name{font-size:13px;font-weight:500}
+    .stage-detail{font-size:11px;color:var(--text-secondary);margin-top:2px;font-family:'JetBrains Mono',monospace}
+    .stage-check{width:22px;height:22px;border-radius:50%;background:var(--border-color);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0}
+    .stage.done .stage-check{background:var(--green);color:#fff}
+    .stage.failed .stage-check{background:var(--red);color:#fff}
+    .stage.active .stage-check{background:var(--blue);color:#fff;animation:spinCheck .8s linear infinite}
+    @keyframes spinCheck{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+    /* Connector line */
+    .stage-connector{width:2px;height:12px;background:var(--border-color);margin:0 17px}
+    .stage-connector.done{background:var(--green)}
+    .stage-connector.active{background:var(--blue)}
+    /* Upload area */
+    .upload-area{background:var(--bg-card);border-radius:12px;border:2px dashed var(--border-color);padding:30px;text-align:center;cursor:pointer;transition:all .3s;margin-bottom:16px}
+    .upload-area:hover{border-color:var(--gold);background:var(--gold-soft)}
+    .upload-area.has-files{border-color:var(--green);border-style:solid;background:var(--green-soft)}
+    .ua-icon{font-size:32px;margin-bottom:8px}
+    .ua-text{font-size:14px;font-weight:500;margin-bottom:4px}
+    .ua-hint{font-size:11px;color:var(--text-secondary)}
+    .ua-count{font-size:13px;font-weight:700;color:var(--green);margin-top:6px}
+    /* Batch controls */
+    .batch-controls{display:flex;gap:10px;margin-bottom:16px}
+    .batch-btn{flex:1;padding:10px;border-radius:8px;border:none;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;font-family:inherit}
+    .batch-btn.primary{background:linear-gradient(135deg,var(--gold),#f97316);color:#000}
+    .batch-btn.primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px var(--gold-glow)}
+    .batch-btn.secondary{background:var(--bg-elevated);border:1px solid var(--border-color);color:var(--text-secondary)}
+    .batch-btn.secondary:hover{border-color:var(--gold);color:var(--gold)}
+    .batch-btn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+
+    /* ── Command Console ── */
+    .console-panel{background:var(--bg-panel);border-left:1px solid var(--border-color);display:flex;flex-direction:column;overflow:hidden}
+    .console-header{padding:14px 16px;border-bottom:1px solid var(--border-color)}
+    .console-title{font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px}
+    .console-title span{width:8px;height:8px;background:var(--green);border-radius:50%;display:inline-block}
+    .console-log{flex:1;overflow-y:auto;padding:12px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7}
+    .log-line{display:flex;gap:8px;margin-bottom:2px}
+    .log-time{color:var(--text-dim);flex-shrink:0}
+    .log-msg{flex:1}
+    .log-msg.info{color:var(--text-secondary)}
+    .log-msg.success{color:var(--green)}
+    .log-msg.error{color:var(--red)}
+    .log-msg.warn{color:var(--gold)}
+    .log-msg.cmd{color:var(--purple)}
+    .log-msg.fenix{color:var(--gold)}
+    /* Command input */
+    .cmd-area{border-top:1px solid var(--border-color);padding:12px}
+    .cmd-label{font-size:10px;color:var(--text-secondary);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+    .cmd-input-wrap{display:flex;gap:6px}
+    .cmd-input{flex:1;padding:8px 10px;border-radius:8px;background:var(--bg-elevated);border:1px solid var(--border-color);color:#fff;font-size:12px;font-family:'JetBrains Mono',monospace;transition:all .2s}
+    .cmd-input:focus{outline:none;border-color:var(--purple);box-shadow:0 0 10px rgba(139,92,246,.2)}
+    .cmd-send{width:36px;height:36px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--purple),var(--blue));cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+    .cmd-send:hover{transform:scale(1.05);box-shadow:0 4px 12px rgba(139,92,246,.4)}
+    .cmd-send svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2}
+    /* Quick commands */
+    .quick-cmds{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+    .qcmd{padding:3px 8px;border-radius:5px;border:1px solid var(--border-color);background:var(--bg-elevated);color:var(--text-secondary);font-size:10px;cursor:pointer;transition:all .2s;font-family:inherit}
+    .qcmd:hover{border-color:var(--purple);color:var(--purple);background:var(--purple-soft)}
+    /* Notification */
+    .notif-area{padding:10px;border-top:1px solid var(--border-color);max-height:120px;overflow-y:auto}
+    .notif-item{display:flex;gap:8px;padding:6px 8px;border-radius:6px;margin-bottom:4px;font-size:11px;align-items:flex-start}
+    .notif-item.success{background:var(--green-soft);border-left:2px solid var(--green)}
+    .notif-item.warn{background:var(--gold-soft);border-left:2px solid var(--gold)}
+    .notif-item.error{background:var(--red-soft);border-left:2px solid var(--red)}
+    .notif-icon{flex-shrink:0;margin-top:1px}
+    ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:var(--bg-elevated)}::-webkit-scrollbar-thumb{background:var(--border-color);border-radius:2px}::-webkit-scrollbar-thumb:hover{background:var(--gold)}
+  </style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- Toolbar -->
+  <header class="toolbar">
+    <button class="btn-back" onclick="location.href='/app'">← Geri</button>
+    <div class="fenix-logo">
+      <!-- Phoenix SVG (gold tones) -->
+      <svg class="fenix-bird" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="fBG" cx="50%" cy="60%" r="50%"><stop offset="0%" stop-color="#F59E0B"/><stop offset="100%" stop-color="#92400e"/></radialGradient>
+        </defs>
+        <!-- Wings -->
+        <path d="M20 24 Q8 18 4 10 Q10 14 20 20 Z" fill="url(#fBG)" opacity=".8"/>
+        <path d="M20 24 Q32 18 36 10 Q30 14 20 20 Z" fill="url(#fBG)" opacity=".8"/>
+        <!-- Body -->
+        <ellipse cx="20" cy="26" rx="5" ry="8" fill="#F59E0B"/>
+        <!-- Head -->
+        <circle cx="20" cy="17" r="5" fill="#F59E0B"/>
+        <!-- Crest flames -->
+        <path d="M18 13 Q20 8 22 13" stroke="#fbbf24" stroke-width="1.5" fill="none"/>
+        <path d="M16 14 Q20 6 24 14" stroke="#f97316" stroke-width="1" fill="none" opacity=".7"/>
+        <!-- Eye -->
+        <circle cx="21.5" cy="17" r="1.5" fill="#000"/>
+        <circle cx="22" cy="16.5" r=".5" fill="#fff"/>
+        <!-- Tail -->
+        <path d="M18 33 Q20 38 22 33 Q20 36 20 33 Z" fill="#d97706"/>
+      </svg>
+      <span class="fenix-name">Fenix <span>Otonom</span></span>
+    </div>
+    <div class="mode-pill">BATCH PIPELINE</div>
+    <div class="tb-spacer"></div>
+    <div class="stats-bar">
+      <div class="stat-item green">
+        <div class="stat-val" id="statDone">0</div>
+        <div class="stat-lbl">Bitti</div>
+      </div>
+      <div class="tb-divider"></div>
+      <div class="stat-item blue">
+        <div class="stat-val" id="statProc">0</div>
+        <div class="stat-lbl">İşliyor</div>
+      </div>
+      <div class="tb-divider"></div>
+      <div class="stat-item gold">
+        <div class="stat-val" id="statPend">0</div>
+        <div class="stat-lbl">Bekliyor</div>
+      </div>
+      <div class="tb-divider"></div>
+      <div class="stat-item red">
+        <div class="stat-val" id="statFail">0</div>
+        <div class="stat-lbl">Hata</div>
+      </div>
+      <div class="tb-divider"></div>
+      <div class="brain-indicator">
+        <div class="brain-dot" id="brainDot"></div>
+        <span id="brainStatus">Fenix Aktif</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Queue Panel (Left) -->
+  <aside class="queue-panel">
+    <div class="queue-header">
+      <span class="queue-title">İş Kuyruğu</span>
+      <span class="queue-count" id="queueCount">0</span>
+    </div>
+    <div class="queue-actions">
+      <button class="qa-btn" onclick="pauseAll()">⏸ Durdur</button>
+      <button class="qa-btn" onclick="resumeAll()">▶ Devam</button>
+      <button class="qa-btn danger" onclick="confirmCancelAll()">✕ Hepsini İptal</button>
+    </div>
+    <div class="queue-list" id="queueList">
+      <div class="queue-empty">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+        <p>Henüz iş yok</p>
+        <p style="font-size:11px;margin-top:4px">Ürün yükleyip başlat</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Center Panel -->
+  <main class="center-panel">
+    <!-- Active job banner -->
+    <div class="active-job-banner" id="activeBanner">
+      <div class="aj-preview" id="ajPreview">
+        <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px">⚡</div>
+      </div>
+      <div class="aj-info">
+        <div class="aj-name" id="ajName">Hazır — ürün yükle</div>
+        <div class="aj-sub" id="ajSub">Pipeline beklemede</div>
+      </div>
+      <div class="aj-pct" id="ajPct">—</div>
+    </div>
+
+    <!-- Pipeline area -->
+    <div class="pipeline-area" id="pipelineArea">
+      <!-- Upload section -->
+      <div class="upload-area" id="batchUploadZone">
+        <div class="ua-icon">📦</div>
+        <p class="ua-text">Toplu Ürün Yükle</p>
+        <p class="ua-hint">100'e kadar görsel — PNG, JPG, WEBP</p>
+        <div class="ua-count" id="fileCountBadge" style="display:none"></div>
+        <input type="file" id="batchFileInp" accept="image/*" multiple style="display:none">
+      </div>
+
+      <!-- Batch controls -->
+      <div class="batch-controls">
+        <button class="batch-btn primary" id="startBtn" onclick="startBatch()" disabled>
+          ⚡ FENIX'İ BAŞLAT
+        </button>
+        <button class="batch-btn secondary" onclick="clearFiles()">🗑 Temizle</button>
+      </div>
+
+      <!-- Pipeline stages -->
+      <div class="pipeline-stages" id="pipelineStages">
+        <div class="stage" id="stage-upload" data-stage="upload">
+          <div class="stage-row">
+            <div class="stage-icon">📤</div>
+            <div class="stage-info">
+              <div class="stage-name">1. Görsel Yükleme</div>
+              <div class="stage-detail" id="st-upload-detail">Bekleniyor…</div>
+            </div>
+            <div class="stage-check">1</div>
+          </div>
+        </div>
+        <div class="stage-connector" id="sc-1"></div>
+
+        <div class="stage" id="stage-analyze" data-stage="analyze">
+          <div class="stage-row">
+            <div class="stage-icon">🔍</div>
+            <div class="stage-info">
+              <div class="stage-name">2. AI Analiz (Gemini)</div>
+              <div class="stage-detail" id="st-analyze-detail">Ürün kategorisi + özellikler</div>
+            </div>
+            <div class="stage-check">2</div>
+          </div>
+        </div>
+        <div class="stage-connector" id="sc-2"></div>
+
+        <div class="stage" id="stage-bg" data-stage="bg">
+          <div class="stage-row">
+            <div class="stage-icon">✂️</div>
+            <div class="stage-info">
+              <div class="stage-name">3. Arka Plan Kaldır (fal.ai)</div>
+              <div class="stage-detail" id="st-bg-detail">Remove.bg entegrasyonu</div>
+            </div>
+            <div class="stage-check">3</div>
+          </div>
+        </div>
+        <div class="stage-connector" id="sc-3"></div>
+
+        <div class="stage" id="stage-video" data-stage="video">
+          <div class="stage-row">
+            <div class="stage-icon">🎬</div>
+            <div class="stage-info">
+              <div class="stage-name">4. Video Üretim (Kling)</div>
+              <div class="stage-detail" id="st-video-detail">9:16 reels + efektler</div>
+            </div>
+            <div class="stage-check">4</div>
+          </div>
+        </div>
+        <div class="stage-connector" id="sc-4"></div>
+
+        <div class="stage" id="stage-audio" data-stage="audio">
+          <div class="stage-row">
+            <div class="stage-icon">🎵</div>
+            <div class="stage-info">
+              <div class="stage-name">5. Müzik + Seslendirme</div>
+              <div class="stage-detail" id="st-audio-detail">BPM senkron + TTS</div>
+            </div>
+            <div class="stage-check">5</div>
+          </div>
+        </div>
+        <div class="stage-connector" id="sc-5"></div>
+
+        <div class="stage" id="stage-export" data-stage="export">
+          <div class="stage-row">
+            <div class="stage-icon">📱</div>
+            <div class="stage-info">
+              <div class="stage-name">6. Dışa Aktar</div>
+              <div class="stage-detail" id="st-export-detail">MP4 + indirme linki</div>
+            </div>
+            <div class="stage-check">6</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Console Panel (Right) -->
+  <aside class="console-panel">
+    <div class="console-header">
+      <div class="console-title">
+        <span></span>
+        Fenix Konsolu
+      </div>
+    </div>
+
+    <!-- Log output -->
+    <div class="console-log" id="consoleLog">
+      <div class="log-line"><span class="log-time">00:00</span><span class="log-msg info">Fenix Otonom hazır.</span></div>
+      <div class="log-line"><span class="log-time">00:00</span><span class="log-msg fenix">Komut girin veya ürün yükleyin.</span></div>
+    </div>
+
+    <!-- Notifications -->
+    <div class="notif-area" id="notifArea"></div>
+
+    <!-- Command input -->
+    <div class="cmd-area">
+      <div class="cmd-label">Doğal Dil Komutu</div>
+      <div class="cmd-input-wrap">
+        <input class="cmd-input" id="cmdInput" placeholder="ör: İlk 20 ürüne beyaz arka plan" onkeydown="if(event.key==='Enter')sendCmd()">
+        <button class="cmd-send" onclick="sendCmd()">
+          <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+      <div class="quick-cmds">
+        <button class="qcmd" onclick="setCmd('Kuyruğu durdur')">⏸ Durdur</button>
+        <button class="qcmd" onclick="setCmd('Kuyruğa devam et')">▶ Devam</button>
+        <button class="qcmd" onclick="setCmd('Hepsine sinematik stil uygula')">🎬 Sinema</button>
+        <button class="qcmd" onclick="setCmd('15. ürünü atla')">⏭ 15. atla</button>
+        <button class="qcmd" onclick="setCmd('Arka planı beyaz yap')">⬜ Beyaz BG</button>
+        <button class="qcmd" onclick="setCmd('Müziği enerjik yap')">🔥 Enerjik</button>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<div id="toast" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:rgba(8,8,16,.95);border:1px solid rgba(245,158,11,.3);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:9999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;max-width:80vw;text-align:center"></div>
+
+<script>
+const _qp = new URLSearchParams(location.search);
+const S = {
+  customerId: _qp.get('cid') || localStorage.getItem('fx_cid'),
+  quota: parseInt(localStorage.getItem('fx_quota')||'0'),
+  pkg: _qp.get('pkg') || localStorage.getItem('fx_pkg')||'free',
+  files: [], jobs: [], polling: null, batchRunning: false
+};
+
+if (!S.customerId) location.href = '/app';
+
+// ── Socket.io ──
+let socket = null;
+try {
+  socket = io({ transports: ['websocket'], reconnection: true });
+  socket.on('job:progress', d => { updateJobProgress(d.id, d.progress); });
+  socket.on('job:completed', d => { handleJobDone(d.id, 'completed', d.result); });
+  socket.on('job:failed', d => { handleJobDone(d.id, 'failed', null, d.error); });
+  socket.on('job:started', d => { updateJobStatus(d.id, 'processing'); });
+  log('Socket bağlandı.', 'success');
+} catch(e) { log('Socket bağlanamadı: ' + e.message, 'warn'); }
+
+// ── Helpers ──
+function toast(msg, dur=3000) {
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.style.opacity='1'; el.style.transform='translateX(-50%) translateY(0)';
+  setTimeout(()=>{el.style.opacity='0';el.style.transform='translateX(-50%) translateY(20px)';},dur);
+}
+
+function log(msg, type='info') {
+  const el = document.getElementById('consoleLog');
+  const now = new Date(); const t = now.getMinutes().toString().padStart(2,'0')+':'+now.getSeconds().toString().padStart(2,'0');
+  const line = document.createElement('div'); line.className='log-line';
+  line.innerHTML = `<span class="log-time">${t}</span><span class="log-msg ${type}">${msg}</span>`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function addNotif(msg, type='success') {
+  const icons = {success:'✅', warn:'⚠️', error:'❌'};
+  const el = document.getElementById('notifArea');
+  const item = document.createElement('div'); item.className=`notif-item ${type}`;
+  item.innerHTML = `<span class="notif-icon">${icons[type]||'ℹ️'}</span><span>${msg}</span>`;
+  el.insertBefore(item, el.firstChild);
+  if (el.children.length > 5) el.lastChild.remove();
+}
+
+// ── File Upload ──
+const uz = document.getElementById('batchUploadZone');
+const fi = document.getElementById('batchFileInp');
+uz.addEventListener('click', e => { if(!e.target.closest('input')) fi.click(); });
+fi.addEventListener('change', () => { addFiles(Array.from(fi.files)); fi.value=''; });
+uz.addEventListener('dragover', e => { e.preventDefault(); uz.classList.add('dragover'); });
+uz.addEventListener('dragleave', () => uz.classList.remove('dragover'));
+uz.addEventListener('drop', e => { e.preventDefault(); uz.classList.remove('dragover'); addFiles(Array.from(e.dataTransfer.files)); });
+
+function addFiles(files) {
+  const imgs = files.filter(f => f.type.startsWith('image/'));
+  if (!imgs.length) { toast('Sadece görsel dosyaları yükleyebilirsiniz'); return; }
+  S.files = [...S.files, ...imgs].slice(0, 100);
+  const badge = document.getElementById('fileCountBadge');
+  badge.style.display = 'block';
+  badge.textContent = S.files.length + ' görsel yüklendi';
+  uz.classList.add('has-files');
+  document.getElementById('startBtn').disabled = false;
+  log(imgs.length + ' görsel eklendi. Toplam: ' + S.files.length, 'success');
+  document.getElementById('ajName').textContent = S.files.length + ' ürün hazır';
+  document.getElementById('ajSub').textContent = '"Fenix\'i Başlat" butonuna bas';
+  document.getElementById('ajPct').textContent = S.files.length;
+}
+
+function clearFiles() {
+  S.files = [];
+  document.getElementById('fileCountBadge').style.display='none';
+  document.getElementById('batchUploadZone').classList.remove('has-files');
+  document.getElementById('startBtn').disabled = true;
+  log('Dosyalar temizlendi.', 'warn');
+}
+
+// ── Start Batch ──
+async function startBatch() {
+  if (S.batchRunning) { toast('Pipeline zaten çalışıyor'); return; }
+  if (!S.files.length) { toast('Önce ürün yükle'); return; }
+  if (S.quota <= 0 && S.pkg === 'free') { toast('Kredin bitti. Paket al!', 4000); return; }
+  S.batchRunning = true;
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('startBtn').textContent = '⏳ ÇALIŞIYOR…';
+  log('🔥 Fenix pipeline başlatıldı — ' + S.files.length + ' ürün', 'fenix');
+  setStage('upload', 'active', S.files.length + ' görsel işleme alındı');
+  // Process first few to demo (real batch via server)
+  await processBatchFiles();
+}
+
+async function processBatchFiles() {
+  let done = 0, failed = 0;
+  const total = S.files.length;
+  for (let i = 0; i < total; i++) {
+    const file = S.files[i];
+    const jobId = Date.now() + '-' + i;
+    addJobCard(jobId, file.name, 'pending');
+    updateStats();
+  }
+  setStage('upload', 'done', total + ' görsel sıraya alındı');
+  setConnector(1, 'done');
+  setStage('analyze', 'active', 'Gemini analiz ediyor…');
+  await sleep(800);
+  setStage('analyze', 'done', 'Kategori + özellikler çıkarıldı');
+  setConnector(2, 'done');
+  setStage('bg', 'active', 'Arka planlar kaldırılıyor…');
+
+  // Queue files via API
+  for (let i = 0; i < Math.min(S.files.length, 5); i++) {
+    const file = S.files[i];
+    try {
+      const b64 = await readFileAsBase64(file);
+      const r = await fetch('/api/generate', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          kategori:'genel', sirketAdi:'', komutlar:[],
+          customerId: S.customerId, imageBase64: b64,
+          batchMode: true, batchIndex: i, batchTotal: S.files.length
+        })
+      });
+      const d = await r.json();
+      const jobId = Object.keys(S.jobs)[i] || i.toString();
+      if (d.ok) {
+        if (d.jobId) trackJob(d.jobId, file.name, i);
+        else handleJobDone(jobId, 'completed', d.videoUrl);
+      } else {
+        handleJobDone(jobId, 'failed', null, d.error);
+        failed++;
+      }
+    } catch(e) {
+      log('Hata [' + file.name + ']: ' + e.message, 'error');
+      failed++;
+    }
+  }
+  if (S.files.length > 5) {
+    log('İlk 5 kota kullanıldı. Geri kalan sırada bekliyor.', 'warn');
+  }
+}
+
+function trackJob(jobId, name, idx) {
+  S.jobs[jobId] = { name, idx, status: 'processing' };
+  updateJobCardById(idx.toString(), 'processing');
+  startPolling();
+}
+
+function startPolling() {
+  if (S.polling) return;
+  S.polling = setInterval(async ()=>{
+    let allDone = true;
+    for (const [jobId, job] of Object.entries(S.jobs)) {
+      if (job.status === 'processing') {
+        allDone = false;
+        try {
+          const r = await fetch('/api/queue/'+jobId);
+          if (!r.ok) continue;
+          const d = await r.json();
+          if (!d.job) continue;
+          updateJobProgress(jobId, d.job.progress||0);
+          if (d.job.status === 'completed') handleJobDone(jobId, 'completed', d.job.result);
+          else if (d.job.status === 'failed') handleJobDone(jobId, 'failed', null, d.job.error);
+        } catch(e){}
+      }
+    }
+    if (allDone) { clearInterval(S.polling); S.polling=null; }
+  }, 2000);
+}
+
+// ── Job Cards ──
+function addJobCard(jobId, name, status) {
+  const list = document.getElementById('queueList');
+  const empty = list.querySelector('.queue-empty');
+  if (empty) empty.remove();
+  const card = document.createElement('div');
+  card.className='job-card'; card.id='jc-'+jobId; card.dataset.status=status; card.dataset.jobId=jobId;
+  card.innerHTML = `
+    <div class="job-top">
+      <span class="job-name">${name}</span>
+      <span class="job-status-badge badge-${status}">${statusLabel(status)}</span>
+    </div>
+    <div class="job-meta" id="jm-${jobId}">—</div>
+    <div class="job-progress"><div class="job-progress-bar" id="jp-${jobId}" style="width:0%"></div></div>
+  `;
+  card.addEventListener('click', ()=>selectJob(jobId));
+  list.appendChild(card);
+  updateQueueCount();
+  updateStats();
+}
+
+function updateJobProgress(jobId, pct) {
+  const bar = document.getElementById('jp-'+jobId);
+  if (bar) bar.style.width = pct + '%';
+  const card = document.getElementById('jc-'+jobId);
+  if (card) {
+    card.dataset.status = 'processing';
+    const badge = card.querySelector('.job-status-badge');
+    if (badge) { badge.className='job-status-badge badge-processing'; badge.textContent='İşliyor'; }
+    const meta = document.getElementById('jm-'+jobId);
+    if (meta) meta.textContent = pct + '%';
+  }
+  const active = S.activeJob;
+  if (active === jobId) {
+    document.getElementById('ajPct').textContent = pct + '%';
+  }
+  updateStats();
+}
+
+function handleJobDone(jobId, status, result, error) {
+  const card = document.getElementById('jc-'+jobId);
+  if (!card) return;
+  card.dataset.status = status;
+  const badge = card.querySelector('.job-status-badge');
+  const bar = document.getElementById('jp-'+jobId);
+  const meta = document.getElementById('jm-'+jobId);
+  if (badge) { badge.className='job-status-badge badge-'+status; badge.textContent=statusLabel(status); }
+  if (status === 'completed') {
+    if (bar) bar.style.width='100%';
+    if (meta) meta.textContent = 'Tamamlandı ✓';
+    if (result) {
+      const link = document.createElement('a');
+      link.className='job-result-link'; link.href=result; link.target='_blank';
+      link.innerHTML='↗ Videoyu Aç'; card.appendChild(link);
+    }
+    log('✅ Tamamlandı: ' + (card.querySelector('.job-name')?.textContent||jobId), 'success');
+    addNotif('Video hazır: ' + (card.querySelector('.job-name')?.textContent||jobId), 'success');
+    setStage('video','done','Video üretildi'); setConnector(4,'done');
+    setStage('audio','done','Ses eklendi'); setConnector(5,'done');
+    setStage('export','done','İndirme linki hazır');
+  } else if (status === 'failed') {
+    if (bar) bar.style.background='var(--red)';
+    if (meta) meta.textContent = '⚠ ' + (error||'Hata');
+    log('❌ Başarısız: ' + (card.querySelector('.job-name')?.textContent||jobId) + ' — ' + (error||''), 'error');
+    addNotif('Hata: ' + (error||'Bilinmeyen hata'), 'error');
+  }
+  if (S.jobs[jobId]) S.jobs[jobId].status = status;
+  updateStats();
+  updateQueueCount();
+  // Pipeline stage progress
+  setStage('bg','done','Arka planlar temizlendi'); setConnector(3,'done');
+}
+
+function updateJobCardById(idx, status) {
+  const cards = document.querySelectorAll('.job-card');
+  if (cards[idx]) {
+    cards[idx].dataset.status = status;
+    const badge = cards[idx].querySelector('.job-status-badge');
+    if (badge) { badge.className='job-status-badge badge-'+status; badge.textContent=statusLabel(status); }
+  }
+}
+
+function selectJob(jobId) {
+  document.querySelectorAll('.job-card').forEach(c=>c.classList.remove('active'));
+  const card = document.getElementById('jc-'+jobId);
+  if (card) {
+    card.classList.add('active');
+    S.activeJob = jobId;
+    document.getElementById('ajName').textContent = card.querySelector('.job-name')?.textContent || jobId;
+    const pct = document.getElementById('jp-'+jobId)?.style.width || '0%';
+    document.getElementById('ajPct').textContent = pct;
+    document.getElementById('ajSub').textContent = 'Durum: ' + statusLabel(card.dataset.status);
+  }
+}
+
+function statusLabel(s) {
+  return {pending:'Bekliyor',processing:'İşliyor',completed:'Bitti',failed:'Hata',cancelled:'İptal',paused:'Duraklatıldı'}[s]||s;
+}
+
+function updateQueueCount() {
+  const cards = document.querySelectorAll('.job-card');
+  document.getElementById('queueCount').textContent = cards.length;
+}
+
+function updateStats() {
+  const cards = document.querySelectorAll('.job-card');
+  let done=0,proc=0,pend=0,fail=0;
+  cards.forEach(c=>{
+    if(c.dataset.status==='completed')done++;
+    else if(c.dataset.status==='processing')proc++;
+    else if(c.dataset.status==='pending')pend++;
+    else if(c.dataset.status==='failed')fail++;
+  });
+  document.getElementById('statDone').textContent=done;
+  document.getElementById('statProc').textContent=proc;
+  document.getElementById('statPend').textContent=pend;
+  document.getElementById('statFail').textContent=fail;
+}
+
+// ── Pipeline Stage Controls ──
+function setStage(id, state, detail) {
+  const el = document.getElementById('stage-'+id);
+  if (!el) return;
+  el.className = 'stage ' + (state==='active'?'active':state==='done'?'done':state==='failed'?'failed':'');
+  const det = document.getElementById('st-'+id+'-detail');
+  if (det && detail) det.textContent = detail;
+  const check = el.querySelector('.stage-check');
+  if (check) {
+    const stageNums = {upload:1,analyze:2,bg:3,video:4,audio:5,export:6};
+    if (state==='done') check.textContent='✓';
+    else if (state==='failed') check.textContent='✕';
+    else if (state==='active') check.textContent='⟳';
+    else check.textContent = stageNums[id]||'?';
+  }
+}
+
+function setConnector(n, state) {
+  const el = document.getElementById('sc-'+n);
+  if (el) el.className = 'stage-connector ' + state;
+}
+
+// ── Queue Controls ──
+async function pauseAll() {
+  log('Kuyruk duraklatıldı.', 'warn');
+  addNotif('Kuyruk duraklatıldı', 'warn');
+  toast('⏸ Kuyruk durduruldu');
+  await sendCmdToServer('pause_queue', {});
+}
+
+async function resumeAll() {
+  log('Kuyruk devam ediyor.', 'success');
+  addNotif('Kuyruk devam ediyor', 'success');
+  toast('▶ Kuyruk devam ediyor');
+  await sendCmdToServer('resume_queue', {});
+}
+
+function confirmCancelAll() {
+  if (!confirm('Tüm bekleyen işleri iptal etmek istediğinizden emin misiniz?')) return;
+  document.querySelectorAll('.job-card[data-status="pending"]').forEach(c=>{
+    c.dataset.status='cancelled';
+    const badge=c.querySelector('.job-status-badge');
+    if(badge){badge.className='job-status-badge badge-cancelled';badge.textContent='İptal';}
+  });
+  updateStats();
+  log('Tüm işler iptal edildi.', 'warn');
+  addNotif('Tüm işler iptal edildi', 'warn');
+}
+
+// ── Command Interpreter ──
+async function sendCmd() {
+  const inp = document.getElementById('cmdInput');
+  const cmd = inp.value.trim();
+  if (!cmd) return;
+  inp.value = '';
+  log('> ' + cmd, 'cmd');
+  toast('⚡ Komut işleniyor…');
+
+  try {
+    const r = await fetch('/api/agent/command', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ command: cmd, customerId: S.customerId,
+        context: { totalItems: S.files.length, jobType: 'video' }
+      })
+    });
+    const d = await r.json();
+    if (d.ok && d.result) {
+      const res = d.result;
+      if (res.action && res.action !== 'unknown') {
+        log(`Fenix → ${res.action} (güven: ${Math.round((res.confidence||0)*100)}%)`, 'fenix');
+        log(res.explanation || res.action, 'success');
+        applyLocalAction(res);
+      } else {
+        log('Komut anlaşılamadı: ' + (res.explanation||''), 'warn');
+        toast('Komut anlaşılamadı');
+      }
+    } else {
+      log('Komut yanıtı boş.', 'warn');
+    }
+  } catch(e) {
+    log('Komut hatası: ' + e.message, 'error');
+  }
+}
+
+function setCmd(txt) {
+  document.getElementById('cmdInput').value = txt;
+  document.getElementById('cmdInput').focus();
+}
+
+function applyLocalAction(result) {
+  switch(result.action) {
+    case 'pause_queue': pauseAll(); break;
+    case 'resume_queue': resumeAll(); break;
+    case 'cancel_all': confirmCancelAll(); break;
+    case 'set_music_mood': toast('🎵 Müzik: ' + result.value); break;
+    case 'background_color': toast('🎨 BG: ' + result.value); break;
+    case 'set_style': toast('🎬 Stil: ' + result.value); break;
+    default: toast('✓ ' + result.explanation);
+  }
+}
+
+async function sendCmdToServer(action, params) {
+  try {
+    await fetch('/api/agent/command', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ command: action, customerId: S.customerId, params })
+    });
+  } catch(e) {}
+}
+
+// ── Utilities ──
+function readFileAsBase64(file) {
+  return new Promise(res=>{
+    const r=new FileReader();
+    r.onload=e=>res(e.target.result);
+    r.readAsDataURL(file);
+  });
+}
+
+function sleep(ms) { return new Promise(r=>setTimeout(r,ms)); }
+
+// ── Init ──
+// Load existing jobs on mount
+async function loadExistingJobs() {
+  if (!S.customerId) return;
+  try {
+    const r = await fetch('/api/queue/user/' + encodeURIComponent(S.customerId));
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.jobs && d.jobs.length) {
+      d.jobs.slice(0,20).forEach(job=>{
+        addJobCard(job.id, job.payload?.fileName||job.id, job.status);
+        if (job.progress) updateJobProgress(job.id, job.progress);
+      });
+      log(d.jobs.length + ' önceki iş yüklendi.', 'info');
+    }
+  } catch(e) { /* Kuyruk API henüz yok olabilir */ }
+}
+
+loadExistingJobs();
+</script>
+<script src="/fenix-security-widget.js"></script>
+</body>
+</html>
