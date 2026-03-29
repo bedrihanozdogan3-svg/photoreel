@@ -457,7 +457,21 @@ table.kt tr.quota-full td{background:rgba(255,107,26,.05)}
     <span class="nav-icon">🎙️</span>
     <span class="nav-label">SES</span>
   </button>
+  <button class="nav-btn" data-tab="guvenlik" id="nav-guvenlik">
+    <span class="nav-icon">🛡️</span>
+    <span class="nav-label">KALKAN</span>
+  </button>
 </div>
+
+<!-- GÜVENLİK UYARI BANNER — kritik alarm gelince üstte görünür -->
+<div id="sec-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;padding:12px 20px;text-align:center;font-weight:700;font-size:14px;letter-spacing:1px;animation:sec-flash .5s ease infinite alternate;cursor:pointer" onclick="switchTab('guvenlik');this.style.display='none'">
+  <span id="sec-banner-text"></span>
+</div>
+<style>
+@keyframes sec-flash{from{opacity:.7}to{opacity:1}}
+#sec-banner.critical{background:rgba(239,68,68,.95);color:#fff}
+#sec-banner.warning{background:rgba(245,158,11,.9);color:#000}
+</style>
 
 <!-- ══ MAIN ══ -->
 <div class="main-wrap">
@@ -815,6 +829,68 @@ table.kt tr.quota-full td{background:rgba(255,107,26,.05)}
       </div>
     </div>
 
+    <!-- ══ GÜVENLİK / KALKAN ══ -->
+    <div class="tab-panel" id="tab-guvenlik">
+      <div style="display:flex;flex-direction:column;gap:14px">
+
+        <!-- DURUM GÖSTERGESİ -->
+        <div class="section-card" id="sec-status-card" style="text-align:center;padding:24px">
+          <div id="sec-shield" style="font-size:64px;margin-bottom:8px">🟢</div>
+          <div id="sec-status-text" style="font-size:18px;font-weight:700;letter-spacing:2px">HER ŞEY GÜVENLİ</div>
+          <div id="sec-status-sub" style="font-size:11px;color:var(--ash-muted);margin-top:4px">Son kontrol: şimdi</div>
+        </div>
+
+        <!-- SAYILAR -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <div class="section-card" style="text-align:center;padding:14px">
+            <div id="sec-alarm-count" style="font-size:28px;font-weight:700;color:#ef4444">0</div>
+            <div style="font-size:10px;color:var(--ash-muted);letter-spacing:1px">ALARM</div>
+          </div>
+          <div class="section-card" style="text-align:center;padding:14px">
+            <div id="sec-ban-count" style="font-size:28px;font-weight:700;color:#f59e0b">0</div>
+            <div style="font-size:10px;color:var(--ash-muted);letter-spacing:1px">BANLI IP</div>
+          </div>
+          <div class="section-card" style="text-align:center;padding:14px">
+            <div id="sec-device-count" style="font-size:28px;font-weight:700;color:#10b981">0</div>
+            <div style="font-size:10px;color:var(--ash-muted);letter-spacing:1px">CİHAZ</div>
+          </div>
+        </div>
+
+        <!-- ALARMLAR -->
+        <div class="section-card">
+          <div class="sec-title" style="display:flex;justify-content:space-between;align-items:center">
+            <span>🚨 AKTİF ALARMLAR</span>
+            <button onclick="loadGuvenlik()" style="background:none;border:1px solid var(--char-border);color:var(--ash-muted);padding:3px 10px;border-radius:4px;font-size:10px;cursor:pointer">↺ YENİLE</button>
+          </div>
+          <div id="sec-alarms" style="margin-top:8px;font-size:12px"></div>
+        </div>
+
+        <!-- BANLI IP'LER -->
+        <div class="section-card">
+          <div class="sec-title">⛔ BANLI IP'LER</div>
+          <div id="sec-bans" style="margin-top:8px;font-size:12px"></div>
+        </div>
+
+        <!-- MANUEL BAN -->
+        <div class="section-card">
+          <div class="sec-title">🔨 MANUEL BAN</div>
+          <div style="display:flex;gap:8px;margin-top:8px;align-items:flex-end">
+            <input type="text" id="sec-ban-ip" placeholder="IP adresi" style="flex:1;padding:8px;border-radius:4px;border:1px solid var(--char-border);background:var(--void-deep);color:var(--ash-text);font-size:12px">
+            <input type="text" id="sec-ban-reason" placeholder="Sebep" style="flex:1;padding:8px;border-radius:4px;border:1px solid var(--char-border);background:var(--void-deep);color:var(--ash-text);font-size:12px">
+            <button onclick="secManualBan()" style="padding:8px 16px;border-radius:4px;border:1px solid #ef4444;background:rgba(239,68,68,.15);color:#ef4444;font-weight:700;font-size:11px;cursor:pointer;white-space:nowrap">⛔ BANLA</button>
+          </div>
+          <div id="sec-ban-result" style="margin-top:6px;font-size:11px"></div>
+        </div>
+
+        <!-- KAYITLI CİHAZLAR -->
+        <div class="section-card">
+          <div class="sec-title">📱 KAYITLI CİHAZLAR</div>
+          <div id="sec-devices" style="margin-top:8px;font-size:12px"></div>
+        </div>
+
+      </div>
+    </div>
+
   </div><!-- /content-area -->
 
   <!-- ══ BRAIN SIDEBAR ══ -->
@@ -875,6 +951,7 @@ function switchTab(tab) {
   if (tab === 'beyin') loadBeyin();
   if (tab === 'domain') loadDomain();
   if (tab === 'ses') loadSes();
+  if (tab === 'guvenlik') loadGuvenlik();
 }
 
 // ══ MODEL SEÇİMİ ══
@@ -1356,6 +1433,199 @@ document.addEventListener('click', function(e) {
 // Service Worker
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/sw-kontrol.js').catch(function() {});
+}
+
+// ══ GÜVENLİK (KALKAN) ══
+function secEsc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = String(s); return d.innerHTML; }
+
+async function loadGuvenlik() {
+  try {
+    var token = localStorage.getItem('fenix_token');
+    var headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = 'Bearer ' + token;
+    var opts = { headers: headers, credentials: 'include' };
+
+    // Alarmlar
+    var alarmRes = await fetch(BASE + '/api/security/alarms', opts);
+    var alarmData = await alarmRes.json();
+    var alarms = alarmData.alarms || [];
+    document.getElementById('sec-alarm-count').textContent = alarms.length;
+
+    if (alarms.length === 0) {
+      document.getElementById('sec-alarms').innerHTML = '<div style="color:var(--ash-muted);padding:8px">Aktif alarm yok ✅</div>';
+    } else {
+      var html = '';
+      alarms.forEach(function(a) {
+        var color = a.type === 'auto_ban' ? '#ef4444' : a.type === 'multi_account' ? '#f59e0b' : '#8a8a9a';
+        html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;border-bottom:1px solid rgba(255,255,255,.05)">' +
+          '<div><span style="color:' + color + ';font-weight:700;font-size:11px">' + secEsc(a.type) + '</span> ' +
+          '<code style="font-size:10px;color:var(--ash-muted)">' + secEsc(a.ip) + '</code> ' +
+          '<span style="font-size:10px;color:var(--ash-muted)">' + secEsc(a.detail) + '</span></div>' +
+          '<div style="display:flex;gap:4px">' +
+          '<button onclick="secBanFromAlarm(\'' + secEsc(a.ip) + '\',\'' + secEsc(a.id) + '\')" style="padding:3px 8px;border:1px solid #ef4444;background:rgba(239,68,68,.1);color:#ef4444;border-radius:3px;font-size:10px;cursor:pointer">BAN</button>' +
+          '<button onclick="secResolve(\'' + secEsc(a.id) + '\')" style="padding:3px 8px;border:1px solid #f59e0b;background:rgba(245,158,11,.1);color:#f59e0b;border-radius:3px;font-size:10px;cursor:pointer">TAMAM</button>' +
+          '</div></div>';
+      });
+      document.getElementById('sec-alarms').innerHTML = html;
+    }
+
+    // Banlı IP'ler
+    var banRes = await fetch(BASE + '/api/security/banned-ips', opts);
+    var banData = await banRes.json();
+    var bans = banData.ips || [];
+    document.getElementById('sec-ban-count').textContent = bans.length;
+
+    if (bans.length === 0) {
+      document.getElementById('sec-bans').innerHTML = '<div style="color:var(--ash-muted);padding:8px">Banlı IP yok</div>';
+    } else {
+      var bhtml = '';
+      bans.forEach(function(b) {
+        bhtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">' +
+          '<div><code style="font-size:11px">' + secEsc(b.ip) + '</code> <span style="font-size:10px;color:var(--ash-muted)">' + secEsc(b.reason) + '</span></div>' +
+          '<button onclick="secUnban(\'' + secEsc(b.ip) + '\')" style="padding:3px 8px;border:1px solid #10b981;background:rgba(16,185,129,.1);color:#10b981;border-radius:3px;font-size:10px;cursor:pointer">KALDIR</button>' +
+          '</div>';
+      });
+      document.getElementById('sec-bans').innerHTML = bhtml;
+    }
+
+    // Cihazlar
+    var devRes = await fetch(BASE + '/api/security/devices', opts);
+    var devData = await devRes.json();
+    var devices = devData.devices || [];
+    document.getElementById('sec-device-count').textContent = devices.length;
+
+    if (devices.length === 0) {
+      document.getElementById('sec-devices').innerHTML = '<div style="color:var(--ash-muted);padding:8px">Kayıtlı cihaz yok</div>';
+    } else {
+      var dhtml = '';
+      devices.forEach(function(dev) {
+        var trustColor = dev.trusted ? '#10b981' : '#ef4444';
+        var trustText = dev.trusted ? 'GÜVENİLİR' : 'DEVRE DIŞI';
+        dhtml += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.05)">' +
+          '<div><span style="font-weight:600">' + secEsc(dev.name) + '</span> ' +
+          '<span style="font-size:10px;color:' + trustColor + ';font-weight:700">' + trustText + '</span>' +
+          '<br><span style="font-size:9px;color:var(--ash-muted)">Son: ' + (dev.lastSeen || '—').slice(0,16) + ' | ID: ' + secEsc(dev.deviceId?.substring(0,8) || '?') + '...</span></div>' +
+          (dev.trusted ? '<button onclick="secRevokeDevice(\'' + secEsc(dev.deviceId) + '\')" style="padding:3px 8px;border:1px solid #ef4444;background:rgba(239,68,68,.1);color:#ef4444;border-radius:3px;font-size:10px;cursor:pointer">DEVRE DIŞI</button>' : '') +
+          '</div>';
+      });
+      document.getElementById('sec-devices').innerHTML = dhtml;
+    }
+
+    // Durum göstergesi güncelle
+    updateSecurityStatus(alarms.length, bans.length);
+    document.getElementById('sec-status-sub').textContent = 'Son kontrol: ' + new Date().toLocaleTimeString('tr-TR');
+
+  } catch(e) {
+    document.getElementById('sec-alarms').innerHTML = '<div style="color:#ef4444;padding:8px">Yüklenemedi: ' + secEsc(e.message) + '</div>';
+  }
+}
+
+function updateSecurityStatus(alarmCount, banCount) {
+  var shield = document.getElementById('sec-shield');
+  var text = document.getElementById('sec-status-text');
+  if (alarmCount > 0) {
+    shield.textContent = '🔴'; text.textContent = 'TEHLİKE — AKTİF ALARM'; text.style.color = '#ef4444';
+    document.getElementById('sec-status-card').style.borderColor = 'rgba(239,68,68,.4)';
+  } else if (banCount > 0) {
+    shield.textContent = '🟡'; text.textContent = 'DİKKAT — BANLI IP VAR'; text.style.color = '#f59e0b';
+    document.getElementById('sec-status-card').style.borderColor = 'rgba(245,158,11,.3)';
+  } else {
+    shield.textContent = '🟢'; text.textContent = 'HER ŞEY GÜVENLİ'; text.style.color = '#10b981';
+    document.getElementById('sec-status-card').style.borderColor = 'rgba(16,185,129,.2)';
+  }
+}
+
+async function secResolve(id) {
+  if (!confirm('Alarm çözüldü olarak işaretlensin mi?')) return;
+  var token = localStorage.getItem('fenix_token');
+  await fetch(BASE + '/api/security/alarms/' + id + '/resolve', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') }, credentials: 'include' });
+  loadGuvenlik();
+}
+
+async function secBanFromAlarm(ip, alarmId) {
+  if (!confirm(ip + ' banlanacak. Onayla?')) return;
+  var token = localStorage.getItem('fenix_token');
+  var h = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') };
+  await fetch(BASE + '/api/security/ban', { method: 'POST', headers: h, credentials: 'include', body: JSON.stringify({ ip: ip, reason: 'alarm' }) });
+  await fetch(BASE + '/api/security/alarms/' + alarmId + '/resolve', { method: 'POST', headers: h, credentials: 'include' });
+  loadGuvenlik();
+}
+
+async function secUnban(ip) {
+  if (!confirm(ip + ' ban kaldırılacak?')) return;
+  var token = localStorage.getItem('fenix_token');
+  await fetch(BASE + '/api/security/unban', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') }, credentials: 'include', body: JSON.stringify({ ip: ip }) });
+  loadGuvenlik();
+}
+
+async function secManualBan() {
+  var ip = document.getElementById('sec-ban-ip').value.trim();
+  var reason = document.getElementById('sec-ban-reason').value.trim();
+  if (!ip) { alert('IP gir'); return; }
+  if (!confirm(ip + ' banlanacak?')) return;
+  var token = localStorage.getItem('fenix_token');
+  var d = await fetch(BASE + '/api/security/ban', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') }, credentials: 'include', body: JSON.stringify({ ip: ip, reason: reason || 'manuel' }) }).then(function(r){return r.json()});
+  document.getElementById('sec-ban-result').innerHTML = d.ok ? '<span style="color:#10b981">✅ ' + secEsc(ip) + ' banlandı</span>' : '<span style="color:#ef4444">❌ ' + secEsc(d.error) + '</span>';
+  if (d.ok) { document.getElementById('sec-ban-ip').value = ''; document.getElementById('sec-ban-reason').value = ''; loadGuvenlik(); }
+}
+
+async function secRevokeDevice(deviceId) {
+  if (!confirm('Bu cihaz devre dışı bırakılacak?')) return;
+  var token = localStorage.getItem('fenix_token');
+  await fetch(BASE + '/api/security/device/revoke', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (token || '') }, credentials: 'include', body: JSON.stringify({ deviceId: deviceId }) });
+  loadGuvenlik();
+}
+
+// ══ GÜVENLİK SOCKET HANDLERİ ══
+// Socket.io bağlantısı varsa güvenlik olaylarını dinle
+(function() {
+  if (typeof io === 'undefined') return;
+  var sock = io(BASE, { auth: { token: localStorage.getItem('fenix_token') }, reconnection: true });
+  sock.on('security_alert', function(data) {
+    // Ses çal
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var osc = ctx.createOscillator();
+      osc.type = data.severity === 'critical' ? 'sawtooth' : 'square';
+      osc.frequency.value = data.severity === 'critical' ? 880 : 660;
+      osc.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + 0.3);
+      setTimeout(function(){ var o2 = ctx.createOscillator(); o2.type = osc.type; o2.frequency.value = osc.frequency.value * 1.2; o2.connect(ctx.destination); o2.start(); o2.stop(ctx.currentTime + 0.3); }, 350);
+    } catch(e) {}
+
+    // Titreşim
+    if (navigator.vibrate) {
+      navigator.vibrate(data.severity === 'critical' ? [500,200,500,200,500] : [200,100,200]);
+    }
+
+    // Banner göster
+    var banner = document.getElementById('sec-banner');
+    banner.className = data.severity || 'warning';
+    document.getElementById('sec-banner-text').textContent = (data.label || '⚠️ GÜVENLİK') + ' — ' + (data.ip || '') + ' ' + (data.detail || '');
+    banner.style.display = 'block';
+
+    // KALKAN butonunu kırmızı yap
+    var navBtn = document.getElementById('nav-guvenlik');
+    if (navBtn) navBtn.style.background = 'rgba(239,68,68,.25)';
+
+    // Güvenlik tabı açıksa yenile
+    if (currentTab === 'guvenlik') loadGuvenlik();
+
+    // Browser notification
+    if (Notification.permission === 'granted') {
+      new Notification('FENIX GÜVENLİK', { body: (data.label || '') + ' — ' + (data.detail || ''), icon: '/icons/icon-192.png', tag: 'security' });
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission();
+    }
+
+    // 15sn sonra banner gizle
+    setTimeout(function() { banner.style.display = 'none'; }, 15000);
+  });
+})();
+
+// Bildirim izni iste (sayfa açılışında)
+if ('Notification' in window && Notification.permission === 'default') {
+  Notification.requestPermission();
 }
 
 // ══ INIT ══

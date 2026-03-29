@@ -144,6 +144,8 @@ async function autoBan(ip, reason, detail) {
       bannedAt: new Date().toISOString()
     });
     await createAlarm(ip, 'auto_ban', detail, []);
+    // Anlık tablet bildirimi
+    emitSecurityAlert('auto_ban', ip, detail);
   } catch(e) {}
 }
 
@@ -159,7 +161,29 @@ async function createAlarm(ip, type, detail, customerIds) {
       resolved: false,
       createdAt: new Date().toISOString()
     });
+    // Anlık tablet bildirimi
+    emitSecurityAlert(type, ip, detail);
   } catch(e) {}
+}
+
+// Socket.io ile güvenlik uyarısı gönder
+function emitSecurityAlert(type, ip, detail) {
+  if (!global.io) return;
+  const LABELS = {
+    auto_ban: '⛔ OTOMATİK BAN',
+    multi_account: '👥 ÇOKLU HESAP',
+    brute_force: '🔨 KABA KUVVET',
+    unknown_device: '📱 BİLİNMEYEN CİHAZ',
+    rate_abuse: '⚡ AŞIRI İSTEK'
+  };
+  global.io.emit('security_alert', {
+    type,
+    label: LABELS[type] || '⚠️ GÜVENLİK',
+    ip: ip || 'bilinmiyor',
+    detail: detail || '',
+    severity: (type === 'auto_ban' || type === 'unknown_device') ? 'critical' : 'warning',
+    ts: new Date().toISOString()
+  });
 }
 
 /**
@@ -186,4 +210,4 @@ async function unbanIP(ip, adminId) {
   }
 }
 
-module.exports = { ipBanCheck, auditLogger, banIP, unbanIP, getIP };
+module.exports = { ipBanCheck, auditLogger, banIP, unbanIP, getIP, emitSecurityAlert };

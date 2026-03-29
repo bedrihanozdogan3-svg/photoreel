@@ -5,7 +5,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { banIP, unbanIP } = require('../middleware/auditLog');
+const { banIP, unbanIP, emitSecurityAlert } = require('../middleware/auditLog');
 
 // Firestore
 let db = null;
@@ -141,6 +141,106 @@ router.get('/audit-log', requireAdmin, async (req, res) => {
     res.json({ ok: true, count: logs.length, logs });
   } catch(e) {
     res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ── CİHAZ YÖNETİMİ ──
+
+/**
+ * POST /api/security/device/register
+ * Body: { deviceId, name, userAgent }
+ * Yeni cihaz kaydet (ilk bağlantıda).
+ */
+router.post('/device/register', requireAdmin, async (req, res) => {
+  const { deviceId, name, userAgent } = req.body || {};
+  if (!deviceId) return res.status(400).json({ ok: false, error: 'deviceId gerekli.' });
+  const firestore = getDb();
+  if (!firestore) return res.json({ ok: true, local: true });
+  try {
+    const ref = firestore.collection('fenix-devices').doc(deviceId);
+    const existing = await ref.get();
+    if (existing.exists) {
+      // Zaten kayıtlı — son görülme güncelle
+      await ref.update({ lastSeen: new Date().toISOString(), userAgent: userAgent || '' });
+      return res.json({ ok: true, status: 'known', name: existing.data().name });
+    }
+    // Yeni cihaz — kaydet
+    await ref.set({
+      deviceId,
+      name: name || 'Adsız Cihaz',
+      userAgent: userAgent || '',
+      trusted: true,
+      createdAt: new Date().toISOString(),
+      lastSeen: new Date().toISOString()
+    });
+    res.json({ ok: true, status: 'registered' });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/**
+ * GET /api/security/devices
+ * Kayıtlı cihaz listesi.
+ */
+router.get('/devices', requireAdmin, async (req, res) => {
+  const firestore = getDb();
+  if (!firestore) return res.json({ ok: true, devices: [] });
+  try {
+    const snap = await firestore.collection('fenix-devices').get();
+    const devices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    res.json({ ok: true, count: devices.length, devices });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/**
+ * POST /api/security/device/revoke
+ * Body: { deviceId }
+ * Cihazı güvenilmez olarak işaretle.
+ */
+router.post('/device/revoke', requireAdmin, async (req, res) => {
+  const { deviceId } = req.body || {};
+  if (!deviceId) return res.status(400).json({ ok: false, error: 'deviceId gerekli.' });
+  const firestore = getDb();
+  if (!firestore) return res.json({ ok: true });
+  try {
+    await firestore.collection('fenix-devices').doc(deviceId).update({
+      trusted: false, revokedAt: new Date().toISOString()
+    });
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/**
+ * POST /api/security/device/verify
+ * Body: { deviceId }
+ * Cihaz güvenilir mi kontrol et. Auth gerekmez (requireTablet içinden çağrılır).
+ */
+router.post('/device/verify', async (req, res) => {
+  const { deviceId } = req.body || {};
+  if (!deviceId) return res.json({ ok: false, trusted: false });
+  const firestore = getDb();
+  if (!firestore) return res.json({ ok: true, trusted: true }); // dev mode
+  try {
+    const doc = await firestore.collection('fenix-devices').doc(deviceId).get();
+    if (!doc.exists) {
+      // Bilinmeyen cihaz → alarm
+      emitSecurityAlert('unknown_device', '', 'Bilinmeyen cihaz erişim denemesi: ' + deviceId.substring(0, 8) + '...');
+      return res.json({ ok: true, trusted: false });
+    }
+    const data = doc.data();
+    if (!data.trusted) {
+      return res.json({ ok: true, trusted: false, revoked: true });
+    }
+    // Güvenilir — son görülme güncelle
+    await doc.ref.update({ lastSeen: new Date().toISOString() });
+    return res.json({ ok: true, trusted: true, name: data.name });
+  } catch(e) {
+    return res.json({ ok: false, trusted: false, error: e.message });
   }
 });
 
