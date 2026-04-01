@@ -259,6 +259,10 @@ app.use('/api/generate', generateRoutes);
 const effectsRoutes = require('./routes/api-effects');
 app.use('/api/effects', effectsRoutes);
 
+// PRO Studio — FFmpeg post-processing
+const proRoutes = require('./routes/api-pro');
+app.use('/api/pro', proRoutes);
+
 // Güvenlik paneli — sadece tablet cihaz anahtarıyla
 const TABLET_KEY = process.env.TABLET_KEY || '';
 const TABLET_COOKIE = 'fenix_tablet';
@@ -702,8 +706,13 @@ app.post('/api/fenix/train/stop', requireAdmin, (req, res) => {
   res.json({ ok: true, message: 'Durdurma isteği gönderildi' });
 });
 
-app.get('/api/fenix/train/status', (req, res) => {
-  res.json({ ok: true, ...fenixTrainer.getState() });
+app.get('/api/fenix/train/status', async (req, res) => {
+  try {
+    const state = await fenixTrainer.getStateWithCheckpoint();
+    res.json({ ok: true, ...state });
+  } catch(e) {
+    res.json({ ok: true, ...fenixTrainer.getState() });
+  }
 });
 
 // ── Fenix Sağlık Kontrol Endpoint'i ──

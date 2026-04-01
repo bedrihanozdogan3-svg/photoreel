@@ -61,8 +61,8 @@ async function loadCheckpoint() {
     const doc = await db.collection('fenix-trainer').doc('checkpoint').get();
     if (!doc.exists) return null;
     const d = doc.data();
-    // 7 günden eski checkpoint'i yoksay (eskiden 6 saat — çok kısaydı)
-    if (d.updatedAt && Date.now() - new Date(d.updatedAt).getTime() > 7 * 24 * 3600 * 1000) return null;
+    // 1 yıldan eski checkpoint'i yoksay (eskiden 7 gün — çok kısaydı, eğitim kayboluyordu)
+    if (d.updatedAt && Date.now() - new Date(d.updatedAt).getTime() > 365 * 24 * 3600 * 1000) return null;
     return d;
   } catch(e) { return null; }
 }
@@ -696,6 +696,25 @@ async function runTraining(budget = 20, resume = false) {
 function stop() { state.stopRequested = true; }
 function getState() { return { ...state }; }
 
+// Firestore'dan gerçek ders sayısını oku (RAM sıfırlanmış olsa bile)
+async function getStateWithCheckpoint() {
+  const s = { ...state };
+  if (s.totalLessons === 0) {
+    try {
+      const cp = await loadCheckpoint();
+      if (cp && cp.totalLessons > 0) {
+        s.totalLessons = cp.totalLessons;
+        s.totalCost    = cp.totalCost    || s.totalCost;
+        s.round        = cp.round        || s.round;
+        s.budget       = cp.budget       || s.budget;
+        s.phases       = cp.phases       || s.phases;
+        s._fromCheckpoint = true; // gösterge
+      }
+    } catch(e) { /* sessiz */ }
+  }
+  return s;
+}
+
 // ── Sunucu başlayınca checkpoint varsa otomatik devam ──
 // Güvenli bütçe limiti: checkpoint'teki budget değeri MAX ile sınırlandırılır
 const SAFE_MAX_BUDGET = 10; // Hiçbir zaman $10 üstü harcama yapılamaz
@@ -719,4 +738,4 @@ const SAFE_MAX_BUDGET = 10; // Hiçbir zaman $10 üstü harcama yapılamaz
   } catch(e) { logger.warn('Checkpoint yüklenemedi', { error: e.message }); }
 })();
 
-module.exports = { runTraining, stop, getState };
+module.exports = { runTraining, stop, getState, getStateWithCheckpoint };
