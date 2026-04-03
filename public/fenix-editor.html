@@ -9695,11 +9695,12 @@ function _3dSetupModel(model) {
   _tfCtrl.attach(model);
   _fitCameraToObject(model);
 
-  // three3D state güncelle
+  // three3D state güncelle — mevcut preset'i koru (load3DDemo'dan geldiyse)
+  const keepPreset = three3D?.preset && three3D.preset !== 'custom' ? three3D.preset : 'custom';
   three3D = {
     angle: 0, pitch: 0.25, lightIntensity: 1,
     metalness: 0.3, roughness: 0.5, color: '#888888',
-    preset: 'custom', name: model.name,
+    preset: keepPreset, name: model.name,
     _offset: { x:0, y:0, z:0 }, _scale: 1,
     _hitCenter: { x:0, y:0, r:60 }
   };
