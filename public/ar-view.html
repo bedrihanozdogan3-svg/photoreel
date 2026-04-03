@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fenixal AR</title>
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0a0a0a; color: #fff; font-family: -apple-system, sans-serif; height: 100vh; overflow: hidden; }
+  model-viewer { width: 100%; height: 100vh; background: #0a0a0a; }
+  #loading { position: fixed; inset: 0; background: #0a0a0a; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; transition: opacity 0.5s; }
+  #loading.hide { opacity: 0; pointer-events: none; }
+  .logo { font-size: 28px; font-weight: 900; color: #F97316; letter-spacing: 2px; margin-bottom: 12px; }
+  .sub { font-size: 12px; color: #666; margin-bottom: 24px; }
+  .spinner { width: 32px; height: 32px; border: 3px solid #222; border-top-color: #F97316; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .size-badge { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); backdrop-filter: blur(10px); border: 1px solid rgba(249,115,22,0.2); border-radius: 20px; padding: 6px 16px; font-size: 11px; color: #F97316; font-weight: 700; z-index: 50; }
+  .brand { position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 9px; color: #333; z-index: 50; }
+  model-viewer::part(default-ar-button) { display: none; }
+  .ar-btn { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%); height: 56px; padding: 0 36px; border-radius: 28px; border: none; background: linear-gradient(135deg, #F97316, #ea580c); color: #fff; font-size: 16px; font-weight: 900; cursor: pointer; box-shadow: 0 8px 32px rgba(249,115,22,0.5); z-index: 50; letter-spacing: 0.5px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 8px 32px rgba(249,115,22,0.5); } 50% { box-shadow: 0 8px 40px rgba(249,115,22,0.8); } }
+  .ar-btn:active { transform: translateX(-50%) scale(0.95); }
+</style>
+</head>
+<body>
+
+<div id="loading">
+  <div class="logo">FENIXAL</div>
+  <div class="sub">AR Deneyimi Yükleniyor...</div>
+  <div class="spinner"></div>
+</div>
+
+<div class="size-badge" id="size-badge">📐 Yükleniyor...</div>
+
+<model-viewer
+  id="ar-model"
+  ar
+  ar-modes="webxr scene-viewer quick-look"
+  ar-scale="fixed"
+  ar-placement="floor"
+  camera-controls
+  touch-action="pan-y"
+  auto-rotate
+  shadow-intensity="1.5"
+  shadow-softness="0.8"
+  exposure="1.0"
+  environment-image="neutral"
+  interaction-prompt="auto"
+  loading="eager"
+>
+</model-viewer>
+
+<button class="ar-btn" onclick="launchAR()">🚀 ODANA YERLEŞTİR</button>
+
+<div class="brand">fenixal · AR görüntüleyici</div>
+
+<script>
+  // Model URL'lerini tanımla
+  const models = {
+    sneaker: { url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb', size: 30, name: 'Spor Ayakkabı' },
+    hanya: { url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb', size: 35, name: 'Hasar Kask' },
+    watch: { url: 'https://modelviewer.dev/shared-assets/models/Astronaut.glb', size: 180, name: 'Astronot' },
+    chess: { url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/ABeautifulGame/glTF-Binary/ABeautifulGame.glb', size: 40, name: 'Satranç Seti' },
+    camera: { url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/AntiqueCamera/glTF-Binary/AntiqueCamera.glb', size: 25, name: 'Antik Kamera' },
+    lamp: { url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/IridescenceLamp/glTF-Binary/IridescenceLamp.glb', size: 50, name: 'Lamba' },
+    sofa: { url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/GlamVelvetSofa/glTF-Binary/GlamVelvetSofa.glb', size: 85, name: 'Kadife Koltuk' },
+    chair: { url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/SheenChair/glTF-Binary/SheenChair.glb', size: 85, name: 'Sandalye' },
+    fox: { url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Fox/glTF-Binary/Fox.glb', size: 40, name: 'Tilki' },
+    dragon: { url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DragonAttenuation/glTF-Binary/DragonAttenuation.glb', size: 30, name: 'Ejderha' },
+    default: { url: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb', size: 30, name: 'Model' },
+  };
+
+  // URL parametresinden model al
+  const params = new URLSearchParams(window.location.search);
+  const modelKey = params.get('model') || 'default';
+  const modelData = models[modelKey] || models.default;
+
+  // Model yükle
+  const viewer = document.getElementById('ar-model');
+  viewer.src = modelData.url;
+
+  // Boyut badge
+  document.getElementById('size-badge').textContent = '📐 ' + modelData.name + ' · ' + modelData.size + 'cm';
+
+  // Yükleme tamamlandığında
+  viewer.addEventListener('load', () => {
+    document.getElementById('loading').classList.add('hide');
+    setTimeout(() => document.getElementById('loading').remove(), 600);
+  });
+
+  // AR buton
+  function launchAR() {
+    if (viewer.canActivateAR) {
+      viewer.activateAR();
+    } else {
+      alert('AR desteklenmiyor. Lütfen Chrome (Android) veya Safari (iOS) kullanın.');
+    }
+  }
+
+  // model-viewer AR desteği kontrolü
+  viewer.addEventListener('ar-status', (e) => {
+    if (e.detail.status === 'session-started') {
+      document.querySelector('.ar-btn').style.display = 'none';
+    } else {
+      document.querySelector('.ar-btn').style.display = '';
+    }
+  });
+</script>
+</body>
+</html>
