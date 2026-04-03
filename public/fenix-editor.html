@@ -16686,27 +16686,104 @@ _screenToUV = function(screenX, screenY, canvasW, canvasH) {
     <button onclick="_arTogglePanel()" style="background:none;border:none;color:#444;font-size:14px;cursor:pointer;line-height:1;">×</button>
   </div>
   <div id="ar-status" style="font-size:9px;color:#555;margin-bottom:8px;">Model seçin ve butona tıklayın</div>
-  <button onclick="_arExportAndQR()" style="width:100%;height:34px;border-radius:7px;border:none;background:linear-gradient(90deg,#F97316,#ea580c);color:#000;font-size:10px;font-weight:800;cursor:pointer;letter-spacing:.5px;margin-bottom:8px;">🚀 AR QR Oluştur</button>
-  <div id="ar-qr-wrap" style="display:none;text-align:center;">
-    <div id="ar-qr-div" style="display:inline-block;border-radius:8px;overflow:hidden;border:2px solid rgba(249,115,22,0.2);"></div>
-    <div style="font-size:7px;color:#444;margin-top:4px;">Telefonunla tara → AR görüntüle</div>
+  <!-- DESKTOP: QR Oluştur -->
+  <div id="ar-desktop-section">
+    <button onclick="_arExportAndQR()" style="width:100%;height:34px;border-radius:7px;border:none;background:linear-gradient(90deg,#F97316,#ea580c);color:#000;font-size:10px;font-weight:800;cursor:pointer;letter-spacing:.5px;margin-bottom:8px;">🚀 AR QR Oluştur</button>
+    <div id="ar-qr-wrap" style="display:none;text-align:center;">
+      <div id="ar-qr-div" style="display:inline-block;border-radius:8px;overflow:hidden;border:2px solid rgba(249,115,22,0.2);"></div>
+      <div style="font-size:7px;color:#444;margin-top:4px;">Telefonunla tara → AR görüntüle</div>
+    </div>
+  </div>
+  <!-- MOBİL: Odana Yerleştir -->
+  <div id="ar-mobile-section" style="display:none;">
+    <button onclick="_arLaunchNative()" style="width:100%;height:52px;border-radius:10px;border:none;background:linear-gradient(135deg,#F97316,#ea580c,#dc2626);color:#fff;font-size:14px;font-weight:900;cursor:pointer;letter-spacing:.5px;margin-bottom:8px;box-shadow:0 4px 20px rgba(249,115,22,0.4);animation:_arPulse 2s infinite;">🚀 ODANA YERLEŞTİR</button>
+    <div style="font-size:8px;color:#555;text-align:center;">Kameran açılacak — modeli odana yerleştir</div>
   </div>
   <div style="display:flex;gap:4px;margin-top:6px;">
     <button onclick="_arDownloadGLB()" style="flex:1;height:26px;border-radius:5px;border:1px solid #222;background:#111;color:#888;font-size:8px;cursor:pointer;">📦 GLB İndir</button>
     <button onclick="_arDownloadPNG()" style="flex:1;height:26px;border-radius:5px;border:1px solid #222;background:#111;color:#888;font-size:8px;cursor:pointer;">📸 PNG İndir</button>
   </div>
 </div>
+<style>
+@keyframes _arPulse { 0%,100%{box-shadow:0 4px 20px rgba(249,115,22,0.4)} 50%{box-shadow:0 4px 30px rgba(249,115,22,0.7)} }
+</style>
 
 <script>
 // ── AR Modülü — tamamen bağımsız, mevcut koda dokunmaz ──
 let _arBlobUrl = null;
 
-// 3D modunda AR butonunu göster
+// Mobil algılama
+const _isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const _isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+const _isAndroid = /Android/i.test(navigator.userAgent);
+
+// 3D modunda AR butonunu göster + mobil/desktop ayrımı
 const _arObserver = setInterval(() => {
   const fab = document.getElementById('ar-fab');
   if (!fab) return;
   fab.style.display = (S?.mode === '3d' && S?.threeLoaded) ? 'flex' : 'none';
+  // Mobil/desktop section toggle
+  const deskSec = document.getElementById('ar-desktop-section');
+  const mobSec = document.getElementById('ar-mobile-section');
+  if (deskSec) deskSec.style.display = _isMobile ? 'none' : '';
+  if (mobSec) mobSec.style.display = _isMobile ? '' : 'none';
 }, 500);
+
+// Native AR Launch — mobilde kamerayı aç
+async function _arLaunchNative() {
+  const status = document.getElementById('ar-status');
+  if (status) status.textContent = '⏳ AR hazırlanıyor...';
+
+  // Model export
+  let exportTarget = _mainMesh;
+  if (!exportTarget && _scene) {
+    _scene.traverse(c => { if (c.userData?.fenixMesh && c.visible && !exportTarget) exportTarget = c; });
+  }
+  if (!exportTarget) { if (status) status.textContent = '⚠ Model yükleyin'; return; }
+
+  try {
+    if (typeof THREE === 'undefined' || typeof THREE.GLTFExporter === 'undefined') {
+      if (status) status.textContent = '⚠ Exporter yükleniyor...';
+      return;
+    }
+    const exporter = new THREE.GLTFExporter();
+    const buffer = await new Promise(r => exporter.parse(exportTarget, r, { binary: true }));
+    const blob = new Blob([buffer], { type: 'model/gltf-binary' });
+    const blobUrl = URL.createObjectURL(blob);
+
+    if (_isIOS) {
+      // iOS Quick Look — USDZ gerekir, GLB fallback olarak indir
+      // iOS Safari model-viewer ile AR açabilir
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = 'model.glb';
+      a.rel = 'ar';
+      a.click();
+      if (status) status.textContent = '📱 iOS: Dosya indiriliyor → "Dosyalar" dan aç';
+    } else if (_isAndroid) {
+      // Android Scene Viewer — intent ile
+      const intentUrl = 'intent://arvr.google.com/scene-viewer/1.0?file=' +
+        encodeURIComponent(window.location.origin + '/ar-model.glb') +
+        '&mode=ar_preferred#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;end;';
+
+      // Önce GLB'yi indir, sonra scene viewer aç
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = 'fenixal-ar-model.glb';
+      a.click();
+
+      setTimeout(() => {
+        if (status) status.textContent = '📱 Model indirildi — "Dosyalar" dan 3D görüntüleyici ile aç';
+      }, 1000);
+    }
+
+    // 3 saniye sonra bellek temizle
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
+
+  } catch(err) {
+    if (status) status.textContent = '❌ Hata: ' + err.message;
+  }
+}
 
 function _arTogglePanel() {
   const panel = document.getElementById('ar-panel');
