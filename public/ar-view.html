@@ -83,8 +83,19 @@
   // Boyut badge
   document.getElementById('size-badge').textContent = '📐 ' + modelData.name + ' · ' + modelData.size + 'cm';
 
-  // Yükleme tamamlandığında
+  // Yükleme tamamlandığında — boyut sınırla
   viewer.addEventListener('load', () => {
+    // Model boyutunu gerçek cm'e ölçekle
+    const targetCm = modelData.size; // cm
+    const targetM = targetCm / 100;  // metreye çevir
+    const dims = viewer.getDimensions();
+    if (dims) {
+      const maxDim = Math.max(dims.x, dims.y, dims.z);
+      if (maxDim > 0) {
+        const scale = targetM / maxDim;
+        viewer.scale = `${scale} ${scale} ${scale}`;
+      }
+    }
     document.getElementById('loading').classList.add('hide');
     setTimeout(() => document.getElementById('loading').remove(), 600);
   });
