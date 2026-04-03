@@ -1112,6 +1112,44 @@ app.post('/api/trim-upload', _trimUpload.single('file'), async (req, res) => {
   }
 });
 
+// ══════════════════════════════════════
+//  AR MODEL UPLOAD — GLB yükle, public URL al
+// ══════════════════════════════════════
+const _arUpload = multer({
+  dest: path.join(__dirname, 'public', 'ar-models'),
+  limits: { fileSize: 50 * 1024 * 1024 } // 50 MB
+});
+// ar-models klasörünü oluştur
+const _arDir = path.join(__dirname, 'public', 'ar-models');
+if (!require('fs').existsSync(_arDir)) require('fs').mkdirSync(_arDir, { recursive: true });
+
+app.post('/api/ar/upload', _arUpload.single('model'), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ ok: false, error: 'Model dosyası gerekli' });
+    const fs = require('fs');
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const ext = path.extname(req.file.originalname) || '.glb';
+    const filename = id + ext;
+    const destPath = path.join(_arDir, filename);
+    fs.renameSync(req.file.path, destPath);
+    const publicUrl = '/ar-models/' + filename;
+    res.json({ ok: true, id, url: publicUrl, filename });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// AR model listesi
+app.get('/api/ar/list', (req, res) => {
+  try {
+    const fs = require('fs');
+    const files = fs.readdirSync(_arDir).filter(f => f.endsWith('.glb') || f.endsWith('.gltf'));
+    res.json({ ok: true, models: files.map(f => ({ filename: f, url: '/ar-models/' + f })) });
+  } catch(e) {
+    res.json({ ok: true, models: [] });
+  }
+});
+
 // Video birleştirme (Pro) — iki video yükle, concat çıktısı
 const _mergeUpload = multer({
   dest: videoProcessor.TEMP_DIR,

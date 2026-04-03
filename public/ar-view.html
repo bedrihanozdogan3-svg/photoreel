@@ -73,15 +73,21 @@
 
   // URL parametresinden model al
   const params = new URLSearchParams(window.location.search);
+  const customGlb = params.get('glb'); // Custom model URL
   const modelKey = params.get('model') || 'default';
-  const modelData = models[modelKey] || models.default;
-
-  // Model yükle
   const viewer = document.getElementById('ar-model');
-  viewer.src = modelData.url;
 
-  // Boyut badge
-  document.getElementById('size-badge').textContent = '📐 ' + modelData.name + ' · ' + modelData.size + 'cm';
+  if (customGlb) {
+    // Custom model — buluttan GLB URL
+    const fullUrl = customGlb.startsWith('http') ? customGlb : window.location.origin + customGlb;
+    viewer.src = fullUrl;
+    document.getElementById('size-badge').textContent = '📐 Özel Model · AR';
+  } else {
+    // Preset model
+    const modelData = models[modelKey] || models.default;
+    viewer.src = modelData.url;
+    document.getElementById('size-badge').textContent = '📐 ' + modelData.name + ' · ' + modelData.size + 'cm';
+  }
 
   // Yükleme tamamlandığında — boyut sınırla
   viewer.addEventListener('load', () => {

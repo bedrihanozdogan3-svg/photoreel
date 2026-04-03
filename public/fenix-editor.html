@@ -17032,13 +17032,34 @@ async function _arExportAndQR() {
     // Boyut bilgisi
     const arPreset = three3D?.preset || 'default';
     const arRealSize = _arRealWorldSizes[arPreset] || _arRealWorldSizes.default;
-
-    // QR URL — direkt AR sayfasına yönlendir (editöre girmeden)
-    const modelParam = arPreset;
     const baseUrl = window.location.protocol === 'file:'
       ? 'https://fenixphotoai.com'
       : window.location.origin;
-    const qrUrl = baseUrl + '/ar-view.html?model=' + encodeURIComponent(modelParam);
+
+    let qrUrl;
+    // Custom model → buluta yükle, direkt GLB URL'i ile AR aç
+    if (arPreset === 'custom') {
+      if (status) status.textContent = '☁ Model buluta yükleniyor...';
+      try {
+        const glbBlob = new Blob([buffer], { type: 'model/gltf-binary' });
+        const fd = new FormData();
+        fd.append('model', glbBlob, (three3D?.name || 'model') + '.glb');
+        const uploadRes = await fetch(baseUrl + '/api/ar/upload', { method: 'POST', body: fd });
+        const uploadData = await uploadRes.json();
+        if (uploadData.ok) {
+          qrUrl = baseUrl + '/ar-view.html?glb=' + encodeURIComponent(uploadData.url);
+          if (status) status.textContent = '☁ Buluta yüklendi ✓';
+        } else {
+          throw new Error(uploadData.error);
+        }
+      } catch(uploadErr) {
+        console.warn('Cloud upload hatası, lokal devam:', uploadErr);
+        qrUrl = baseUrl + '/ar-view.html?model=default';
+      }
+    } else {
+      // Preset model → direkt kütüphane URL'i
+      qrUrl = baseUrl + '/ar-view.html?model=' + encodeURIComponent(arPreset);
+    }
 
     if (qrWrap) {
       qrWrap.style.display = 'block';
