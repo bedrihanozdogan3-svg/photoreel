@@ -43,18 +43,7 @@ const { promptInjectionGuard, authLimiter, bruteForceCheck, auditLog } = require
 // Güvenlik — production'da tam Helmet, dev'de minimal (uzantı uyumu)
 if (config.isProd) {
   app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net", "https://modelviewer.dev"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        imgSrc: ["'self'", "data:", "blob:", "https:"],
-        mediaSrc: ["'self'", "blob:", "data:"],
-        connectSrc: ["'self'", "ws:", "wss:", "https://cdn.jsdelivr.net", "https://raw.githubusercontent.com", "https://modelviewer.dev", "https://api.meshy.ai", ...config.allowedOrigins.filter(o => typeof o === 'string')],
-        workerSrc: ["'self'", "blob:"],
-      }
-    }
+    contentSecurityPolicy: false
   }));
 } else {
   // Dev — minimal güvenlik, tarayıcı uzantılarıyla uyumlu
