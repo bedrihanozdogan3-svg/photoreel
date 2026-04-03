@@ -16091,6 +16091,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // İlk switchMode çağrısından label güncellenmişse senkronize et
   if (typeof _tlUpdateModeLabel === 'function') _tlUpdateModeLabel(S.mode || 'image');
+
+  // ── Deep Link: URL parametresinden model yükle ──
+  const urlParams = new URLSearchParams(window.location.search);
+  const deepModel = urlParams.get('model');
+  const deepAR = urlParams.get('ar');
+  if (deepModel) {
+    // 3D moduna geç ve modeli yükle
+    setTimeout(() => {
+      switchMode('3d');
+      setTimeout(() => {
+        load3DDemo(deepModel);
+        // AR modu istenmişse paneli aç
+        if (deepAR === '1') setTimeout(() => _arTogglePanel(), 1500);
+      }, 800);
+    }, 500);
+  }
 }, { once: false });
 
 // Mod değişiminde V2 overlay'i senkronize et
@@ -16731,11 +16747,50 @@ const _arObserver = setInterval(() => {
 }, 500);
 
 // Native AR Launch — mobilde kamerayı aç
+// ── AR Scale: gerçek dünya boyutları (metre cinsinden) ──
+const _arRealWorldSizes = {
+  'sneaker': 0.30,    // 30cm ayakkabı
+  'watch': 1.80,      // astronot 180cm
+  'hanya': 0.35,      // kask 35cm
+  'chess': 0.40,      // satranç seti 40cm
+  'camera': 0.25,     // antik kamera 25cm
+  'lamp': 0.50,       // lamba 50cm
+  'sofa': 0.85,       // koltuk 85cm
+  'chair': 0.85,      // sandalye 85cm
+  'corset': 0.45,     // korse 45cm
+  'fox': 0.40,        // tilki 40cm
+  'dragon': 0.30,     // ejderha 30cm
+  'default': 0.50     // varsayılan 50cm
+};
+
+function _arScaleForRealWorld(target) {
+  // Modelin mevcut boyutunu hesapla
+  const box = new THREE.Box3().setFromObject(target);
+  const size = box.getSize(new THREE.Vector3());
+  const currentHeight = size.y || size.x || 1;
+
+  // Hedef boyut (metre)
+  const preset = three3D?.preset || 'default';
+  const targetHeight = _arRealWorldSizes[preset] || _arRealWorldSizes.default;
+
+  // Ölçek faktörü
+  const scaleFactor = targetHeight / currentHeight;
+
+  // Clone'a uygula — orijinali bozma
+  const clone = target.clone();
+  clone.scale.multiplyScalar(scaleFactor);
+
+  // Zemine sabitle (Y=0 grounding)
+  const box2 = new THREE.Box3().setFromObject(clone);
+  clone.position.y = -box2.min.y;
+
+  return clone;
+}
+
 async function _arLaunchNative() {
   const status = document.getElementById('ar-status');
   if (status) status.textContent = '⏳ AR hazırlanıyor...';
 
-  // Model export
   let exportTarget = _mainMesh;
   if (!exportTarget && _scene) {
     _scene.traverse(c => { if (c.userData?.fenixMesh && c.visible && !exportTarget) exportTarget = c; });
@@ -16747,39 +16802,37 @@ async function _arLaunchNative() {
       if (status) status.textContent = '⚠ Exporter yükleniyor...';
       return;
     }
+
+    // Scale fix — gerçek dünya boyutuna ölçekle + zemine sabitle
+    const preset = three3D?.preset || 'default';
+    const realSize = _arRealWorldSizes[preset] || _arRealWorldSizes.default;
+    if (status) status.textContent = '📐 Ölçek: ' + Math.round(realSize * 100) + 'cm (Gerçek Ölçek)';
+    const arModel = _arScaleForRealWorld(exportTarget);
+
     const exporter = new THREE.GLTFExporter();
-    const buffer = await new Promise(r => exporter.parse(exportTarget, r, { binary: true }));
+    const buffer = await new Promise(r => exporter.parse(arModel, r, { binary: true }));
     const blob = new Blob([buffer], { type: 'model/gltf-binary' });
     const blobUrl = URL.createObjectURL(blob);
+    const modelName = (three3D?.name || 'model').replace(/\s+/g, '-').toLowerCase();
 
     if (_isIOS) {
-      // iOS Quick Look — USDZ gerekir, GLB fallback olarak indir
-      // iOS Safari model-viewer ile AR açabilir
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = 'model.glb';
+      a.download = 'fenixal-' + modelName + '.glb';
       a.rel = 'ar';
       a.click();
-      if (status) status.textContent = '📱 iOS: Dosya indiriliyor → "Dosyalar" dan aç';
+      if (status) status.textContent = '📱 iOS: İndiriliyor → Dosyalar → 3D ile aç';
     } else if (_isAndroid) {
-      // Android Scene Viewer — intent ile
-      const intentUrl = 'intent://arvr.google.com/scene-viewer/1.0?file=' +
-        encodeURIComponent(window.location.origin + '/ar-model.glb') +
-        '&mode=ar_preferred#Intent;scheme=https;package=com.google.android.googlequicksearchbox;action=android.intent.action.VIEW;end;';
-
-      // Önce GLB'yi indir, sonra scene viewer aç
       const a = document.createElement('a');
       a.href = blobUrl;
-      a.download = 'fenixal-ar-model.glb';
+      a.download = 'fenixal-' + modelName + '.glb';
       a.click();
-
       setTimeout(() => {
-        if (status) status.textContent = '📱 Model indirildi — "Dosyalar" dan 3D görüntüleyici ile aç';
-      }, 1000);
+        if (status) status.textContent = '📱 İndirildi — Dosyalar → 3D Görüntüleyici ile aç';
+      }, 800);
     }
 
-    // 3 saniye sonra bellek temizle
-    setTimeout(() => URL.revokeObjectURL(blobUrl), 3000);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
 
   } catch(err) {
     if (status) status.textContent = '❌ Hata: ' + err.message;
@@ -16847,10 +16900,16 @@ async function _arExportAndQR() {
     const qrWrap = document.getElementById('ar-qr-wrap');
     const qrCanvas = document.getElementById('ar-qr-canvas');
 
-    // QR URL — model bilgisini göster, deploy edilince gerçek AR linki olur
-    const qrUrl = window.location.protocol === 'file:'
+    // Boyut bilgisi
+    const arPreset = three3D?.preset || 'default';
+    const arRealSize = _arRealWorldSizes[arPreset] || _arRealWorldSizes.default;
+
+    // QR URL — deep link: model parametresi dahil
+    const modelParam = arPreset;
+    const baseUrl = window.location.protocol === 'file:'
       ? 'https://fenixphotoai.com/fenix-editor.html'
       : window.location.origin + window.location.pathname;
+    const qrUrl = baseUrl + '?model=' + encodeURIComponent(modelParam) + '&ar=1';
 
     if (qrWrap) {
       qrWrap.style.display = 'block';
@@ -16867,7 +16926,7 @@ async function _arExportAndQR() {
             colorLight: '#0c0c0c',
             correctLevel: QRCode.CorrectLevel.M
           });
-          if (status) status.innerHTML = '✅ <b style="color:#22c55e">QR hazır — telefonla tara!</b> (' + sizeMB + ' MB)';
+          if (status) status.innerHTML = '✅ <b style="color:#22c55e">QR hazır!</b> ' + sizeMB + 'MB · ' + Math.round(arRealSize*100) + 'cm';
         } catch(qrErr) {
           console.warn('QR hata:', qrErr);
           // Fallback — link kopyala butonu
