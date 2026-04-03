@@ -31,8 +31,11 @@ const MAX_CONNECTIONS = 100;
 let connectionCount = 0;
 app.use(cors({
   origin: function(origin, cb) {
-    if (!origin || config.allowedOrigins.includes(origin)) return cb(null, true);
-    cb(null, false);
+    if (!origin) return cb(null, true);
+    const allowed = config.allowedOrigins.some(o =>
+      o instanceof RegExp ? o.test(origin) : o === origin
+    );
+    cb(null, allowed);
   }
 }));
 // Güvenlik
@@ -43,12 +46,13 @@ if (config.isProd) {
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://cdn.jsdelivr.net", "https://modelviewer.dev"],
         styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
         fontSrc: ["'self'", "https://fonts.gstatic.com"],
         imgSrc: ["'self'", "data:", "blob:", "https:"],
         mediaSrc: ["'self'", "blob:", "data:"],
-        connectSrc: ["'self'", "ws:", "wss:", ...config.allowedOrigins],
+        connectSrc: ["'self'", "ws:", "wss:", "https://cdn.jsdelivr.net", "https://raw.githubusercontent.com", "https://modelviewer.dev", "https://api.meshy.ai", ...config.allowedOrigins.filter(o => typeof o === 'string')],
+        workerSrc: ["'self'", "blob:"],
       }
     }
   }));
