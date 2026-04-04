@@ -6761,9 +6761,35 @@ async function _ustaLoadPanel() {
     _gsyncSocket.emit('gsync:join', { userId, deviceId: 'usta-panel', deviceType: 'desktop' });
 
     // Usta odasına katıl
-    _gsyncSocket.on('order:new', (data) => {
+    _gsyncSocket.on('order:new', async (data) => {
+      // Bildirim sesi + toast
+      try { new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAABBAgASBBAAH').play(); } catch(e){}
       toast(`📦 Yeni sipariş: ${data.customerName}`, 'ok', 4000);
+
+      // Panel güncelle (sayfa yenilemeden)
       _ustaLoadPanel();
+
+      // Model varsa otomatik canvas'a düşür (doluysa sıraya al)
+      if (data.scanId) {
+        toast('🧊 3D model geliyor...', 'ok', 2000);
+        setTimeout(() => _ustaLoadModel(data.scanId), 500);
+      } else if (data.fileUrl) {
+        // 3D moda geç + sahneyi hazırla
+        if (typeof switchMode === 'function') switchMode('3d');
+        if (typeof _init3DScene === 'function') _init3DScene();
+        const drop = document.getElementById('three-drop');
+        const wrap = document.getElementById('three-wrap');
+        if (drop) drop.style.display = 'none';
+        if (wrap) wrap.style.display = 'flex';
+        // Sıra sistemiyle yükle
+        _queueModel(data.fileUrl, data.customerName || 'Sipariş');
+      }
+    });
+
+    // Sipariş durumu değiştiğinde paneli güncelle (sayfa yenilemeden)
+    _gsyncSocket.on('order:updated', (data) => {
+      _ustaLoadPanel();
+      if (data.status === 'ready') toast(`✅ ${data.customerName || 'Sipariş'} hazır!`, 'ok', 3000);
     });
 
     _gsyncSocket.on('qr:password-changed', (data) => {
@@ -6883,6 +6909,51 @@ async function _ustaLoadModel(scanId) {
   } catch(e) { toast('Model yükleme hatası: ' + e.message, 'err'); }
 }
 
+// ── Canvas Sıra Sistemi — doluysa beklet ──
+const _modelQueue = [];
+let _canvasBusy = false;
+
+function _queueModel(url, name) {
+  if (_canvasBusy) {
+    _modelQueue.push({ url, name });
+    toast(`⏳ Sıraya alındı: ${name} (${_modelQueue.length}. sıra)`, 'info', 3000);
+    _updateQueueBadge();
+    return;
+  }
+  _canvasBusy = true;
+  _updateQueueBadge();
+  loadModelFromURL(url, name);
+}
+
+function _canvasFinished() {
+  // Mevcut iş bitti — sıradaki varsa yükle
+  if (_modelQueue.length > 0) {
+    const next = _modelQueue.shift();
+    toast(`▶ Sıradaki yükleniyor: ${next.name}`, 'ok', 2000);
+    _updateQueueBadge();
+    setTimeout(() => loadModelFromURL(next.url, next.name), 500);
+  } else {
+    _canvasBusy = false;
+    _updateQueueBadge();
+  }
+}
+
+function _updateQueueBadge() {
+  let badge = document.getElementById('_queue_badge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = '_queue_badge';
+    badge.style.cssText = 'position:fixed;bottom:60px;right:12px;background:rgba(249,115,22,.9);color:#000;font-size:10px;font-weight:800;padding:4px 10px;border-radius:12px;z-index:9999;display:none;';
+    document.body.appendChild(badge);
+  }
+  if (_modelQueue.length > 0) {
+    badge.textContent = `⏳ Sırada: ${_modelQueue.length} model`;
+    badge.style.display = 'block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
 function loadModelFromURL(url, name) {
   if (!_scene) { toast('3D sahne hazır değil', 'err'); return; }
   // Mevcut kullanıcı modellerini temizle (ışık ve kamerayı koru)
@@ -6920,7 +6991,9 @@ function loadModelFromURL(url, name) {
       _fitModelToView(mesh);
       _scene.add(mesh);
       toast('✓ ' + (name || 'Model') + ' canvas\'a yüklendi!', 'ok', 3000);
-    }, undefined, (err) => { toast('STL yükleme hatası', 'err'); });
+      // Sıradaki modeli yükle (varsa)
+      setTimeout(_canvasFinished, 1000);
+    }, undefined, (err) => { toast('STL yükleme hatası', 'err'); _canvasBusy = false; });
   } else {
     // GLB/GLTF Loader (varsayılan)
     const loader = new THREE.GLTFLoader();
@@ -6934,6 +7007,8 @@ function loadModelFromURL(url, name) {
       _fitModelToView(model);
       _scene.add(model);
       toast('✓ ' + (name || 'Model') + ' canvas\'a yüklendi!', 'ok', 3000);
+      // Sıradaki modeli yükle (varsa)
+      setTimeout(_canvasFinished, 1000);
     }, (progress) => {
       if (progress.total > 0) {
         const pct = Math.round(progress.loaded / progress.total * 100);
