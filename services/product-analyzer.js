@@ -30,6 +30,14 @@ Analiz et:
 12. suggested_transition_speed: Geçiş hızı önerisi — "yavas" (yumuşak ürünler), "orta", "hizli" (sert/teknoloji)
 13. suggested_duration_per_scene: Sahne başına önerilen süre (saniye) — 1.5 ile 4 arası
 14. special_features: Ürünün öne çıkan özellikleri dizisi (ilk sahne için) — max 3
+15. light_direction: Işığın geliş yönü — "sol_ust", "sag_ust", "sol_alt", "sag_alt", "on", "arka", "belirsiz"
+16. needs_reflection: Parlak yüzey var mı, zemine yansıma gerekir mi? — true/false (saat, cam şişe, parlak metal = true)
+17. shadow_intensity: Gölge yoğunluğu önerisi — "guclu", "orta", "hafif", "yok"
+18. target_audience: Hedef kitle tahmini — "genc" (18-25), "yetiskin" (25-45), "premium" (lüks segment), "genel"
+19. audience_mood: Kitle atmosferi — "enerjik", "sofistike", "sicak", "cool", "profesyonel"
+20. color_grading: Önerilen renk tonu — "sicak" (altın tonlar), "soguk" (mavi tonlar), "notr", "sinematik" (teal-orange), "pastel", "agresif" (kırmızı-sarı, indirim ürünleri)
+21. is_discount_product: İndirim/promosyon ürünü gibi mi görünüyor? — true/false
+22. surface_material: Alt yüzey önerisi — "mermer", "granit", "ahsap", "beton", "kadife", "cam", "dogal_tas"
 
 SADECE geçerli JSON döndür. Markdown, açıklama veya başka metin YAZMA.`;
 

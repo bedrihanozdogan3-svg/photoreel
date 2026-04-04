@@ -127,16 +127,33 @@ function generateBackgroundConfig(analysis, userPrefs = {}) {
       color: harmony.accent // Objeler aksan rengiyle uyumlu
     })),
     blur: theme.blur,
+    // ── FAZA 4.1: Shadow-Match — Gerçekçi Gölge + Yansıma ──
     lighting: {
-      direction: 'top_left',
+      direction: analysis.light_direction || 'sol_ust',
       intensity: analysis.product_quality === 'yuksek' ? 0.7 : 0.9,
       shadow: {
         enabled: true,
-        angle: 135,
-        softness: 0.6,
-        opacity: 0.3
+        angle: _lightDirToAngle(analysis.light_direction),
+        softness: analysis.texture === 'yumusak' ? 0.8 : 0.4,
+        opacity: { guclu: 0.5, orta: 0.3, hafif: 0.15, yok: 0 }[analysis.shadow_intensity] || 0.3
+      },
+      reflection: {
+        enabled: analysis.needs_reflection === true,
+        intensity: baseSurface.reflection || 0.1,
+        blur: 8
       }
     },
+    // ── FAZA 4.2: HDRi — Çevre rengi ürüne yansıma ──
+    hdri: {
+      enabled: analysis.needs_reflection === true || ['metal', 'cam', 'parlak'].includes(analysis.texture),
+      envColor: harmony.bg,
+      envIntensity: 0.2,
+      reflectionStrength: baseSurface.reflection || 0.1
+    },
+    // ── FAZA 4.3: Auto-Persona — Hedef kitleye göre atmosfer ──
+    persona: _buildPersona(analysis, harmony),
+    // ── FAZA 4.4: Psikolojik Renk Grading ──
+    colorGrading: _buildColorGrading(analysis),
     // Kullanıcı özel alanlar
     nameplate: userPrefs.sirketIsmi ? {
       text: userPrefs.sirketIsmi,
@@ -184,6 +201,27 @@ function buildAiPrompt(analysis, theme, harmony, baseSurface, userPrefs) {
 
   if (analysis.has_model) {
     prompt += ` Professional studio lighting for model photography.`;
+  }
+
+  // FAZA 4: Gelişmiş ışık + persona + renk
+  if (analysis.light_direction && analysis.light_direction !== 'belirsiz') {
+    prompt += ` Light coming from ${analysis.light_direction.replace('_', ' ')}.`;
+  }
+  if (analysis.needs_reflection) {
+    prompt += ` Reflective surface below product, subtle mirror reflection.`;
+  }
+  if (analysis.shadow_intensity === 'guclu') {
+    prompt += ` Strong dramatic shadows, high contrast.`;
+  }
+  if (analysis.target_audience === 'genc') {
+    prompt += ` Youthful, vibrant, urban energy atmosphere.`;
+  } else if (analysis.target_audience === 'premium') {
+    prompt += ` Ultra luxury, dark elegant, gold accents, premium feel.`;
+  }
+  if (analysis.color_grading === 'sinematik') {
+    prompt += ` Cinematic teal-orange color grading.`;
+  } else if (analysis.color_grading === 'agresif' || analysis.is_discount_product) {
+    prompt += ` Bold red-yellow tones, attention-grabbing, sale vibes.`;
   }
 
   return prompt;
@@ -340,6 +378,59 @@ Return ONLY JSON:
   return bgConfig;
 }
 
+// ── FAZA 4 Yardımcı Fonksiyonlar ──
+
+function _lightDirToAngle(dir) {
+  const map = { sol_ust: 135, sag_ust: 45, sol_alt: 225, sag_alt: 315, on: 180, arka: 0, belirsiz: 135 };
+  return map[dir] || 135;
+}
+
+function _buildPersona(analysis, harmony) {
+  const audience = analysis.target_audience || 'genel';
+  const mood = analysis.audience_mood || 'profesyonel';
+
+  const personas = {
+    genc: { palette: 'vibrant', bg_hint: 'neon, urban, streetwear vibes', energy: 'high', accent_boost: 1.3 },
+    yetiskin: { palette: 'balanced', bg_hint: 'clean office, natural wood, warm tones', energy: 'medium', accent_boost: 1.0 },
+    premium: { palette: 'muted', bg_hint: 'dark luxury, gold accents, velvet, marble', energy: 'low', accent_boost: 0.8 },
+    genel: { palette: 'neutral', bg_hint: 'minimal, professional studio', energy: 'medium', accent_boost: 1.0 }
+  };
+
+  const p = personas[audience] || personas.genel;
+  return {
+    audience,
+    mood,
+    palette: p.palette,
+    bgHint: p.bg_hint,
+    energy: p.energy,
+    accentBoost: p.accent_boost
+  };
+}
+
+function _buildColorGrading(analysis) {
+  const grading = analysis.color_grading || 'notr';
+  const isDiscount = analysis.is_discount_product === true;
+
+  const grades = {
+    sicak: { lut: 'warm_gold', temperature: 15, saturation: 1.1, contrast: 1.05, tint: '#FFE4B5' },
+    soguk: { lut: 'cool_blue', temperature: -10, saturation: 0.95, contrast: 1.1, tint: '#B0C4DE' },
+    notr: { lut: 'neutral', temperature: 0, saturation: 1.0, contrast: 1.0, tint: null },
+    sinematik: { lut: 'teal_orange', temperature: 5, saturation: 1.15, contrast: 1.2, tint: '#008080' },
+    pastel: { lut: 'pastel_soft', temperature: 5, saturation: 0.8, contrast: 0.95, tint: '#FFE4E1' },
+    agresif: { lut: 'aggressive_red', temperature: 20, saturation: 1.4, contrast: 1.3, tint: '#FF4444' }
+  };
+
+  // İndirim ürünü → agresif renk
+  const finalGrade = isDiscount ? 'agresif' : grading;
+  const g = grades[finalGrade] || grades.notr;
+
+  return {
+    type: finalGrade,
+    ...g,
+    isDiscount
+  };
+}
+
 function _logToFenix(task, bgConfig, analysis, success) {
   try {
     const fenixBrain = require('./fenix-brain');
@@ -347,9 +438,17 @@ function _logToFenix(task, bgConfig, analysis, success) {
       fenixBrain.logShadow({
         task,
         method: bgConfig.method,
-        theme: bgConfig.suggestedTheme,
+        theme: bgConfig.suggestedTheme || bgConfig.theme,
         productType: analysis.product_type,
-        primaryColor: analysis.primary_color,
+        primaryColor: analysis.main_colors?.[0],
+        // FAZA 4 — Fenix bunları öğrenecek
+        lightDirection: analysis.light_direction,
+        shadowIntensity: analysis.shadow_intensity,
+        needsReflection: analysis.needs_reflection,
+        targetAudience: analysis.target_audience,
+        colorGrading: analysis.color_grading,
+        isDiscount: analysis.is_discount_product,
+        persona: bgConfig.persona,
         success
       });
     }
