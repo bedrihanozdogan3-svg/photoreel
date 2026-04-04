@@ -63,6 +63,54 @@ const EFFECTS = {
     desc:  'Koyu kenarlar, film gibi görünüm',
     ffmpeg_filter: '[0:v]vignette=PI/4,eq=contrast=1.15:saturation=1.2:brightness=-0.05[v]',
     map: '[v]'
+  },
+  // 7. Buhar efekti — sıcak içecekler, yemek
+  'buhar': {
+    label: 'Buhar / Duman',
+    emoji: '♨️',
+    desc:  'Sıcak içecek ve yemek ürünleri için',
+    ffmpeg_filter: '[0:v]split[a][b];[b]boxblur=15:5,format=rgba,colorchannelmixer=aa=0.3,lutrgb=r=val*1.1:g=val*1.1:b=val*1.15[fog];[a][fog]overlay=0:0:shortest=1[v]',
+    map: '[v]'
+  },
+  // 8. Parlama / Glint — ürün yüzeyinde ışık çakması
+  'parlama': {
+    label: 'Parlama / Glint',
+    emoji: '✨',
+    desc:  'Ürün yüzeyinde ışık yansıması, premium hissiyat',
+    ffmpeg_filter: '[0:v]split[a][b];[b]eq=brightness=0.4:contrast=2,format=rgba,colorchannelmixer=aa=0.15*sin(n*0.3)[glow];[a][glow]blend=all_mode=screen[v]',
+    map: '[v]'
+  },
+  // 9. Mikro-titreşim — dikkat çekici ince sarsıntı
+  'mikro-titresim': {
+    label: 'Mikro Titreşim',
+    emoji: '📳',
+    desc:  'Dikkat çekici ince sarsıntı, beat sync için ideal',
+    ffmpeg_filter: '[0:v]scale=iw*1.02:ih*1.02,crop=iw/1.02:ih/1.02:(iw-out_w)/2+2*sin(n*2.5):(ih-out_h)/2+2*cos(n*3.1)[v]',
+    map: '[v]'
+  },
+  // 10. Ken Burns — yavaş zoom + pan (donmuş resim hissi yok)
+  'ken-burns': {
+    label: 'Ken Burns',
+    emoji: '🎞️',
+    desc:  'Yavaş zoom ve kaydırma, profesyonel fotoğraf gösterimi',
+    ffmpeg_filter: '[0:v]scale=iw*1.2:ih*1.2,zoompan=z=\'min(zoom+0.0005,1.2)\':d=125:x=\'iw/2-(iw/zoom/2)+10*sin(on*0.02)\':y=\'ih/2-(ih/zoom/2)\':s=1080x1920:fps=30[v]',
+    map: '[v]'
+  },
+  // 11. Flulaşan arka plan — zamanla blur artar
+  'flu-arkaplan': {
+    label: 'Flulaşan Arka Plan',
+    emoji: '🌫️',
+    desc:  'Arka plan zamanla bulanıklaşır, ürün net kalır',
+    ffmpeg_filter: '[0:v]split[fg][bg];[bg]boxblur=luma_radius=min(n/3\\,25):luma_power=2[blurred];[fg][blurred]blend=all_mode=normal:all_opacity=0.5[v]',
+    map: '[v]'
+  },
+  // 12. Hız kontrolü — yavaş çekim
+  'slow-motion-soft': {
+    label: 'Yumuşak Yavaş Çekim',
+    emoji: '🐌',
+    desc:  'Yumuşak interpolasyonlu yavaş çekim',
+    ffmpeg_filter: '[0:v]setpts=2.0*PTS,minterpolate=fps=60:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:vsbmc=1[v]',
+    map: '[v]'
   }
 };
 

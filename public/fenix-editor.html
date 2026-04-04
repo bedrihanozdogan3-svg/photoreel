@@ -9020,6 +9020,14 @@ function _rp3dAI(body) {
     <div style="font-size:8px;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Sahne AI</div>
     <button onclick="aiAction('smart-light')" style="height:28px;border-radius:5px;background:#111;border:1px solid #222;color:#888;font-size:9px;cursor:pointer;">✨ Akıllı Işıklandırma</button>
     <button onclick="aiAction('cinematic-cam')" style="height:28px;border-radius:5px;background:#111;border:1px solid #222;color:#888;font-size:9px;cursor:pointer;">🎥 Sinematik Kamera</button>
+
+    <div style="height:1px;background:#1a1a1a;margin:6px 0;"></div>
+    <div style="font-size:8px;color:#444;font-weight:700;text-transform:uppercase;letter-spacing:1px;">🎭 3D Efektler</div>
+    <button onclick="_3dFxSteam()" style="height:28px;border-radius:5px;background:#111;border:1px solid #222;color:#888;font-size:9px;cursor:pointer;width:100%;">♨️ Buhar / Duman Efekti</button>
+    <button onclick="_3dFxGlint()" style="height:28px;border-radius:5px;background:#111;border:1px solid #222;color:#888;font-size:9px;cursor:pointer;width:100%;">✨ Parlama / Glint</button>
+    <button onclick="_3dFxPulse()" style="height:28px;border-radius:5px;background:#111;border:1px solid #222;color:#888;font-size:9px;cursor:pointer;width:100%;">📳 Mikro Titreşim</button>
+    <button onclick="_3dFxGlow()" style="height:28px;border-radius:5px;background:#111;border:1px solid #222;color:#888;font-size:9px;cursor:pointer;width:100%;">🔆 Neon Glow</button>
+    <button onclick="_3dFxStopAll()" style="height:28px;border-radius:5px;background:#111;border:1px solid #333;color:#ef4444;font-size:9px;cursor:pointer;width:100%;">⏹ Efektleri Durdur</button>
   </div>`;
 }
 
@@ -17961,6 +17969,177 @@ function _arSyncScale(scale) {
 function _arSyncEnv(env) {
   if (_arSocket && _arCurrentModelId) {
     _arSocket.emit('ar:env', { modelId: _arCurrentModelId, env });
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  3D EFEKTLER — Buhar, Parlama, Titreşim, Neon Glow
+//  Three.js sahnesine particle/post-process ekler
+//  Mevcut sahneye DOKUNMAZ, sadece yeni objeler ekler
+// ═══════════════════════════════════════════════════
+
+const _3dFx = { active: [], intervalIds: [] };
+
+// ── BUHAR / DUMAN — particle system ──
+function _3dFxSteam() {
+  if (!_scene) return toast('Önce 3D modele geç', 'err');
+  // Mevcut buhar varsa kaldır
+  _3dFxRemove('steam');
+
+  const particles = new THREE.Group();
+  particles.name = '_fx_steam';
+  const count = 60;
+  const mat = new THREE.SpriteMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.15,
+    blending: THREE.AdditiveBlending
+  });
+
+  for (let i = 0; i < count; i++) {
+    const sprite = new THREE.Sprite(mat.clone());
+    sprite.position.set(
+      (Math.random() - 0.5) * 1.5,
+      Math.random() * 2,
+      (Math.random() - 0.5) * 1.5
+    );
+    sprite.scale.set(0.3 + Math.random() * 0.5, 0.3 + Math.random() * 0.5, 1);
+    sprite.userData.speed = 0.003 + Math.random() * 0.005;
+    sprite.userData.drift = (Math.random() - 0.5) * 0.002;
+    particles.add(sprite);
+  }
+  _scene.add(particles);
+
+  const id = setInterval(() => {
+    particles.children.forEach(s => {
+      s.position.y += s.userData.speed;
+      s.position.x += s.userData.drift;
+      s.material.opacity = Math.max(0, 0.15 - s.position.y * 0.04);
+      if (s.position.y > 3) {
+        s.position.y = 0;
+        s.position.x = (Math.random() - 0.5) * 1.5;
+        s.material.opacity = 0.15;
+      }
+    });
+  }, 30);
+
+  _3dFx.active.push('steam');
+  _3dFx.intervalIds.push(id);
+  toast('♨️ Buhar efekti eklendi', 'ok');
+}
+
+// ── PARLAMA / GLINT — ışık noktası animasyonu ──
+function _3dFxGlint() {
+  if (!_scene) return toast('Önce 3D modele geç', 'err');
+  _3dFxRemove('glint');
+
+  const light = new THREE.PointLight(0xffffff, 2, 5);
+  light.name = '_fx_glint';
+  light.position.set(1, 2, 2);
+  _scene.add(light);
+
+  // Küçük parlak küre (görsel)
+  const glintGeo = new THREE.SphereGeometry(0.05, 8, 8);
+  const glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const glintMesh = new THREE.Mesh(glintGeo, glintMat);
+  glintMesh.name = '_fx_glint_dot';
+  light.add(glintMesh);
+
+  let angle = 0;
+  const id = setInterval(() => {
+    angle += 0.03;
+    light.position.x = Math.sin(angle) * 2;
+    light.position.z = Math.cos(angle) * 2;
+    light.intensity = 1.5 + Math.sin(angle * 3) * 1.5;
+  }, 30);
+
+  _3dFx.active.push('glint');
+  _3dFx.intervalIds.push(id);
+  toast('✨ Parlama efekti eklendi', 'ok');
+}
+
+// ── MİKRO TİTREŞİM — kamera shake ──
+function _3dFxPulse() {
+  if (!_camera) return toast('Önce 3D modele geç', 'err');
+  _3dFxRemove('pulse');
+
+  const origPos = _camera.position.clone();
+  let t = 0;
+  const id = setInterval(() => {
+    t += 0.15;
+    _camera.position.x = origPos.x + Math.sin(t * 2.5) * 0.015;
+    _camera.position.y = origPos.y + Math.cos(t * 3.1) * 0.01;
+  }, 30);
+
+  _3dFx.active.push('pulse');
+  _3dFx.intervalIds.push(id);
+  toast('📳 Mikro titreşim eklendi', 'ok');
+}
+
+// ── NEON GLOW — modelin etrafında renkli ışık halkası ──
+function _3dFxGlow() {
+  if (!_scene) return toast('Önce 3D modele geç', 'err');
+  _3dFxRemove('glow');
+
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(2, 0.03, 8, 64),
+    new THREE.MeshBasicMaterial({ color: 0xF97316, transparent: true, opacity: 0.6 })
+  );
+  ring.name = '_fx_glow_ring';
+  ring.rotation.x = Math.PI / 2;
+  ring.position.y = 0.1;
+  _scene.add(ring);
+
+  const neonLight = new THREE.PointLight(0xF97316, 1.5, 8);
+  neonLight.name = '_fx_glow_light';
+  neonLight.position.set(0, 0.5, 0);
+  _scene.add(neonLight);
+
+  let t = 0;
+  const id = setInterval(() => {
+    t += 0.02;
+    ring.material.opacity = 0.3 + Math.sin(t * 2) * 0.3;
+    neonLight.intensity = 1 + Math.sin(t * 2) * 1;
+    const hue = (t * 20) % 360;
+    const color = new THREE.Color(`hsl(${hue}, 100%, 50%)`);
+    ring.material.color = color;
+    neonLight.color = color;
+  }, 30);
+
+  _3dFx.active.push('glow');
+  _3dFx.intervalIds.push(id);
+  toast('🔆 Neon glow eklendi', 'ok');
+}
+
+// ── TÜM EFEKTLERİ DURDUR ──
+function _3dFxStopAll() {
+  _3dFx.intervalIds.forEach(id => clearInterval(id));
+  _3dFx.intervalIds = [];
+  ['steam', 'glint', 'pulse', 'glow'].forEach(name => _3dFxRemove(name));
+  _3dFx.active = [];
+  toast('⏹ Tüm 3D efektler durduruldu', 'ok');
+}
+
+// Belirli bir efekti sahnesinden kaldır
+function _3dFxRemove(name) {
+  if (!_scene) return;
+  const prefixes = {
+    steam: ['_fx_steam'],
+    glint: ['_fx_glint', '_fx_glint_dot'],
+    pulse: [], // Pulse kamera shake — obje yok, sadece interval
+    glow: ['_fx_glow_ring', '_fx_glow_light']
+  };
+  (prefixes[name] || []).forEach(n => {
+    const obj = _scene.getObjectByName(n);
+    if (obj) {
+      _scene.remove(obj);
+      if (obj.geometry) obj.geometry.dispose();
+      if (obj.material) obj.material.dispose();
+    }
+  });
+  // Pulse için kamerayı sıfırla
+  if (name === 'pulse' && _orbitCtrl) {
+    _orbitCtrl.update();
   }
 }
 </script>
