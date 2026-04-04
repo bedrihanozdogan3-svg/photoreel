@@ -94,6 +94,22 @@ const BASE_SURFACES = {
  * @returns {object} Arka plan konfigürasyonu
  */
 function generateBackgroundConfig(analysis, userPrefs = {}) {
+  // Fenix önce kendi karar vermeyi denesin
+  try {
+    const fenixBrain = require('./fenix-brain');
+    const fenixDecision = fenixBrain.fenixDecide('background_generation', {
+      productType: analysis.product_type,
+      primaryColor: analysis.main_colors?.[0],
+      texture: analysis.texture,
+      audience: analysis.target_audience
+    });
+    if (fenixDecision && fenixDecision.handler === 'fenix' && fenixDecision.decision) {
+      logger.info('🧠 Fenix arka plan kararını kendi verdi!', { confidence: fenixDecision.confidence });
+      // Fenix'in geçmiş deneyiminden gelen karar — direkt kullan
+      if (typeof fenixDecision.decision === 'object') return fenixDecision.decision;
+    }
+  } catch(e) { /* Fenix henüz hazır değil, normal akışa devam */ }
+
   const primaryColor = analysis.main_colors?.[0] || 'gri';
   const productType = analysis.product_type || 'diger';
   const suggestedTheme = userPrefs.theme || analysis.suggested_bg_theme || 'studyo';

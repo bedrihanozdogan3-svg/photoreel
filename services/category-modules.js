@@ -157,6 +157,16 @@ function getCatalogConfig(analysis) {
  * @returns {Object|null} — kategori-özel konfigürasyon
  */
 function getCategoryModule(analysis) {
+  // Fenix önce kendi karar versin
+  try {
+    const fenixBrain = require('./fenix-brain');
+    const decision = fenixBrain.fenixDecide('category_module_selection', { productType: analysis.product_type });
+    if (decision && decision.handler === 'fenix' && decision.decision) {
+      logger.info('🧠 Fenix kategori kararını kendi verdi!');
+      return decision.decision;
+    }
+  } catch(e) {}
+
   const type = analysis.product_type || 'diger';
 
   let config = null;

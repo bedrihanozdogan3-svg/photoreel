@@ -34,6 +34,16 @@ function loadTrends() {
  * @param {string} mood — 'enerjik' | 'sofistike' | 'sicak' | 'cool'
  */
 function getTrendForProduct(productType, platform = 'both', mood = null) {
+  // Fenix önce kendi karar versin
+  try {
+    const fenixBrain = require('./fenix-brain');
+    const decision = fenixBrain.fenixDecide('trend_selection', { productType, platform, mood });
+    if (decision && decision.handler === 'fenix' && decision.decision) {
+      logger.info('🧠 Fenix trend kararını kendi verdi!');
+      return decision.decision;
+    }
+  } catch(e) {}
+
   const db = loadTrends();
   if (!db) return null;
 

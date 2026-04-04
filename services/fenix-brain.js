@@ -120,6 +120,96 @@ function routeTask(taskType, complexity = 'normal') {
   return routing[complexity] || routing.normal;
 }
 
+/**
+ * Fenix'in kendi başına karar vermesi — geçmiş deneyimlerden öğrenir
+ * Shadow log'daki başarılı kayıtlara bakıp benzer durumda aynı kararı verir
+ * @param {string} taskType — görev tipi
+ * @param {Object} currentInput — mevcut girdi (ürün analizi, parametreler)
+ * @returns {Object|null} — Fenix'in kararı veya null (yetersizse)
+ */
+function fenixDecide(taskType, currentInput = {}) {
+  const skill = getSkillLevel(taskType);
+  const score = getSkillScore(taskType);
+
+  // Apprentice — henüz karar veremez, sadece izler
+  if (skill === SKILL_LEVELS.APPRENTICE) {
+    return null;
+  }
+
+  // Geçmiş başarılı kararları bul
+  const relevant = shadowLog.filter(e =>
+    e.taskType === taskType && e.outcome === 'success'
+  ).slice(-50); // Son 50 başarılı karar
+
+  if (relevant.length < 5) return null; // Yeterli veri yok
+
+  // En son başarılı kararın çıktısını referans al
+  const lastSuccess = relevant[relevant.length - 1];
+
+  // Benzerlik skoru — input alanlarını karşılaştır
+  let bestMatch = null;
+  let bestScore = 0;
+  for (const entry of relevant) {
+    const similarity = _calculateSimilarity(currentInput, entry.input);
+    if (similarity > bestScore) {
+      bestScore = similarity;
+      bestMatch = entry;
+    }
+  }
+
+  // %60+ benzerlik → Fenix karar verebilir
+  if (bestMatch && bestScore >= 0.6) {
+    logger.info(`🧠 Fenix karar veriyor: ${taskType}`, { confidence: score, similarity: bestScore });
+
+    // Kararı logla (Fenix kendi başına yaptı)
+    logShadow({ task: taskType + '_fenix_decision', confidence: score, similarity: bestScore, success: true, actor: 'fenix' });
+
+    return {
+      handler: 'fenix',
+      decision: bestMatch.output,
+      confidence: score,
+      similarity: bestScore,
+      basedOn: relevant.length + ' geçmiş deneyim',
+      reason: `Fenix ${taskType} görevinde %${Math.round(bestScore * 100)} benzerlik buldu`
+    };
+  }
+
+  // Journeyman ama yeterli benzerlik yok → usta'ya sor
+  if (skill === SKILL_LEVELS.JOURNEYMAN) {
+    return {
+      handler: 'fenix_with_review',
+      suggestedDecision: lastSuccess?.output || null,
+      confidence: score,
+      reason: 'Fenix öneri sunuyor ama ustanın onayı gerekli'
+    };
+  }
+
+  return null;
+}
+
+/**
+ * İki input arasındaki benzerlik skoru (0-1)
+ */
+function _calculateSimilarity(input1, input2) {
+  if (!input1 || !input2) return 0;
+  const keys1 = Object.keys(typeof input1 === 'object' ? input1 : {});
+  const keys2 = Object.keys(typeof input2 === 'object' ? input2 : {});
+  if (!keys1.length || !keys2.length) return 0;
+
+  const commonKeys = keys1.filter(k => keys2.includes(k));
+  if (!commonKeys.length) return 0;
+
+  let matches = 0;
+  for (const key of commonKeys) {
+    const v1 = String(input1[key] || '');
+    const v2 = String(input2[key] || '');
+    if (v1 === v2) matches++;
+    else if (v1.includes(v2) || v2.includes(v1)) matches += 0.5;
+  }
+
+  return matches / Math.max(keys1.length, keys2.length);
+}
+
 // ═══════════════════════════════════════════════════════
 // 2. SHADOW LEARNING — Usta Hareketlerini Kaydet
 // ═══════════════════════════════════════════════════════
@@ -839,6 +929,9 @@ module.exports = {
 
   // FAZA 1-8 Servislerden Gelen Loglar
   logShadow,
+
+  // Fenix Otonom Karar
+  fenixDecide,
 
   // Genel
   getFullStatus,
