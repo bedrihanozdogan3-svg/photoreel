@@ -475,6 +475,32 @@ router.post('/upload', _upload.single('video'), (req, res) => {
 
 
 // ════════════════════════════════════════════════════════════
+//  PARALLEL RENDER QUEUE — Sunucu yükünü sınırla
+// ════════════════════════════════════════════════════════════
+const MAX_CONCURRENT_RENDERS = 4;
+let _activeRenderCount = 0;
+const _renderQueue = [];
+
+function _acquireRenderSlot() {
+  return new Promise(resolve => {
+    if (_activeRenderCount < MAX_CONCURRENT_RENDERS) { _activeRenderCount++; resolve(); }
+    else _renderQueue.push(resolve);
+  });
+}
+function _releaseRenderSlot() {
+  _activeRenderCount = Math.max(0, _activeRenderCount - 1);
+  if (_renderQueue.length > 0) { _activeRenderCount++; _renderQueue.shift()(); }
+}
+
+// Valid xfade transitions
+const XFADE_TRANSITIONS = new Set([
+  'fade','wipeleft','wiperight','wipeup','wipedown','slideleft','slideright',
+  'slideup','slidedown','circlecrop','rectcrop','distance','fadeblack','fadewhite',
+  'radial','smoothleft','smoothright','smoothup','smoothdown','circleopen',
+  'circleclose','dissolve','pixelize','diagtl','diagtr','diagbl','diagbr'
+]);
+
+// ════════════════════════════════════════════════════════════
 //  RENDER — 4K timeline segmentli async render
 //  POST /api/pro/render
 //  Body: { sourceFileId|videoUrl, segments, resolution,
@@ -525,7 +551,7 @@ function getOverlayCoords(pos) {
 router.post('/render', async (req, res) => {
   const {
     sourceFileId, videoUrl, segments, resolution = '1080',
-    lut, color, audio, branding, speed, customerId = 'anon'
+    lut, color, audio, branding, speed, crop, customerId = 'anon'
   } = req.body || {};
 
   if (!sourceFileId && !videoUrl)
@@ -603,6 +629,16 @@ router.post('/render', async (req, res) => {
         filterLines.push(`[0:a]atrim=start=${s.start.toFixed(3)}:end=${s.end.toFixed(3)},asetpts=PTS-STARTPTS[atrim]`);
         finalVStream = 'vtrim';
         finalAStream = 'atrim';
+      }
+
+      // Crop (before scale so coordinates are in source resolution)
+      if (crop && typeof crop.x === 'number' && crop.w > 4 && crop.h > 4) {
+        const cx = Math.max(0, Math.round(crop.x));
+        const cy = Math.max(0, Math.round(crop.y));
+        const cw = Math.round(crop.w);
+        const ch = Math.round(crop.h);
+        filterLines.push(`[${finalVStream}]crop=${cw}:${ch}:${cx}:${cy}[vcrop]`);
+        finalVStream = 'vcrop';
       }
 
       // Scale
@@ -741,6 +777,380 @@ router.get('/render-progress/:jobId', (req, res) => {
   if (!job) return res.status(404).json({ ok: false, error: 'Job bulunamadı veya süresi dolmuş' });
 
   res.json({ ok: true, ...job });
+});
+
+// ════════════════════════════════════════════════════════════
+//  MULTI-CLIP RENDER  —  Birden fazla kaynak video + overlay + geçiş
+//  POST /api/pro/render-multi
+//  Body: {
+//    clips: [{ sourceFileId?, videoUrl?, start?, end?, transition?, transDur? }],
+//    overlays?: [{ sourceFileId?, videoUrl?, startAt, endAt, x, y, scale }],
+//    resolution?, lut?, color?, audio?, branding?, customerId?
+//  }
+// ════════════════════════════════════════════════════════════
+router.post('/render-multi', async (req, res) => {
+  const {
+    clips, overlays = [],
+    resolution = '1080', lut, color, audio, branding,
+    customerId = 'anon'
+  } = req.body || {};
+
+  if (!Array.isArray(clips) || clips.length < 1)
+    return res.status(400).json({ ok: false, error: 'clips dizisi gerekli (min 1)' });
+  if (clips.length > 20)
+    return res.status(400).json({ ok: false, error: 'Maksimum 20 klip desteklenir' });
+  if (!['720', '1080', '4k'].includes(resolution))
+    return res.status(400).json({ ok: false, error: 'Geçersiz çözünürlük: 720|1080|4k' });
+
+  const jobId      = `multi_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const outputPath = path.join(TEMP_DIR, `${jobId}_out.mp4`);
+  _renderJobs[jobId] = { status: 'queued', progress: 0, startedAt: Date.now() };
+  res.json({ ok: true, jobId, pollUrl: `/api/pro/render-progress/${jobId}` });
+
+  (async () => {
+    // Wait for a render slot (parallel limiter)
+    await _acquireRenderSlot();
+
+    const tempFiles = [];
+    let filterFile = null;
+    let logoPath   = null;
+
+    try {
+      _renderJobs[jobId] = { ..._renderJobs[jobId], status: 'downloading', progress: 5 };
+
+      const scaleW     = resolution === '4k' ? 3840 : resolution === '1080' ? 1920 : 1280;
+      const scaleH     = resolution === '4k' ? 2160 : resolution === '1080' ? 1080 : 720;
+      const scaleAlgo  = resolution === '4k' ? 'lanczos' : 'bicubic';
+      // Force aspect ratio → letterbox/pillarbox → uniform resolution
+      const normVF = `scale=${scaleW}:${scaleH}:force_original_aspect_ratio=decrease:flags=${scaleAlgo},` +
+                     `pad=${scaleW}:${scaleH}:(ow-iw)/2:(oh-ih)/2,setsar=1`;
+
+      // ── 1. Download all clip sources ──
+      const clipPaths = [];
+      for (let i = 0; i < clips.length; i++) {
+        const c = clips[i];
+        const p = path.join(TEMP_DIR, `${jobId}_clip${i}.mp4`);
+        tempFiles.push(p);
+        if (c.sourceFileId && global._proFiles?.[c.sourceFileId]) {
+          fs.copyFileSync(global._proFiles[c.sourceFileId].path, p);
+        } else if (c.videoUrl) {
+          await downloadVideo(c.videoUrl, p);
+        } else {
+          throw new Error(`Klip ${i}: sourceFileId veya videoUrl gerekli`);
+        }
+        if (!fs.existsSync(p) || fs.statSync(p).size < 100)
+          throw new Error(`Klip ${i} kaynağı alınamadı`);
+        clipPaths.push(p);
+        _renderJobs[jobId].progress = 5 + Math.round((i + 1) / clips.length * 18);
+      }
+
+      // ── 2. Download all overlay sources ──
+      const overlayPaths = [];
+      for (let i = 0; i < overlays.length; i++) {
+        const ov = overlays[i];
+        const p  = path.join(TEMP_DIR, `${jobId}_ov${i}.mp4`);
+        tempFiles.push(p);
+        if (ov.sourceFileId && global._proFiles?.[ov.sourceFileId]) {
+          fs.copyFileSync(global._proFiles[ov.sourceFileId].path, p);
+        } else if (ov.videoUrl) {
+          await downloadVideo(ov.videoUrl, p);
+        } else {
+          throw new Error(`Overlay ${i}: sourceFileId veya videoUrl gerekli`);
+        }
+        overlayPaths.push(p);
+      }
+
+      // ── 3. Logo ──
+      if (branding?.logoBase64) {
+        logoPath = path.join(TEMP_DIR, `${jobId}_logo.png`);
+        tempFiles.push(logoPath);
+        fs.writeFileSync(logoPath, Buffer.from(
+          branding.logoBase64.replace(/^data:image\/\w+;base64,/, ''), 'base64'
+        ));
+      }
+
+      _renderJobs[jobId] = { ..._renderJobs[jobId], status: 'processing', progress: 28 };
+
+      // ── 4. Build filter_complex ──
+      const filterLines = [];
+      const vRefs = [];   // normalized video stream labels per clip
+      const aRefs = [];   // audio stream labels per clip
+
+      for (let i = 0; i < clips.length; i++) {
+        const c = clips[i];
+        const hasStart = typeof c.start === 'number';
+        const hasEnd   = typeof c.end   === 'number' && c.end > (c.start || 0);
+        let vSrc = `[${i}:v]`, aSrc = `[${i}:a]`;
+
+        // Trim if start/end provided
+        if (hasStart || hasEnd) {
+          const ts = hasStart ? `start=${(+c.start).toFixed(3)}` : '';
+          const te = hasEnd   ? `end=${(+c.end).toFixed(3)}`     : '';
+          const trimOpts = [ts, te].filter(Boolean).join(':');
+          filterLines.push(`${vSrc}trim=${trimOpts},setpts=PTS-STARTPTS[vt${i}]`);
+          filterLines.push(`${aSrc}atrim=${trimOpts},asetpts=PTS-STARTPTS[at${i}]`);
+          vSrc = `[vt${i}]`; aSrc = `[at${i}]`;
+        }
+
+        // Normalize resolution (auto-equalize different source resolutions)
+        filterLines.push(`${vSrc}${normVF}[vn${i}]`);
+        vRefs.push(`[vn${i}]`);
+        aRefs.push(aSrc);
+      }
+
+      // ── 5. Concat or xfade chain ──
+      let finalV, finalA;
+
+      if (clips.length === 1) {
+        finalV = `vn0`; finalA = aRefs[0].replace(/[\[\]]/g, '');
+      } else {
+        const hasTransitions = clips.some((c, i) => i > 0 && c.transition && c.transition !== 'none');
+
+        if (hasTransitions) {
+          // xfade chain — pair by pair
+          let curV = `vn0`;
+          let curA = aRefs[0].replace(/[\[\]]/g, '');
+          let cumOffset = 0;
+
+          for (let i = 1; i < clips.length; i++) {
+            const c = clips[i];
+            const tDur   = (c.transDur > 0 && c.transDur <= 2) ? +c.transDur : 0.5;
+            const prevDur = (typeof clips[i-1].end === 'number' && typeof clips[i-1].start === 'number')
+              ? (clips[i-1].end - clips[i-1].start) : 5; // safe fallback
+            cumOffset += prevDur;
+            const offset  = Math.max(0, cumOffset - tDur).toFixed(3);
+            const trans   = XFADE_TRANSITIONS.has(c.transition) ? c.transition : 'fade';
+            const nextV   = vRefs[i].replace(/[\[\]]/g, '');
+            const nextA   = aRefs[i].replace(/[\[\]]/g, '');
+
+            filterLines.push(`[${curV}][${nextV}]xfade=transition=${trans}:duration=${tDur}:offset=${offset}[xfv${i}]`);
+            filterLines.push(`[${curA}][${nextA}]acrossfade=d=${tDur}[xfa${i}]`);
+            curV = `xfv${i}`; curA = `xfa${i}`;
+          }
+          finalV = curV; finalA = curA;
+
+        } else {
+          // Simple concat (fastest — no transitions)
+          filterLines.push(`${vRefs.join('')}${aRefs.join('')}concat=n=${clips.length}:v=1:a=1[vcat][acat]`);
+          finalV = 'vcat'; finalA = 'acat';
+        }
+      }
+
+      // ── 6. Global color / LUT effects ──
+      const effectStr = buildVideoEffectString({ lut, color });
+      if (effectStr) {
+        filterLines.push(`[${finalV}]${effectStr}[vfx]`);
+        finalV = 'vfx';
+      }
+
+      // ── 7. Overlay PiP (Hollywood composite) ──
+      // Input indices: clips[0..n-1] = 0..n-1, overlays[0..m-1] = n..n+m-1, logo = n+m
+      const overlayInputBase = clips.length;
+      for (let i = 0; i < overlays.length; i++) {
+        const ov    = overlays[i];
+        const scale = Math.max(0.05, Math.min(1, ov.scale || 0.3));
+        const ovW   = Math.round(scaleW * scale);
+        const xPct  = Math.max(0, Math.min(100, ov.x || 50));
+        const yPct  = Math.max(0, Math.min(100, ov.y || 50));
+        const ovX   = Math.round((scaleW - ovW) * xPct / 100);
+        const ovY   = Math.round(scaleH * yPct / 100);
+        const inIdx = overlayInputBase + i;
+
+        filterLines.push(`[${inIdx}:v]scale=${ovW}:-1[pip${i}]`);
+        const enableExpr = (typeof ov.startAt === 'number' && typeof ov.endAt === 'number')
+          ? `:enable='between(t,${ov.startAt.toFixed(2)},${ov.endAt.toFixed(2)})'`
+          : '';
+        filterLines.push(`[${finalV}][pip${i}]overlay=${ovX}:${ovY}${enableExpr}[vov${i}]`);
+        finalV = `vov${i}`;
+      }
+
+      // ── 8. Logo + Slogan branding ──
+      const logoIdx = clips.length + overlays.length;
+      if (logoPath) {
+        const coords = getOverlayCoords(branding?.position);
+        filterLines.push(`[${logoIdx}:v]scale=120:-1[logo]`);
+        filterLines.push(`[${finalV}][logo]overlay=${coords}[vlogo]`);
+        finalV = 'vlogo';
+      }
+      if (branding?.slogan) {
+        const safe = branding.slogan.replace(/['"\\:\[\]]/g, '');
+        filterLines.push(`[${finalV}]drawtext=text='${safe}':fontsize=28:fontcolor=white:borderw=2:bordercolor=black:x=20:y=H-30[vfinal]`);
+        finalV = 'vfinal';
+      }
+
+      // ── 9. Write filter_complex to file ──
+      filterFile = path.join(TEMP_DIR, `${jobId}_filter.txt`);
+      fs.writeFileSync(filterFile, filterLines.join(';\n'));
+
+      const afParts = buildAudioFilters(audio || null);
+
+      // ── 10. Build FFmpeg command ──
+      const cmdParts = ['ffmpeg', '-y'];
+      for (const p of clipPaths)    cmdParts.push('-i', p);
+      for (const p of overlayPaths) cmdParts.push('-i', p);
+      if (logoPath)                  cmdParts.push('-i', logoPath);
+
+      cmdParts.push('-filter_complex_script', filterFile);
+      cmdParts.push('-map', `[${finalV}]`);
+      cmdParts.push('-map', `[${finalA}]`);
+      if (afParts.length > 0) cmdParts.push('-af', afParts.join(','));
+
+      const crf    = resolution === '4k' ? '18' : resolution === '1080' ? '20' : '23';
+      const preset = resolution === '4k' ? 'medium' : 'fast';
+      cmdParts.push(
+        '-c:v', 'libx264', '-preset', preset, '-crf', crf,
+        '-c:a', 'aac', '-b:a', resolution === '4k' ? '320k' : '192k',
+        '-movflags', '+faststart',
+        outputPath
+      );
+
+      _renderJobs[jobId] = { ..._renderJobs[jobId], status: 'rendering', progress: 35 };
+      logger.info('Multi-clip render başladı', { jobId, clipCount: clips.length, overlayCount: overlays.length, resolution });
+
+      const timeoutMs = resolution === '4k' ? 900000 : resolution === '1080' ? 450000 : 240000;
+      await new Promise((resolve, reject) => {
+        const proc = exec(
+          cmdParts.map(p => (p.includes(' ') ? `"${p}"` : p)).join(' '),
+          { timeout: timeoutMs },
+          (err, _out, stderr) => {
+            if (err) {
+              logger.error('Multi-clip FFmpeg hatası', { jobId, stderr: (stderr || '').slice(-600) });
+              return reject(new Error('FFmpeg hatası: ' + (stderr || '').slice(-200)));
+            }
+            resolve();
+          }
+        );
+        if (proc.stderr) {
+          proc.stderr.on('data', chunk => {
+            const m = chunk.match(/time=(\d{2}):(\d{2}):(\d{2})/);
+            if (m) {
+              const s = (+m[1]) * 3600 + (+m[2]) * 60 + (+m[3]);
+              _renderJobs[jobId].progress = Math.min(95, 35 + Math.round(s * 1.2));
+            }
+          });
+        }
+      });
+
+      if (!fs.existsSync(outputPath) || fs.statSync(outputPath).size < 1000)
+        throw new Error('Çıktı video oluşturulamadı');
+
+      const outSize = fs.statSync(outputPath).size;
+      if (!global._proFiles) global._proFiles = {};
+      global._proFiles[jobId] = { path: outputPath, createdAt: Date.now() };
+
+      // Clean up temp input files
+      tempFiles.forEach(f => { try { fs.unlinkSync(f); } catch(_) {} });
+      if (filterFile) { try { fs.unlinkSync(filterFile); } catch(_) {} }
+
+      // Auto-clean output after 30 min
+      setTimeout(() => {
+        cleanupFiles(outputPath);
+        if (global._proFiles) delete global._proFiles[jobId];
+        delete _renderJobs[jobId];
+      }, 30 * 60 * 1000);
+
+      _renderJobs[jobId] = {
+        status: 'done', progress: 100,
+        fileId: jobId,
+        downloadUrl: `/api/pro/download/${jobId}`,
+        size: outSize, resolution,
+        clipCount: clips.length,
+        overlayCount: overlays.length
+      };
+      logger.info('Multi-clip render tamamlandı', { jobId, outSize, clipCount: clips.length });
+
+    } catch (err) {
+      logger.error('Multi-clip render hatası', { jobId, error: err.message });
+      tempFiles.forEach(f => { try { fs.unlinkSync(f); } catch(_) {} });
+      if (filterFile) { try { fs.unlinkSync(filterFile); } catch(_) {} }
+      _renderJobs[jobId] = { status: 'error', progress: 0, error: err.message };
+    } finally {
+      _releaseRenderSlot();
+    }
+  })();
+});
+
+// Fix download endpoint to accept both upload_ and multi_ and render_ fileIds
+router.get('/download/:fileId', (req, res) => {
+  const { fileId } = req.params;
+  if (!fileId || !/^(pro_|upload_|render_|multi_)\d+_[a-z0-9]+$/.test(fileId))
+    return res.status(400).json({ ok: false, error: 'Geçersiz dosya ID' });
+  const fileInfo = global._proFiles?.[fileId];
+  if (!fileInfo || !fs.existsSync(fileInfo.path))
+    return res.status(404).json({ ok: false, error: 'Dosya bulunamadı veya süresi dolmuş' });
+  res.setHeader('Content-Type', 'video/mp4');
+  res.setHeader('Content-Disposition', `attachment; filename="fenix-${fileId}.mp4"`);
+  fs.createReadStream(fileInfo.path).pipe(res);
+});
+
+// ═══════════════════════════════════════════
+//  ARKA PLAN SİLME — POST /api/pro/remove-bg
+// ═══════════════════════════════════════════
+const _imgUpload = multer({
+  dest: TEMP_DIR,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB max
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Sadece görsel dosyaları kabul edilir'));
+  }
+}).single('image');
+
+router.post('/remove-bg', (req, res) => {
+  _imgUpload(req, res, async (err) => {
+    if (err) return res.status(400).json({ ok: false, error: err.message });
+    try {
+      if (!req.file) return res.status(400).json({ ok: false, error: 'Görsel dosyası gerekli' });
+
+      const bgRemover = require('../services/background-remover');
+      const imageBuffer = fs.readFileSync(req.file.path);
+
+      const result = await bgRemover.processProductImage(imageBuffer, {
+        keepStand: req.body.keepStand === 'true',
+        keepModel: req.body.keepModel === 'true'
+      });
+
+      // Temp dosyayı sil
+      try { fs.unlinkSync(req.file.path); } catch(e) {}
+
+      if (result.success && Buffer.isBuffer(result.removed)) {
+        // Sonucu temp dosyaya yaz, URL döndür
+        const outId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        const outPath = path.join(TEMP_DIR, `bg-removed-${outId}.png`);
+        fs.writeFileSync(outPath, result.removed);
+
+        // 30 dk sonra sil
+        setTimeout(() => { try { fs.unlinkSync(outPath); } catch(e) {} }, 30 * 60 * 1000);
+
+        // Global file store'a ekle (download için)
+        if (!global._proFiles) global._proFiles = {};
+        global._proFiles[outId] = { path: outPath, created: Date.now() };
+
+        res.json({
+          ok: true,
+          method: result.method,
+          analysis: result.analysis || null,
+          downloadUrl: `/api/pro/download-img/${outId}`,
+          size: result.removed.length
+        });
+      } else {
+        res.status(500).json({ ok: false, error: 'Arka plan silinemedi' });
+      }
+    } catch(e) {
+      logger.error('remove-bg hatası', { error: e.message });
+      res.status(500).json({ ok: false, error: e.message });
+    }
+  });
+});
+
+// Görsel indirme endpoint'i
+router.get('/download-img/:fileId', (req, res) => {
+  const { fileId } = req.params;
+  const fileInfo = global._proFiles?.[fileId];
+  if (!fileInfo || !fs.existsSync(fileInfo.path))
+    return res.status(404).json({ ok: false, error: 'Dosya bulunamadı veya süresi dolmuş' });
+  res.setHeader('Content-Type', 'image/png');
+  res.setHeader('Content-Disposition', `attachment; filename="fenix-nobg-${fileId}.png"`);
+  fs.createReadStream(fileInfo.path).pipe(res);
 });
 
 module.exports = router;

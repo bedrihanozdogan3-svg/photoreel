@@ -212,4 +212,148 @@ function selectBaseSurface(color, productType, theme) {
   return BASE_SURFACES.granit;
 }
 
-module.exports = { generateBackgroundConfig, BG_THEMES, BASE_SURFACES, COLOR_HARMONIES };
+/**
+ * Gerçek arka plan görseli üret
+ * Öncelik: fal.ai Flux → Gemini fallback → CSS gradient fallback
+ * @param {Object} analysis — product-analyzer çıktısı
+ * @param {Object} userPrefs — kullanıcı tercihleri
+ * @returns {Promise<Object>} — bgConfig + imageUrl veya generatedStyle
+ */
+async function generateBackground(analysis, userPrefs = {}) {
+  const bgConfig = generateBackgroundConfig(analysis, userPrefs);
+
+  // ── YÖNTEM 1: fal.ai Flux ile gerçek arka plan görseli ──
+  const FAL_KEY = process.env.FAL_KEY;
+  if (FAL_KEY) {
+    try {
+      logger.info('fal.ai Flux ile arka plan üretiliyor...');
+      const falPrompt = bgConfig.aiPrompt + ' Empty product photography background, no product, no people, high quality, 4K, studio lighting.';
+
+      const resp = await fetch('https://queue.fal.run/fal-ai/flux/dev', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Key ${FAL_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          prompt: falPrompt,
+          image_size: { width: 1080, height: 1920 }, // 9:16 reels format
+          num_images: 1,
+          enable_safety_checker: false
+        })
+      });
+
+      if (resp.ok) {
+        const data = await resp.json();
+        // Async job — request_id döner
+        if (data.request_id) {
+          bgConfig.falRequestId = data.request_id;
+          bgConfig.method = 'fal-flux-async';
+
+          // Polling ile sonuç bekle (max 60sn)
+          let imageUrl = null;
+          for (let i = 0; i < 30; i++) {
+            await new Promise(r => setTimeout(r, 2000));
+            const statusResp = await fetch(`https://queue.fal.run/fal-ai/flux/dev/requests/${data.request_id}`, {
+              headers: { 'Authorization': `Key ${FAL_KEY}` }
+            });
+            if (statusResp.ok) {
+              const status = await statusResp.json();
+              if (status.status === 'COMPLETED' && status.images?.[0]?.url) {
+                imageUrl = status.images[0].url;
+                break;
+              }
+            }
+          }
+
+          if (imageUrl) {
+            bgConfig.imageUrl = imageUrl;
+            bgConfig.method = 'fal-flux';
+            logger.info('fal.ai arka plan üretildi', { url: imageUrl });
+
+            _logToFenix('background_generation', bgConfig, analysis, true);
+            return bgConfig;
+          }
+        }
+        // Senkron yanıt (bazı modellerde)
+        if (data.images?.[0]?.url) {
+          bgConfig.imageUrl = data.images[0].url;
+          bgConfig.method = 'fal-flux';
+          logger.info('fal.ai arka plan üretildi (sync)', { url: bgConfig.imageUrl });
+
+          _logToFenix('background_generation', bgConfig, analysis, true);
+          return bgConfig;
+        }
+      }
+      logger.warn('fal.ai yanıt başarısız, Gemini fallback deneniyor');
+    } catch(e) {
+      logger.warn('fal.ai arka plan hatası, Gemini fallback', { error: e.message });
+    }
+  }
+
+  // ── YÖNTEM 2: Gemini ile CSS-bazlı arka plan stili ──
+  try {
+    const { GoogleGenerativeAI } = require('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+
+    const prompt = `Generate a CSS-based product photography background. Specs: ${bgConfig.aiPrompt}
+
+Return ONLY JSON:
+{
+  "cssGradient": "CSS linear-gradient string",
+  "overlayObjects": [{ "emoji": "🌿", "x": 0.8, "y": 0.3, "scale": 1.0, "opacity": 0.4 }],
+  "surfaceColor": "#hex",
+  "ambientColor": "#hex",
+  "lightDirection": "top-left",
+  "blur": 20,
+  "vignette": true
+}`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      bgConfig.generatedStyle = JSON.parse(jsonMatch[0]);
+      bgConfig.method = 'gemini-css';
+      logger.info('Gemini arka plan stili üretildi');
+    }
+  } catch(e) {
+    logger.warn('Gemini fallback da başarısız', { error: e.message });
+  }
+
+  // ── YÖNTEM 3: Varsayılan CSS gradient ──
+  if (!bgConfig.generatedStyle && !bgConfig.imageUrl) {
+    bgConfig.generatedStyle = {
+      cssGradient: `linear-gradient(180deg, ${bgConfig.colors.background} 0%, ${bgConfig.colors.accent}22 60%, ${bgConfig.colors.baseSurface} 100%)`,
+      surfaceColor: bgConfig.colors.baseSurface,
+      ambientColor: bgConfig.colors.background,
+      lightDirection: 'top-left',
+      blur: bgConfig.theme.blur || 20,
+      vignette: true,
+      overlayObjects: []
+    };
+    bgConfig.method = 'fallback-css';
+  }
+
+  _logToFenix('background_generation', bgConfig, analysis, !!bgConfig.generatedStyle || !!bgConfig.imageUrl);
+  return bgConfig;
+}
+
+function _logToFenix(task, bgConfig, analysis, success) {
+  try {
+    const fenixBrain = require('./fenix-brain');
+    if (fenixBrain && fenixBrain.logShadow) {
+      fenixBrain.logShadow({
+        task,
+        method: bgConfig.method,
+        theme: bgConfig.suggestedTheme,
+        productType: analysis.product_type,
+        primaryColor: analysis.primary_color,
+        success
+      });
+    }
+  } catch(e) { /* opsiyonel */ }
+}
+
+module.exports = { generateBackgroundConfig, generateBackground, BG_THEMES, BASE_SURFACES, COLOR_HARMONIES };
