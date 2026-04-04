@@ -612,4 +612,56 @@ async function saveDublajResult(userId, data) {
   } catch(e) { /* sessizce geç */ }
 }
 
+// ═══════════════════════════════════════════
+//  FAZA 5 — Trend & Caption API
+// ═══════════════════════════════════════════
+
+/**
+ * GET /api/generate/trends?category=taki&platform=instagram
+ * Ürüne uygun trend müzik + geçiş + efekt döner
+ */
+router.get('/trends', (req, res) => {
+  try {
+    const trendService = require('../services/trend-service');
+    const { category, platform, mood } = req.query;
+    const trend = trendService.getTrendForProduct(category || 'genel', platform || 'both', mood || null);
+    if (!trend) return res.status(404).json({ ok: false, error: 'Trend verisi bulunamadı' });
+    res.json({ ok: true, trend });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/**
+ * POST /api/generate/caption
+ * Body: { product_type, product_name, platform, audience_mood }
+ * Instagram/TikTok caption + hashtag üretir
+ */
+router.post('/caption', async (req, res) => {
+  try {
+    const trendService = require('../services/trend-service');
+    const { product_type, product_name, platform, audience_mood } = req.body || {};
+    const analysis = { product_type: product_type || 'genel', product_name: product_name || '', audience_mood: audience_mood || 'profesyonel' };
+    const caption = await trendService.generateCaption(analysis, platform || 'instagram');
+    res.json({ ok: true, ...caption });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+/**
+ * GET /api/generate/trend-report
+ * Haftalık trend raporu döner
+ */
+router.get('/trend-report', (req, res) => {
+  try {
+    const trendService = require('../services/trend-service');
+    const report = trendService.getWeeklyTrendReport();
+    if (!report) return res.status(404).json({ ok: false, error: 'Trend verisi yüklenemedi' });
+    res.json({ ok: true, report });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 module.exports = router;

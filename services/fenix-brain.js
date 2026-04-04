@@ -17,9 +17,8 @@ let _db = null;
 function getDb() {
   if (_db) return _db;
   try {
-    const { Firestore } = require('@google-cloud/firestore');
-    const config = require('../config');
-    _db = new Firestore({ projectId: config.firestoreProjectId });
+    const admin = require('firebase-admin');
+    _db = admin.firestore();
     return _db;
   } catch(e) { return null; }
 }
@@ -194,6 +193,22 @@ function getShadowStats() {
       return acc;
     }, {})
   };
+}
+
+/**
+ * FAZA 1-8 servislerinden gelen basit log — recordShadow'a köprü
+ * Kullanım: fenixBrain.logShadow({ task: 'background_removal', method: 'imgly', success: true })
+ */
+function logShadow(data) {
+  if (!data || !data.task) return;
+  const taskType = data.task;
+  const outcome = data.success === false ? 'failure' : 'success';
+  const actor = data.actor || 'fenix_pipeline';
+  const input = { ...data };
+  delete input.task;
+  delete input.success;
+  delete input.actor;
+  return recordShadow(actor, taskType, input, { logged: true }, outcome);
 }
 
 // Objeyi özetlemek (shadow log'da çok büyük veri tutmamak için)
@@ -682,6 +697,118 @@ async function getLessonsByCategory() {
   }
 })();
 
+// ═══════════════════════════════════════════════════════
+// 7. TRAFİK PATTERN ÖĞRENMESİ
+// Fenix bağlantı/istek pattern'lerini öğrenir,
+// anomali tespit eder, otomatik ölçekleme önerir
+// ═══════════════════════════════════════════════════════
+
+const trafficPatterns = {
+  hourlyBaseline: new Array(24).fill(0), // Saatlik ortalama bağlantı
+  sampleCount: 0,
+  anomalies: [],            // Son 20 anomali
+  predictions: {},          // Tahmini yoğunluk saatleri
+  lastAnalysis: null,
+};
+
+// Firestore'dan trafik pattern'lerini yükle
+(async () => {
+  const db = getDb();
+  if (!db) return;
+  try {
+    const doc = await db.collection('system').doc('fenix-traffic-patterns').get();
+    if (doc.exists) {
+      const data = doc.data();
+      if (data.hourlyBaseline) trafficPatterns.hourlyBaseline = data.hourlyBaseline;
+      if (data.sampleCount) trafficPatterns.sampleCount = data.sampleCount;
+      if (data.predictions) trafficPatterns.predictions = data.predictions;
+      logger.info('📊 Trafik pattern\'leri yüklendi', { samples: data.sampleCount });
+    }
+  } catch(e) { logger.warn('Trafik pattern yüklenemedi', { error: e.message }); }
+})();
+
+/**
+ * Trafik snapshot'ı al — her 10 dakikada çağrılır
+ * Fenix saatlik trafik yoğunluğunu öğrenir
+ */
+function learnTrafficPattern(currentConnections, currentRequests) {
+  const hour = new Date().getHours();
+  trafficPatterns.sampleCount++;
+
+  // Exponential moving average — eski verileri yavaşça unut
+  const alpha = 0.1;
+  trafficPatterns.hourlyBaseline[hour] =
+    trafficPatterns.hourlyBaseline[hour] * (1 - alpha) + currentConnections * alpha;
+
+  // Anomali tespiti — ortalamadan 3x sapma
+  const baseline = trafficPatterns.hourlyBaseline[hour];
+  if (baseline > 5 && currentConnections > baseline * 3) {
+    const anomaly = {
+      timestamp: new Date().toISOString(),
+      hour,
+      expected: Math.round(baseline),
+      actual: currentConnections,
+      ratio: (currentConnections / baseline).toFixed(1) + 'x',
+      type: 'TRAFFIC_SPIKE'
+    };
+    trafficPatterns.anomalies.push(anomaly);
+    if (trafficPatterns.anomalies.length > 20) trafficPatterns.anomalies.shift();
+
+    logger.warn('🚨 Trafik anomalisi tespit edildi', anomaly);
+
+    // Tablet'e bildir
+    if (global.io) {
+      global.io.emit('fenix_escalation', {
+        severity: 'warning',
+        reasons: [`Trafik spike: ${anomaly.ratio} (beklenen: ${anomaly.expected}, gerçek: ${anomaly.actual})`],
+        message: 'Beklenmedik trafik artışı — DDoS veya viral içerik olabilir'
+      });
+    }
+  }
+
+  // Tahmin güncelle — en yoğun 3 saat
+  const indexed = trafficPatterns.hourlyBaseline.map((v, i) => ({ hour: i, avg: v }));
+  indexed.sort((a, b) => b.avg - a.avg);
+  trafficPatterns.predictions = {
+    peakHours: indexed.slice(0, 3).map(h => h.hour),
+    quietHours: indexed.slice(-3).map(h => h.hour),
+    updatedAt: new Date().toISOString()
+  };
+
+  trafficPatterns.lastAnalysis = new Date().toISOString();
+}
+
+// Her 10 dakikada trafik öğren + Firestore'a kaydet
+setInterval(async () => {
+  try {
+    // global trafficStats'dan oku (server.js'den)
+    const io = global.io;
+    const connCount = io ? io.engine?.clientsCount || 0 : 0;
+    learnTrafficPattern(connCount, 0);
+
+    // Firestore'a kaydet
+    const db = getDb();
+    if (db && trafficPatterns.sampleCount % 6 === 0) { // Her saatte bir kaydet
+      await db.collection('system').doc('fenix-traffic-patterns').set({
+        hourlyBaseline: trafficPatterns.hourlyBaseline,
+        sampleCount: trafficPatterns.sampleCount,
+        predictions: trafficPatterns.predictions,
+        updatedAt: new Date().toISOString()
+      });
+    }
+  } catch(e) { logger.warn('Trafik pattern kayıt hatası', { error: e.message }); }
+}, 10 * 60 * 1000);
+
+function getTrafficInsights() {
+  return {
+    hourlyBaseline: trafficPatterns.hourlyBaseline.map(v => Math.round(v)),
+    sampleCount: trafficPatterns.sampleCount,
+    anomalies: trafficPatterns.anomalies.slice(-5),
+    predictions: trafficPatterns.predictions,
+    lastAnalysis: trafficPatterns.lastAnalysis
+  };
+}
+
 module.exports = {
   routeTask,
   getSkillLevel,
@@ -710,6 +837,9 @@ module.exports = {
   onEscalation,
   checkEscalation,
 
+  // FAZA 1-8 Servislerden Gelen Loglar
+  logShadow,
+
   // Genel
   getFullStatus,
 
@@ -717,4 +847,8 @@ module.exports = {
   recordLesson,
   getLessons,
   getLessonsByCategory,
+
+  // Trafik Öğrenme
+  learnTrafficPattern,
+  getTrafficInsights,
 };
