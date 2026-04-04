@@ -19,6 +19,9 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/DRACOLoader.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/fflate.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/STLExporter.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
 <!-- ── GOOGLE FONTS — metin aracı için tüm fontları önceden yükle ── -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1759,7 +1762,7 @@
         </svg>
         <span class="sb-lbl">Çıkış</span>
       </button>
-      <!-- Giriş butonu sağ panele taşındı -->
+      <!-- Drive/3D Bas/Eng sağ panele taşındı -->
     </div>
 
     <!-- VIDEO TOOLS -->
@@ -1884,10 +1887,6 @@
       <button class="sb-btn" title="Arka Plan" onclick="openRPanel('3d-scene')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
         <span class="sb-lbl">Sahne</span>
-      </button>
-      <button class="sb-btn" title="Dosya Yükle" onclick="document.getElementById('file-3d-import').click()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        <span class="sb-lbl">Yükle</span>
       </button>
     </div>
 
@@ -2565,6 +2564,22 @@
     <button class="rps-btn" onclick="openRPanel('export')" title="Dışa Aktar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
       <span class="rps-lbl">Çıkış</span>
+    </button>
+    <div class="rps-sep"></div>
+    <!-- 3D Bas -->
+    <button class="rps-btn" onclick="openRPanel('usta')" title="Parça Üret — Usta Paneli">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h16M7 14l5-10 5 10"/><circle cx="12" cy="15" r="2.5"/></svg>
+      <span class="rps-lbl">3D Bas</span>
+    </button>
+    <!-- Drive -->
+    <button class="rps-btn" onclick="openRPanel('drive')" title="Fenixal Drive">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10l4-6h10l4 6"/><rect x="3" y="10" width="18" height="9" rx="2"/><circle cx="17" cy="14.5" r="1.5" fill="currentColor"/></svg>
+      <span class="rps-lbl">Drive</span>
+    </button>
+    <!-- Mühendislik -->
+    <button class="rps-btn" onclick="openRPanel('eng')" title="Mühendislik Paneli">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>
+      <span class="rps-lbl">Eng</span>
     </button>
   </div>
 
@@ -6388,8 +6403,669 @@ const SP = {
           </div>
         </div>`;
     }
+  },
+
+  usta: {
+    title: '🔧 Parça Üret',
+    render() {
+      setTimeout(_ustaLoadPanel, 100);
+      return `
+        <div style="padding:4px 0">
+          <div id="usta-status" style="background:#111;border-radius:6px;padding:8px;margin-bottom:6px;border:1px solid #222">
+            <div style="font-size:10px;color:#F97316;font-weight:700;margin-bottom:4px">PAKET DURUMU</div>
+            <div id="usta-plan" style="font-size:11px;color:#888">Yükleniyor...</div>
+          </div>
+
+          <div style="background:#111;border-radius:6px;padding:8px;margin-bottom:6px;border:1px solid #222">
+            <div style="font-size:10px;color:#22C55E;font-weight:700;margin-bottom:6px">QR KOD</div>
+            <div id="usta-qr-info" style="font-size:10px;color:#888;margin-bottom:6px"></div>
+            <button onclick="_ustaGenerateQR()" style="width:100%;height:32px;border-radius:6px;background:#22C55E;border:none;color:#000;font-size:11px;font-weight:700;cursor:pointer">+ Yeni QR Üret</button>
+            <div id="usta-qr-result" style="margin-top:8px"></div>
+            <div style="margin-top:6px">
+              <label style="font-size:9px;color:#666">Şifre değişim aralığı:</label>
+              <select id="usta-qr-interval" onchange="_ustaSetInterval(this.value)" style="width:100%;height:26px;border-radius:4px;background:#0a0a15;border:1px solid #333;color:#fff;font-size:10px;margin-top:2px">
+                <option value="2">2 dakika</option>
+                <option value="5" selected>5 dakika</option>
+                <option value="10">10 dakika</option>
+                <option value="30">30 dakika</option>
+                <option value="60">1 saat</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="background:#111;border-radius:6px;padding:8px;border:1px solid #222">
+            <div style="font-size:10px;color:#A855F7;font-weight:700;margin-bottom:6px">SİPARİŞ KUYRUĞU</div>
+            <div id="usta-orders" style="max-height:40vh;overflow-y:auto">
+              <div style="color:#555;text-align:center;font-size:11px;padding:10px">Yükleniyor...</div>
+            </div>
+          </div>
+        </div>`;
+    }
+  },
+
+  engineering: {
+    title: '🔧 Mühendislik',
+    render() {
+      return `
+        <div style="padding:4px 0">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+            <span id="gsync-status" style="font-size:10px;color:#22C55E">● G-Sync</span>
+            <span id="gsync-devices" style="font-size:10px;color:#666">${_gsyncDeviceCount} cihaz</span>
+          </div>
+          <div style="background:#111;border-radius:6px;padding:8px;margin-bottom:6px;border:1px solid #222">
+            <div style="font-size:10px;color:#F97316;font-weight:700;margin-bottom:4px">📐 ÖLÇÜM</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <button onclick="_engMeasure('distance')" style="flex:1;height:28px;border-radius:4px;background:#1a1a2e;border:1px solid #333;color:#ccc;font-size:10px;cursor:pointer">📏 Mesafe</button>
+              <button onclick="_engMeasure('angle')" style="flex:1;height:28px;border-radius:4px;background:#1a1a2e;border:1px solid #333;color:#ccc;font-size:10px;cursor:pointer">📐 Açı</button>
+              <button onclick="_engMeasure('area')" style="flex:1;height:28px;border-radius:4px;background:#1a1a2e;border:1px solid #333;color:#ccc;font-size:10px;cursor:pointer">⬜ Alan</button>
+            </div>
+            <div id="eng-measurements" style="margin-top:6px;font-size:10px;color:#888"></div>
+          </div>
+          <div style="background:#111;border-radius:6px;padding:8px;margin-bottom:6px;border:1px solid #222">
+            <div style="font-size:10px;color:#A855F7;font-weight:700;margin-bottom:4px">📝 NOTLAR</div>
+            <div style="display:flex;gap:4px">
+              <input id="eng-note-input" type="text" placeholder="Not ekle..." style="flex:1;height:26px;border-radius:4px;background:#0a0a15;border:1px solid #333;color:#fff;padding:0 6px;font-size:10px">
+              <button onclick="_engAddNote()" style="height:26px;padding:0 8px;border-radius:4px;background:#A855F7;border:none;color:#fff;font-size:10px;cursor:pointer">+</button>
+            </div>
+            <div id="eng-notes" style="margin-top:6px;max-height:120px;overflow-y:auto"></div>
+          </div>
+          <div style="background:#111;border-radius:6px;padding:8px;border:1px solid #222">
+            <div style="font-size:10px;color:#38BDF8;font-weight:700;margin-bottom:4px">📊 MODEL BİLGİSİ</div>
+            <div id="eng-model-info" style="font-size:10px;color:#888">
+              Model yüklendikten sonra bilgi görünür
+            </div>
+          </div>
+        </div>`;
+    }
+  },
+
+  drive: {
+    title: '📁 Fenixal Drive',
+    render() {
+      // Drive paneli açılınca dosyaları yükle
+      setTimeout(_driveLoadFiles, 100);
+      return `
+        <div style="padding:4px 0">
+          <div style="display:flex;gap:6px;margin-bottom:8px">
+            <button onclick="_driveUploadClick()" style="flex:1;height:32px;border-radius:6px;background:#F97316;border:none;color:#000;font-size:11px;font-weight:700;cursor:pointer">+ Yükle</button>
+            <button onclick="_driveNewScan()" style="flex:1;height:32px;border-radius:6px;background:#1a1a2e;border:1px solid #F97316;color:#F97316;font-size:11px;font-weight:700;cursor:pointer">📷 Tarama</button>
+            <input type="file" id="drive-file-inp" multiple accept="image/*,video/*,.glb,.gltf" style="display:none" onchange="_driveHandleFiles(this.files)">
+          </div>
+          <div style="display:flex;gap:4px;margin-bottom:8px">
+            <input id="drive-search" type="text" placeholder="Ara..." oninput="_driveSearch(this.value)"
+              style="flex:1;height:28px;border-radius:6px;background:#111;border:1px solid #333;color:#fff;padding:0 8px;font-size:11px">
+            <select id="drive-filter" onchange="_driveFilter(this.value)"
+              style="height:28px;border-radius:6px;background:#111;border:1px solid #333;color:#999;font-size:10px;padding:0 4px">
+              <option value="">Tümü</option>
+              <option value="photo">Foto</option>
+              <option value="video">Video</option>
+              <option value="3d-model">3D</option>
+            </select>
+          </div>
+          <div id="drive-quota" style="font-size:10px;color:#666;margin-bottom:6px">Yükleniyor...</div>
+          <div id="drive-files" style="max-height:55vh;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
+            <div style="color:#555;text-align:center;padding:20px;font-size:11px">Dosyalar yükleniyor...</div>
+          </div>
+        </div>`;
+    }
   }
 };
+
+// ══════════════════════════════════════════════
+//  FENIXAL DRIVE — Client Functions
+// ══════════════════════════════════════════════
+
+let _driveFiles = [];
+const _driveUserId = () => localStorage.getItem('fenix_user_id') || 'default-user';
+const _driveApi = (ep) => `/api/drive/${ep}`;
+
+async function _driveLoadFiles(type) {
+  try {
+    let url = _driveApi('files') + `?userId=${_driveUserId()}&limit=50`;
+    if (type) url += `&type=${type}`;
+    const r = await fetch(url);
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+    _driveFiles = d.files;
+    _driveRender(d.files);
+    _driveLoadQuota();
+  } catch(e) {
+    document.getElementById('drive-files').innerHTML = `<div style="color:#f55;text-align:center;padding:10px;font-size:11px">${e.message}</div>`;
+  }
+}
+
+function _driveRender(files) {
+  const el = document.getElementById('drive-files');
+  if (!el) return;
+  if (!files.length) { el.innerHTML = '<div style="color:#555;text-align:center;padding:20px;font-size:11px">Henüz dosya yok</div>'; return; }
+
+  el.innerHTML = files.map(f => {
+    const icon = f.type === 'photo' ? '🖼' : f.type === 'video' ? '🎬' : f.type === '3d-model' ? '🧊' : '📄';
+    const size = f.size > 1048576 ? (f.size/1048576).toFixed(1)+'MB' : (f.size/1024).toFixed(0)+'KB';
+    const date = new Date(f.uploadedAt).toLocaleDateString('tr-TR');
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#111;border-radius:6px;border:1px solid #222;cursor:pointer"
+                onclick="_driveUseFile('${f.fileId}')" title="${f.name}">
+      <span style="font-size:16px">${icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;color:#eee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
+        <div style="font-size:9px;color:#666">${size} · ${date}</div>
+      </div>
+      <button onclick="event.stopPropagation();_driveDelete('${f.fileId}')" style="background:none;border:none;color:#555;cursor:pointer;font-size:12px" title="Sil">🗑</button>
+    </div>`;
+  }).join('');
+}
+
+async function _driveLoadQuota() {
+  try {
+    const r = await fetch(_driveApi('quota') + `?userId=${_driveUserId()}`);
+    const d = await r.json();
+    if (!d.ok) return;
+    const used = d.usedBytes > 1073741824 ? (d.usedBytes/1073741824).toFixed(2)+'GB' : (d.usedBytes/1048576).toFixed(1)+'MB';
+    const max = (d.maxBytes/1073741824).toFixed(0)+'GB';
+    document.getElementById('drive-quota').innerHTML = `💾 ${used} / ${max} (${d.usedPercent}%) · ${d.fileCount || 0} dosya`;
+  } catch(e) {}
+}
+
+function _driveUploadClick() { document.getElementById('drive-file-inp')?.click(); }
+
+async function _driveHandleFiles(fileList) {
+  if (!fileList || !fileList.length) return;
+  const el = document.getElementById('drive-files');
+  for (const file of fileList) {
+    if (el) el.innerHTML = `<div style="color:#F97316;text-align:center;padding:10px;font-size:11px">Yükleniyor: ${file.name}...</div>` + (el.innerHTML || '');
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('userId', _driveUserId());
+    fd.append('name', file.name);
+    try {
+      const r = await fetch('/api/drive/upload', { method: 'POST', body: fd });
+      const d = await r.json();
+      if (!d.ok) throw new Error(d.error);
+      toast(`✓ ${file.name} yüklendi`, 'ok', 2000);
+    } catch(e) {
+      toast(`✗ ${file.name}: ${e.message}`, 'err', 3000);
+    }
+  }
+  _driveLoadFiles();
+}
+
+async function _driveDelete(fileId) {
+  if (!confirm('Dosyayı silmek istediğinize emin misiniz?')) return;
+  try {
+    const r = await fetch(`/api/drive/file/${fileId}`, { method: 'DELETE' });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+    toast('Dosya silindi', 'ok', 1500);
+    _driveLoadFiles();
+  } catch(e) { toast('Silinemedi: '+e.message, 'err'); }
+}
+
+function _driveSearch(q) {
+  if (!q) { _driveRender(_driveFiles); return; }
+  const lq = q.toLowerCase();
+  _driveRender(_driveFiles.filter(f => f.name.toLowerCase().includes(lq)));
+}
+
+function _driveFilter(type) { _driveLoadFiles(type || undefined); }
+
+function _driveUseFile(fileId) {
+  const f = _driveFiles.find(x => x.fileId === fileId);
+  if (!f) return;
+  if (f.type === 'photo') {
+    // Fotoğrafı canvas'a yükle
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => { importImageToCanvas(img); toast('Fotoğraf canvas\'a yüklendi', 'ok', 1500); closeSlidePanel(); };
+    img.onerror = () => toast('Fotoğraf yüklenemedi', 'err');
+    img.src = f.url;
+  } else {
+    // URL'yi kopyala
+    navigator.clipboard?.writeText(f.url);
+    toast('URL kopyalandı', 'ok', 1500);
+  }
+}
+
+function _driveNewScan() {
+  // Tarama başlat — yeni scan oluştur ve fotoğraf seçiciyi aç
+  const name = prompt('Tarama adı:', `Tarama ${new Date().toLocaleDateString('tr-TR')}`);
+  if (!name) return;
+  fetch('/api/scans/create', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userId: _driveUserId(), name, quality: 'medium' })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (!d.ok) throw new Error(d.error);
+    toast(`Tarama oluşturuldu: ${d.scan.scanId}`, 'ok', 2000);
+    // Fotoğraf seçiciyi scan modunda aç
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.multiple = true; inp.accept = 'image/*';
+    inp.onchange = () => _driveScanUpload(d.scan.scanId, inp.files);
+    inp.click();
+  })
+  .catch(e => toast('Hata: '+e.message, 'err'));
+}
+
+async function _driveScanUpload(scanId, fileList) {
+  toast(`${fileList.length} fotoğraf yükleniyor...`, 'ok', 3000);
+  for (const file of fileList) {
+    const fd = new FormData();
+    fd.append('photo', file);
+    try {
+      await fetch(`/api/scans/${scanId}/photo`, { method: 'POST', body: fd });
+    } catch(e) {}
+  }
+  toast(`✓ ${fileList.length} fotoğraf yüklendi — 3D oluşturuluyor...`, 'ok', 2000);
+
+  // Otomatik reconstruction başlat
+  try {
+    const r = await fetch(`/api/scans/${scanId}/reconstruct`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      toast(`3D işlem başladı — Job: ${d.job.jobId}`, 'ok', 3000);
+      _driveTrackJob(d.job.jobId, scanId);
+    }
+  } catch(e) { toast('3D işlem başlatılamadı: ' + e.message, 'err'); }
+}
+
+function _driveTrackJob(jobId, scanId) {
+  const interval = setInterval(async () => {
+    try {
+      const r = await fetch(`/api/scans/job/${jobId}`);
+      const d = await r.json();
+      if (!d.ok) { clearInterval(interval); return; }
+      const j = d.job;
+      if (j.status === 'completed') {
+        clearInterval(interval);
+        toast(`✓ 3D model hazır! Drive'a kaydedildi.`, 'ok', 4000);
+        _driveLoadFiles();
+      } else if (j.status === 'failed') {
+        clearInterval(interval);
+        toast(`✗ 3D işlem başarısız: ${j.error}`, 'err', 4000);
+      }
+    } catch(e) { clearInterval(interval); }
+  }, 5000); // 5 saniyede bir kontrol
+}
+
+// ══════════════════════════════════════════════
+//  USTA PANELİ — 3D Parça Basım
+// ══════════════════════════════════════════════
+
+async function _ustaLoadPanel() {
+  const userId = _driveUserId();
+  try {
+    // Profil
+    const pr = await fetch(`/api/usta/profile?userId=${userId}`);
+    const pd = await pr.json();
+    if (pd.ok) {
+      const u = pd.usta;
+      document.getElementById('usta-plan').innerHTML = u.active
+        ? `<span style="color:#22C55E">Aktif</span> — ${u.plan.toUpperCase()} · ${u.totalOrders} sipariş`
+        : `<span style="color:#ef4444">Pasif</span> — <button onclick="_ustaActivate()" style="background:#F97316;border:none;color:#000;padding:2px 8px;border-radius:4px;font-size:10px;cursor:pointer">Aktif Et</button>`;
+      document.getElementById('usta-qr-info').textContent = `Şifre: ${u.currentPassword} (her ${u.qrPasswordInterval} dk değişir)`;
+    }
+
+    // Siparişler
+    const or = await fetch(`/api/usta/orders?userId=${userId}`);
+    const od = await or.json();
+    if (od.ok) _ustaRenderOrders(od.orders.filter(o => o.status !== 'completed'));
+  } catch(e) {}
+
+  // Socket.io ile anlık sipariş dinle
+  if (_gsyncSocket) {
+    _gsyncSocket.emit('gsync:join', { userId, deviceId: 'usta-panel', deviceType: 'desktop' });
+
+    // Usta odasına katıl
+    _gsyncSocket.on('order:new', (data) => {
+      toast(`📦 Yeni sipariş: ${data.customerName}`, 'ok', 4000);
+      _ustaLoadPanel();
+    });
+
+    _gsyncSocket.on('qr:password-changed', (data) => {
+      const el = document.getElementById('usta-qr-info');
+      if (el) el.textContent = `Şifre: ${data.password} (güncellendi)`;
+    });
+  }
+}
+
+function _ustaRenderOrders(orders) {
+  const el = document.getElementById('usta-orders');
+  if (!el) return;
+  if (!orders.length) { el.innerHTML = '<div style="color:#555;text-align:center;font-size:11px;padding:10px">Henüz sipariş yok</div>'; return; }
+
+  const statusColors = { processing: '#F97316', ready: '#22C55E', printing: '#38BDF8', shipped: '#A855F7', completed: '#666' };
+  const statusLabels = { processing: 'İşleniyor', ready: 'Hazır', printing: 'Basılıyor', shipped: 'Kargoda', completed: 'Tamamlandı' };
+
+  el.innerHTML = orders.map(o => `
+    <div style="background:#0a0a15;border-radius:6px;padding:8px;margin-bottom:4px;border-left:3px solid ${statusColors[o.status] || '#333'}">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:11px;color:#eee;font-weight:700">${o.customer?.name || 'İsimsiz'}</span>
+        <span style="font-size:9px;color:${statusColors[o.status]};font-weight:700">${statusLabels[o.status] || o.status}</span>
+      </div>
+      <div style="font-size:9px;color:#666;margin-top:2px">${o.customer?.description || ''} · ${o.customer?.material || 'PLA'} · ${o.customer?.format || 'STL'}</div>
+      <div style="font-size:9px;color:#555;margin-top:2px">${o.customer?.address || ''}</div>
+      <div style="display:flex;gap:4px;margin-top:4px">
+        ${o.status === 'processing' ? `<button onclick="_ustaUpdateOrder('${o.orderId}','ready')" style="flex:1;height:22px;border-radius:4px;background:#F59E0B;border:none;color:#000;font-size:9px;font-weight:700;cursor:pointer">Hazır</button>` : ''}
+        ${o.status === 'ready' ? `<button onclick="_ustaUpdateOrder('${o.orderId}','printing')" style="flex:1;height:22px;border-radius:4px;background:#38BDF8;border:none;color:#000;font-size:9px;font-weight:700;cursor:pointer">Yazdır</button>` : ''}
+        ${o.status === 'printing' ? `<button onclick="_ustaUpdateOrder('${o.orderId}','shipped')" style="flex:1;height:22px;border-radius:4px;background:#A855F7;border:none;color:#fff;font-size:9px;font-weight:700;cursor:pointer">Kargola</button>` : ''}
+        ${o.status === 'shipped' ? `<button onclick="_ustaUpdateOrder('${o.orderId}','completed')" style="flex:1;height:22px;border-radius:4px;background:#22C55E;border:none;color:#000;font-size:9px;font-weight:700;cursor:pointer">Tamamla</button>` : ''}
+        ${o.scanData?.scanId ? `<button onclick="_ustaLoadModel('${o.scanData.scanId}')" style="flex:1;height:22px;border-radius:4px;background:#F97316;border:none;color:#000;font-size:9px;font-weight:700;cursor:pointer">Canvas'a Yükle</button>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function _ustaActivate() {
+  try {
+    const r = await fetch('/api/usta/activate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: _driveUserId(), plan: 'starter' })
+    });
+    const d = await r.json();
+    if (d.ok) { toast('Paket aktif edildi!', 'ok', 2000); _ustaLoadPanel(); }
+  } catch(e) { toast('Hata: '+e.message, 'err'); }
+}
+
+async function _ustaGenerateQR() {
+  try {
+    const r = await fetch('/api/usta/qr/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: _driveUserId() })
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+
+    const fullUrl = location.origin + d.url;
+    const el = document.getElementById('usta-qr-result');
+    el.innerHTML = `
+      <div style="background:#0a0a15;border-radius:6px;padding:8px;text-align:center">
+        <div id="usta-qr-canvas"></div>
+        <div style="font-size:10px;color:#F97316;margin-top:6px;font-weight:700">Şifre: ${d.password}</div>
+        <div style="font-size:9px;color:#555;margin-top:2px;word-break:break-all">${fullUrl}</div>
+        <div style="display:flex;gap:4px;margin-top:6px">
+          <button onclick="navigator.clipboard.writeText('${fullUrl}');toast('Kopyalandı','ok',1500)" style="flex:1;height:26px;border-radius:4px;background:#1a1a2e;border:1px solid #333;color:#ccc;font-size:10px;cursor:pointer">Kopyala</button>
+          <button onclick="navigator.share?.({url:'${fullUrl}',title:'Fenixal Tarama'})" style="flex:1;height:26px;border-radius:4px;background:#1a1a2e;border:1px solid #333;color:#ccc;font-size:10px;cursor:pointer">Paylaş</button>
+        </div>
+      </div>`;
+
+    // QR kod oluştur
+    if (typeof QRCode !== 'undefined') {
+      new QRCode(document.getElementById('usta-qr-canvas'), { text: fullUrl, width: 160, height: 160, colorDark: '#F97316', colorLight: '#0a0a15' });
+    }
+  } catch(e) { toast('QR hatası: '+e.message, 'err'); }
+}
+
+async function _ustaUpdateOrder(orderId, status) {
+  try {
+    await fetch(`/api/usta/order/${orderId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+    toast('Sipariş güncellendi', 'ok', 1500);
+    _ustaLoadPanel();
+  } catch(e) { toast('Hata', 'err'); }
+}
+
+async function _ustaLoadModel(scanId) {
+  try {
+    toast('Model kontrol ediliyor...', 'info', 2000);
+    const r = await fetch(`/api/scans/${scanId}`);
+    const d = await r.json();
+    if (!d.ok) { toast('Tarama bulunamadı', 'err'); return; }
+    const scan = d.scan;
+    if (scan.modelUrl) {
+      // 3D moduna geç
+      if (typeof switchMode === 'function') switchMode('3d');
+      // Three.js sahnesini başlat
+      if (typeof _init3DScene === 'function') _init3DScene();
+      // Drop zone'u gizle, viewport'u göster
+      const drop = document.getElementById('three-drop');
+      const wrap = document.getElementById('three-wrap');
+      if (drop) drop.style.display = 'none';
+      if (wrap) wrap.style.display = 'flex';
+      // Modeli yükle
+      loadModelFromURL(scan.modelUrl, scan.name || 'Müşteri Taraması');
+    } else if (scan.status === 'reconstructing') {
+      toast('Model henüz hazırlanıyor, biraz bekle...', 'info', 3000);
+    } else {
+      toast('Henüz 3D model oluşturulmadı', 'err', 3000);
+    }
+  } catch(e) { toast('Model yükleme hatası: ' + e.message, 'err'); }
+}
+
+function loadModelFromURL(url, name) {
+  if (!_scene) { toast('3D sahne hazır değil', 'err'); return; }
+  // Mevcut kullanıcı modellerini temizle (ışık ve kamerayı koru)
+  const toRemove = [];
+  _scene.traverse(child => {
+    if (child.isMesh || child.isGroup) {
+      if (child !== _tfCtrl && child.parent === _scene) toRemove.push(child);
+    }
+  });
+  toRemove.forEach(obj => {
+    if (obj === _tfCtrl) return;
+    _scene.remove(obj);
+    if (obj.geometry) obj.geometry.dispose();
+    if (obj.material) {
+      if (Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+      else obj.material.dispose();
+    }
+  });
+  // URL uzantısına göre loader seç
+  const ext = url.split('?')[0].split('.').pop().toLowerCase();
+  toast('Model yükleniyor: ' + (name || url.split('/').pop()), 'info', 3000);
+  if (ext === 'stl') {
+    // STL Loader
+    if (typeof THREE.STLLoader === 'undefined') {
+      toast('STL Loader yüklenmiyor, GLB formatı dene', 'err'); return;
+    }
+    const loader = new THREE.STLLoader();
+    loader.load(url, (geometry) => {
+      geometry.computeVertexNormals();
+      const mat = new THREE.MeshStandardMaterial({ color: 0xF97316, metalness: 0.3, roughness: 0.5 });
+      const mesh = new THREE.Mesh(geometry, mat);
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      mesh.name = name || 'STL Model';
+      // Modeli ortala ve ölçekle
+      _fitModelToView(mesh);
+      _scene.add(mesh);
+      toast('✓ ' + (name || 'Model') + ' canvas\'a yüklendi!', 'ok', 3000);
+    }, undefined, (err) => { toast('STL yükleme hatası', 'err'); });
+  } else {
+    // GLB/GLTF Loader (varsayılan)
+    const loader = new THREE.GLTFLoader();
+    loader.load(url, (gltf) => {
+      const model = gltf.scene;
+      model.name = name || 'GLB Model';
+      model.traverse(child => {
+        if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; }
+      });
+      // Modeli ortala ve ölçekle
+      _fitModelToView(model);
+      _scene.add(model);
+      toast('✓ ' + (name || 'Model') + ' canvas\'a yüklendi!', 'ok', 3000);
+    }, (progress) => {
+      if (progress.total > 0) {
+        const pct = Math.round(progress.loaded / progress.total * 100);
+        toast('Yükleniyor... %' + pct, 'info', 1000);
+      }
+    }, (err) => { toast('Model yükleme hatası: ' + err.message, 'err'); });
+  }
+}
+
+// Alias — eski referanslar için
+function _loadGLB(url) { loadModelFromURL(url, 'GLB Model'); }
+
+function _fitModelToView(obj) {
+  // Bounding box hesapla, ortala ve ölçekle
+  const box = new THREE.Box3().setFromObject(obj);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  if (maxDim > 0) {
+    const scale = 3 / maxDim; // 3 birim genişliğe sığdır
+    obj.scale.multiplyScalar(scale);
+  }
+  // Yeniden box hesapla (ölçekleme sonrası)
+  const box2 = new THREE.Box3().setFromObject(obj);
+  const center2 = box2.getCenter(new THREE.Vector3());
+  obj.position.sub(center2); // Merkeze al
+  obj.position.y -= box2.min.y; // Zemine oturt
+  // Kamerayı modele odakla
+  if (_camera && _orbitCtrl) {
+    _camera.position.set(0, 2, 5);
+    _orbitCtrl.target.set(0, 1, 0);
+    _orbitCtrl.update();
+  }
+}
+
+async function _ustaSetInterval(minutes) {
+  try {
+    await fetch('/api/usta/qr/interval', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: _driveUserId(), minutes: parseInt(minutes) })
+    });
+    toast(`Şifre her ${minutes} dk değişecek`, 'ok', 2000);
+  } catch(e) {}
+}
+
+// ══════════════════════════════════════════════
+//  G-SYNC — Multi-Device Real-Time Sync
+// ══════════════════════════════════════════════
+
+let _gsyncSocket = null;
+let _gsyncDeviceCount = 0;
+
+function _gsyncInit() {
+  if (_gsyncSocket) return;
+  if (typeof io === 'undefined') return;
+
+  _gsyncSocket = io({ transports: ['websocket', 'polling'] });
+
+  const userId = _driveUserId();
+  const deviceId = 'editor-' + Math.random().toString(36).slice(2, 6);
+
+  _gsyncSocket.on('connect', () => {
+    _gsyncSocket.emit('gsync:join', { userId, deviceId, deviceType: 'desktop' });
+  });
+
+  _gsyncSocket.on('gsync:device-count', (data) => {
+    _gsyncDeviceCount = data.count;
+    const badge = document.getElementById('gsync-badge');
+    if (badge) {
+      badge.textContent = data.count;
+      badge.style.display = data.count > 1 ? 'inline-block' : 'none';
+    }
+  });
+
+  _gsyncSocket.on('gsync:device-joined', (data) => {
+    toast(`${data.deviceType === 'phone' ? '📱' : '💻'} Cihaz bağlandı`, 'ok', 2000);
+  });
+
+  _gsyncSocket.on('gsync:device-left', () => {
+    toast('Cihaz ayrıldı', 'ok', 1500);
+  });
+
+  // Diğer cihazlardan gelen güncellemeleri dinle
+  _gsyncSocket.on('gsync:model-update', (data) => {
+    // Model değişikliği geldi — editöre uygula
+    if (data.type === 'color' && typeof _applyColorFromSync === 'function') _applyColorFromSync(data);
+    if (data.type === 'scale' && typeof _applyScaleFromSync === 'function') _applyScaleFromSync(data);
+  });
+
+  _gsyncSocket.on('gsync:annotation', (data) => {
+    toast(`📝 ${data.from}: ${data.text}`, 'ok', 3000);
+  });
+
+  _gsyncSocket.on('gsync:measurement', (data) => {
+    toast(`📏 Ölçüm: ${data.value} ${data.unit}`, 'ok', 3000);
+  });
+}
+
+function _gsyncEmit(type, data) {
+  if (_gsyncSocket && _gsyncSocket.connected) {
+    _gsyncSocket.emit('gsync:model-update', { type, ...data });
+  }
+}
+
+// Sayfa yüklenince G-Sync başlat
+setTimeout(_gsyncInit, 2000);
+
+// ══════════════════════════════════════════════
+//  ENGINEERING PANEL — Ölçüm, Not, Analiz
+// ══════════════════════════════════════════════
+
+let _engCurrentModel = null;
+
+function _engMeasure(type) {
+  // Simüle edilmiş ölçüm — 3D viewer entegrasyonu ile gerçek ölçüm yapılacak
+  const labels = { distance: '📏 Mesafe', angle: '📐 Açı', area: '⬜ Alan' };
+  toast(`${labels[type]}: İki nokta seçin (3D viewer'da tıklayın)`, 'ok', 2000);
+
+  // Demo değer — gerçek 3D picker entegre edildiğinde kalkacak
+  const demoValues = { distance: (Math.random()*100+10).toFixed(1)+'mm', angle: (Math.random()*90+5).toFixed(1)+'°', area: (Math.random()*500+50).toFixed(1)+'mm²' };
+  const el = document.getElementById('eng-measurements');
+  if (el) {
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:3px 6px;background:#0a0a15;border-radius:4px;margin-top:3px;color:#eee;display:flex;justify-content:space-between';
+    div.innerHTML = `<span>${labels[type]}</span><span style="color:#F97316;font-weight:700">${demoValues[type]}</span>`;
+    el.appendChild(div);
+
+    // Firestore'a kaydet
+    fetch('/api/engineering/measurement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        modelId: _engCurrentModel || 'current',
+        userId: _driveUserId(),
+        type,
+        value: parseFloat(demoValues[type]),
+        unit: type === 'angle' ? '°' : 'mm',
+        label: labels[type]
+      })
+    }).catch(() => {});
+
+    // G-Sync ile paylaş
+    _gsyncEmit('measurement', { type, value: demoValues[type] });
+  }
+}
+
+function _engAddNote() {
+  const inp = document.getElementById('eng-note-input');
+  if (!inp || !inp.value.trim()) return;
+  const text = inp.value.trim();
+  inp.value = '';
+
+  const el = document.getElementById('eng-notes');
+  if (el) {
+    const div = document.createElement('div');
+    div.style.cssText = 'padding:4px 6px;background:#0a0a15;border-radius:4px;margin-top:3px;color:#ddd;font-size:10px;border-left:2px solid #A855F7';
+    div.textContent = text;
+    el.appendChild(div);
+  }
+
+  // Firestore'a kaydet
+  fetch('/api/engineering/annotation', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      modelId: _engCurrentModel || 'current',
+      userId: _driveUserId(),
+      text
+    })
+  }).catch(() => {});
+
+  toast('Not eklendi', 'ok', 1500);
+}
 
 function openSlidePanel(type) {
   const def = SP[type];
@@ -6414,10 +7090,9 @@ function openSlidePanel(type) {
   }
   // Gemini paneli açılınca geniş mod + sohbet sıfırla + input focus
   const panel2 = document.getElementById('slide-panel');
-  if (type === 'gemini') {
+  if (type === 'gemini' || type === 'drive') {
     panel2?.classList.add('gemini-wide');
-    window._gchatHistory = [];
-    setTimeout(() => document.getElementById('gchat-inp')?.focus(), 100);
+    if (type === 'gemini') { window._gchatHistory = []; setTimeout(() => document.getElementById('gchat-inp')?.focus(), 100); }
   } else {
     panel2?.classList.remove('gemini-wide');
   }
@@ -8155,7 +8830,7 @@ function openRPanel(section) {
 
   const titleEl = document.getElementById('vrs-title');
   const titles = { color:'RENK & GRADİNG', audio:'SES MİKSAJI', ai:'OTONOM AI', export:'DIŞA AKTAR', layers:'KATMANLAR',
-    '3d-sculpt':'HEYKEL & MODİFİKATÖR', '3d-mat':'MATERYAL', '3d-light':'IŞIKLAR', '3d-cam':'KAMERA', '3d-scene':'SAHNE', '3d-lib':'MODEL KÜTÜPHANESİ', '3d-ai':'AI ARAÇLARI', '3d-export':'DIŞA AKTAR' };
+    '3d-sculpt':'HEYKEL & MODİFİKATÖR', '3d-mat':'MATERYAL', '3d-light':'IŞIKLAR', '3d-cam':'KAMERA', '3d-scene':'SAHNE', '3d-lib':'MODEL KÜTÜPHANESİ', '3d-ai':'AI ARAÇLARI', '3d-export':'DIŞA AKTAR', 'usta':'PARÇA ÜRET', 'drive':'FENİXAL DRİVE', 'eng':'MÜHENDİSLİK' };
   if (titleEl) titleEl.textContent = titles[section] || section.toUpperCase();
 
   if      (section === 'color')    _rpInjectColor(body);
@@ -8171,6 +8846,9 @@ function openRPanel(section) {
   else if (section === '3d-lib')   _rp3dLib(body);
   else if (section === '3d-ai')    _rp3dAI(body);
   else if (section === '3d-export') _rp3dExport(body);
+  else if (section === 'usta') _rpUsta(body);
+  else if (section === 'drive') _rpDrive(body);
+  else if (section === 'eng') _rpEng(body);
   else body.innerHTML = '';
 }
 
@@ -8535,6 +9213,20 @@ function closeVidRPanel() {
 }
 
 // ── 3D/Video moduna göre sağ ikon strip'i güncelle ──
+// === SAĞ PANEL: Usta / Drive / Eng ===
+
+function _rpUsta(body) {
+  body.innerHTML = SP.usta.render();
+}
+
+function _rpDrive(body) {
+  body.innerHTML = SP.drive.render();
+}
+
+function _rpEng(body) {
+  body.innerHTML = SP.engineering.render();
+}
+
 function _updateRpStripIcons(mode) {
   const strip = document.getElementById('rpanel-strip');
   if (!strip) return;
@@ -8577,6 +9269,19 @@ function _updateRpStripIcons(mode) {
       <button class="rps-btn" onclick="document.getElementById('file-3d-import').click()" title="Model Yükle (Giriş)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <span class="rps-lbl">Giriş</span>
+      </button>
+      <div class="rps-sep"></div>
+      <button class="rps-btn" onclick="openRPanel('usta')" title="Parça Üret — Usta Paneli">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h16M7 14l5-10 5 10"/><circle cx="12" cy="15" r="2.5"/></svg>
+        <span class="rps-lbl">3D Bas</span>
+      </button>
+      <button class="rps-btn" onclick="openRPanel('drive')" title="Fenixal Drive">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10l4-6h10l4 6"/><rect x="3" y="10" width="18" height="9" rx="2"/><circle cx="17" cy="14.5" r="1.5" fill="currentColor"/></svg>
+        <span class="rps-lbl">Drive</span>
+      </button>
+      <button class="rps-btn" onclick="openRPanel('eng')" title="Mühendislik Paneli">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg>
+        <span class="rps-lbl">Eng</span>
       </button>`;
   } else {
     // Video modu — mevcut ikonlar
@@ -16793,6 +17498,7 @@ _screenToUV = function(screenX, screenY, canvasW, canvasH) {
      AR EXPORT MODÜLÜ — Bağımsız, mevcut koda dokunmaz
 ══════════════════════════════════════════════════════ -->
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/exporters/GLTFExporter.js"></script>
 
@@ -16806,9 +17512,16 @@ _screenToUV = function(screenX, screenY, canvasW, canvasH) {
     <button onclick="_arTogglePanel()" style="background:none;border:none;color:#444;font-size:14px;cursor:pointer;line-height:1;">×</button>
   </div>
   <div id="ar-status" style="font-size:9px;color:#555;margin-bottom:8px;">Model seçin ve butona tıklayın</div>
+  <!-- Boyut Ayarı -->
+  <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+    <span style="font-size:8px;color:#888;white-space:nowrap;">📐 Boyut:</span>
+    <input type="range" id="ar-size-slider" min="5" max="300" value="50" step="5" oninput="document.getElementById('ar-size-val').textContent=this.value+'cm'; _arSyncScale && _arSyncScale(parseFloat(this.value)/100)" style="flex:1;accent-color:#F97316;height:4px;">
+    <span id="ar-size-val" style="font-size:9px;color:#F97316;font-weight:800;min-width:36px;">50cm</span>
+  </div>
   <!-- DESKTOP: QR Oluştur -->
   <div id="ar-desktop-section">
     <button onclick="_arExportAndQR()" style="width:100%;height:34px;border-radius:7px;border:none;background:linear-gradient(90deg,#F97316,#ea580c);color:#000;font-size:10px;font-weight:800;cursor:pointer;letter-spacing:.5px;margin-bottom:8px;">🚀 AR QR Oluştur</button>
+    <button id="ar-open-btn" onclick="_arOpenDirect()" style="display:none;width:100%;height:26px;border-radius:6px;border:1px solid #3b82f6;background:rgba(59,130,246,0.1);color:#3b82f6;font-size:9px;font-weight:700;cursor:pointer;margin-bottom:6px;">🔗 Son AR Linkini Aç</button>
     <div id="ar-qr-wrap" style="display:none;text-align:center;">
       <div id="ar-qr-div" style="display:inline-block;border-radius:8px;overflow:hidden;border:2px solid rgba(249,115,22,0.2);"></div>
       <div style="font-size:7px;color:#444;margin-top:4px;">Telefonunla tara → AR görüntüle</div>
@@ -16816,8 +17529,8 @@ _screenToUV = function(screenX, screenY, canvasW, canvasH) {
   </div>
   <!-- MOBİL: Odana Yerleştir -->
   <div id="ar-mobile-section" style="display:none;">
-    <button onclick="_arLaunchNative()" style="width:100%;height:52px;border-radius:10px;border:none;background:linear-gradient(135deg,#F97316,#ea580c,#dc2626);color:#fff;font-size:14px;font-weight:900;cursor:pointer;letter-spacing:.5px;margin-bottom:8px;box-shadow:0 4px 20px rgba(249,115,22,0.4);animation:_arPulse 2s infinite;">🚀 ODANA YERLEŞTİR</button>
-    <div style="font-size:8px;color:#555;text-align:center;">Kameran açılacak — modeli odana yerleştir</div>
+    <button onclick="_arLaunchNative()" style="width:100%;height:44px;border-radius:10px;border:none;background:linear-gradient(135deg,#F97316,#ea580c,#dc2626);color:#fff;font-size:13px;font-weight:900;cursor:pointer;letter-spacing:.5px;margin-bottom:6px;box-shadow:0 4px 20px rgba(249,115,22,0.4);animation:_arPulse 2s infinite;">🚀 ODANA YERLEŞTİR</button>
+    <div style="font-size:7px;color:#555;text-align:center;">Kameran açılacak — modeli odana yerleştir</div>
   </div>
   <div style="display:flex;gap:4px;margin-top:6px;">
     <button onclick="_arDownloadGLB()" style="flex:1;height:26px;border-radius:5px;border:1px solid #222;background:#111;color:#888;font-size:8px;cursor:pointer;">📦 GLB İndir</button>
@@ -16831,6 +17544,16 @@ _screenToUV = function(screenX, screenY, canvasW, canvasH) {
 <script>
 // ── AR Modülü — tamamen bağımsız, mevcut koda dokunmaz ──
 let _arBlobUrl = null;
+let _arLastQrUrl = null;
+let _uploadStart = 0;
+
+function _arOpenDirect() {
+  if (_arLastQrUrl) {
+    window.open(_arLastQrUrl, '_blank');
+  } else {
+    toast('Önce AR QR Oluştur butonuna tıklayın', 'err');
+  }
+}
 
 // Mobil algılama
 const _isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
@@ -16926,6 +17649,23 @@ async function _arLaunchNative() {
   }
 }
 
+// ── Buluta Yükle & AR Aç (mobil + desktop ortak) ──
+async function _arCloudAndOpen() {
+  const status = document.getElementById('ar-status');
+  if (status) status.innerHTML = '☁ <b style="color:#F97316">Buluta yükleniyor...</b>';
+
+  // Önce QR oluştur (bu aynı zamanda buluta yüklüyor)
+  await _arExportAndQR();
+
+  // QR URL hazırsa direkt aç
+  if (_arLastQrUrl) {
+    window.open(_arLastQrUrl, '_blank');
+    if (status) status.innerHTML = '✅ <b style="color:#22c55e">AR açıldı!</b>';
+  } else {
+    if (status) status.innerHTML = '⚠ <b style="color:#ef4444">Yükleme başarısız — tekrar deneyin</b>';
+  }
+}
+
 // ── model-viewer AR Modal ──
 function _arOpenViewer(blobUrl, modelName, realSize) {
   const status = document.getElementById('ar-status');
@@ -16976,6 +17716,7 @@ function _arTogglePanel() {
 
 async function _arExportAndQR() {
   const status = document.getElementById('ar-status');
+  const arSizeCm = parseInt(document.getElementById('ar-size-slider')?.value) || 50;
 
   // Sahnedeki tüm fenixMesh nesnelerini bul — _mainMesh'e bağımlı değil
   let exportTarget = _mainMesh;
@@ -17032,34 +17773,92 @@ async function _arExportAndQR() {
     // Boyut bilgisi
     const arPreset = three3D?.preset || 'default';
     const arRealSize = _arRealWorldSizes[arPreset] || _arRealWorldSizes.default;
-    const baseUrl = window.location.protocol === 'file:'
-      ? 'https://fenixphotoai.com'
-      : window.location.origin;
+    // API çağrıları için mevcut sunucu, QR URL'i için her zaman production domain
+    const apiBase = window.location.origin;
+    const _loc = window.location;
+    const baseUrl = (_loc.hostname === 'localhost' || _loc.hostname === '127.0.0.1')
+      ? 'https://fenix-ai-194617495310.europe-west1.run.app'
+      : _loc.origin;
 
     let qrUrl;
-    // Custom model → buluta yükle, direkt GLB URL'i ile AR aç
-    if (arPreset === 'custom') {
-      if (status) status.textContent = '☁ Model buluta yükleniyor...';
+    // HER ZAMAN editördeki modeli yükle — ne koyarsan o gider
+    {
+      if (status) status.innerHTML = '☁ <b style="color:#F97316">Buluta yükleniyor...</b>';
+      _uploadStart = Date.now();
       try {
         const glbBlob = new Blob([buffer], { type: 'model/gltf-binary' });
-        const fd = new FormData();
-        fd.append('model', glbBlob, (three3D?.name || 'model') + '.glb');
-        const uploadRes = await fetch(baseUrl + '/api/ar/upload', { method: 'POST', body: fd });
-        const uploadData = await uploadRes.json();
-        if (uploadData.ok) {
-          qrUrl = baseUrl + '/ar-view.html?glb=' + encodeURIComponent(uploadData.url);
-          if (status) status.textContent = '☁ Buluta yüklendi ✓';
+        const CHUNK_SIZE = 20 * 1024 * 1024; // 20MB chunk
+        const totalChunks = Math.ceil(glbBlob.size / CHUNK_SIZE);
+        const modelFileName = (three3D?.name || 'model') + '.glb';
+
+        let uploadUrl = '';
+
+        if (totalChunks <= 1 && glbBlob.size < 25 * 1024 * 1024) {
+          // Küçük dosya — tek seferde yükle
+          const fd = new FormData();
+          fd.append('model', glbBlob, modelFileName);
+          const uploadRes = await fetch(apiBase + '/api/ar/upload', { method: 'POST', body: fd });
+          const uploadData = await uploadRes.json();
+          if (!uploadData.ok) throw new Error(uploadData.error || 'Yükleme başarısız');
+          uploadUrl = uploadData.url;
         } else {
-          throw new Error(uploadData.error);
+          // Büyük dosya — chunked upload
+          if (status) status.innerHTML = '☁ <b style="color:#F97316">Parçalı yükleme başlatılıyor... (' + totalChunks + ' parça)</b>';
+          const initRes = await fetch(apiBase + '/api/ar/upload-init', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: modelFileName, totalChunks, totalSize: glbBlob.size })
+          });
+          const initData = await initRes.json();
+          if (!initData.ok) throw new Error('Upload başlatılamadı');
+
+          for (let i = 0; i < totalChunks; i++) {
+            const start = i * CHUNK_SIZE;
+            const end = Math.min(start + CHUNK_SIZE, glbBlob.size);
+            const chunk = glbBlob.slice(start, end);
+            const pct = Math.round((i + 1) / totalChunks * 100);
+            if (status) status.innerHTML = '☁ <b style="color:#F97316">Buluta aktarılıyor... ' + pct + '% (parça ' + (i+1) + '/' + totalChunks + ')</b>';
+
+            const cfd = new FormData();
+            cfd.append('chunk', chunk, 'chunk_' + i);
+            cfd.append('uploadId', initData.uploadId);
+            cfd.append('chunkIndex', i.toString());
+            const cRes = await fetch(apiBase + '/api/ar/upload-chunk', { method: 'POST', body: cfd });
+            const cData = await cRes.json();
+            if (!cData.ok) throw new Error('Parça ' + (i+1) + ' yüklenemedi: ' + (cData.error || ''));
+            if (cData.complete) {
+              uploadUrl = cData.url;
+            }
+          }
+          if (!uploadUrl) throw new Error('Upload tamamlanamadı');
         }
+
+        // Firestore'a model kaydı → benzersiz ID
+        try {
+          const regRes = await fetch(apiBase + '/api/ar/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: three3D?.name || 'Model', glbUrl: uploadUrl, sizeCm: arSizeCm, createdBy: 'editor' })
+          });
+          const regData = await regRes.json();
+          if (regData.ok) { qrUrl = baseUrl + '/ar-view.html?id=' + regData.id; _arInitSync(regData.id); }
+          else qrUrl = baseUrl + '/ar-view.html?glb=' + encodeURIComponent(uploadUrl) + '&size=' + arSizeCm;
+        } catch(e) {
+          qrUrl = baseUrl + '/ar-view.html?glb=' + encodeURIComponent(uploadUrl) + '&size=' + arSizeCm;
+        }
+        const elapsed = ((Date.now() - _uploadStart) / 1000).toFixed(1);
+        if (status) status.innerHTML = '✅ <b style="color:#22c55e">Buluta yüklendi!</b> ' + elapsed + 's';
       } catch(uploadErr) {
-        console.warn('Cloud upload hatası, lokal devam:', uploadErr);
-        qrUrl = baseUrl + '/ar-view.html?model=default';
+        console.warn('Upload hatası:', uploadErr);
+        qrUrl = baseUrl + '/ar-view.html?model=default&size=' + arSizeCm;
+        if (status) status.innerHTML = '⚠ <b style="color:#ef4444">Yükleme başarısız — ' + uploadErr.message + '</b>';
       }
-    } else {
-      // Preset model → direkt kütüphane URL'i
-      qrUrl = baseUrl + '/ar-view.html?model=' + encodeURIComponent(arPreset);
     }
+
+    // Direkt aç butonunu aktifle
+    _arLastQrUrl = qrUrl;
+    const openBtn = document.getElementById('ar-open-btn');
+    if (openBtn) openBtn.style.display = 'block';
 
     if (qrWrap) {
       qrWrap.style.display = 'block';
@@ -17120,6 +17919,49 @@ function _arDownloadPNG() {
   a.download = 'fenix-3d-render.png';
   a.click();
   toast('PNG indirildi ✓', 'ok');
+}
+
+// === AR LIVE SYNC (Editor → Phone) ===
+let _arSocket = null;
+let _arCurrentModelId = null;
+
+function _arInitSync(modelId) {
+  if (!modelId) return;
+  _arCurrentModelId = modelId;
+  if (_arSocket) { _arSocket.disconnect(); _arSocket = null; }
+  const loc = window.location;
+  const wsUrl = (loc.hostname === 'localhost' || loc.hostname === '127.0.0.1')
+    ? loc.origin
+    : 'https://fenix-ai-194617495310.europe-west1.run.app';
+  _arSocket = io(wsUrl, { transports: ['websocket', 'polling'] });
+  _arSocket.on('connect', () => {
+    _arSocket.emit('ar:join', { modelId, role: 'editor' });
+    console.log('[AR Sync] Connected, room:', modelId);
+  });
+}
+
+function _arSyncColor(color, part) {
+  if (_arSocket && _arCurrentModelId) {
+    _arSocket.emit('ar:color', { modelId: _arCurrentModelId, color, part: part || 'all' });
+  }
+}
+
+function _arSyncMaterial(material, part) {
+  if (_arSocket && _arCurrentModelId) {
+    _arSocket.emit('ar:material', { modelId: _arCurrentModelId, material, part: part || 'all' });
+  }
+}
+
+function _arSyncScale(scale) {
+  if (_arSocket && _arCurrentModelId) {
+    _arSocket.emit('ar:scale', { modelId: _arCurrentModelId, scale });
+  }
+}
+
+function _arSyncEnv(env) {
+  if (_arSocket && _arCurrentModelId) {
+    _arSocket.emit('ar:env', { modelId: _arCurrentModelId, env });
+  }
 }
 </script>
 
