@@ -3179,7 +3179,46 @@ function updateRightPanel() {
       <button onclick="openVidPanel('props')" style="width:100%;padding:8px;border-radius:6px;border:1px solid #222;background:#0f0f0f;color:#888;font-size:10px;font-weight:700;cursor:pointer;margin-bottom:6px;transition:all .15s;" onmouseover="this.style.borderColor='#F97316';this.style.color='#F97316'" onmouseout="this.style.borderColor='#222';this.style.color='#888'">⚙ Renk & Ses Özellikleri →</button>
       <button onclick="openVidPanel('transitions')" style="width:100%;padding:8px;border-radius:6px;border:1px solid #222;background:#0f0f0f;color:#888;font-size:10px;font-weight:700;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='#F97316';this.style.color='#F97316'" onmouseout="this.style.borderColor='#222';this.style.color='#888'">🎬 Geçiş Efektleri →</button>`;
     ai.innerHTML = `
-      <button onclick="openVidPanel('ai')" style="width:100%;padding:9px;border-radius:7px;border:none;background:linear-gradient(90deg,#c2410c,#F97316);color:#000;font-size:11px;font-weight:800;cursor:pointer;letter-spacing:.4px;">🤖 Otonom AI Araçları →</button>`;
+      <button onclick="openVidPanel('ai')" style="width:100%;padding:9px;border-radius:7px;border:none;background:linear-gradient(90deg,#c2410c,#F97316);color:#000;font-size:11px;font-weight:800;cursor:pointer;letter-spacing:.4px;margin-bottom:8px;">🤖 Otonom AI Araçları →</button>
+
+      <div style="font-size:8px;color:#F97316;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">⚙ Video Kontrolleri</div>
+
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">
+        <span style="font-size:9px;color:#666;width:60px;flex-shrink:0;">Duraklama</span>
+        <div style="display:flex;gap:2px;">
+          ${[1,2,3,4,5].map(s => '<button onclick="_setVideoPause('+s+')" id="vp-'+s+'" style="width:26px;height:20px;border-radius:3px;border:1px solid '+(s===2?'#F97316':'#222')+';background:'+(s===2?'rgba(249,115,22,.15)':'#111')+';color:'+(s===2?'#F97316':'#666')+';font-size:8px;font-weight:700;cursor:pointer;">'+s+'s</button>').join('')}
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">
+        <span style="font-size:9px;color:#666;width:60px;flex-shrink:0;">Marka</span>
+        <input type="text" id="brand-name-input" placeholder="Marka adı" value="${localStorage.getItem('fenix_brand')||''}" onchange="localStorage.setItem('fenix_brand',this.value)" style="flex:1;height:20px;background:#0a0a0a;border:1px solid #222;border-radius:3px;color:#ccc;font-size:9px;padding:0 5px;">
+      </div>
+
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">
+        <span style="font-size:9px;color:#666;width:60px;flex-shrink:0;">Konum</span>
+        <select id="brand-pos" onchange="localStorage.setItem('fenix_brand_pos',this.value)" style="flex:1;height:20px;background:#0a0a0a;border:1px solid #222;border-radius:3px;color:#888;font-size:8px;">
+          <option value="bottom-left" ${(localStorage.getItem('fenix_brand_pos')||'bottom-left')==='bottom-left'?'selected':''}>Sol Alt</option>
+          <option value="bottom-right" ${localStorage.getItem('fenix_brand_pos')==='bottom-right'?'selected':''}>Sağ Alt</option>
+        </select>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px;">
+        <span style="font-size:9px;color:#666;width:60px;flex-shrink:0;">Kanca</span>
+        <input type="text" id="text-hook-input" placeholder="Bunu bilmeden almayın..." value="${localStorage.getItem('fenix_hook')||''}" onchange="localStorage.setItem('fenix_hook',this.value)" style="flex:1;height:20px;background:#0a0a0a;border:1px solid #222;border-radius:3px;color:#ccc;font-size:9px;padding:0 5px;">
+      </div>
+
+      <div style="display:flex;align-items:center;gap:4px;">
+        <span style="font-size:9px;color:#666;width:60px;flex-shrink:0;">Efekt</span>
+        <select id="video-effect-sel" onchange="localStorage.setItem('fenix_effect',this.value)" style="flex:1;height:20px;background:#0a0a0a;border:1px solid #222;border-radius:3px;color:#888;font-size:8px;">
+          <option value="auto">AI Seçsin</option>
+          <option value="none">Yok</option>
+          <option value="buhar">♨️ Buhar</option>
+          <option value="parlama">✨ Parlama</option>
+          <option value="sinematik">🎬 Sinematik</option>
+        </select>
+      </div>
+    `;
   }
 
   else if (S.mode === '3d') {
@@ -17977,6 +18016,38 @@ function _arSyncEnv(env) {
 //  "AI YAPSIN" — Otomatik Pipeline
 //  Resim → Arka plan sil → Yeni arka plan → Reels video
 // ═══════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════
+//  3.4 KULLANICI TAKİP — en çok kullanılan özellik
+// ═══════════════════════════════════════════════════
+
+const _userTrack = JSON.parse(localStorage.getItem('fenix_user_track') || '{}');
+
+function _trackFeature(feature) {
+  _userTrack[feature] = (_userTrack[feature] || 0) + 1;
+  localStorage.setItem('fenix_user_track', JSON.stringify(_userTrack));
+  // 10 kullanımda bir öneri göster
+  const count = _userTrack[feature];
+  if (count === 10) {
+    toast(`💡 "${feature}" sık kullanıyorsun — kısayol: önerilere bak`, 'ok', 3000);
+  }
+}
+
+function _getTopFeatures(n = 3) {
+  return Object.entries(_userTrack)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, n)
+    .map(([name, count]) => ({ name, count }));
+}
+
+// Mevcut butonlara takip ekle (sayfa yüklendiğinde)
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.ai-btn, .sb-btn, .rps-btn');
+  if (btn) {
+    const label = btn.title || btn.textContent?.trim().substring(0, 20) || 'unknown';
+    _trackFeature(label);
+  }
+});
 
 // ── Video duraklama süresi seçici ──
 function _setVideoPause(sec) {
