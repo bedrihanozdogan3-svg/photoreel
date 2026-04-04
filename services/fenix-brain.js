@@ -70,6 +70,41 @@ process.once('SIGINT', async () => {
   } catch(e) { logger.warn('Fenix skills yüklenemedi', { error: e.message }); }
 })();
 
+// ── Mühendislik Bilgi Bankasını Yükle (3D baskı kuralları) ──
+(async () => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const knowledgePath = path.join(__dirname, '../data/fenix-3d-engineering-knowledge.json');
+    if (fs.existsSync(knowledgePath)) {
+      const knowledge = JSON.parse(fs.readFileSync(knowledgePath, 'utf8'));
+      // Her modülün her dersini skill olarak kaydet
+      for (const [modKey, mod] of Object.entries(knowledge.modules || {})) {
+        for (const lesson of (mod.lessons || [])) {
+          const skillKey = `eng_${lesson.id}`;
+          if (!taskSkills[skillKey]) {
+            taskSkills[skillKey] = {
+              level: 'apprentice', score: 0, successes: 0, failures: 0, total: 0,
+              rules: lesson.rules,
+              skills: lesson.skills,
+              title: lesson.title
+            };
+          } else {
+            // Kuralları güncelle (yenileri varsa)
+            taskSkills[skillKey].rules = lesson.rules;
+            taskSkills[skillKey].skills = lesson.skills;
+          }
+        }
+      }
+      skillsDirty = true;
+      logger.info('Fenix mühendislik bilgi bankası yüklendi', {
+        modules: Object.keys(knowledge.modules).length,
+        totalLessons: Object.values(knowledge.modules).reduce((s, m) => s + (m.lessons?.length || 0), 0)
+      });
+    }
+  } catch(e) { logger.warn('Mühendislik bilgi bankası yüklenemedi', { error: e.message }); }
+})();
+
 // ═══════════════════════════════════════════════════════
 // 1. ORKESTRASYON — Usta-Çırak Görev Akışı
 // ═══════════════════════════════════════════════════════

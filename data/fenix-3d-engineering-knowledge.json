@@ -1,0 +1,178 @@
+{
+  "version": "1.0",
+  "createdAt": "2026-04-04",
+  "source": "metin dosyası/*.docx — Bedrihan'ın mühendislik bilgi bankası",
+  "description": "Fenix'in 3D baskı mühendislik bilgisi — tüm sütunlar ve iç detaylar",
+
+  "modules": {
+    "global_scaling": {
+      "title": "Sütün ve Global Ölçeklendirme",
+      "lessons": [
+        {
+          "id": "auto_qc",
+          "title": "Otomatik Kalite Kontrol (Auto-QC)",
+          "skills": ["wall_thickness_check", "hole_diameter_check", "volume_calculation"],
+          "rules": [
+            "Duvar kalınlığı 0.5mm altındaysa UYARI ver",
+            "Delik çapları üretim limitlerinin altındaysa müşteriye bildir",
+            "Hacim ve ağırlık hesapla → hammadde maliyeti çıkar",
+            "Tolerans doğrulama: poligon kalitesi istenen hassasiyetle örtüşmeli"
+          ]
+        },
+        {
+          "id": "digital_fingerprint",
+          "title": "Dijital Parmak İzi (SHA-256 Hash)",
+          "skills": ["sha256_hashing", "file_integrity_check"],
+          "rules": [
+            "Her modelin SHA-256 özeti çıkarılır",
+            "İndiren taraf hash kontrolü yapar — bozulma varsa UYARI",
+            "Versiyonlama: parca_v1_final_production.step formatında mühürlenir"
+          ]
+        },
+        {
+          "id": "load_balancing",
+          "title": "Global Ölçeklendirme ve Yük Dengeleme",
+          "skills": ["serverless_processing", "cdn_distribution", "chunked_upload"],
+          "rules": [
+            "Veri işleme Cloud Functions/Cloud Run'da paralel yapılır",
+            "CDN ile veriler en yakın edge sunucuya dağıtılır",
+            "Büyük dosyalar 50MB chunk'lara bölünür — paralel yüklenir",
+            "Draco sıkıştırma: 100MB → 10-15MB kaliteden ödün vermeden"
+          ]
+        },
+        {
+          "id": "smart_queue",
+          "title": "Akıllı İş Kuyruğu (Smart Job Queue)",
+          "skills": ["priority_scoring", "state_machine", "capacity_management", "dead_letter_queue"],
+          "rules": [
+            "Önceliklendirme: Teslim tarihi + Müşteri statüsü (VIP +10) + İşlem karmaşıklığı",
+            "İş durumları: QUEUED → PROCESSING → READY_FOR_REVIEW → IN_PRODUCTION → COMPLETED",
+            "Usta kapasitesi 24 saat aşarsa → yoğun uyarısı + başka ustaya yönlendir",
+            "Hatalı işlem 3 kez tekrar denenir → Dead Letter Queue → yöneticiye uyarı",
+            "Fast Track: Kısa işler ağır işlerin arasına serpiştirilir"
+          ]
+        }
+      ]
+    },
+
+    "data_preparation": {
+      "title": "Veri Hazırlama ve Hassasiyet",
+      "lessons": [
+        {
+          "id": "mesh_healing",
+          "title": "Geometrik Onarım (Mesh Healing)",
+          "skills": ["manifold_repair", "normal_unification", "non_manifold_cleanup", "degenerate_face_removal"],
+          "rules": [
+            "Açık kenarları (Open Edges) tespit et → otomatik kapat",
+            "Model 'watertight' (su sızdırmaz) olmalı yoksa 3D yazıcı hata verir",
+            "Ters dönmüş yüzeyleri (Inverted Normals) dışa doğru düzelt",
+            "Üst üste binen üçgenleri (Overlapping Triangles) ayıkla",
+            "Zero-area faces sil ve etrafını yeniden ör (Remeshing)",
+            "Çakışan noktaları birleştir (Merge by Distance)",
+            "Kütüphaneler: Trimesh veya Open3D"
+          ]
+        },
+        {
+          "id": "precision_scaling",
+          "title": "Referans Ölçekleme (Precision Scaling)",
+          "skills": ["anchor_detection", "pixel_to_mm", "camera_calibration", "bounding_box"],
+          "rules": [
+            "Referans nesnesi: A4 kağıdı, madeni para veya ArUco Marker",
+            "Scale Factor = Gerçek Uzunluk (mm) / Piksel Uzunluğu (px)",
+            "Tüm vertex koordinatlarını SF ile çarp → milimetrik model",
+            "Kamera lens bozulmasını düzelt (Undistort) — EXIF metadata'dan telefon modeli al",
+            "Bounding Box (X,Y,Z) hesapla → Firestore'a 'actual_dimensions' yaz",
+            "Confidence Score %95 altındaysa → 'Manuel Ölçü Kontrolü Gerekli' uyarısı"
+          ]
+        },
+        {
+          "id": "polygon_optimization",
+          "title": "Poligon Optimizasyonu (Decimation)",
+          "skills": ["quadric_decimation", "retopology", "normal_mapping", "lod_generation"],
+          "rules": [
+            "Quadric Error Metrics: keskin köşeleri koru, düz yüzeyleri sadeleştir",
+            "Hedef: poligon sayısını %20'ye düşür, görsel kalite %95 korunsun",
+            "Retopoloji: üçgen → dörtgen (quad) tabanlı yapıya geçiş",
+            "Normal Mapping: High-Poly detayını Low-Poly üzerine 'bake' et",
+            "LOD sistemi: LOD0 (üretim/tam), LOD1 (web/%50), LOD2 (AR/%10)",
+            "Dosya boyutu 10MB altına düşmeli, aksi halde katsayıyı artır"
+          ]
+        },
+        {
+          "id": "format_conversion",
+          "title": "Format Dönüşümü (Export Pipeline)",
+          "skills": ["mesh_to_nurbs", "stl_export", "step_export", "volume_validation"],
+          "rules": [
+            "Mesh → NURBS: B-Rep oluşturma, düzlem/silindir/delik tespiti",
+            "STL: 3D yazıcılar için Binary STL üçgen ağı",
+            "STEP: CNC/kalıpçılık için tüm mühendislik verisi (hacim, yüzey, tolerans)",
+            "Dönüşüm sonrası hacim farkı %0.01'den fazlaysa → HATALI işaretle",
+            "STEP'e metadata göm: malzeme, tolerans, katman yüksekliği",
+            "Kütüphaneler: OpenCASCADE veya FreeCAD API"
+          ]
+        },
+        {
+          "id": "production_ready",
+          "title": "Üretime Hazır Paketi",
+          "skills": ["auto_orientation", "support_calculation", "manifest_generation"],
+          "rules": [
+            "Optimal oryantasyon: en az destek + en yüksek yüzey kalitesi açısı",
+            "Tabla yerleşimi: Bounding Box tablanın merkezine hizalanır",
+            "manifest.json üret: malzeme, doluluk oranı, katman yüksekliği, tahmini süre",
+            "SHA-256 mühür ekle, versiyonla",
+            "Durum: 'Ready for Production' → ustaya push notification"
+          ]
+        }
+      ]
+    },
+
+    "firebase_infrastructure": {
+      "title": "Temel Bağlantılar ve Firebase Altyapısı",
+      "lessons": [
+        {
+          "id": "admin_sdk",
+          "title": "Firebase Admin SDK",
+          "skills": ["service_account_auth", "custom_claims", "jwt_verification"],
+          "rules": [
+            "Admin SDK ile tam yetkili Firestore + Storage erişimi",
+            "Custom Claims: Usta (master:true) ve Müşteri (client:true) rolleri",
+            "Her istekte verifyIdToken ile JWT doğrulama",
+            "serviceAccountKey.json ASLA GitHub'a yüklenmez — .env veya güvenli dizin"
+          ]
+        },
+        {
+          "id": "storage_bucket",
+          "title": "Storage Bucket ve Dosya Yönetimi",
+          "skills": ["resumable_upload", "signed_urls", "metadata_mapping", "lifecycle_management"],
+          "rules": [
+            "Resumable upload: kesintide kaldığı yerden devam",
+            "Signed URL: 15 dakika geçerli indirme linki (V4)",
+            "Metadata: customerID, precision, material, status etiketleri",
+            "Lifecycle: 30 gün sonra tamamlanan ham verileri Archive'a taşı veya sil",
+            "Multi-Region bucket + CDN edge caching"
+          ]
+        },
+        {
+          "id": "firestore_schema",
+          "title": "Firestore Veri Şeması",
+          "skills": ["collection_hierarchy", "realtime_sync", "query_optimization", "offline_persistence"],
+          "rules": [
+            "3 ana koleksiyon: users, projects, production_logs",
+            "Proje: ownerId, masterId, status, engineering_specs, storagePath",
+            "onSnapshot ile anlık senkronizasyon — sadece added/modified dinle",
+            "Dinleyicileri active:true ile sınırla, bitenleri unsubscribe yap",
+            "enablePersistence: offline çalışma, internet gelince otomatik sync",
+            "engineering_specs: unit, material, bounding_box, precision"
+          ]
+        }
+      ]
+    }
+  },
+
+  "fenix_learning_config": {
+    "auto_apply": true,
+    "skill_threshold_for_autonomy": 30,
+    "log_all_decisions": true,
+    "teach_on_startup": true
+  }
+}
