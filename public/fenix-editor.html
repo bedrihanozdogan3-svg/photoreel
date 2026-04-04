@@ -3165,50 +3165,7 @@ function updateRightPanel() {
     ai.innerHTML = `
       <button class="ai-btn" onclick="aiMagicBg()">✂ Arka Plan Sil</button>
       <button class="ai-btn" onclick="openModal('modal-style')">🎨 AI Stil Aktar</button>
-      <button class="ai-btn" onclick="aiUpscale()">⬆ Kalite Artır</button>
-
-      <div style="height:1px;background:#1a1a1a;margin:8px 0;"></div>
-      <div style="font-size:8px;color:#F97316;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">📹 Video Ayarları</div>
-
-      <div class="ctrl-row" style="margin-bottom:4px;">
-        <div class="ctrl-label" style="font-size:9px;width:70px;">Duraklama</div>
-        <div style="display:flex;gap:3px;">
-          ${[1,2,3,4,5].map(s => `<button onclick="_setVideoPause(${s})" id="vp-${s}" class="seg-btn${s===2?' active':''}" style="width:28px;height:22px;border-radius:4px;border:1px solid ${s===2?'#F97316':'#222'};background:${s===2?'rgba(249,115,22,.15)':'#111'};color:${s===2?'#F97316':'#666'};font-size:9px;font-weight:700;cursor:pointer;">${s}s</button>`).join('')}
-        </div>
-      </div>
-
-      <div class="ctrl-row" style="margin-bottom:4px;">
-        <div class="ctrl-label" style="font-size:9px;width:70px;">Marka İsmi</div>
-        <input type="text" id="brand-name-input" placeholder="Şirket / Marka adı" value="${localStorage.getItem('fenix_brand')||''}" onchange="localStorage.setItem('fenix_brand',this.value)" style="flex:1;height:22px;background:#0a0a0a;border:1px solid #222;border-radius:4px;color:#ccc;font-size:9px;padding:0 6px;">
-      </div>
-
-      <div class="ctrl-row" style="margin-bottom:4px;">
-        <div class="ctrl-label" style="font-size:9px;width:70px;">Marka Konum</div>
-        <select id="brand-pos" onchange="localStorage.setItem('fenix_brand_pos',this.value)" style="flex:1;height:22px;background:#0a0a0a;border:1px solid #222;border-radius:4px;color:#888;font-size:9px;">
-          <option value="bottom-left" ${(localStorage.getItem('fenix_brand_pos')||'bottom-left')==='bottom-left'?'selected':''}>Sol Alt</option>
-          <option value="bottom-right" ${localStorage.getItem('fenix_brand_pos')==='bottom-right'?'selected':''}>Sağ Alt</option>
-          <option value="top-left" ${localStorage.getItem('fenix_brand_pos')==='top-left'?'selected':''}>Sol Üst</option>
-          <option value="top-right" ${localStorage.getItem('fenix_brand_pos')==='top-right'?'selected':''}>Sağ Üst</option>
-        </select>
-      </div>
-
-      <div class="ctrl-row" style="margin-bottom:4px;">
-        <div class="ctrl-label" style="font-size:9px;width:70px;">Metin Kancası</div>
-        <input type="text" id="text-hook-input" placeholder="Bunu bilmeden almayın..." value="${localStorage.getItem('fenix_hook')||''}" onchange="localStorage.setItem('fenix_hook',this.value)" style="flex:1;height:22px;background:#0a0a0a;border:1px solid #222;border-radius:4px;color:#ccc;font-size:9px;padding:0 6px;">
-      </div>
-
-      <div class="ctrl-row" style="margin-bottom:4px;">
-        <div class="ctrl-label" style="font-size:9px;width:70px;">Efekt</div>
-        <select id="video-effect-sel" onchange="localStorage.setItem('fenix_effect',this.value)" style="flex:1;height:22px;background:#0a0a0a;border:1px solid #222;border-radius:4px;color:#888;font-size:9px;">
-          <option value="auto">AI Seçsin</option>
-          <option value="none">Efekt Yok</option>
-          <option value="buhar">♨️ Buhar</option>
-          <option value="parlama">✨ Parlama</option>
-          <option value="ken-burns">🎞 Ken Burns</option>
-          <option value="sinematik">🎬 Sinematik</option>
-        </select>
-      </div>
-    `;
+      <button class="ai-btn" onclick="aiUpscale()">⬆ Kalite Artır</button>`;
 
     // Init recent colors
     setTimeout(() => { renderRecentColors(); drawHistogram(); drawRulers(); }, 50);
