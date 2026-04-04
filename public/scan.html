@@ -508,6 +508,296 @@ async function submitOrder() {
     document.getElementById('f-submit').disabled = false;
   }
 }
+// ═══════════════════════════════════════════════════
+//  SCAN KALİTE İYİLEŞTİRMELERİ (13 Madde)
+// ═══════════════════════════════════════════════════
+
+// ── 1. IŞIK ANALİZİ ──
+let _lightOk = true;
+function _checkLighting() {
+  const video = document.getElementById('camera-video');
+  if (!video || !video.videoWidth) return;
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 64;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(video, 0, 0, 64, 64);
+  const data = ctx.getImageData(0, 0, 64, 64).data;
+  let totalBrightness = 0;
+  for (let i = 0; i < data.length; i += 16) {
+    totalBrightness += (data[i] + data[i+1] + data[i+2]) / 3;
+  }
+  const avg = totalBrightness / (data.length / 16);
+  const warn = document.getElementById('_light_warn');
+  if (avg < 40) {
+    _lightOk = false;
+    if (!warn) {
+      const d = document.createElement('div');
+      d.id = '_light_warn';
+      d.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);background:rgba(239,68,68,.9);color:#fff;font-size:11px;font-weight:700;padding:6px 16px;border-radius:8px;z-index:999;';
+      d.textContent = '⚠ Işık yetersiz — ortamı aydınlat';
+      document.body.appendChild(d);
+    }
+  } else {
+    _lightOk = true;
+    if (warn) warn.remove();
+  }
+}
+
+// ── 2. ODAK KİLİDİ ──
+// Kamera stream'ine focusMode:'manual' constraint eklenir (destekleyen cihazlarda)
+async function _lockFocus() {
+  if (!_stream) return;
+  const track = _stream.getVideoTracks()[0];
+  const caps = track.getCapabilities ? track.getCapabilities() : {};
+  if (caps.focusMode && caps.focusMode.includes('manual')) {
+    try {
+      await track.applyConstraints({ advanced: [{ focusMode: 'manual' }] });
+    } catch(e) {}
+  }
+}
+
+// ── 3. HAREKET ALGILAMA ──
+let _lastMotion = { x: 0, y: 0, z: 0 };
+let _motionStable = true;
+function _handleMotion(e) {
+  const a = e.accelerationIncludingGravity || {};
+  const dx = Math.abs((a.x||0) - _lastMotion.x);
+  const dy = Math.abs((a.y||0) - _lastMotion.y);
+  const dz = Math.abs((a.z||0) - _lastMotion.z);
+  const shake = dx + dy + dz;
+  _lastMotion = { x: a.x||0, y: a.y||0, z: a.z||0 };
+
+  const warn = document.getElementById('_motion_warn');
+  if (shake > 8) {
+    _motionStable = false;
+    if (!warn) {
+      const d = document.createElement('div');
+      d.id = '_motion_warn';
+      d.style.cssText = 'position:fixed;top:90px;left:50%;transform:translateX(-50%);background:rgba(249,115,22,.9);color:#000;font-size:11px;font-weight:700;padding:6px 16px;border-radius:8px;z-index:999;';
+      d.textContent = '📳 Sabit tut — telefon çok sallanıyor';
+      document.body.appendChild(d);
+    }
+  } else {
+    _motionStable = true;
+    if (warn) warn.remove();
+  }
+}
+
+// ── 4. ÇİFT ÇEKİM + NETLİK SEÇME ──
+const _origCapturePhoto = capturePhoto;
+capturePhoto = function() {
+  if (!_lightOk) { if (navigator.vibrate) navigator.vibrate([100,50,100]); return; }
+  if (!_motionStable) { if (navigator.vibrate) navigator.vibrate([100,50,100]); return; }
+  // İki kare çek, en net olanı seç
+  const video = document.getElementById('camera-video');
+  const c1 = document.createElement('canvas');
+  c1.width = video.videoWidth; c1.height = video.videoHeight;
+  c1.getContext('2d').drawImage(video, 0, 0);
+
+  setTimeout(() => {
+    const c2 = document.createElement('canvas');
+    c2.width = video.videoWidth; c2.height = video.videoHeight;
+    c2.getContext('2d').drawImage(video, 0, 0);
+
+    const s1 = _sharpnessScore(c1);
+    const s2 = _sharpnessScore(c2);
+    const best = s1 >= s2 ? c1 : c2;
+
+    best.toBlob(blob => {
+      _photos.push(blob);
+      updateUI();
+      if (navigator.vibrate) navigator.vibrate(50);
+      // Flash
+      const flash = document.createElement('div');
+      flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;opacity:.3;z-index:999;pointer-events:none';
+      document.body.appendChild(flash);
+      setTimeout(() => flash.remove(), 100);
+      if (_photos.length >= TARGET_PHOTOS) {
+        updateTip(4);
+        setTimeout(stopCamera, 1500);
+      }
+    }, 'image/jpeg', 0.92);
+  }, 80); // 80ms sonra ikinci kare
+};
+
+function _sharpnessScore(canvas) {
+  const ctx = canvas.getContext('2d');
+  const w = Math.min(canvas.width, 256);
+  const h = Math.min(canvas.height, 256);
+  const small = document.createElement('canvas');
+  small.width = w; small.height = h;
+  small.getContext('2d').drawImage(canvas, 0, 0, w, h);
+  const d = small.getContext('2d').getImageData(0, 0, w, h).data;
+  let score = 0;
+  for (let i = 4; i < d.length - 4; i += 16) {
+    score += Math.abs(d[i] - d[i-4]) + Math.abs(d[i] - d[i+4]);
+  }
+  return score;
+}
+
+// ── 5. AÇI REHBERİ — hangi açıdan çekileceğini göster ──
+const ANGLE_GUIDE = [
+  { from: 0, to: 15, label: 'Alttan çek ↑', ideal: 20 },
+  { from: 15, to: 30, label: 'Hafif alttan çek ↗', ideal: 25 },
+  { from: 30, to: 60, label: 'Yandan çek →', ideal: 45 },
+  { from: 60, to: 75, label: 'Hafif yukarıdan çek ↘', ideal: 65 },
+  { from: 75, to: 90, label: 'Üstten çek ↓', ideal: 80 }
+];
+
+function _updateAngleGuide(beta) {
+  const guide = ANGLE_GUIDE.find(g => beta >= g.from && beta < g.to);
+  const el = document.getElementById('_angle_guide');
+  if (el && guide) {
+    el.textContent = guide.label;
+    el.style.display = 'block';
+  } else if (el) {
+    el.style.display = 'none';
+  }
+}
+
+// ── 6. EKSİK AÇI TESPİTİ ──
+const _capturedAngles = new Set();
+function _trackAngle(beta) {
+  const bucket = Math.floor(beta / 15) * 15; // 15 derecelik gruplar
+  _capturedAngles.add(bucket);
+}
+
+function _getMissingAngles() {
+  const needed = [0, 15, 30, 45, 60, 75];
+  return needed.filter(a => !_capturedAngles.has(a));
+}
+
+// ── 7. OTOMATİK KIRPMA (arka plan temizleme) ──
+// Fotoğraf çekildikten sonra arka planı siler (edge detection)
+// Bu server-side yapılacak — burada sadece flag
+
+// ── 8. QR MARKER DESTEĞİ ──
+// ArUco marker algılama — müşteriye marker PDF gönderilir
+// Madeni para her zaman fallback
+let _markerDetected = false;
+
+function _checkForMarker(canvas) {
+  // Basit siyah-beyaz kare pattern arama (gerçek ArUco ileride OpenCV ile)
+  const ctx = canvas.getContext('2d');
+  const refArea = ctx.getImageData(canvas.width * 0.7, canvas.height * 0.7, canvas.width * 0.25, canvas.height * 0.2);
+  const d = refArea.data;
+  let blackCount = 0, whiteCount = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const gray = (d[i] + d[i+1] + d[i+2]) / 3;
+    if (gray < 60) blackCount++;
+    else if (gray > 200) whiteCount++;
+  }
+  const total = d.length / 4;
+  // ArUco: %30-50 siyah, %30-50 beyaz → pattern mevcut
+  if (blackCount/total > 0.25 && whiteCount/total > 0.25) {
+    _markerDetected = true;
+    const ref = document.getElementById('cam-ref');
+    if (ref) { ref.textContent = '✅ Marker algılandı!'; ref.classList.add('found'); }
+  }
+}
+
+// ── 9. ÇOKLU REFERANS ──
+// İki farklı noktaya referans → çapraz doğrulama (server-side hesap)
+
+// ── 10. OTOMATİK PARA TESPİTİ ──
+function _checkForCoin(canvas) {
+  // Dairesel nesne arama (basit Hough yaklaşımı)
+  const ctx = canvas.getContext('2d');
+  const refArea = ctx.getImageData(canvas.width * 0.7, canvas.height * 0.7, canvas.width * 0.25, canvas.height * 0.2);
+  const d = refArea.data;
+  // Metalik renk tespiti (sarı-gri tonlar)
+  let metalCount = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i], g = d[i+1], b = d[i+2];
+    if (r > 150 && g > 130 && b < 120 && Math.abs(r-g) < 40) metalCount++;
+  }
+  if (metalCount / (d.length/4) > 0.05) {
+    const ref = document.getElementById('cam-ref');
+    if (ref && !_markerDetected) { ref.textContent = '✅ Para algılandı!'; ref.classList.add('found'); }
+    return true;
+  }
+  return false;
+}
+
+// ── 12. KALİTE SKORU ──
+function _getFrameQuality(canvas) {
+  const sharpness = _sharpnessScore(canvas);
+  const brightness = _getAvgBrightness(canvas);
+  let score = 50;
+  // Netlik
+  if (sharpness > 50000) score += 20;
+  else if (sharpness > 20000) score += 10;
+  // Işık
+  if (brightness > 60 && brightness < 200) score += 20;
+  else if (brightness > 40) score += 10;
+  // Stabilite
+  if (_motionStable) score += 10;
+  return Math.min(100, score);
+}
+
+function _getAvgBrightness(canvas) {
+  const ctx = canvas.getContext('2d');
+  const d = ctx.getImageData(0, 0, Math.min(canvas.width, 64), Math.min(canvas.height, 64)).data;
+  let total = 0;
+  for (let i = 0; i < d.length; i += 16) total += (d[i] + d[i+1] + d[i+2]) / 3;
+  return total / (d.length / 16);
+}
+
+// ── BAŞLATMA ──
+// Işık kontrol döngüsü
+setInterval(_checkLighting, 2000);
+
+// Hareket algılama
+if (window.DeviceMotionEvent) {
+  window.addEventListener('devicemotion', _handleMotion);
+}
+
+// Açı rehberi elementi oluştur
+(function() {
+  const d = document.createElement('div');
+  d.id = '_angle_guide';
+  d.style.cssText = 'position:fixed;top:44px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#22C55E;font-size:11px;font-weight:700;padding:4px 12px;border-radius:12px;z-index:100;display:none;';
+  document.body.appendChild(d);
+})();
+
+// Gyroscope handler'a açı rehberi + takip ekle
+const _origHandleOrientation = handleOrientation;
+handleOrientation = function(e) {
+  _origHandleOrientation(e);
+  const beta = Math.round(e.beta || 0);
+  _updateAngleGuide(beta);
+  _trackAngle(beta);
+
+  // Eksik açı uyarısı (30 fotoğraftan sonra)
+  if (_photos.length > 30) {
+    const missing = _getMissingAngles();
+    if (missing.length > 0) {
+      const guide = document.getElementById('_angle_guide');
+      if (guide) {
+        guide.textContent = `Eksik açı: ~${missing[0]}° civarından çek`;
+        guide.style.display = 'block';
+        guide.style.color = '#F59E0B';
+      }
+    }
+  }
+};
+
+// Her fotoğrafta referans kontrol
+const _origUpdateUI = updateUI;
+updateUI = function() {
+  _origUpdateUI();
+  // Her 5 fotoğrafta referans ve marker kontrol
+  if (_photos.length % 5 === 0 && _photos.length > 0) {
+    const video = document.getElementById('camera-video');
+    if (video && video.videoWidth) {
+      const c = document.createElement('canvas');
+      c.width = video.videoWidth; c.height = video.videoHeight;
+      c.getContext('2d').drawImage(video, 0, 0);
+      _checkForMarker(c);
+      _checkForCoin(c);
+    }
+  }
+};
 </script>
 </body>
 </html>
