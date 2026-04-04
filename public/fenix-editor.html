@@ -6795,6 +6795,8 @@ function _ustaRenderOrders(orders) {
         ${o.status === 'printing' ? `<button onclick="_ustaUpdateOrder('${o.orderId}','shipped')" style="flex:1;height:22px;border-radius:4px;background:#A855F7;border:none;color:#fff;font-size:9px;font-weight:700;cursor:pointer">Kargola</button>` : ''}
         ${o.status === 'shipped' ? `<button onclick="_ustaUpdateOrder('${o.orderId}','completed')" style="flex:1;height:22px;border-radius:4px;background:#22C55E;border:none;color:#000;font-size:9px;font-weight:700;cursor:pointer">Tamamla</button>` : ''}
         ${o.scanData?.scanId ? `<button onclick="_ustaLoadModel('${o.scanData.scanId}')" style="flex:1;height:22px;border-radius:4px;background:#F97316;border:none;color:#000;font-size:9px;font-weight:700;cursor:pointer">Canvas'a Yükle</button>` : ''}
+        ${!o.scanData?.scanId && o.fileUrl ? `<button onclick="loadModelFromURL('${o.fileUrl}','${(o.customer?.name||'Sipariş').replace(/'/g,'')}')" style="flex:1;height:22px;border-radius:4px;background:#F97316;border:none;color:#000;font-size:9px;font-weight:700;cursor:pointer">Canvas'a Yükle</button>` : ''}
+        ${!o.scanData?.scanId && !o.fileUrl ? `<button onclick="_ustaLoadOrderDirect('${o.orderId}')" style="flex:1;height:22px;border-radius:4px;background:rgba(249,115,22,.3);border:1px solid #F97316;color:#F97316;font-size:9px;font-weight:700;cursor:pointer">Dosya Yükle</button>` : ''}
       </div>
     </div>
   `).join('');
@@ -6939,6 +6941,29 @@ function loadModelFromURL(url, name) {
       }
     }, (err) => { toast('Model yükleme hatası: ' + err.message, 'err'); });
   }
+}
+
+// Sipariş dosyası yükle — scanData yoksa manuel yükleme
+function _ustaLoadOrderDirect(orderId) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.stl,.obj,.glb,.gltf,.fbx,.3mf';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    toast('Model yükleniyor: ' + file.name, 'info', 2000);
+    // 3D moda geç
+    if (typeof switchMode === 'function') switchMode('3d');
+    if (typeof _init3DScene === 'function') _init3DScene();
+    const drop = document.getElementById('three-drop');
+    const wrap = document.getElementById('three-wrap');
+    if (drop) drop.style.display = 'none';
+    if (wrap) wrap.style.display = 'flex';
+    // File → URL
+    const url = URL.createObjectURL(file);
+    loadModelFromURL(url, file.name);
+  };
+  input.click();
 }
 
 // Alias — eski referanslar için
