@@ -1388,6 +1388,9 @@ function _performLockOn(canvas, edgeDensity, colorVariance) {
   _shutterLocked = false;
   var btn = document.getElementById('cam-capture-btn');
   if (btn) { btn.style.opacity = '1'; btn.style.border = '4px solid #22C55E'; btn.style.pointerEvents = 'auto'; }
+
+  // Dinamik kare analizi — nesne boyutuna göre
+  _analyzeObjectScale();
 }
 
 function _showKeypointFlash() {
@@ -1442,8 +1445,136 @@ function _trackLockedTarget() {
   }
 }
 
+// ════════════════════════════════════════════════════════════
+//  DİNAMİK KARE SİSTEMİ — Nesne boyutuna göre kare sayısı
+// ════════════════════════════════════════════════════════════
+
+var _objectCategory = 'medium'; // micro | medium | large
+var _objectModeBadge = null;
+
+function _analyzeObjectScale() {
+  var video = document.getElementById('camera-video');
+  if (!video || !video.videoWidth) return;
+
+  // Parçanın ekrandaki kapladığı alanı hesapla
+  var c = document.createElement('canvas');
+  c.width = 128; c.height = 96;
+  var ctx = c.getContext('2d');
+  ctx.drawImage(video, 0, 0, 128, 96);
+  var data = ctx.getImageData(0, 0, 128, 96).data;
+
+  // Merkez bölge (parça alanı) vs kenar (arka plan) karşılaştır
+  var centerPixels = 0, totalCenter = 0;
+  var edgePixels = 0, totalEdge = 0;
+
+  for (var y = 0; y < 96; y++) {
+    for (var x = 0; x < 128; x++) {
+      var idx = (y * 128 + x) * 4;
+      var gray = data[idx] * 0.299 + data[idx+1] * 0.587 + data[idx+2] * 0.114;
+      var inCenter = (x > 20 && x < 108 && y > 15 && y < 81);
+
+      if (inCenter) {
+        totalCenter++;
+        // Kenar tespiti — komşu piksellerle fark
+        if (x > 1 && x < 127 && y > 1 && y < 95) {
+          var left = data[((y)*128+(x-1))*4];
+          var diff = Math.abs(gray - (left * 0.299 + data[((y)*128+(x-1))*4+1] * 0.587 + data[((y)*128+(x-1))*4+2] * 0.114));
+          if (diff > 15) centerPixels++;
+        }
+      } else {
+        totalEdge++;
+        edgePixels++;
+      }
+    }
+  }
+
+  // Parçanın ekran yüzdesi
+  var fillRatio = centerPixels / totalCenter;
+
+  // Kategori belirle
+  if (fillRatio < 0.08) {
+    // Parça çok küçük — mikro mod
+    _objectCategory = 'micro';
+    TARGET_PHOTOS = 18;
+  } else if (fillRatio < 0.2) {
+    // Orta segment
+    _objectCategory = 'medium';
+    TARGET_PHOTOS = 35;
+  } else {
+    // Büyük/kompleks
+    _objectCategory = 'large';
+    TARGET_PHOTOS = 70;
+  }
+
+  // LiDAR varsa kare sayısını düşür
+  if (_hasLiDAR) {
+    TARGET_PHOTOS = Math.max(12, Math.round(TARGET_PHOTOS * 0.5));
+  }
+
+  // UI güncelle
+  document.getElementById('photo-target').textContent = TARGET_PHOTOS;
+
+  // Mod badge göster
+  _showObjectModeBadge();
+
+  // Rehber noktalarını yeniden ayarla
+  _updateGuideForCategory();
+}
+
+function _showObjectModeBadge() {
+  if (!_objectModeBadge) {
+    _objectModeBadge = document.createElement('div');
+    _objectModeBadge.id = 'object-mode-badge';
+    _objectModeBadge.style.cssText = 'position:absolute;top:56px;left:12px;background:rgba(0,0,0,.8);border-radius:20px;padding:4px 12px;font-size:10px;font-weight:700;z-index:20;pointer-events:none;transition:all .3s;';
+    var overlay = document.querySelector('.cam-overlay');
+    if (overlay) overlay.appendChild(_objectModeBadge);
+  }
+
+  var labels = {
+    micro: { text: '🔬 MİKRO MOD: ' + TARGET_PHOTOS + ' Kare', color: '#A855F7', border: '#A855F7', tip: 'Küçük nesne — makro odak aktif' },
+    medium: { text: '📦 ORTA MOD: ' + TARGET_PHOTOS + ' Kare', color: '#00c8ff', border: '#00c8ff', tip: 'Standart tarama — iki tur çek' },
+    large: { text: '🏗 BÜYÜK MOD: ' + TARGET_PHOTOS + ' Kare', color: '#F59E0B', border: '#F59E0B', tip: 'Kompleks nesne — üç tur + derinlik' }
+  };
+
+  var l = labels[_objectCategory];
+  _objectModeBadge.textContent = l.text;
+  _objectModeBadge.style.color = l.color;
+  _objectModeBadge.style.border = '1px solid ' + l.border;
+
+  _speak(l.tip);
+}
+
+function _updateGuideForCategory() {
+  // Rehber balonlarını kategoriye göre güncelle
+  if (_objectCategory === 'micro') {
+    TIPS[0] = 'Küçük nesne algılandı. Yakından, makro modda çek.';
+    TIPS[1] = 'Yavaşça etrafında dön. Tek tur yeterli.';
+    TIPS[2] = 'Şimdi hafif yukarıdan bak.';
+    TIPS[3] = 'Son birkaç kare! Detaylara odaklan.';
+    TIPS[4] = 'Mükemmel! Mikro tarama tamamlandı.';
+  } else if (_objectCategory === 'large') {
+    TIPS[0] = 'Büyük nesne! Önce alt seviyeden tam tur at.';
+    TIPS[1] = 'Alt tur tamam. Şimdi göz hizasından çek.';
+    TIPS[2] = 'Üst açıdan tam tur at.';
+    TIPS[3] = 'İç bükey alanları ve detayları çek.';
+    TIPS[4] = 'Harika! Büyük nesne taraması tamamlandı.';
+  }
+  // medium varsayılan rehber kullanır
+
+  // Macro focus uyarısı (mikro mod)
+  if (_objectCategory === 'micro') {
+    var macroTip = document.getElementById('macro-focus-tip');
+    if (!macroTip) {
+      macroTip = document.createElement('div');
+      macroTip.id = 'macro-focus-tip';
+      macroTip.style.cssText = 'position:absolute;bottom:140px;left:50%;transform:translateX(-50%);background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.4);border-radius:8px;padding:6px 14px;font-size:11px;color:#A855F7;font-weight:700;z-index:20;pointer-events:none;text-align:center;';
+      macroTip.innerHTML = '🔬 MAKRO ODAK — Telefonu parçaya 10-15cm yaklaştır';
+      var overlay = document.querySelector('.cam-overlay');
+      if (overlay) overlay.appendChild(macroTip);
+    }
+  }
+}
+
 </script>
-</body>
-</html>
 </body>
 </html>
