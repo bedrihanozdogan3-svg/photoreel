@@ -98,29 +98,94 @@ body{background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Se
   <div id="guide-device" style="background:#1a1a2a;border-radius:10px;padding:10px 12px;margin-bottom:12px;border-left:3px solid #38BDF8">
     <div style="font-size:11px;color:#38BDF8;font-weight:700">📱 CİHAZ TESPİTİ</div>
     <div id="guide-device-text" style="font-size:12px;color:#ccc;margin-top:4px">Cihaz algılanıyor...</div>
+    <div id="guide-device-extra" style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+      <div id="guide-storage" style="display:flex;align-items:center;gap:4px;background:#111;border-radius:6px;padding:4px 8px;font-size:10px;color:#666"><span style="color:#38BDF8">💾</span> Depolama: <span id="guide-storage-val" style="color:#22C55E">Kontrol ediliyor...</span></div>
+      <div id="guide-battery" style="display:flex;align-items:center;gap:4px;background:#111;border-radius:6px;padding:4px 8px;font-size:10px;color:#666"><span style="color:#F59E0B">🔋</span> Şarj: <span id="guide-battery-val" style="color:#22C55E">Kontrol ediliyor...</span></div>
+    </div>
   </div>
 
   <div style="background:#1a1a2a;border-radius:10px;padding:10px 12px;margin-bottom:8px;border-left:3px solid #F59E0B">
-    <div style="font-size:11px;color:#F59E0B;font-weight:700">💡 1. Işığı Ayarla</div>
-    <div style="font-size:12px;color:#ccc;margin-top:4px">Parçayı gölgede veya odanın ışıklarını tam açarak çek. Sert ışık ve parlama olmasın.</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:36px;height:36px;border-radius:8px;background:#1a1a15;border:1px solid rgba(245,158,11,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="1.5"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#F59E0B;font-weight:700">1. Işığı Ayarla</div>
+        <div style="font-size:12px;color:#ccc;margin-top:2px">Parçayı gölgede veya odanın ışıklarını tam açarak çek.</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <div style="flex:1;background:#1a0a0a;border:1px solid rgba(239,68,68,.2);border-radius:6px;padding:6px;text-align:center"><div style="font-size:18px">🌑</div><div style="font-size:9px;color:#ef4444;font-weight:700;margin-top:2px">YANLIŞ</div><div style="font-size:8px;color:#888">Sert gölge</div></div>
+      <div style="flex:1;background:#0a1a0a;border:1px solid rgba(34,197,94,.2);border-radius:6px;padding:6px;text-align:center"><div style="font-size:18px">☀️</div><div style="font-size:9px;color:#22C55E;font-weight:700;margin-top:2px">DOĞRU</div><div style="font-size:8px;color:#888">Yumuşak ışık</div></div>
+    </div>
   </div>
 
   <div style="background:#1a1a2a;border-radius:10px;padding:10px 12px;margin-bottom:8px;border-left:3px solid #22C55E">
-    <div style="font-size:11px;color:#22C55E;font-weight:700">📏 2. Referans Koy</div>
-    <div style="font-size:12px;color:#ccc;margin-top:4px">Parçanın yanına <b style="color:#fff">1 TL</b> veya <b style="color:#fff">banka kartı</b> koy. Fenix bunu görünce boyutu otomatik hesaplar.</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:36px;height:36px;border-radius:8px;background:#0a1a15;border:1px solid rgba(34,197,94,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22C55E" stroke-width="1.5"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h4M6 14h8"/></svg>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#22C55E;font-weight:700">2. Referans Koy</div>
+        <div style="font-size:12px;color:#ccc;margin-top:2px">Parçanın yanına <b style="color:#fff">1 TL</b> veya <b style="color:#fff">banka kartı</b> koy.</div>
+      </div>
+    </div>
+    <div style="background:#111;border-radius:6px;padding:8px;margin-top:8px;text-align:center">
+      <div style="display:flex;align-items:center;justify-content:center;gap:12px">
+        <div style="width:50px;height:50px;border-radius:50%;border:2px dashed rgba(34,197,94,.4);display:flex;align-items:center;justify-content:center;font-size:9px;color:#22C55E;font-weight:700">PARÇA</div>
+        <div style="font-size:16px;color:#444">←</div>
+        <div style="display:flex;flex-direction:column;gap:4px;align-items:center">
+          <div style="width:44px;height:28px;border-radius:4px;border:1px solid rgba(34,197,94,.5);display:flex;align-items:center;justify-content:center;font-size:7px;color:#22C55E">KART</div>
+          <div style="font-size:8px;color:#666">veya</div>
+          <div style="width:22px;height:22px;border-radius:50%;border:1px solid rgba(34,197,94,.5);display:flex;align-items:center;justify-content:center;font-size:7px;color:#22C55E">1₺</div>
+        </div>
+      </div>
+      <div style="font-size:8px;color:#666;margin-top:4px">Referansı parçanın hemen yanına koy</div>
+    </div>
   </div>
 
   <div style="background:#1a1a2a;border-radius:10px;padding:10px 12px;margin-bottom:8px;border-left:3px solid #A855F7">
-    <div style="font-size:11px;color:#A855F7;font-weight:700">🔄 3. Etrafında Dön</div>
-    <div style="font-size:12px;color:#ccc;margin-top:4px">Parça sabit dursun, <b style="color:#fff">sen etrafında dön</b>. Yukarıdan 15, karşıdan 15 fotoğraf çek. Her fotoğraf öncekiyle örtüşsün.</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:36px;height:36px;border-radius:8px;background:#1a0a2a;border:1px solid rgba(168,85,247,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="1.5"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/><path d="M12 8v4l2 2"/><path d="M16 3l2 2M8 3L6 5"/></svg>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#A855F7;font-weight:700">3. Etrafında Dön</div>
+        <div style="font-size:12px;color:#ccc;margin-top:2px">Parça sabit dursun, <b style="color:#fff">sen etrafında dön</b>. Her fotoğraf öncekiyle örtüşsün.</div>
+      </div>
+    </div>
+    <div style="background:#111;border-radius:6px;padding:8px;margin-top:8px;text-align:center">
+      <div style="position:relative;width:80px;height:80px;margin:0 auto">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:24px;height:24px;background:rgba(168,85,247,.2);border:1px solid rgba(168,85,247,.4);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:8px;color:#A855F7">OBJ</div>
+        <svg width="80" height="80" viewBox="0 0 80 80" style="position:absolute;top:0;left:0"><circle cx="40" cy="40" r="30" fill="none" stroke="rgba(168,85,247,.2)" stroke-width="1" stroke-dasharray="4 3"/><circle cx="40" cy="10" r="4" fill="#A855F7" opacity=".8"/></svg>
+      </div>
+      <div style="font-size:8px;color:#A855F7;margin-top:4px">Üstten 15 + karşıdan 15 = 30 fotoğraf</div>
+    </div>
+  </div>
+
+  <div style="background:#1a1a2a;border-radius:10px;padding:10px 12px;margin-bottom:8px;border-left:3px solid #00c8ff">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:36px;height:36px;border-radius:8px;background:#0a1520;border:1px solid rgba(0,200,255,.3);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00c8ff" stroke-width="1.5"><circle cx="12" cy="12" r="3"/><path d="M12 5V3M12 21v-2M5 12H3M21 12h-2"/></svg>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#00c8ff;font-weight:700">4. Odakla</div>
+        <div style="font-size:12px;color:#ccc;margin-top:2px">Her karede parçaya odaklan. <b style="color:#ef4444">Bulanık fotoğraf = bozuk model.</b></div>
+      </div>
+    </div>
   </div>
 
   <div style="background:#1a1a2a;border-radius:10px;padding:10px 12px;margin-bottom:16px;border-left:3px solid #ef4444">
     <div style="font-size:11px;color:#ef4444;font-weight:700">🚫 Yapma!</div>
     <div style="font-size:12px;color:#ccc;margin-top:4px">
       ❌ Parçayı eline alıp çevirme<br>
-      ❌ Şeffaf/parlak yüzey varsa bebek pudrası serp
+      ❌ Şeffaf/parlak yüzey varsa bebek pudrası serp<br>
+      ❌ Bulanık (blur) çekim yapma — her kare net olsun
     </div>
+  </div>
+
+  <div style="text-align:center;margin-bottom:8px">
+    <div style="font-size:11px;color:#888">⏳ Tahmini süre: <b style="color:#F97316">3 — 5 dakika</b></div>
   </div>
 
   <button onclick="showScreen('s-camera');startCamera()" style="width:100%;height:52px;border-radius:12px;background:linear-gradient(135deg,#F97316,#ea580c);border:none;color:#fff;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:.5px">TARAMAYA BAŞLA 📸</button>
@@ -462,6 +527,38 @@ function _detectDevice() {
   } else {
     box.style.borderColor = '#F59E0B';
     el.innerHTML = `<b style="color:#F59E0B">${deviceName}</b> — Fotoğraf modu<br><span style="font-size:10px;color:#888">45 fotoğraf çekilerek 3D model oluşturulacak.</span>`;
+  }
+
+  // Depolama kontrolü
+  if (navigator.storage && navigator.storage.estimate) {
+    navigator.storage.estimate().then(function(est) {
+      var free = est.quota - est.usage;
+      var freeMB = Math.round(free / 1024 / 1024);
+      var storEl = document.getElementById('guide-storage-val');
+      if (storEl) {
+        if (freeMB > 500) { storEl.textContent = freeMB + ' MB boş ✓'; storEl.style.color = '#22C55E'; }
+        else if (freeMB > 100) { storEl.textContent = freeMB + ' MB — Yeterli'; storEl.style.color = '#F59E0B'; }
+        else { storEl.textContent = freeMB + ' MB — Az!'; storEl.style.color = '#ef4444'; }
+      }
+    });
+  } else {
+    var storEl = document.getElementById('guide-storage-val');
+    if (storEl) { storEl.textContent = 'Kontrol edilemedi'; storEl.style.color = '#888'; }
+  }
+
+  // Şarj kontrolü
+  if (navigator.getBattery) {
+    navigator.getBattery().then(function(bat) {
+      var pct = Math.round(bat.level * 100);
+      var batEl = document.getElementById('guide-battery-val');
+      if (batEl) {
+        if (pct > 20) { batEl.textContent = '%' + pct + ' ✓'; batEl.style.color = '#22C55E'; }
+        else { batEl.textContent = '%' + pct + ' — Şarj et!'; batEl.style.color = '#ef4444'; }
+      }
+    });
+  } else {
+    var batEl = document.getElementById('guide-battery-val');
+    if (batEl) { batEl.textContent = 'Kontrol edilemedi'; batEl.style.color = '#888'; }
   }
 }
 
