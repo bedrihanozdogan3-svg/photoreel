@@ -903,6 +903,316 @@ updateUI = function() {
     }
   }
 };
+
+// ════════════════════════════════════════════════════════════
+//  AKILLI DENETÇİ SİSTEMİ — Object Tracking, Blur Detection,
+//  Light Sensor, Shutter Lock, Sesli Rehberlik
+// ════════════════════════════════════════════════════════════
+
+// ── 1. Object Tracking — Parça kadraj kontrolü ──
+var _trackingActive = false;
+var _trackingLost = false;
+var _trackingCanvas = null;
+var _prevFrame = null;
+
+function _initObjectTracking() {
+  _trackingActive = true;
+  _trackingLost = false;
+  // Tracking overlay
+  var overlay = document.getElementById('tracking-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'tracking-overlay';
+    overlay.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(239,68,68,.15);z-index:100;pointer-events:none;transition:opacity .3s;';
+    overlay.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;"><div style="font-size:48px">⚠️</div><div style="font-size:18px;font-weight:900;color:#ef4444;text-shadow:0 0 10px rgba(239,68,68,.5);">PARÇA KAYBEDİLDİ!</div><div style="font-size:13px;color:#fff;margin-top:4px;">Merkeze dön</div></div>';
+    document.body.appendChild(overlay);
+  }
+
+  // Neon çerçeve
+  var frame = document.querySelector('.cam-frame');
+  if (frame) {
+    frame.style.border = '2px solid rgba(0,255,136,.6)';
+    frame.style.boxShadow = '0 0 20px rgba(0,255,136,.2), inset 0 0 20px rgba(0,255,136,.05)';
+  }
+}
+
+function _checkObjectInFrame() {
+  if (!_trackingActive) return;
+  var video = document.getElementById('camera-video');
+  if (!video || !video.videoWidth) return;
+
+  // Basit hareket/varlık tespiti — merkez bölgenin parlaklığı
+  if (!_trackingCanvas) { _trackingCanvas = document.createElement('canvas'); _trackingCanvas.width = 64; _trackingCanvas.height = 48; }
+  var ctx = _trackingCanvas.getContext('2d');
+  var cx = video.videoWidth * 0.25, cy = video.videoHeight * 0.2;
+  var cw = video.videoWidth * 0.5, ch = video.videoHeight * 0.6;
+  ctx.drawImage(video, cx, cy, cw, ch, 0, 0, 64, 48);
+  var data = ctx.getImageData(0, 0, 64, 48).data;
+
+  // Merkez bölge varyansı hesapla
+  var sum = 0, sq = 0, n = data.length / 4;
+  for (var i = 0; i < data.length; i += 4) {
+    var gray = data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
+    sum += gray; sq += gray * gray;
+  }
+  var mean = sum / n;
+  var variance = (sq / n) - (mean * mean);
+
+  // Düşük varyans = boş/düz alan = parça yok
+  var overlay = document.getElementById('tracking-overlay');
+  if (variance < 200) {
+    if (!_trackingLost) {
+      _trackingLost = true;
+      if (overlay) overlay.style.display = 'block';
+      _speak('Parça kaybedildi! Merkeze dön.');
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    }
+  } else {
+    if (_trackingLost) {
+      _trackingLost = false;
+      if (overlay) overlay.style.display = 'none';
+    }
+  }
+}
+
+// ── 2. Blur Detection — Netlik testi ──
+function _detectBlur(canvas) {
+  if (!canvas) return { sharp: true, score: 100 };
+  var ctx = canvas.getContext('2d');
+  var w = Math.min(canvas.width, 320);
+  var h = Math.min(canvas.height, 240);
+
+  // Küçült
+  var small = document.createElement('canvas');
+  small.width = w; small.height = h;
+  small.getContext('2d').drawImage(canvas, 0, 0, w, h);
+  var data = small.getContext('2d').getImageData(0, 0, w, h).data;
+
+  // Laplacian varyansı — kenar keskinliği
+  var gray = new Float32Array(w * h);
+  for (var i = 0; i < gray.length; i++) {
+    gray[i] = data[i*4] * 0.299 + data[i*4+1] * 0.587 + data[i*4+2] * 0.114;
+  }
+
+  var lap = 0;
+  for (var y = 1; y < h - 1; y++) {
+    for (var x = 1; x < w - 1; x++) {
+      var idx = y * w + x;
+      var val = -4 * gray[idx] + gray[idx-1] + gray[idx+1] + gray[idx-w] + gray[idx+w];
+      lap += val * val;
+    }
+  }
+  var score = lap / ((w-2) * (h-2));
+  var sharp = score > 50; // eşik değer
+
+  return { sharp: sharp, score: Math.round(score) };
+}
+
+// ── 3. Light Sensor — Işık ölçümü ──
+var _lightLevel = -1;
+var _flashForced = false;
+
+function _initLightSensor() {
+  // Ambient Light Sensor API
+  if ('AmbientLightSensor' in window) {
+    try {
+      var sensor = new AmbientLightSensor();
+      sensor.addEventListener('reading', function() {
+        _lightLevel = sensor.illuminance;
+        _checkLight();
+      });
+      sensor.start();
+    } catch(e) { /* izin yok */ }
+  }
+  // Fallback: video frame'den parlaklık ölç
+  setInterval(_measureLightFromVideo, 2000);
+}
+
+function _measureLightFromVideo() {
+  var video = document.getElementById('camera-video');
+  if (!video || !video.videoWidth || _lightLevel >= 0) return;
+  var c = document.createElement('canvas');
+  c.width = 32; c.height = 24;
+  c.getContext('2d').drawImage(video, 0, 0, 32, 24);
+  var data = c.getContext('2d').getImageData(0, 0, 32, 24).data;
+  var sum = 0;
+  for (var i = 0; i < data.length; i += 4) {
+    sum += data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
+  }
+  _lightLevel = sum / (32 * 24); // 0-255 arası
+  _checkLight();
+}
+
+function _checkLight() {
+  var lightInfo = document.getElementById('cam-light-badge');
+  if (!lightInfo) {
+    lightInfo = document.createElement('div');
+    lightInfo.id = 'cam-light-badge';
+    lightInfo.style.cssText = 'position:absolute;top:56px;right:12px;background:rgba(0,0,0,.7);padding:4px 10px;border-radius:12px;font-size:10px;z-index:20;pointer-events:none;';
+    var overlay = document.querySelector('.cam-overlay');
+    if (overlay) overlay.appendChild(lightInfo);
+  }
+
+  var lux = _lightLevel;
+  if (lux < 50) {
+    lightInfo.innerHTML = '<span style="color:#ef4444">☀ Işık Düşük!</span>';
+    // Flaş önerisi
+    if (!_flashForced) {
+      _flashForced = true;
+      _enableFlash();
+      _speak('Işık yetersiz, flaş açıldı.');
+    }
+  } else if (lux < 100) {
+    lightInfo.innerHTML = '<span style="color:#F59E0B">☀ Işık Orta</span>';
+  } else {
+    lightInfo.innerHTML = '<span style="color:#22C55E">☀ Işık İyi</span>';
+    _flashForced = false;
+  }
+}
+
+function _enableFlash() {
+  if (!_stream) return;
+  var track = _stream.getVideoTracks()[0];
+  if (track && track.getCapabilities && track.getCapabilities().torch) {
+    track.applyConstraints({ advanced: [{ torch: true }] }).catch(function(){});
+  }
+}
+
+// ── 4. Shutter Lock — Açı kilit sistemi ──
+var _shutterLocked = true;
+var _targetAngle = 45;
+var _angleTolerance = 8;
+var _currentBeta = 0;
+
+function _updateShutterLock(beta) {
+  _currentBeta = beta;
+  var diff = Math.abs(beta - _targetAngle);
+  var wasLocked = _shutterLocked;
+  _shutterLocked = diff > _angleTolerance;
+
+  var btn = document.getElementById('cam-capture-btn');
+  if (!btn) return;
+
+  if (_shutterLocked) {
+    btn.style.opacity = '0.3';
+    btn.style.border = '4px solid #ef4444';
+    btn.style.pointerEvents = 'none';
+  } else {
+    btn.style.opacity = '1';
+    btn.style.border = '4px solid #22C55E';
+    btn.style.pointerEvents = 'auto';
+    if (wasLocked) {
+      _speak('Kilitlendi! Çek.');
+      if (navigator.vibrate) navigator.vibrate(100);
+    }
+  }
+
+  // Ghost box — hedef açı göstergesi
+  var ghost = document.getElementById('ghost-angle-box');
+  if (!ghost) {
+    ghost = document.createElement('div');
+    ghost.id = 'ghost-angle-box';
+    ghost.style.cssText = 'position:absolute;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);border:2px solid rgba(0,200,255,.3);border-radius:8px;padding:4px 12px;font-size:11px;z-index:20;pointer-events:none;font-family:monospace;text-align:center;';
+    var overlay = document.querySelector('.cam-overlay');
+    if (overlay) overlay.appendChild(ghost);
+  }
+  ghost.innerHTML = _shutterLocked
+    ? '<span style="color:#ef4444">🎯 ' + Math.round(beta) + '° → ' + _targetAngle + '° gerekli</span>'
+    : '<span style="color:#22C55E">🎯 ' + Math.round(beta) + '° — KİLİTLENDİ ✓</span>';
+}
+
+// Açı hedefini fotoğraf sayısına göre güncelle
+function _updateTargetAngle() {
+  var count = _photos.length;
+  if (count < 15) _targetAngle = 30 + (count * 2); // Alt tur: 30-60°
+  else if (count < 30) _targetAngle = 60 + ((count - 15) * 2); // Üst tur: 60-90°
+  else _targetAngle = 45; // Son tur: orta
+  _angleTolerance = 8;
+}
+
+// ── 5. Sesli Rehberlik ──
+var _speechEnabled = true;
+var _lastSpoke = 0;
+
+function _speak(text) {
+  if (!_speechEnabled || !window.speechSynthesis) return;
+  if (Date.now() - _lastSpoke < 3000) return; // 3 sn spam engeli
+  _lastSpoke = Date.now();
+  var u = new SpeechSynthesisUtterance(text);
+  u.lang = 'tr-TR';
+  u.rate = 1.1;
+  u.pitch = 0.9;
+  speechSynthesis.speak(u);
+}
+
+// ── 6. capturePhoto'yu akıllı denetçi ile sar ──
+var _origCapture = capturePhoto;
+capturePhoto = function() {
+  // Shutter lock kontrolü
+  if (_shutterLocked) {
+    _speak(_targetAngle + ' dereceye gel.');
+    if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+    return;
+  }
+
+  // Tracking kontrolü
+  if (_trackingLost) {
+    _speak('Parçayı merkeze getir.');
+    return;
+  }
+
+  // Fotoğrafı çek
+  var video = document.getElementById('camera-video');
+  var canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+
+  // Blur detection
+  var blur = _detectBlur(canvas);
+  if (!blur.sharp) {
+    _speak('Bulanık! Tekrar odakla.');
+    // Kırmızı flash
+    var flash = document.createElement('div');
+    flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(239,68,68,.2);z-index:999;pointer-events:none';
+    document.body.appendChild(flash);
+    setTimeout(function() { flash.remove(); }, 300);
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    return; // Fotoğrafı KAYDETME
+  }
+
+  // Geçti — orijinal fonksiyonu çağır
+  _updateTargetAngle();
+  _origCapture();
+
+  // Sesli onay
+  var remaining = TARGET_PHOTOS - _photos.length;
+  if (remaining > 0 && remaining % 5 === 0) {
+    _speak(remaining + ' kare kaldı.');
+  } else if (remaining === 0) {
+    _speak('Tarama tamamlandı!');
+  }
+};
+
+// ── 7. Gyroscope'u shutter lock'a bağla ──
+var _origOrientation = handleOrientation;
+handleOrientation = function(e) {
+  _origOrientation(e);
+  _updateShutterLock(Math.round(e.beta || 0));
+};
+
+// ── 8. Tracking loop başlat ──
+var _origStartCamera = startCamera;
+startCamera = async function() {
+  await _origStartCamera();
+  _initObjectTracking();
+  _initLightSensor();
+  _updateTargetAngle();
+  _speak('Tarama başlıyor. Parçayı merkeze al.');
+  // Tracking loop
+  setInterval(_checkObjectInFrame, 500);
+};
+
 </script>
 </body>
 </html>
