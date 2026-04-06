@@ -7032,14 +7032,28 @@ function _driveRender(files) {
     const icon = f.type === 'photo' ? '🖼' : f.type === 'video' ? '🎬' : f.type === '3d-model' ? '🧊' : '📄';
     const size = f.size > 1048576 ? (f.size/1048576).toFixed(1)+'MB' : (f.size/1024).toFixed(0)+'KB';
     const date = new Date(f.uploadedAt).toLocaleDateString('tr-TR');
-    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#111;border-radius:6px;border:1px solid #222;cursor:pointer"
-                onclick="_driveUseFile('${f.fileId}')" title="${f.name}">
-      <span style="font-size:16px">${icon}</span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:11px;color:#eee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
-        <div style="font-size:9px;color:#666">${size} · ${date}</div>
+    // Akıllı etiket
+    const nm = (f.name || '').toLowerCase();
+    const tag = f.type === '3d-model' ? (nm.includes('figur') || nm.includes('figür') ? 'Figür' : nm.includes('araba') || nm.includes('car') || nm.includes('mercedes') ? 'Araba' : 'Parça') : f.type === 'photo' ? 'Fotoğraf' : f.type === 'video' ? 'Video' : 'Dosya';
+    const tagColor = tag === 'Araba' ? '#3b82f6' : tag === 'Figür' ? '#a855f7' : tag === 'Parça' ? '#00c8ff' : '#F97316';
+    // 3D Thumbnail (mini canvas ön izleme)
+    const thumbBg = f.type === '3d-model' ? 'linear-gradient(135deg,#0a1628,#0d2847)' : f.thumbnailUrl ? `url(${f.thumbnailUrl}) center/cover` : 'linear-gradient(135deg,#1a1a2e,#16213e)';
+    const thumbIcon = f.type === '3d-model' ? '<div style="font-size:20px;opacity:.7;">🧊</div><div style="font-size:7px;color:#00c8ff;margin-top:2px;">3D</div>' : f.type === 'photo' ? '<div style="font-size:20px;">🖼</div>' : f.type === 'video' ? '<div style="font-size:20px;">🎬</div>' : '<div style="font-size:20px;">📄</div>';
+    return `<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#0a0a15;border-radius:8px;border:1px solid #1a1a2e;cursor:pointer;transition:border-color .2s" onmouseenter="this.style.borderColor='${tagColor}40'" onmouseleave="this.style.borderColor='#1a1a2e'">
+      <div style="width:44px;height:44px;border-radius:6px;background:${thumbBg};display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;border:1px solid #222">${thumbIcon}</div>
+      <div style="flex:1;min-width:0" onclick="_driveUseFile('${f.fileId}')">
+        <div style="font-size:11px;color:#eee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600">${f.name}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
+          <span style="font-size:7px;padding:1px 5px;border-radius:3px;background:${tagColor}15;color:${tagColor};border:1px solid ${tagColor}30;font-weight:700;letter-spacing:.5px">${tag}</span>
+          <span style="font-size:8px;color:#555">${size}</span>
+          <span style="font-size:8px;color:#444">${date}</span>
+        </div>
       </div>
-      <button onclick="event.stopPropagation();_driveDelete('${f.fileId}')" style="background:none;border:none;color:#555;cursor:pointer;font-size:12px" title="Sil">🗑</button>
+      <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0">
+        <button onclick="event.stopPropagation();_driveUseFile('${f.fileId}')" style="width:24px;height:24px;border-radius:4px;background:rgba(0,200,255,.08);border:1px solid rgba(0,200,255,.2);color:#00c8ff;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center" title="Görüntüle">👁</button>
+        ${f.type === '3d-model' ? `<button onclick="event.stopPropagation();_driveFireToProduction('${f.fileId}')" style="width:24px;height:24px;border-radius:4px;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.3);color:#F97316;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center" title="Üretime Ateşle">🔥</button>` : ''}
+        <button onclick="event.stopPropagation();_driveDelete('${f.fileId}')" style="width:24px;height:24px;border-radius:4px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.15);color:#ef4444;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center" title="Sil">🗑</button>
+      </div>
     </div>`;
   }).join('');
 }
@@ -7096,6 +7110,17 @@ function _driveSearch(q) {
 }
 
 function _driveFilter(type) { _driveLoadFiles(type || undefined); }
+
+function _driveFireToProduction(fileId) {
+  const f = _driveFiles.find(x => x.fileId === fileId);
+  if (!f || !f.url) return toast('Dosya bulunamadı', 'err');
+  closeSlidePanel();
+  switchMode('uretim');
+  setTimeout(() => {
+    loadModelFromURL(f.url, f.name);
+    toast('🔥 ' + f.name + ' üretime gönderildi!', 'ok', 3000);
+  }, 300);
+}
 
 function _driveUseFile(fileId) {
   const f = _driveFiles.find(x => x.fileId === fileId);
