@@ -7395,12 +7395,17 @@ async function _ustaLoadModel(scanId) {
       loadModelFromURL(scan.modelUrl, scan.name || 'Müşteri Taraması');
     } else if (scan.status === 'reconstructing' || scan.status === 'downloading' || scan.status === 'optimizing' || scan.status === 'uploading') {
       _showReconProgress(scanId, scan.status);
-    } else if (scan.photos && scan.photos.length >= 3) {
-      // Model yok ama fotoğraflar var — reconstruction başlat
+    } else if (scan.photos && scan.photos.length >= 3 && scan.status !== 'processing') {
+      // Model yok ama fotoğraflar var VE henüz işlem başlamamış — reconstruction başlat
       try {
-        await fetch(`/api/scans/${scanId}/reconstruct`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const reconR = await fetch(`/api/scans/${scanId}/reconstruct`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+        const reconD = await reconR.json();
+        if (!reconD.ok) throw new Error(reconD.error || 'Bilinmeyen hata');
         _showReconProgress(scanId, 'queued');
       } catch(re) { toast('Reconstruction hatası: ' + re.message, 'err'); }
+    } else if (scan.photos && scan.photos.length >= 3) {
+      // Zaten işlemde — sadece progress göster
+      _showReconProgress(scanId, scan.status || 'processing');
     } else {
       toast('Fotoğraflar henüz yüklenmemiş', 'err', 3000);
     }
@@ -7456,14 +7461,33 @@ function _showReconProgress(scanId, initialStatus) {
 
   renderStatus(initialStatus);
 
-  // 2 dakika timeout — takılı kalırsa otomatik kapat
+  // 5 dakika timeout — GPU reconstruction süresi için yeterli
   setTimeout(() => {
     if (document.getElementById('recon-overlay')) {
       if (_reconInterval) { clearInterval(_reconInterval); _reconInterval = null; }
       const ov = document.getElementById('recon-overlay');
       if (ov) { ov.remove(); toast('Model üretimi zaman aşımına uğradı. Tekrar deneyin.', 'err', 5000); }
     }
-  }, 120000);
+  }, 300000);
+
+  // Socket ile anında model teslimi (polling'e güvenmek yerine)
+  if (window._gsyncSocket) {
+    const _reconSocketHandler = (data) => {
+      if (data.scanId === scanId && data.modelUrl) {
+        if (_reconInterval) { clearInterval(_reconInterval); _reconInterval = null; }
+        renderStatus('completed', 100);
+        setTimeout(() => {
+          const ov = document.getElementById('recon-overlay');
+          if (ov) ov.remove();
+          if (typeof _showBlueBeam === 'function') _showBlueBeam();
+          loadModelFromURL(data.modelUrl, 'Müşteri Taraması');
+          _ustaLoadPanel();
+        }, 1000);
+        window._gsyncSocket.off('order:model-ready', _reconSocketHandler);
+      }
+    };
+    window._gsyncSocket.on('order:model-ready', _reconSocketHandler);
+  }
 
   // Polling — her 4 saniyede scan durumunu kontrol et
   if (_reconInterval) clearInterval(_reconInterval);
