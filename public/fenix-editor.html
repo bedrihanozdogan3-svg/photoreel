@@ -879,6 +879,28 @@
     0%,100% { opacity:1; box-shadow:0 0 6px #00c8ff; }
     50%     { opacity:.4; box-shadow:0 0 2px #00c8ff; }
   }
+  /* Sağlık barı %90+ parlayan glow */
+  @keyframes healthGlow90 {
+    0%,100% { box-shadow: 0 0 4px #00ff88, 0 0 12px rgba(0,255,136,.3); }
+    50%     { box-shadow: 0 0 8px #00ff88, 0 0 24px rgba(0,255,136,.5); }
+  }
+  .health-glow-90 { animation: healthGlow90 2s ease-in-out infinite; }
+  /* Veri waveform animasyonu */
+  @keyframes miniWave {
+    0%   { transform: scaleY(.3); }
+    50%  { transform: scaleY(1); }
+    100% { transform: scaleY(.3); }
+  }
+  .data-waveform {
+    display: inline-flex; gap: 1px; align-items: center; height: 10px;
+  }
+  .data-waveform span {
+    width: 2px; height: 8px; background: #00c8ff; border-radius: 1px;
+    animation: miniWave .6s ease-in-out infinite;
+  }
+  .data-waveform span:nth-child(2) { animation-delay: .1s; }
+  .data-waveform span:nth-child(3) { animation-delay: .2s; }
+  .data-waveform span:nth-child(4) { animation-delay: .3s; }
   .layer-tabs { display: flex; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--border); }
   .ltab {
     flex: 1; height: 26px; border-radius: 5px; border: none;
@@ -2520,8 +2542,8 @@
           <div class="data-flow-bar" style="margin-bottom:6px;opacity:.6;"></div>
           <!-- Veriler -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:8px;font-family:'JetBrains Mono',monospace;">
-            <div style="color:rgba(0,200,255,.4);">Vertices</div><div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;"><span id="eng-vertices" style="color:#00c8ff;">—</span><span id="eng-v-tick" style="font-size:7px;">⏳</span></div>
-            <div style="color:rgba(0,200,255,.4);">Faces</div><div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;"><span id="eng-faces" style="color:#00c8ff;">—</span><span id="eng-f-tick" style="font-size:7px;">⏳</span></div>
+            <div style="color:rgba(0,200,255,.4);">Vertices</div><div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;"><span id="eng-vertices" style="color:#00c8ff;">—</span><span id="eng-v-tick" class="data-waveform"><span></span><span></span><span></span><span></span></span></div>
+            <div style="color:rgba(0,200,255,.4);">Faces</div><div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;"><span id="eng-faces" style="color:#00c8ff;">—</span><span id="eng-f-tick" class="data-waveform"><span></span><span></span><span></span><span></span></span></div>
             <div style="color:rgba(0,200,255,.4);">BBox</div><div id="eng-bbox" style="color:#00c8ff;text-align:right;font-size:7px;">—</div>
             <div style="color:rgba(0,200,255,.4);">Watertight</div><div id="eng-watertight" style="text-align:right;">—</div>
             <div style="color:rgba(0,200,255,.4);">Dosya</div><div id="eng-filesize" style="color:#00c8ff;text-align:right;">—</div>
@@ -16165,6 +16187,8 @@ function updateEngOverlay() {
     setT('eng-bbox', '—');
     setT('eng-watertight', '—');
     setT('eng-filesize', '—');
+    // Waveform'a geri dön
+    ['eng-v-tick','eng-f-tick'].forEach(id => { const el = document.getElementById(id); if (el) { el.className = 'data-waveform'; el.style.fontSize = ''; el.innerHTML = '<span></span><span></span><span></span><span></span>'; }});
     return;
   }
 
@@ -16178,11 +16202,11 @@ function updateEngOverlay() {
   setT('eng-faces', Math.round(totalFaces).toLocaleString());
   setT('eng-bbox', dimX + '×' + dimY + '×' + dimZ);
 
-  // Canlı veri tikleri
+  // Canlı veri tikleri — waveform → tik geçişi
   const vTick = document.getElementById('eng-v-tick');
   const fTick = document.getElementById('eng-f-tick');
-  if (vTick) vTick.textContent = totalVerts > 100 ? '✅' : '⚠️';
-  if (fTick) fTick.textContent = totalFaces > 100 ? '✅' : '⚠️';
+  if (vTick) { vTick.className = ''; vTick.style.fontSize = '7px'; vTick.textContent = totalVerts > 100 ? '✅' : '⚠️'; }
+  if (fTick) { fTick.className = ''; fTick.style.fontSize = '7px'; fTick.textContent = totalFaces > 100 ? '✅' : '⚠️'; }
 
   const wtEl = document.getElementById('eng-watertight');
   if (wtEl) {
@@ -16218,6 +16242,8 @@ function updateEngOverlay() {
     healthBar.style.background = score >= 80 ? 'linear-gradient(90deg,#00ff88,#00c8ff)' :
                                  score >= 50 ? 'linear-gradient(90deg,#eab308,#F97316)' :
                                                'linear-gradient(90deg,#ef4444,#F97316)';
+    // %90+ parlayan yeşil glow
+    healthBar.classList.toggle('health-glow-90', score >= 90);
   }
 
   // ── Et Kalınlığı (basit tahmin) ──
