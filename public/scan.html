@@ -45,9 +45,6 @@ body{background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Se
 /* Referans alanı */
 .cam-ref{position:absolute;bottom:8px;right:8px;width:80px;height:50px;border:2px dashed rgba(34,197,94,.5);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:9px;color:rgba(34,197,94,.7);text-align:center;line-height:1.2}
 .cam-ref.found{border-color:#22C55E;color:#22C55E;background:rgba(34,197,94,.1)}
-.cam-ghost{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:60vw;height:40vh;pointer-events:none;z-index:50}
-.cam-ghost.aligned svg{opacity:.15!important}
-.cam-ghost.aligned #ghost-match{color:#22C55E!important;background:rgba(34,197,94,.8)!important}
 
 /* Rehber balonu */
 .cam-tip{position:absolute;bottom:180px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.85);border:1px solid #F97316;border-radius:12px;padding:10px 16px;font-size:13px;max-width:85vw;text-align:center;transition:opacity .3s}
@@ -126,22 +123,6 @@ body{background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Se
     </div>
   </div>
 
-  <div style="background:#1a1a2a;border-radius:10px;padding:10px 12px;margin-bottom:12px;border-left:3px solid #F97316">
-    <div style="font-size:11px;color:#F97316;font-weight:700">🎯 4. Ne Üretiyoruz?</div>
-    <div style="font-size:11px;color:#ccc;margin-top:6px;margin-bottom:6px;">Parça tipini seç — AI doğru şablonu göstersin:</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;">
-      <button onclick="_setPartCategory('gear')" id="cat-gear" class="cat-btn" style="height:52px;border-radius:8px;border:2px solid #333;background:#0a0a15;color:#888;font-size:10px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:all .15s;">
-        <span style="font-size:18px;">⚙️</span>Dişli/Mil
-      </button>
-      <button onclick="_setPartCategory('auto')" id="cat-auto" class="cat-btn" style="height:52px;border-radius:8px;border:2px solid #333;background:#0a0a15;color:#888;font-size:10px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:all .15s;">
-        <span style="font-size:18px;">🚗</span>Araç Parça
-      </button>
-      <button onclick="_setPartCategory('art')" id="cat-art" class="cat-btn" style="height:52px;border-radius:8px;border:2px solid #333;background:#0a0a15;color:#888;font-size:10px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:all .15s;">
-        <span style="font-size:18px;">🎨</span>Sanat/Figür
-      </button>
-    </div>
-  </div>
-
   <button onclick="showScreen('s-camera');startCamera()" style="width:100%;height:52px;border-radius:12px;background:linear-gradient(135deg,#F97316,#ea580c);border:none;color:#fff;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:.5px">TARAMAYA BAŞLA 📸</button>
 </div>
 
@@ -164,19 +145,6 @@ body{background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Se
       <!-- Referans — çerçevenin sağ alt köşesinde -->
       <div id="cam-ref" class="cam-ref">1 TL veya<br>Kart koyun</div>
     </div>
-
-    <!-- Ghost Şablon Overlay -->
-    <div id="cam-ghost" class="cam-ghost">
-      <svg id="ghost-svg" width="100%" height="100%" viewBox="0 0 200 200" style="opacity:.3;pointer-events:none">
-        <!-- Dişli şablonu (varsayılan) -->
-        <circle cx="100" cy="100" r="70" fill="none" stroke="#00ff88" stroke-width="1.5" stroke-dasharray="4,4"/>
-        <text x="100" y="100" fill="#00ff88" font-size="8" text-anchor="middle" dominant-baseline="middle">Parcayi buraya oturt</text>
-      </svg>
-      <div id="ghost-match" style="position:absolute;bottom:6px;left:50%;transform:translateX(-50%);font-size:9px;font-weight:700;color:#ef4444;background:rgba(0,0,0,.7);padding:2px 10px;border-radius:8px;">Hizalama bekleniyor...</div>
-    </div>
-
-    <!-- Kalibrasyon durumu -->
-    <div id="cam-calib-badge" style="position:absolute;top:70px;right:10px;background:rgba(239,68,68,.9);color:#fff;font-size:9px;font-weight:700;padding:3px 10px;border-radius:8px;z-index:100;display:none;">Kalibrasyon yok</div>
 
     <!-- Rehber balonu -->
     <div id="cam-tip" class="cam-tip">Ustam, once parcanin yanina bir madeni para koy ki boyunu bilelim.</div>
@@ -306,7 +274,6 @@ async function startCamera() {
     });
     document.getElementById('camera-video').srcObject = _stream;
     updateTip(0);
-    _updateGhostTemplate(); // Kategoriye göre ghost şablon
 
     // Gyroscope dinle
     if (window.DeviceOrientationEvent) {
@@ -322,17 +289,9 @@ let _uploadError = null;
 
 function stopCamera() {
   if (_stream) { _stream.getTracks().forEach(t => t.stop()); _stream = null; }
-  // Tüm arka plan döngülerini durdur
-  if (_lightCheckTimer) { clearInterval(_lightCheckTimer); _lightCheckTimer = null; }
-  if (window.DeviceMotionEvent) { window.removeEventListener('devicemotion', _handleMotion); }
-  if (window.DeviceOrientationEvent) { window.removeEventListener('deviceorientation', handleOrientation); }
-  // Uyarı elementlerini temizle
-  var lw = document.getElementById('_light_warn'); if (lw) lw.remove();
-  var mw = document.getElementById('_motion_warn'); if (mw) mw.remove();
-  var ag = document.getElementById('_angle_guide'); if (ag) ag.style.display = 'none';
-
   if (_photos.length > 3) {
     showScreen('s-form');
+    // Fotoğrafları arka planda yükle
     _uploadDone = false;
     _uploadError = null;
     uploadPhotos().then(() => { _uploadDone = true; }).catch(e => { _uploadError = e.message; _uploadDone = true; });
@@ -417,7 +376,7 @@ function handleOrientation(e) {
   }
 }
 
-// ── FOTOĞRAFLARI YÜKLE (Paralel + Hata Kontrolü) ──
+// ── FOTOĞRAFLARI YÜKLE ──
 async function uploadPhotos() {
   if (_photos.length === 0) return;
 
@@ -437,44 +396,30 @@ async function uploadPhotos() {
     if (!createD.ok) throw new Error(createD.error);
     _scanId = createD.scan.scanId;
 
-    // Fotoğrafları paralel yükle (5'erli batch — hız + stabilite dengesi)
-    const BATCH_SIZE = 5;
+    // Fotoğrafları paralel yükle (5'li batch)
+    const BATCH = 5;
     let uploaded = 0;
-    let failCount = 0;
-    const progressEl = document.getElementById('f-error');
-
-    for (let b = 0; b < _photos.length; b += BATCH_SIZE) {
-      const batch = _photos.slice(b, b + BATCH_SIZE);
+    for (let b = 0; b < _photos.length; b += BATCH) {
+      const batch = _photos.slice(b, b + BATCH);
       const results = await Promise.allSettled(batch.map((photo, j) => {
         const fd = new FormData();
         fd.append('photo', photo, `photo_${String(b + j).padStart(3,'0')}.jpg`);
-        return fetch(`/api/scans/${_scanId}/photo`, { method: 'POST', body: fd })
-          .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+        return fetch(`/api/scans/${_scanId}/photo`, { method: 'POST', body: fd });
       }));
-      results.forEach(r => {
-        if (r.status === 'fulfilled') uploaded++;
-        else { failCount++; console.warn('Fotoğraf yükleme hatası:', r.reason); }
-      });
-      if (progressEl) progressEl.textContent = `Fotoğraflar yükleniyor... ${uploaded}/${_photos.length}`;
+      const failed = results.filter(r => r.status === 'rejected').length;
+      uploaded += batch.length - failed;
+      if (failed > 0) console.warn(`Batch ${Math.floor(b/BATCH)+1}: ${failed} fotoğraf yüklenemedi`);
     }
-
-    if (failCount > 0 && uploaded < 3) {
-      throw new Error(`${failCount} fotoğraf yüklenemedi, minimum 3 gerekli`);
-    }
-    if (failCount > 0) console.warn(`${failCount}/${_photos.length} fotoğraf atlandı, ${uploaded} başarılı`);
 
     // Reconstruction başlat
-    const reconR = await fetch(`/api/scans/${_scanId}/reconstruct`, {
+    await fetch(`/api/scans/${_scanId}/reconstruct`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({})
     });
-    const reconD = await reconR.json();
-    if (!reconD.ok) throw new Error('Reconstruction başlatılamadı: ' + (reconD.error || ''));
 
   } catch(e) {
     console.error('Upload hatasi:', e);
-    throw e; // _uploadError'a düşsün
   }
 }
 
@@ -646,18 +591,41 @@ function _handleMotion(e) {
   }
 }
 
-// ── 4. TEK ÇEKİM + IŞIK/HAREKET KONTROL ──
+// ── 4. ÇİFT ÇEKİM + NETLİK SEÇME ──
 const _origCapturePhoto = capturePhoto;
 capturePhoto = function() {
   if (!_lightOk) { if (navigator.vibrate) navigator.vibrate([100,50,100]); return; }
   if (!_motionStable) { if (navigator.vibrate) navigator.vibrate([100,50,100]); return; }
-  // Kalibrasyon kontrolü (ilk 3 fotoğraftan sonra)
-  if (_photos.length >= 3 && !_calibrated) {
-    if (typeof _showCalibBadge === 'function') _showCalibBadge(false);
-    const tip = document.getElementById('cam-tip');
-    if (tip) tip.textContent = '⚠ Parçanın yanına 1 TL veya kart koy — ölçek doğruluğu için şart!';
-  }
-  _origCapturePhoto();
+  // İki kare çek, en net olanı seç
+  const video = document.getElementById('camera-video');
+  const c1 = document.createElement('canvas');
+  c1.width = video.videoWidth; c1.height = video.videoHeight;
+  c1.getContext('2d').drawImage(video, 0, 0);
+
+  setTimeout(() => {
+    const c2 = document.createElement('canvas');
+    c2.width = video.videoWidth; c2.height = video.videoHeight;
+    c2.getContext('2d').drawImage(video, 0, 0);
+
+    const s1 = _sharpnessScore(c1);
+    const s2 = _sharpnessScore(c2);
+    const best = s1 >= s2 ? c1 : c2;
+
+    best.toBlob(blob => {
+      _photos.push(blob);
+      updateUI();
+      if (navigator.vibrate) navigator.vibrate(50);
+      // Flash
+      const flash = document.createElement('div');
+      flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;opacity:.3;z-index:999;pointer-events:none';
+      document.body.appendChild(flash);
+      setTimeout(() => flash.remove(), 100);
+      if (_photos.length >= TARGET_PHOTOS) {
+        updateTip(4);
+        setTimeout(stopCamera, 1500);
+      }
+    }, 'image/jpeg', 0.92);
+  }, 80); // 80ms sonra ikinci kare
 };
 
 function _sharpnessScore(canvas) {
@@ -783,435 +751,9 @@ function _getAvgBrightness(canvas) {
   return total / (d.length / 16);
 }
 
-// ═══════════════════════════════════════════════════
-//  PRE-SCAN AI: Kategori + Dinamik Şablon + Segmentasyon
-// ═══════════════════════════════════════════════════
-
-let _partCategory = 'gear'; // gear | auto | art
-
-function _setPartCategory(cat) {
-  _partCategory = cat;
-  // Buton görselini güncelle
-  document.querySelectorAll('.cat-btn').forEach(b => {
-    b.style.borderColor = '#333'; b.style.color = '#888'; b.style.background = '#0a0a15';
-  });
-  const btn = document.getElementById('cat-' + cat);
-  if (btn) {
-    btn.style.borderColor = '#F97316'; btn.style.color = '#F97316'; btn.style.background = 'rgba(249,115,22,.1)';
-  }
-}
-
-// Dinamik ghost şablon — kategoriye göre değişir
-function _updateGhostTemplate() {
-  const svg = document.getElementById('ghost-svg');
-  if (!svg) return;
-
-  if (_partCategory === 'gear') {
-    // Dişli/Mil: dairesel + diş profili
-    svg.innerHTML = `
-      <circle cx="100" cy="100" r="65" fill="none" stroke="#00ff88" stroke-width="1" stroke-dasharray="3,3"/>
-      <circle cx="100" cy="100" r="45" fill="none" stroke="#00ff88" stroke-width="0.5" stroke-dasharray="2,4"/>
-      <circle cx="100" cy="100" r="12" fill="none" stroke="#00ff88" stroke-width="1"/>
-      ${Array.from({length:16}, (_,i) => {
-        const a = (i/16) * Math.PI * 2;
-        const x1 = 100 + Math.cos(a)*62, y1 = 100 + Math.sin(a)*62;
-        const x2 = 100 + Math.cos(a)*72, y2 = 100 + Math.sin(a)*72;
-        return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#00ff88" stroke-width="1.5"/>`;
-      }).join('')}
-      <text x="100" y="170" fill="#00ff88" font-size="7" text-anchor="middle">Dişliyi merkeze oturt</text>
-    `;
-  } else if (_partCategory === 'auto') {
-    // Araç parçası: dikdörtgen bounding box + grid
-    svg.innerHTML = `
-      <rect x="20" y="40" width="160" height="120" fill="none" stroke="#38BDF8" stroke-width="1.5" stroke-dasharray="4,4" rx="4"/>
-      <line x1="20" y1="100" x2="180" y2="100" stroke="#38BDF8" stroke-width="0.5" stroke-dasharray="2,6"/>
-      <line x1="100" y1="40" x2="100" y2="160" stroke="#38BDF8" stroke-width="0.5" stroke-dasharray="2,6"/>
-      <line x1="60" y1="40" x2="60" y2="160" stroke="#38BDF8" stroke-width="0.3" stroke-dasharray="1,8"/>
-      <line x1="140" y1="40" x2="140" y2="160" stroke="#38BDF8" stroke-width="0.3" stroke-dasharray="1,8"/>
-      <circle cx="45" cy="65" r="4" fill="none" stroke="#ef4444" stroke-width="1"/>
-      <circle cx="155" cy="65" r="4" fill="none" stroke="#ef4444" stroke-width="1"/>
-      <circle cx="45" cy="135" r="4" fill="none" stroke="#ef4444" stroke-width="1"/>
-      <circle cx="155" cy="135" r="4" fill="none" stroke="#ef4444" stroke-width="1"/>
-      <text x="100" y="170" fill="#38BDF8" font-size="7" text-anchor="middle">Parçayı kutuya sığdır — kırmızılar delik noktaları</text>
-    `;
-  } else {
-    // Sanat/Figür: serbest form oval
-    svg.innerHTML = `
-      <ellipse cx="100" cy="95" rx="55" ry="70" fill="none" stroke="#A855F7" stroke-width="1.5" stroke-dasharray="4,4"/>
-      <path d="M70 60 Q100 30 130 60" fill="none" stroke="#A855F7" stroke-width="0.5" stroke-dasharray="2,4"/>
-      <path d="M70 130 Q100 160 130 130" fill="none" stroke="#A855F7" stroke-width="0.5" stroke-dasharray="2,4"/>
-      <text x="100" y="178" fill="#A855F7" font-size="7" text-anchor="middle">Figürü oval rehbere oturt</text>
-    `;
-  }
-}
-
-// Referans boyutlarına A4 kağıdı ekle
-const REF_A4 = { width: 210, height: 297 };
-
-// AI Nesne Segmentasyonu — arka plandan parçayı ayır (basit kenar yoğunluğu)
-function _preSegmentAnalysis(canvas) {
-  const ctx = canvas.getContext('2d');
-  const w = Math.min(canvas.width, 128), h = Math.min(canvas.height, 128);
-  const small = document.createElement('canvas');
-  small.width = w; small.height = h;
-  small.getContext('2d').drawImage(canvas, 0, 0, w, h);
-  const data = small.getContext('2d').getImageData(0, 0, w, h).data;
-
-  // Kenar haritası — Sobel benzeri
-  let edgeCount = 0, centerEdges = 0, totalPixels = 0, centerPixels = 0;
-  const cx1 = w * 0.25, cx2 = w * 0.75, cy1 = h * 0.25, cy2 = h * 0.75;
-
-  for (let y = 1; y < h - 1; y++) {
-    for (let x = 1; x < w - 1; x++) {
-      const i = (y * w + x) * 4;
-      const iR = (y * w + x + 1) * 4;
-      const iD = ((y + 1) * w + x) * 4;
-      const gx = Math.abs(data[i] - data[iR]) + Math.abs(data[i+1] - data[iR+1]);
-      const gy = Math.abs(data[i] - data[iD]) + Math.abs(data[i+1] - data[iD+1]);
-      const edge = gx + gy;
-      totalPixels++;
-      if (edge > 50) edgeCount++;
-      if (x > cx1 && x < cx2 && y > cy1 && y < cy2) {
-        centerPixels++;
-        if (edge > 50) centerEdges++;
-      }
-    }
-  }
-
-  const centerDensity = centerEdges / (centerPixels || 1);
-  const edgeDensity = edgeCount / (totalPixels || 1);
-
-  // Nesne merkezde mi?
-  const objectCentered = centerDensity > edgeDensity * 1.2;
-
-  return { objectCentered, centerDensity, edgeDensity, hasObject: centerDensity > 0.05 };
-}
-
-// AI otomatik kategori tespiti (kameradan)
-function _aiDetectCategory(canvas) {
-  const ctx = canvas.getContext('2d');
-  const w = 64, h = 64;
-  const small = document.createElement('canvas');
-  small.width = w; small.height = h;
-  small.getContext('2d').drawImage(canvas, 0, 0, w, h);
-  const data = small.getContext('2d').getImageData(0, 0, w, h).data;
-
-  // Merkez bölgede dairesellik kontrolü
-  const cx = w / 2, cy = h / 2;
-  let circularEdges = 0, totalEdges = 0;
-
-  for (let y = 1; y < h - 1; y++) {
-    for (let x = 1; x < w - 1; x++) {
-      const i = (y * w + x) * 4;
-      const iR = (y * w + x + 1) * 4;
-      const iD = ((y + 1) * w + x) * 4;
-      const edge = Math.abs(data[i] - data[iR]) + Math.abs(data[i] - data[iD]);
-      if (edge > 40) {
-        totalEdges++;
-        const dx = x - cx, dy = y - cy;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist > 10 && dist < 28) circularEdges++;
-      }
-    }
-  }
-
-  const circularRatio = circularEdges / (totalEdges || 1);
-
-  if (circularRatio > 0.35) return 'gear';  // Dairesel = dişli/mil
-  if (totalEdges > w * h * 0.15) return 'auto'; // Çok kenar = karmaşık araç parçası
-  return 'art'; // Az kenar = figür/sanat
-}
-
-// A4 Kağıdı Kalibrasyonu
-function _calibrateFromA4(canvas) {
-  if (_calibrated) return false;
-  const ctx = canvas.getContext('2d');
-  const w = canvas.width, h = canvas.height;
-  // A4 = beyaz dikdörtgen, en/boy oranı ~0.707
-  const data = ctx.getImageData(0, 0, Math.min(w, 256), Math.min(h, 256)).data;
-  const sw = Math.min(w, 256), sh = Math.min(h, 256);
-
-  let minX = sw, maxX = 0, minY = sh, maxY = 0, whiteCount = 0;
-  for (let y = 0; y < sh; y++) {
-    for (let x = 0; x < sw; x++) {
-      const i = (y * sw + x) * 4;
-      const r = data[i], g = data[i+1], b = data[i+2];
-      if (r > 200 && g > 200 && b > 200) {
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-        whiteCount++;
-      }
-    }
-  }
-
-  if (whiteCount < 500) return false;
-  const pxW = maxX - minX, pxH = maxY - minY;
-  if (pxW < 30 || pxH < 30) return false;
-
-  const ratio = pxW / pxH;
-  // A4 yatay: 297/210=1.414, dikey: 210/297=0.707
-  if (ratio > 1.2 && ratio < 1.7) {
-    _calibPxPerMm = pxW / REF_A4.height; // Yatay A4
-    _calibrated = true; _calibSource = 'A4';
-    _showCalibBadge(true);
-    return true;
-  } else if (ratio > 0.55 && ratio < 0.85) {
-    _calibPxPerMm = pxW / REF_A4.width; // Dikey A4
-    _calibrated = true; _calibSource = 'A4';
-    _showCalibBadge(true);
-    return true;
-  }
-  return false;
-}
-
-// Pozisyonel Rehberlik — açı ve mesafe uyarıları
-function _positionalGuidance(canvas) {
-  const seg = _preSegmentAnalysis(canvas);
-  const tip = document.getElementById('cam-tip');
-  if (!tip) return;
-
-  if (!seg.hasObject) {
-    tip.textContent = '⚠ Parça görünmüyor — kamerayı parçaya doğrult';
-    tip.style.color = '#ef4444';
-    return;
-  }
-
-  if (!seg.objectCentered) {
-    tip.textContent = '↔ Parçayı ekranın merkezine getir';
-    tip.style.color = '#F59E0B';
-    return;
-  }
-
-  // Her şey tamam
-  tip.style.color = '#22C55E';
-}
-
-// ═══════════════════════════════════════════════════
-//  AKILLI REFERANS & KALİBRASYON SİSTEMİ
-// ═══════════════════════════════════════════════════
-
-// Kalibrasyon durumu
-let _calibrated = false;
-let _calibPxPerMm = 0; // pixel/mm oranı
-let _calibSource = ''; // 'coin' veya 'card'
-let _ghostAligned = false;
-
-// Standart referans boyutları (mm)
-const REF_SIZES = {
-  coin_1tl: { diameter: 26.15 },
-  card:     { width: 85.6, height: 53.98 }
-};
-
-// Kalibrasyon: para algılandığında boyut hesapla
-function _calibrateFromCoin(canvas) {
-  const ctx = canvas.getContext('2d');
-  // Referans alanı: sağ alt %25x%20
-  const rx = Math.floor(canvas.width * 0.7);
-  const ry = Math.floor(canvas.height * 0.7);
-  const rw = Math.floor(canvas.width * 0.25);
-  const rh = Math.floor(canvas.height * 0.2);
-  const refData = ctx.getImageData(rx, ry, rw, rh).data;
-
-  // Metalik piksel kümesini bul → çap hesapla
-  let minX = rw, maxX = 0, minY = rh, maxY = 0, metalCount = 0;
-  for (let y = 0; y < rh; y++) {
-    for (let x = 0; x < rw; x++) {
-      const i = (y * rw + x) * 4;
-      const r = refData[i], g = refData[i+1], b = refData[i+2];
-      if (r > 150 && g > 130 && b < 120 && Math.abs(r - g) < 40) {
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-        metalCount++;
-      }
-    }
-  }
-
-  if (metalCount < 50) return false;
-
-  const pxDiameter = Math.max(maxX - minX, maxY - minY);
-  if (pxDiameter < 15) return false;
-
-  _calibPxPerMm = pxDiameter / REF_SIZES.coin_1tl.diameter;
-  _calibrated = true;
-  _calibSource = 'coin';
-  _showCalibBadge(true);
-  return true;
-}
-
-// Kalibrasyon: kart algılama (dikdörtgen)
-function _calibrateFromCard(canvas) {
-  const ctx = canvas.getContext('2d');
-  const rx = Math.floor(canvas.width * 0.7);
-  const ry = Math.floor(canvas.height * 0.7);
-  const rw = Math.floor(canvas.width * 0.25);
-  const rh = Math.floor(canvas.height * 0.25);
-  const refData = ctx.getImageData(rx, ry, rw, rh).data;
-
-  // Açık renkli dikdörtgen kümesi bul
-  let minX = rw, maxX = 0, minY = rh, maxY = 0, lightCount = 0;
-  for (let y = 0; y < rh; y++) {
-    for (let x = 0; x < rw; x++) {
-      const i = (y * rw + x) * 4;
-      const r = refData[i], g = refData[i+1], b = refData[i+2];
-      const brightness = (r + g + b) / 3;
-      if (brightness > 180 && Math.abs(r - g) < 30 && Math.abs(g - b) < 30) {
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-        lightCount++;
-      }
-    }
-  }
-
-  if (lightCount < 100) return false;
-  const pxW = maxX - minX;
-  const pxH = maxY - minY;
-  if (pxW < 30 || pxH < 15) return false;
-
-  // Genişlik veya yükseklikten kalibrasyon
-  const ratioWH = pxW / pxH;
-  if (ratioWH > 1.2 && ratioWH < 2.2) {
-    // Yatay kart
-    _calibPxPerMm = pxW / REF_SIZES.card.width;
-  } else if (ratioWH > 0.4 && ratioWH < 0.85) {
-    // Dikey kart
-    _calibPxPerMm = pxH / REF_SIZES.card.width;
-  } else {
-    return false;
-  }
-
-  _calibrated = true;
-  _calibSource = 'card';
-  _showCalibBadge(true);
-  return true;
-}
-
-function _showCalibBadge(ok) {
-  const badge = document.getElementById('cam-calib-badge');
-  if (!badge) return;
-  badge.style.display = 'block';
-  if (ok) {
-    badge.style.background = 'rgba(34,197,94,.9)';
-    badge.textContent = '✅ Kalibrasyon: ' + _calibPxPerMm.toFixed(2) + ' px/mm (' + _calibSource + ')';
-  } else {
-    badge.style.background = 'rgba(239,68,68,.9)';
-    badge.textContent = '⚠ Referans nesne koy (para/kart)';
-  }
-}
-
-// Ghost şablon hizalama kontrolü
-function _checkGhostAlignment(canvas) {
-  const ctx = canvas.getContext('2d');
-  // Merkez bölgesinde nesne var mı kontrol et (kenar yoğunluğu)
-  const cx = Math.floor(canvas.width * 0.25);
-  const cy = Math.floor(canvas.height * 0.25);
-  const cw = Math.floor(canvas.width * 0.5);
-  const ch = Math.floor(canvas.height * 0.5);
-  const centerData = ctx.getImageData(cx, cy, cw, ch).data;
-
-  // Basit kenar yoğunluğu: komşu piksel farkı
-  let edgeCount = 0, totalChecked = 0;
-  const stride = 8;
-  for (let y = 1; y < ch - 1; y += stride) {
-    for (let x = 1; x < cw - 1; x += stride) {
-      const i = (y * cw + x) * 4;
-      const iR = (y * cw + x + 1) * 4;
-      const iD = ((y + 1) * cw + x) * 4;
-      const diff = Math.abs(centerData[i] - centerData[iR]) + Math.abs(centerData[i] - centerData[iD]);
-      if (diff > 40) edgeCount++;
-      totalChecked++;
-    }
-  }
-
-  const edgeRatio = edgeCount / (totalChecked || 1);
-  const ghost = document.getElementById('cam-ghost');
-  const matchEl = document.getElementById('ghost-match');
-
-  if (edgeRatio > 0.15) {
-    _ghostAligned = true;
-    if (ghost) ghost.classList.add('aligned');
-    if (matchEl) matchEl.textContent = '✅ Parça hizalandı';
-  } else {
-    _ghostAligned = false;
-    if (ghost) ghost.classList.remove('aligned');
-    if (matchEl) matchEl.textContent = 'Parçayı merkeze koy';
-  }
-}
-
-// ═══════════════════════════════════════════════════
-//  VALİDASYON KAPISI (Check-In Gate)
-// ═══════════════════════════════════════════════════
-
-let _scanQualityScore = 0;
-let _rejectionCount = 0;
-
-function _validateScanQuality() {
-  // Tüm fotoğraflardan toplam kalite skoru
-  if (_photos.length < 5) return { ok: true, score: 50 };
-
-  let totalScore = 0;
-  const checks = {
-    lighting: _lightOk ? 20 : 0,
-    stability: _motionStable ? 15 : 0,
-    calibration: _calibrated ? 25 : 0,
-    alignment: _ghostAligned ? 15 : 5,
-    photoCount: Math.min(25, (_photos.length / TARGET_PHOTOS) * 25)
-  };
-
-  totalScore = checks.lighting + checks.stability + checks.calibration + checks.alignment + checks.photoCount;
-  _scanQualityScore = Math.round(totalScore);
-
-  const reasons = [];
-  if (!checks.lighting) reasons.push('Işık yetersiz');
-  if (!checks.stability) reasons.push('Titreşim çok fazla');
-  if (!checks.calibration) reasons.push('Kalibrasyon yapılmadı (para/kart koy)');
-  if (!checks.alignment) reasons.push('Parça merkeze hizalanmadı');
-  if (checks.photoCount < 15) reasons.push('Daha fazla açıdan çek');
-
-  return {
-    ok: totalScore >= 60,
-    score: totalScore,
-    reasons: reasons,
-    checks: checks
-  };
-}
-
-// Kalibrasyon kontrolü artık birinci override içinde (satır 621)
-
-// Upload öncesi validasyon kapısı
-const _origStopCamera = stopCamera;
-stopCamera = function() {
-  if (_photos.length > 3) {
-    const validation = _validateScanQuality();
-    _scanQualityScore = validation.score;
-
-    if (!validation.ok && _rejectionCount < 3) {
-      _rejectionCount++;
-      const tip = document.getElementById('cam-tip');
-      if (tip) {
-        tip.textContent = '⚠ Kalite düşük (' + validation.score + '/100): ' + validation.reasons.join(', ') + ' — Düzelt ve devam et!';
-        tip.style.color = '#ef4444';
-      }
-      // Engelleme — düşük kalitede de devam edebilsin ama uyarı alsın
-      if (validation.score < 30) {
-        // Çok düşük: engelle
-        const tip2 = document.getElementById('cam-tip');
-        if (tip2) tip2.textContent = '🚫 Kalite çok düşük! ' + validation.reasons[0] + ' — Lütfen düzelt.';
-        return; // stopCamera çağrılmaz
-      }
-    }
-  }
-  _origStopCamera();
-};
-
 // ── BAŞLATMA ──
 // Işık kontrol döngüsü
-let _lightCheckTimer = setInterval(_checkLighting, 2000);
+setInterval(_checkLighting, 2000);
 
 // Hareket algılama
 if (window.DeviceMotionEvent) {
@@ -1248,11 +790,12 @@ handleOrientation = function(e) {
   }
 };
 
-// Her fotoğrafta referans + kalibrasyon + ghost kontrol
+// Her fotoğrafta referans kontrol
 const _origUpdateUI = updateUI;
 updateUI = function() {
   _origUpdateUI();
-  if (_photos.length % 3 === 0 && _photos.length > 0) {
+  // Her 5 fotoğrafta referans ve marker kontrol
+  if (_photos.length % 5 === 0 && _photos.length > 0) {
     const video = document.getElementById('camera-video');
     if (video && video.videoWidth) {
       const c = document.createElement('canvas');
@@ -1260,21 +803,6 @@ updateUI = function() {
       c.getContext('2d').drawImage(video, 0, 0);
       _checkForMarker(c);
       _checkForCoin(c);
-      // Kalibrasyon dene (henüz yapılmadıysa) — para, kart, A4
-      if (!_calibrated) {
-        if (!_calibrateFromCoin(c) && !_calibrateFromCard(c)) _calibrateFromA4(c);
-      }
-      // Ghost hizalama + segmentasyon + pozisyonel rehberlik
-      _checkGhostAlignment(c);
-      _positionalGuidance(c);
-      // İlk 3 fotoğrafta AI otomatik kategori tespiti
-      if (_photos.length <= 3) {
-        const detected = _aiDetectCategory(c);
-        if (detected !== _partCategory) {
-          _setPartCategory(detected);
-          _updateGhostTemplate();
-        }
-      }
     }
   }
 };
