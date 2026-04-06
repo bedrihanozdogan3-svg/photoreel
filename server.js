@@ -1291,6 +1291,156 @@ app.get('/api/feedback/recommendations', async (req, res) => {
   }
 });
 
+// ════════════════════════════════════════════════════════
+//  QR KOD + TARAMA SİSTEMİ
+// ════════════════════════════════════════════════════════
+const crypto = require('crypto');
+const fs = require('fs');
+
+// Scan sayfası — müşteri QR okutunca buraya gelir
+app.get('/scan', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'scan.html'));
+});
+app.get('/scan.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'scan.html'));
+});
+
+// QR üret — usta panelden çağrılır
+app.post('/api/usta/qr/generate', async (req, res) => {
+  try {
+    const userId = req.body.userId || 'default';
+    const scanId = 'scan_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
+    const password = crypto.randomBytes(3).toString('hex').toUpperCase();
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 saat
+
+    // Firestore'a kaydet (varsa)
+    try {
+      const db = require('firebase-admin').firestore();
+      await db.collection('scans').doc(scanId).set({
+        scanId, userId, password, expiresAt,
+        status: 'waiting', createdAt: new Date(), photos: []
+      });
+    } catch(e) { logger.warn('QR Firestore kayıt atlandı: ' + e.message); }
+
+    res.json({
+      ok: true,
+      scanId,
+      password,
+      url: '/scan?id=' + scanId + '&p=' + password,
+      expiresAt: expiresAt.toISOString()
+    });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// QR doğrula — scan.html şifreyi kontrol eder
+app.post('/api/scan/verify', async (req, res) => {
+  try {
+    const { scanId, password } = req.body;
+    if (!scanId || !password) return res.status(400).json({ ok: false, error: 'scanId ve password gerekli' });
+
+    try {
+      const db = require('firebase-admin').firestore();
+      const doc = await db.collection('scans').doc(scanId).get();
+      if (!doc.exists) return res.status(404).json({ ok: false, error: 'Tarama bulunamadı' });
+      const data = doc.data();
+      if (data.password !== password) return res.status(401).json({ ok: false, error: 'Şifre yanlış' });
+      if (new Date() > new Date(data.expiresAt)) return res.status(410).json({ ok: false, error: 'QR süresi dolmuş' });
+      res.json({ ok: true, scanId, status: data.status });
+    } catch(e) {
+      // Firestore yoksa demo mod
+      res.json({ ok: true, scanId, status: 'demo' });
+    }
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// Tarama oluştur
+app.post('/api/scans', async (req, res) => {
+  try {
+    const { scanId, name, photoCount, quality } = req.body;
+    const id = scanId || 'scan_' + Date.now();
+    try {
+      const db = require('firebase-admin').firestore();
+      await db.collection('scans').doc(id).set({
+        scanId: id, name: name || 'Tarama', photoCount: photoCount || 0,
+        quality: quality || 'high', status: 'uploading', createdAt: new Date(), photos: []
+      }, { merge: true });
+    } catch(e) { /* Firestore yoksa devam */ }
+    res.json({ ok: true, scan: { scanId: id, status: 'uploading' } });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// Fotoğraf yükle
+const _scanUpload = multer({ dest: path.join(__dirname, 'uploads', 'scans'), limits: { fileSize: 20 * 1024 * 1024 } });
+app.post('/api/scans/:scanId/photo', _scanUpload.single('photo'), async (req, res) => {
+  try {
+    const { scanId } = req.params;
+    const filePath = req.file ? req.file.path : null;
+    if (!filePath) return res.status(400).json({ ok: false, error: 'Fotoğraf yok' });
+
+    try {
+      const db = require('firebase-admin').firestore();
+      const admin = require('firebase-admin');
+      await db.collection('scans').doc(scanId).update({
+        photos: admin.firestore.FieldValue.arrayUnion(filePath),
+        status: 'uploading'
+      });
+    } catch(e) { /* Firestore yoksa devam */ }
+
+    // Socket ile usta panele bildir
+    if (global.io) global.io.emit('scan:photo', { scanId, photoPath: filePath });
+
+    res.json({ ok: true, photoPath: filePath });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// Reconstruction başlat
+app.post('/api/scans/:scanId/reconstruct', async (req, res) => {
+  try {
+    const { scanId } = req.params;
+    try {
+      const db = require('firebase-admin').firestore();
+      await db.collection('scans').doc(scanId).update({ status: 'processing' });
+    } catch(e) { /* Firestore yoksa devam */ }
+
+    // Photogrammetry servisi çağır
+    try {
+      const photogrammetry = require('./services/photogrammetry-service');
+      const scanDir = path.join(__dirname, 'uploads', 'scans');
+      photogrammetry.reconstruct(scanDir, scanId).then(function(result) {
+        if (global.io) global.io.emit('scan:complete', { scanId, result });
+      }).catch(function(err) {
+        logger.error('Reconstruction hatası: ' + err.message);
+        if (global.io) global.io.emit('scan:error', { scanId, error: err.message });
+      });
+    } catch(e) { logger.warn('Photogrammetry servisi yüklenemedi: ' + e.message); }
+
+    res.json({ ok: true, status: 'processing' });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// Usta paneli — siparişleri listele
+app.get('/api/usta/orders', async (req, res) => {
+  try {
+    const db = require('firebase-admin').firestore();
+    const snap = await db.collection('scans').orderBy('createdAt', 'desc').limit(20).get();
+    const orders = [];
+    snap.forEach(doc => orders.push({ id: doc.id, ...doc.data() }));
+    res.json({ ok: true, orders });
+  } catch(e) { res.json({ ok: true, orders: [] }); }
+});
+
+// Sipariş durumu güncelle
+app.put('/api/usta/order/:orderId', async (req, res) => {
+  try {
+    const db = require('firebase-admin').firestore();
+    await db.collection('scans').doc(req.params.orderId).update({ status: req.body.status || 'completed' });
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// uploads/scans klasörü yoksa oluştur
+try { fs.mkdirSync(path.join(__dirname, 'uploads', 'scans'), { recursive: true }); } catch(e) {}
+
 // 404 ve hata yakalama (en sonda olmalı)
 app.use(notFoundHandler);
 app.use(errorHandler);
