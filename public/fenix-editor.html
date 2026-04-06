@@ -7532,9 +7532,9 @@ function loadModelFromURL(url, name) {
     ext = (name || '').split('.').pop().toLowerCase() || 'glb';
   }
   toast('Model yükleniyor: ' + (name || url.split('/').pop()), 'info', 3000);
-  // Laser scan efekti
+  // Laser scan + Digital Matrix efekti
   const _scanTarget = document.getElementById('three-wrap') || document.getElementById('mod-3d');
-  if (_scanTarget && typeof _showLaserScanEffect === 'function') _showLaserScanEffect(_scanTarget);
+  if (_scanTarget) { if (typeof _showLaserScanEffect === 'function') _showLaserScanEffect(_scanTarget); if (typeof _showDigitalMatrix === 'function') _showDigitalMatrix(_scanTarget); }
   if (ext === 'stl') {
     // STL Loader
     if (typeof THREE.STLLoader === 'undefined') {
@@ -7727,6 +7727,50 @@ function _showLaserScanEffect(containerEl) {
   containerEl.style.position = 'relative';
   containerEl.appendChild(scanLine);
   setTimeout(() => scanLine?.remove(), 7500);
+}
+
+// ── Digital Matrix Efekti (Koordinatlar süzülerek belirir) ──
+function _showDigitalMatrix(containerEl) {
+  if (!containerEl) return;
+  containerEl.style.position = 'relative';
+  const dims = [
+    { label: 'X', val: (Math.random()*200+20).toFixed(1), color: '#ff4444' },
+    { label: 'Y', val: (Math.random()*150+15).toFixed(1), color: '#44ff44' },
+    { label: 'Z', val: (Math.random()*100+10).toFixed(1), color: '#4488ff' }
+  ];
+  const extras = [
+    { text: 'MESH ANALIZ...', delay: 800 },
+    { text: 'BOYUT TARAMA', delay: 1600 },
+    { text: 'KALİBRASYON OK', delay: 2800 }
+  ];
+  dims.forEach((d, i) => {
+    const el = document.createElement('div');
+    el.className = '_dmatrix-coord';
+    el.style.cssText = `position:absolute;pointer-events:none;z-index:21;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:${d.color};text-shadow:0 0 8px ${d.color}80;opacity:0;white-space:nowrap;`;
+    el.style.left = (15 + i * 30) + '%';
+    el.style.top = (20 + i * 20) + '%';
+    el.textContent = `${d.label}: ${d.val}mm`;
+    containerEl.appendChild(el);
+    el.animate([
+      { opacity: 0, transform: 'translateY(20px)', filter: 'blur(4px)' },
+      { opacity: 1, transform: 'translateY(0)', filter: 'blur(0)' },
+      { opacity: 1, transform: 'translateY(0)', filter: 'blur(0)' },
+      { opacity: 0, transform: 'translateY(-15px)', filter: 'blur(2px)' }
+    ], { duration: 4000, delay: 500 + i * 600, fill: 'forwards', easing: 'ease-out' });
+    setTimeout(() => el.remove(), 5500 + i * 600);
+  });
+  extras.forEach(e => {
+    const el = document.createElement('div');
+    el.className = '_dmatrix-status';
+    el.style.cssText = 'position:absolute;pointer-events:none;z-index:21;font-family:"JetBrains Mono",monospace;font-size:11px;color:#00ff88;text-shadow:0 0 6px #00ff8860;opacity:0;right:12px;';
+    el.style.bottom = (10 + extras.indexOf(e) * 18) + 'px';
+    el.textContent = '▸ ' + e.text;
+    containerEl.appendChild(el);
+    el.animate([
+      { opacity: 0 }, { opacity: .9 }, { opacity: .9 }, { opacity: 0 }
+    ], { duration: 3500, delay: e.delay, fill: 'forwards' });
+    setTimeout(() => el.remove(), e.delay + 4000);
+  });
 }
 
 // Alias — eski referanslar için
@@ -11821,9 +11865,9 @@ function _3dLoadFile(file) {
   _init3DScene();
 
   toast(`${file.name} yükleniyor...`, 'ok', 3000);
-  // Laser scan efekti
+  // Laser scan + Digital Matrix efekti
   const _scanWrap = document.getElementById('three-wrap');
-  if (_scanWrap && typeof _showLaserScanEffect === 'function') _showLaserScanEffect(_scanWrap);
+  if (_scanWrap) { if (typeof _showLaserScanEffect === 'function') _showLaserScanEffect(_scanWrap); if (typeof _showDigitalMatrix === 'function') _showDigitalMatrix(_scanWrap); }
   const url = URL.createObjectURL(file);
   const modelName = file.name.replace(/\.[^.]+$/, '');
 
