@@ -1575,6 +1575,270 @@ function _updateGuideForCategory() {
   }
 }
 
+// ════════════════════════════════════════════════════════════
+//  GONİOMETRİK RADAR — Açı Mühendisi + Auto-Shutter
+// ════════════════════════════════════════════════════════════
+
+// Üretim rotası — tur bazlı hedef açılar
+var _scanRoute = {
+  nodes: [], // {pitch, yaw, label} dizisi
+  currentNode: 0,
+  autoShutter: true
+};
+
+// Canlı açı verileri (60Hz)
+var _liveAngles = { alpha: 0, beta: 0, gamma: 0 }; // yaw, pitch, roll
+var _baseYaw = null; // İlk kilitlenme yaw'ı
+
+function _initGoniometricRadar() {
+  // Açı radarı UI oluştur
+  var radar = document.getElementById('angle-radar');
+  if (!radar) {
+    radar = document.createElement('div');
+    radar.id = 'angle-radar';
+    radar.style.cssText = 'position:absolute;top:50%;right:12px;transform:translateY(-50%);width:80px;height:80px;border-radius:50%;background:rgba(0,0,0,.8);border:2px solid rgba(0,200,255,.3);z-index:20;pointer-events:none;';
+    radar.innerHTML = '<canvas id="radar-canvas" width="80" height="80" style="position:absolute;top:0;left:0;"></canvas><div id="radar-degree" style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:9px;color:#00c8ff;font-family:monospace;white-space:nowrap;font-weight:700;"></div>';
+    var overlay = document.querySelector('.cam-overlay');
+    if (overlay) overlay.appendChild(radar);
+  }
+
+  // Açı komut paneli
+  var cmdPanel = document.getElementById('angle-cmd');
+  if (!cmdPanel) {
+    cmdPanel = document.createElement('div');
+    cmdPanel.id = 'angle-cmd';
+    cmdPanel.style.cssText = 'position:absolute;top:56px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);border:1px solid rgba(0,200,255,.2);border-radius:20px;padding:3px 14px;font-size:10px;font-weight:700;z-index:20;pointer-events:none;font-family:monospace;color:#00c8ff;white-space:nowrap;';
+    var overlay = document.querySelector('.cam-overlay');
+    if (overlay) overlay.appendChild(cmdPanel);
+  }
+
+  // Rota oluştur (kategoriye göre)
+  _buildScanRoute();
+
+  // 60Hz gyroscope dinle
+  if (window.DeviceOrientationEvent) {
+    window.addEventListener('deviceorientation', _onGyro60Hz);
+  }
+
+  // Radar çizim döngüsü
+  setInterval(_drawRadar, 50);
+}
+
+function _buildScanRoute() {
+  _scanRoute.nodes = [];
+  _scanRoute.currentNode = 0;
+
+  var yawStep, pitchLevels;
+
+  if (_objectCategory === 'micro') {
+    // Tek tur: 15° pitch, 20° yaw adımla
+    pitchLevels = [15, 45];
+    yawStep = 36; // 360/10 = 36° aralık
+  } else if (_objectCategory === 'large') {
+    // Üç tur
+    pitchLevels = [15, 45, 85];
+    yawStep = 15; // 360/24 = 15° aralık
+  } else {
+    // İki tur
+    pitchLevels = [20, 50];
+    yawStep = 20; // 360/18 = 20° aralık
+  }
+
+  var turNames = ['Alt Tur', 'Orta Tur', 'Üst Tur'];
+  pitchLevels.forEach(function(pitch, turIdx) {
+    for (var yaw = 0; yaw < 360; yaw += yawStep) {
+      _scanRoute.nodes.push({
+        pitch: pitch,
+        yaw: yaw,
+        label: turNames[turIdx] + ' ' + yaw + '°',
+        taken: false
+      });
+    }
+  });
+}
+
+function _onGyro60Hz(e) {
+  _liveAngles.alpha = e.alpha || 0; // yaw (0-360)
+  _liveAngles.beta = e.beta || 0;   // pitch (-180 ~ 180)
+  _liveAngles.gamma = e.gamma || 0; // roll (-90 ~ 90)
+
+  // İlk kilitlenme anında base yaw kaydet
+  if (_baseYaw === null && _lockState === 'locked') {
+    _baseYaw = _liveAngles.alpha;
+  }
+
+  // Hedef açı kontrolü
+  _checkAngleTarget();
+}
+
+function _checkAngleTarget() {
+  if (_lockState !== 'locked' || _scanRoute.nodes.length === 0) return;
+
+  var node = _scanRoute.nodes[_scanRoute.currentNode];
+  if (!node || node.taken) {
+    // Sonraki çekilmemiş node'u bul
+    for (var i = 0; i < _scanRoute.nodes.length; i++) {
+      if (!_scanRoute.nodes[i].taken) { _scanRoute.currentNode = i; node = _scanRoute.nodes[i]; break; }
+    }
+    if (!node || node.taken) return; // Hepsi çekilmiş
+  }
+
+  // Relative yaw hesapla
+  var relYaw = (_liveAngles.alpha - (_baseYaw || 0) + 360) % 360;
+  var pitch = Math.abs(_liveAngles.beta);
+
+  // Hedefle fark
+  var yawDiff = Math.abs(relYaw - node.yaw);
+  if (yawDiff > 180) yawDiff = 360 - yawDiff;
+  var pitchDiff = Math.abs(pitch - node.pitch);
+
+  var yawOK = yawDiff < 5;
+  var pitchOK = pitchDiff < 4;
+
+  // Açı komut paneli güncelle
+  var cmdEl = document.getElementById('angle-cmd');
+  if (cmdEl) {
+    if (yawOK && pitchOK) {
+      cmdEl.innerHTML = '<span style="color:#00ff88">🎯 ' + Math.round(pitch) + '° / ' + Math.round(relYaw) + '° — KİLİTLENDİ</span>';
+    } else {
+      var hints = [];
+      if (!pitchOK) {
+        hints.push(pitch < node.pitch ? '↑ ' + Math.round(node.pitch - pitch) + '° yukarı' : '↓ ' + Math.round(pitch - node.pitch) + '° aşağı');
+      }
+      if (!yawOK) {
+        var yawDir = ((node.yaw - relYaw + 360) % 360) < 180 ? 'sağa' : 'sola';
+        hints.push('↻ ' + Math.round(yawDiff) + '° ' + yawDir);
+      }
+      cmdEl.innerHTML = '<span style="color:#F59E0B">' + hints.join(' · ') + '</span>';
+    }
+  }
+
+  // Shutter lock güncelle
+  _shutterLocked = !(yawOK && pitchOK);
+  var btn = document.getElementById('cam-capture-btn');
+  if (btn) {
+    btn.style.opacity = _shutterLocked ? '0.3' : '1';
+    btn.style.border = _shutterLocked ? '4px solid #ef4444' : '4px solid #22C55E';
+    btn.style.pointerEvents = _shutterLocked ? 'none' : 'auto';
+  }
+
+  // Auto-shutter — tam açıya gelince otomatik çek
+  if (yawOK && pitchOK && _scanRoute.autoShutter && !_shutterLocked) {
+    node.taken = true;
+    _scanRoute.currentNode++;
+    _shutterLocked = true; // Çift çekim engeli
+
+    // Sesli onay
+    if (navigator.vibrate) navigator.vibrate(80);
+
+    // Fotoğrafı çek (blur kontrolü dahil)
+    setTimeout(function() {
+      var video = document.getElementById('camera-video');
+      var canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+
+      var blur = _detectBlur(canvas);
+      if (!blur.sharp) {
+        node.taken = false; // Geri al
+        _scanRoute.currentNode--;
+        _speak('Bulanık! Tekrar.');
+        return;
+      }
+
+      // Orijinal capture
+      _origCapture();
+
+      var remaining = _scanRoute.nodes.filter(function(n) { return !n.taken; }).length;
+      if (remaining > 0) {
+        var next = _scanRoute.nodes[_scanRoute.currentNode];
+        if (next) _speak(Math.round(next.pitch) + ' derece, ' + Math.round(next.yaw) + ' derece ' + (next.yaw > relYaw ? 'sağa' : 'sola'));
+      } else {
+        _speak('Tüm açılar tamamlandı! Mükemmel tarama.');
+      }
+    }, 100);
+  }
+
+  // Sesli rehberlik (3 saniyede bir)
+  if (_shutterLocked && Date.now() - _lastSpoke > 4000) {
+    if (!pitchOK) {
+      var dir = pitch < node.pitch ? 'yukarı kalk' : 'aşağı in';
+      _speak(Math.round(Math.abs(pitch - node.pitch)) + ' derece ' + dir);
+    } else if (!yawOK) {
+      var yDir = ((node.yaw - relYaw + 360) % 360) < 180 ? 'sağa dön' : 'sola dön';
+      _speak(Math.round(yawDiff) + ' derece ' + yDir);
+    }
+  }
+}
+
+function _drawRadar() {
+  var canvas = document.getElementById('radar-canvas');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var w = 80, h = 80, cx = 40, cy = 40, r = 32;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Dış halka
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0,200,255,.2)'; ctx.lineWidth = 1; ctx.stroke();
+
+  // İç halka
+  ctx.beginPath(); ctx.arc(cx, cy, r * 0.5, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(0,200,255,.1)'; ctx.stroke();
+
+  // Çapraz çizgiler
+  ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r);
+  ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy);
+  ctx.strokeStyle = 'rgba(0,200,255,.1)'; ctx.stroke();
+
+  // Hedef noktaları çiz (çekilmişler yeşil, çekilmemişler turuncu)
+  _scanRoute.nodes.forEach(function(node, i) {
+    var angle = (node.yaw - 90) * Math.PI / 180;
+    var dist = (node.pitch / 90) * r;
+    var nx = cx + Math.cos(angle) * dist;
+    var ny = cy + Math.sin(angle) * dist;
+
+    ctx.beginPath(); ctx.arc(nx, ny, node.taken ? 2 : 3, 0, Math.PI * 2);
+    if (node.taken) {
+      ctx.fillStyle = '#22C55E'; ctx.fill();
+    } else if (i === _scanRoute.currentNode) {
+      ctx.fillStyle = '#F97316'; ctx.fill();
+      // Aktif hedef — parlayan halka
+      ctx.beginPath(); ctx.arc(nx, ny, 6, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(249,115,22,.5)'; ctx.lineWidth = 1; ctx.stroke();
+    } else {
+      ctx.fillStyle = 'rgba(0,200,255,.3)'; ctx.fill();
+    }
+  });
+
+  // Kullanıcının mevcut konumu (kırmızı nokta)
+  var relYaw = ((_liveAngles.alpha - (_baseYaw || 0) + 360) % 360);
+  var userAngle = (relYaw - 90) * Math.PI / 180;
+  var userDist = (Math.abs(_liveAngles.beta) / 90) * r;
+  var ux = cx + Math.cos(userAngle) * userDist;
+  var uy = cy + Math.sin(userAngle) * userDist;
+
+  ctx.beginPath(); ctx.arc(ux, uy, 4, 0, Math.PI * 2);
+  ctx.fillStyle = '#ff4444'; ctx.fill();
+  ctx.beginPath(); ctx.arc(ux, uy, 7, 0, Math.PI * 2);
+  ctx.strokeStyle = 'rgba(255,68,68,.4)'; ctx.lineWidth = 1; ctx.stroke();
+
+  // Derece etiketi
+  var degEl = document.getElementById('radar-degree');
+  if (degEl) {
+    var taken = _scanRoute.nodes.filter(function(n) { return n.taken; }).length;
+    degEl.textContent = Math.round(Math.abs(_liveAngles.beta)) + '° / ' + Math.round(relYaw) + '° [' + taken + '/' + _scanRoute.nodes.length + ']';
+  }
+}
+
+// Goniometrik radarı kamera başladığında aktif et
+var _origStartCamera2 = startCamera;
+startCamera = async function() {
+  await _origStartCamera2();
+  _initGoniometricRadar();
+};
+
 </script>
 </body>
 </html>
