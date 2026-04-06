@@ -7283,6 +7283,8 @@ async function _ustaLoadPanel() {
         const wrap = document.getElementById('three-wrap');
         if (drop) drop.style.display = 'none';
         if (wrap) wrap.style.display = 'flex';
+        // Mavi ışık hüzmesi — QR'dan parça geliyor
+        if (typeof _showBlueBeam === 'function') _showBlueBeam(wrap);
         loadModelFromURL(data.modelUrl, 'Müşteri Taraması');
       }
     });
@@ -7583,30 +7585,41 @@ function loadModelFromURL(url, name) {
   const _scanTarget = document.getElementById('three-wrap') || document.getElementById('mod-3d');
   if (_scanTarget) { if (typeof _showLaserScanEffect === 'function') _showLaserScanEffect(_scanTarget); if (typeof _showDigitalMatrix === 'function') _showDigitalMatrix(_scanTarget); }
   if (ext === 'stl') {
-    // STL Loader
-    if (typeof THREE.STLLoader === 'undefined') {
-      toast('STL Loader yüklenmiyor, GLB formatı dene', 'err'); return;
-    }
-    const loader = new THREE.STLLoader();
-    loader.load(url, (geometry) => {
-      geometry.computeVertexNormals();
-      const mat = new THREE.MeshStandardMaterial({ color: 0xF97316, metalness: 0.1, roughness: 0.85 });
-      const mesh = new THREE.Mesh(geometry, mat);
-      mesh.castShadow = true; mesh.receiveShadow = true;
-      mesh.name = name || 'STL Model';
-      mesh.userData.fenixMesh = true;
-      mesh.userData._origMat = mat.clone();
-      // Modeli ortala ve ölçekle
-      _fitModelToView(mesh);
-      _scene.add(mesh);
-      _mainMesh = mesh;
-      window._3dMeshList = [mesh];
-      if (typeof _3dBuildLayerPanel === 'function') _3dBuildLayerPanel(mesh);
-      _updateEngInfo(mesh);
-      toast('✓ ' + (name || 'Model') + ' canvas\'a yüklendi!', 'ok', 3000);
-      // Sıradaki modeli yükle (varsa)
-      setTimeout(_canvasFinished, 1000);
-    }, undefined, (err) => { toast('STL yükleme hatası', 'err'); _canvasBusy = false; });
+    // STL Loader — Web Worker ile arka planda parse
+    fetch(url).then(r => r.arrayBuffer()).then(buffer => {
+      // Ghost mesh: hızlı low-poly önizleme
+      if (typeof THREE.STLLoader !== 'undefined') {
+        try {
+          const quickGeo = new THREE.STLLoader().parse(buffer.slice(0));
+          if (typeof _showGhostMesh === 'function') _showGhostMesh(quickGeo);
+        } catch(e) {}
+      }
+      // Worker ile asıl parse
+      if (typeof _loadSTLviaWorker === 'function') {
+        _loadSTLviaWorker(buffer, name);
+        setTimeout(_canvasFinished, 1500);
+      } else {
+        // Fallback: klasik STL Loader
+        if (typeof THREE.STLLoader === 'undefined') { toast('STL Loader yüklenmiyor', 'err'); return; }
+        const geometry = new THREE.STLLoader().parse(buffer);
+        geometry.computeVertexNormals();
+        const mat = new THREE.MeshStandardMaterial({ color: 0xF97316, metalness: 0.1, roughness: 0.85 });
+        const mesh = new THREE.Mesh(geometry, mat);
+        mesh.castShadow = true; mesh.receiveShadow = true;
+        mesh.name = name || 'STL Model';
+        mesh.userData.fenixMesh = true;
+        mesh.userData._origMat = mat.clone();
+        _fitModelToView(mesh);
+        _scene.add(mesh);
+        _mainMesh = mesh;
+        window._3dMeshList = [mesh];
+        if (typeof _3dBuildLayerPanel === 'function') _3dBuildLayerPanel(mesh);
+        _updateEngInfo(mesh);
+        if (typeof _fadeInModel === 'function') _fadeInModel(mesh, 1000);
+        toast('✓ ' + (name || 'Model') + ' canvas\'a yüklendi!', 'ok', 3000);
+        setTimeout(_canvasFinished, 1000);
+      }
+    }).catch(err => { toast('STL yükleme hatası', 'err'); _canvasBusy = false; });
   } else if (ext === 'fbx' && typeof THREE.FBXLoader !== 'undefined') {
     // FBX Loader
     const loader = new THREE.FBXLoader();
@@ -7628,6 +7641,7 @@ function loadModelFromURL(url, name) {
       window._3dMeshList = _fbxMeshes;
       if (typeof _3dBuildLayerPanel === 'function') _3dBuildLayerPanel(fbx);
       _updateEngInfo(fbx);
+      if (typeof _fadeInModel === 'function') _fadeInModel(fbx, 1000);
       toast('✓ ' + (name || 'FBX') + ' canvas\'a yüklendi!', 'ok', 3000);
       setTimeout(_canvasFinished, 1000);
     }, undefined, (err) => { toast('FBX yükleme hatası: ' + err.message, 'err'); });
@@ -7659,6 +7673,7 @@ function loadModelFromURL(url, name) {
       window._3dMeshList = [mesh];
       if (typeof _3dBuildLayerPanel === 'function') _3dBuildLayerPanel(mesh);
       _updateEngInfo(mesh);
+      if (typeof _fadeInModel === 'function') _fadeInModel(mesh, 1000);
       toast('✓ ' + (name || 'OBJ') + ' canvas\'a yüklendi!', 'ok', 3000);
       setTimeout(_canvasFinished, 1000);
     }).catch(err => toast('OBJ yükleme hatası', 'err'));
@@ -7686,13 +7701,14 @@ function loadModelFromURL(url, name) {
       });
       // Modeli ortala ve ölçekle
       _fitModelToView(model);
+      _removeGhostMesh();
       _scene.add(model);
       _mainMesh = model;
       window._3dMeshList = _glbMeshes;
       if (typeof _3dBuildLayerPanel === 'function') _3dBuildLayerPanel(model);
       _updateEngInfo(model);
+      if (typeof _fadeInModel === 'function') _fadeInModel(model, 1000);
       toast('✓ ' + (name || 'Model') + ' canvas\'a yüklendi!', 'ok', 3000);
-      // Sıradaki modeli yükle (varsa)
       setTimeout(_canvasFinished, 1000);
     }, (progress) => {
       if (progress.total > 0) {
@@ -11250,8 +11266,12 @@ function _init3DScene() {
   // ── TransformControls ──
   _tfCtrl = new THREE.TransformControls(_camera, canvas);
   _tfCtrl.addEventListener('dragging-changed', e => { _orbitCtrl.enabled = !e.value; });
+  _tfCtrl.addEventListener('objectChange', () => { _updateHassasPanel(); });
   _tfCtrl.setSize(0.8);
   _scene.add(_tfCtrl);
+
+  // ── Hassas Panel (editable XYZ koordinat girişi) ──
+  _createHassasPanel();
 
   // ── Raycaster ──
   _raycaster = new THREE.Raycaster();
@@ -11362,10 +11382,11 @@ function _init3DScene() {
       } else {
         _tfCtrl.attach(obj);
         toast(`${obj.name || 'Mesh'} seçildi`, 'ok', 600);
+        _showHassasPanel(true); _updateHassasPanel();
       }
     } else {
       _3dDeselectPart();
-    }
+      _showHassasPanel(false);
   });
 
   // ── Render loop ──
@@ -16456,6 +16477,257 @@ function snapToGrid(position) {
   position.y = Math.round(position.y / step) * step;
   position.z = Math.round(position.z / step) * step;
   return position;
+}
+
+// ════════════════════════════════════════
+//  HASSASİYET PANELİ — Milimetrik XYZ Kontrolü
+// ════════════════════════════════════════
+function _createHassasPanel() {
+  if (document.getElementById('hassas-panel')) return;
+  const panel = document.createElement('div');
+  panel.id = 'hassas-panel';
+  panel.style.cssText = 'display:none;position:absolute;bottom:56px;left:50%;transform:translateX(-50%);background:rgba(0,8,16,.95);border:1px solid rgba(0,200,255,.2);border-radius:10px;padding:10px 14px;font-family:"JetBrains Mono",monospace;z-index:25;pointer-events:auto;backdrop-filter:blur(12px);min-width:340px;';
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <span style="font-size:8px;color:rgba(0,200,255,.5);font-weight:700;letter-spacing:2px;">HASSAS KONUM (mm)</span>
+      <div style="display:flex;gap:4px;">
+        <button onclick="_setHassasSnap(0.1)" class="hs-snap-btn" data-snap="0.1" style="font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.2);color:#00c8ff;cursor:pointer;">0.1mm</button>
+        <button onclick="_setHassasSnap(1)" class="hs-snap-btn" data-snap="1" style="font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.2);color:#00c8ff;cursor:pointer;">1mm</button>
+        <button onclick="_setHassasSnap(5)" class="hs-snap-btn" data-snap="5" style="font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.2);color:#00c8ff;cursor:pointer;">5mm</button>
+        <button onclick="_setHassasSnap(10)" class="hs-snap-btn" data-snap="10" style="font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.2);color:#00c8ff;cursor:pointer;">10mm</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;">
+      <div style="text-align:center;">
+        <label style="font-size:7px;color:#ff4444;font-weight:700;">X</label>
+        <input id="hs-x" type="number" step="0.1" value="0" style="width:80px;background:#0a0a15;border:1px solid rgba(255,68,68,.3);border-radius:4px;color:#ff4444;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;text-align:center;padding:4px;outline:none;" onchange="_hassasMoveFromInput()">
+      </div>
+      <div style="text-align:center;">
+        <label style="font-size:7px;color:#44ff44;font-weight:700;">Y</label>
+        <input id="hs-y" type="number" step="0.1" value="0" style="width:80px;background:#0a0a15;border:1px solid rgba(68,255,68,.3);border-radius:4px;color:#44ff44;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;text-align:center;padding:4px;outline:none;" onchange="_hassasMoveFromInput()">
+      </div>
+      <div style="text-align:center;">
+        <label style="font-size:7px;color:#4488ff;font-weight:700;">Z</label>
+        <input id="hs-z" type="number" step="0.1" value="0" style="width:80px;background:#0a0a15;border:1px solid rgba(68,136,255,.3);border-radius:4px;color:#4488ff;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;text-align:center;padding:4px;outline:none;" onchange="_hassasMoveFromInput()">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:3px;">
+        <button onclick="_hassasSetSpace('world')" id="hs-world" style="font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.3);color:#00ff88;cursor:pointer;font-weight:700;">WORLD</button>
+        <button onclick="_hassasSetSpace('local')" id="hs-local" style="font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,200,255,.08);border:1px solid rgba(0,200,255,.15);color:#00c8ff60;cursor:pointer;">LOCAL</button>
+      </div>
+    </div>
+    <div id="hs-snap-label" style="font-size:7px;color:#00ff88;text-align:center;margin-top:6px;opacity:.6;">Snap: KAPALI</div>
+  `;
+  const wrap = document.getElementById('uretim-wrap') || document.getElementById('three-wrap');
+  if (wrap) wrap.appendChild(panel);
+}
+
+let _hassasSnapMM = 0; // 0 = kapalı
+
+function _setHassasSnap(mm) {
+  _hassasSnapMM = (_hassasSnapMM === mm) ? 0 : mm;
+  // TransformControls snap ayarla
+  if (_tfCtrl) {
+    _tfCtrl.setTranslationSnap(_hassasSnapMM > 0 ? _hassasSnapMM * 0.001 : null);
+    _tfCtrl.setRotationSnap(_hassasSnapMM > 0 ? THREE.MathUtils.degToRad(15) : null);
+  }
+  document.querySelectorAll('.hs-snap-btn').forEach(b => {
+    const active = parseFloat(b.dataset.snap) === _hassasSnapMM;
+    b.style.background = active ? 'rgba(0,255,136,.2)' : 'rgba(0,200,255,.1)';
+    b.style.borderColor = active ? 'rgba(0,255,136,.5)' : 'rgba(0,200,255,.2)';
+    b.style.color = active ? '#00ff88' : '#00c8ff';
+  });
+  const label = document.getElementById('hs-snap-label');
+  if (label) label.textContent = _hassasSnapMM > 0 ? `Snap: ${_hassasSnapMM}mm adımlarla` : 'Snap: KAPALI';
+  if (_hassasSnapMM > 0) toast(`Mıknatıs: ${_hassasSnapMM}mm`, 'ok', 1000);
+}
+
+function _hassasSetSpace(space) {
+  if (_tfCtrl) _tfCtrl.setSpace(space);
+  const w = document.getElementById('hs-world');
+  const l = document.getElementById('hs-local');
+  if (w) { w.style.color = space === 'world' ? '#00ff88' : '#00c8ff60'; w.style.background = space === 'world' ? 'rgba(0,255,136,.15)' : 'rgba(0,200,255,.08)'; }
+  if (l) { l.style.color = space === 'local' ? '#00ff88' : '#00c8ff60'; l.style.background = space === 'local' ? 'rgba(0,255,136,.15)' : 'rgba(0,200,255,.08)'; }
+  toast(space === 'world' ? 'World Space (Fabrika Merkezi)' : 'Local Space (Parça Ekseni)', 'ok', 1500);
+}
+
+function _updateHassasPanel() {
+  if (!_tfCtrl || !_tfCtrl.object) return;
+  const obj = _tfCtrl.object;
+  const xmm = (obj.position.x * 1000).toFixed(1);
+  const ymm = (obj.position.y * 1000).toFixed(1);
+  const zmm = (obj.position.z * 1000).toFixed(1);
+  const xi = document.getElementById('hs-x');
+  const yi = document.getElementById('hs-y');
+  const zi = document.getElementById('hs-z');
+  if (xi && document.activeElement !== xi) xi.value = xmm;
+  if (yi && document.activeElement !== yi) yi.value = ymm;
+  if (zi && document.activeElement !== zi) zi.value = zmm;
+  // Status bar XYZ güncelle
+  const sbXyz = document.getElementById('sb-xyz');
+  if (sbXyz) { sbXyz.style.display = ''; sbXyz.textContent = `X:${xmm}  Y:${ymm}  Z:${zmm} mm`; }
+}
+
+function _hassasMoveFromInput() {
+  if (!_tfCtrl || !_tfCtrl.object) return toast('Önce bir parça seçin', 'err');
+  const x = parseFloat(document.getElementById('hs-x')?.value || 0) * 0.001;
+  const y = parseFloat(document.getElementById('hs-y')?.value || 0) * 0.001;
+  const z = parseFloat(document.getElementById('hs-z')?.value || 0) * 0.001;
+  _tfCtrl.object.position.set(x, y, z);
+  _updateHassasPanel();
+  toast('Konum güncellendi', 'ok', 800);
+}
+
+function _showHassasPanel(show) {
+  const p = document.getElementById('hassas-panel');
+  if (p) p.style.display = show ? 'block' : 'none';
+}
+
+// ════════════════════════════════════════
+//  GHOST MESH — Şeffaf Silüet + Fade-In
+// ════════════════════════════════════════
+let _ghostMesh = null;
+
+function _showGhostMesh(geometry) {
+  _removeGhostMesh();
+  if (!_scene || !geometry) return;
+  const mat = new THREE.MeshBasicMaterial({
+    color: 0x00c8ff, wireframe: true, transparent: true, opacity: 0.15,
+    depthWrite: false
+  });
+  _ghostMesh = new THREE.Mesh(geometry.clone(), mat);
+  _ghostMesh.name = '_ghostPreview';
+  // Ortala
+  const box = new THREE.Box3().setFromObject(_ghostMesh);
+  const center = box.getCenter(new THREE.Vector3());
+  _ghostMesh.position.sub(center);
+  _ghostMesh.position.y -= box.min.y - center.y;
+  _scene.add(_ghostMesh);
+  // Nefes alan animasyon
+  _ghostMesh._breathAnim = setInterval(() => {
+    if (!_ghostMesh || !_ghostMesh.material) { clearInterval(_ghostMesh?._breathAnim); return; }
+    _ghostMesh.material.opacity = 0.08 + Math.sin(Date.now() * 0.003) * 0.07;
+  }, 50);
+}
+
+function _removeGhostMesh() {
+  if (_ghostMesh) {
+    if (_ghostMesh._breathAnim) clearInterval(_ghostMesh._breathAnim);
+    _scene?.remove(_ghostMesh);
+    _ghostMesh.geometry?.dispose();
+    _ghostMesh.material?.dispose();
+    _ghostMesh = null;
+  }
+}
+
+function _fadeInModel(obj, duration) {
+  duration = duration || 1200;
+  if (!obj) return;
+  obj.traverse(c => {
+    if (c.isMesh && c.material) {
+      c.material.transparent = true;
+      c.material.opacity = 0;
+    }
+  });
+  const start = Date.now();
+  const tick = () => {
+    const t = Math.min(1, (Date.now() - start) / duration);
+    const ease = t * (2 - t); // easeOutQuad
+    obj.traverse(c => {
+      if (c.isMesh && c.material) c.material.opacity = ease;
+    });
+    if (t < 1) requestAnimationFrame(tick);
+    else obj.traverse(c => { if (c.isMesh && c.material) { c.material.transparent = false; c.material.opacity = 1; } });
+  };
+  requestAnimationFrame(tick);
+}
+
+// ════════════════════════════════════════
+//  BLUE BEAM — QR'dan Model Gelince Işık Hüzmesi
+// ════════════════════════════════════════
+function _showBlueBeam(containerEl) {
+  if (!containerEl) containerEl = document.getElementById('three-wrap') || document.getElementById('mod-3d');
+  if (!containerEl) return;
+  containerEl.style.position = 'relative';
+  const beam = document.createElement('div');
+  beam.id = '_blue-beam';
+  beam.style.cssText = 'position:absolute;left:50%;top:0;width:4px;height:100%;transform:translateX(-50%);background:linear-gradient(180deg,rgba(0,140,255,0) 0%,rgba(0,140,255,.7) 30%,rgba(0,200,255,.9) 50%,rgba(0,140,255,.7) 70%,rgba(0,140,255,0) 100%);box-shadow:0 0 30px rgba(0,140,255,.5),0 0 60px rgba(0,200,255,.3);pointer-events:none;z-index:22;opacity:0;';
+  containerEl.appendChild(beam);
+  beam.animate([
+    { opacity: 0, width: '4px' },
+    { opacity: 1, width: '8px', offset: 0.2 },
+    { opacity: 1, width: '6px', offset: 0.7 },
+    { opacity: 0, width: '2px' }
+  ], { duration: 2500, easing: 'ease-out', fill: 'forwards' });
+  // İç parlama dairesi
+  const glow = document.createElement('div');
+  glow.style.cssText = 'position:absolute;left:50%;top:50%;width:120px;height:120px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(0,180,255,.25) 0%,transparent 70%);pointer-events:none;z-index:21;';
+  containerEl.appendChild(glow);
+  glow.animate([
+    { opacity: 0, transform: 'translate(-50%,-50%) scale(0.3)' },
+    { opacity: 1, transform: 'translate(-50%,-50%) scale(1)', offset: 0.3 },
+    { opacity: 0, transform: 'translate(-50%,-50%) scale(1.5)' }
+  ], { duration: 2500, easing: 'ease-out', fill: 'forwards' });
+  setTimeout(() => { beam.remove(); glow.remove(); }, 2800);
+}
+
+// ════════════════════════════════════════
+//  WEB WORKER — STL Parse (Arka plan)
+// ════════════════════════════════════════
+function _createSTLWorker() {
+  const workerCode = `
+    self.onmessage = function(e) {
+      const buffer = e.data;
+      const dv = new DataView(buffer);
+      // Binary STL: 80 header + 4 bytes numTriangles
+      const numTriangles = dv.getUint32(80, true);
+      const vertices = new Float32Array(numTriangles * 9);
+      const normals = new Float32Array(numTriangles * 9);
+      let offset = 84;
+      for (let i = 0; i < numTriangles; i++) {
+        const nx = dv.getFloat32(offset, true); offset += 4;
+        const ny = dv.getFloat32(offset, true); offset += 4;
+        const nz = dv.getFloat32(offset, true); offset += 4;
+        for (let j = 0; j < 3; j++) {
+          const vi = i * 9 + j * 3;
+          vertices[vi]     = dv.getFloat32(offset, true); offset += 4;
+          vertices[vi + 1] = dv.getFloat32(offset, true); offset += 4;
+          vertices[vi + 2] = dv.getFloat32(offset, true); offset += 4;
+          normals[vi] = nx; normals[vi+1] = ny; normals[vi+2] = nz;
+        }
+        offset += 2; // attribute byte count
+      }
+      self.postMessage({ vertices, normals, numTriangles }, [vertices.buffer, normals.buffer]);
+    };
+  `;
+  const blob = new Blob([workerCode], { type: 'application/javascript' });
+  return new Worker(URL.createObjectURL(blob));
+}
+
+function _loadSTLviaWorker(arrayBuffer, name) {
+  if (!_scene || typeof THREE === 'undefined') return;
+  const worker = _createSTLWorker();
+  // Ghost mesh: basit low-poly önizleme
+  toast('⚡ Arka planda işleniyor: ' + (name || 'STL'), 'ok', 2000);
+  worker.onmessage = function(e) {
+    const { vertices, normals, numTriangles } = e.data;
+    const geom = new THREE.BufferGeometry();
+    geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geom.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    const mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.5, metalness: 0.3 });
+    const mesh = new THREE.Mesh(geom, mat);
+    mesh.name = (name || 'STL').replace(/\.[^.]+$/, '');
+    _removeGhostMesh();
+    _scene.add(mesh);
+    _3dSetupModel(mesh);
+    _fadeInModel(mesh, 1000);
+    toast(`${mesh.name} yüklendi — ${numTriangles.toLocaleString()} üçgen`, 'ok', 3000);
+    worker.terminate();
+  };
+  worker.onerror = function(err) {
+    toast('Worker hatası: ' + err.message, 'err');
+    worker.terminate();
+  };
+  worker.postMessage(arrayBuffer, [arrayBuffer]);
 }
 
 // ════════════════════════════════════════
