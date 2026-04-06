@@ -1306,49 +1306,70 @@ app.get('/scan.html', (req, res) => {
 });
 
 // QR üret — usta panelden çağrılır
+// QR SABİT kalır, sadece şifre periyodik değişir
 app.post('/api/usta/qr/generate', async (req, res) => {
   try {
     const userId = req.body.userId || 'default';
-    const scanId = 'scan_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
+    // Sabit token: userId bazlı, her zaman aynı QR
+    const token = crypto.createHash('md5').update('fenix_' + userId).digest('hex').substring(0, 12);
     const password = crypto.randomBytes(3).toString('hex').toUpperCase();
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 saat
+    const intervalMin = parseInt(req.body.interval) || 5;
 
     // Firestore'a kaydet (varsa)
     try {
       const db = require('firebase-admin').firestore();
-      await db.collection('scans').doc(scanId).set({
-        scanId, userId, password, expiresAt,
-        status: 'waiting', createdAt: new Date(), photos: []
-      });
+      await db.collection('qr-tokens').doc(token).set({
+        token, userId, password,
+        intervalMin,
+        updatedAt: new Date(),
+        status: 'active'
+      }, { merge: true });
     } catch(e) { logger.warn('QR Firestore kayıt atlandı: ' + e.message); }
 
     res.json({
       ok: true,
-      scanId,
+      token,
       password,
-      url: '/scan?id=' + scanId + '&p=' + password,
-      expiresAt: expiresAt.toISOString()
+      url: '/scan?t=' + token,
+      intervalMin
     });
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// Şifre yenile — otomatik periyodik çağrılır
+app.post('/api/usta/qr/refresh', async (req, res) => {
+  try {
+    const userId = req.body.userId || 'default';
+    const token = crypto.createHash('md5').update('fenix_' + userId).digest('hex').substring(0, 12);
+    const password = crypto.randomBytes(3).toString('hex').toUpperCase();
+
+    try {
+      const db = require('firebase-admin').firestore();
+      await db.collection('qr-tokens').doc(token).update({
+        password, updatedAt: new Date()
+      });
+    } catch(e) { /* Firestore yoksa devam */ }
+
+    res.json({ ok: true, password });
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
 // QR doğrula — scan.html şifreyi kontrol eder
 app.post('/api/scan/verify', async (req, res) => {
   try {
-    const { scanId, password } = req.body;
-    if (!scanId || !password) return res.status(400).json({ ok: false, error: 'scanId ve password gerekli' });
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ ok: false, error: 'Token ve şifre gerekli' });
 
     try {
       const db = require('firebase-admin').firestore();
-      const doc = await db.collection('scans').doc(scanId).get();
-      if (!doc.exists) return res.status(404).json({ ok: false, error: 'Tarama bulunamadı' });
+      const doc = await db.collection('qr-tokens').doc(token).get();
+      if (!doc.exists) return res.status(404).json({ ok: false, error: 'QR bulunamadı' });
       const data = doc.data();
       if (data.password !== password) return res.status(401).json({ ok: false, error: 'Şifre yanlış' });
-      if (new Date() > new Date(data.expiresAt)) return res.status(410).json({ ok: false, error: 'QR süresi dolmuş' });
-      res.json({ ok: true, scanId, status: data.status });
+      res.json({ ok: true, token, ustaId: data.userId, status: 'verified' });
     } catch(e) {
-      // Firestore yoksa demo mod
-      res.json({ ok: true, scanId, status: 'demo' });
+      // Firestore yoksa demo mod — herhangi şifreyle geç
+      res.json({ ok: true, token, ustaId: 'demo', status: 'demo' });
     }
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });

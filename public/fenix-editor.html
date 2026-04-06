@@ -7288,33 +7288,63 @@ async function _ustaActivate() {
   } catch(e) { toast('Hata: '+e.message, 'err'); }
 }
 
+var _qrRefreshTimer = null;
+var _qrToken = null;
 async function _ustaGenerateQR() {
   try {
+    const interval = document.getElementById('usta-qr-interval')?.value || 5;
     const r = await fetch('/api/usta/qr/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: _driveUserId() })
+      body: JSON.stringify({ userId: _driveUserId(), interval: interval })
     });
     const d = await r.json();
     if (!d.ok) throw new Error(d.error);
 
+    _qrToken = d.token;
     const fullUrl = location.origin + d.url;
     const el = document.getElementById('usta-qr-result');
     el.innerHTML = `
       <div style="background:#0a0a15;border-radius:6px;padding:8px;text-align:center">
         <div id="usta-qr-canvas"></div>
-        <div style="font-size:10px;color:#F97316;margin-top:6px;font-weight:700">Şifre: ${d.password}</div>
+        <div style="font-size:10px;color:#F97316;margin-top:6px;font-weight:700">Şifre: <span id="usta-pw-display">${d.password}</span></div>
+        <div id="usta-pw-timer" style="font-size:8px;color:#666;margin-top:2px"></div>
         <div style="font-size:9px;color:#555;margin-top:2px;word-break:break-all">${fullUrl}</div>
+        <div style="font-size:8px;color:#22C55E;margin-top:4px">QR sabit · Şifre ${interval} dk'da bir değişir</div>
         <div style="display:flex;gap:4px;margin-top:6px">
           <button onclick="navigator.clipboard.writeText('${fullUrl}');toast('Kopyalandı','ok',1500)" style="flex:1;height:26px;border-radius:4px;background:#1a1a2e;border:1px solid #333;color:#ccc;font-size:10px;cursor:pointer">Kopyala</button>
           <button onclick="navigator.share?.({url:'${fullUrl}',title:'Fenixal Tarama'})" style="flex:1;height:26px;border-radius:4px;background:#1a1a2e;border:1px solid #333;color:#ccc;font-size:10px;cursor:pointer">Paylaş</button>
         </div>
       </div>`;
 
-    // QR kod oluştur
     if (typeof QRCode !== 'undefined') {
       new QRCode(document.getElementById('usta-qr-canvas'), { text: fullUrl, width: 160, height: 160, colorDark: '#F97316', colorLight: '#0a0a15' });
     }
+
+    // Otomatik şifre yenileme
+    if (_qrRefreshTimer) clearInterval(_qrRefreshTimer);
+    var nextRefresh = Date.now() + interval * 60000;
+    _qrRefreshTimer = setInterval(async function() {
+      try {
+        var rr = await fetch('/api/usta/qr/refresh', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({userId:_driveUserId()}) });
+        var dd = await rr.json();
+        if (dd.ok) {
+          var pwEl = document.getElementById('usta-pw-display');
+          if (pwEl) { pwEl.textContent = dd.password; pwEl.style.animation = 'none'; pwEl.offsetHeight; pwEl.style.animation = ''; }
+          nextRefresh = Date.now() + interval * 60000;
+          toast('Şifre yenilendi: ' + dd.password, 'ok', 2000);
+        }
+      } catch(e) {}
+    }, interval * 60000);
+
+    // Geri sayım göster
+    setInterval(function() {
+      var remaining = Math.max(0, Math.ceil((nextRefresh - Date.now()) / 1000));
+      var timerEl = document.getElementById('usta-pw-timer');
+      if (timerEl) timerEl.textContent = 'Yeni şifre: ' + Math.floor(remaining/60) + ':' + String(remaining%60).padStart(2,'0');
+    }, 1000);
+
+    toast('QR oluşturuldu — şifre ' + interval + ' dk\'da bir yenilenir', 'ok', 3000);
   } catch(e) { toast('QR hatası: '+e.message, 'err'); }
 }
 
