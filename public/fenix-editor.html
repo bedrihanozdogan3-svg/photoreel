@@ -879,28 +879,6 @@
     0%,100% { opacity:1; box-shadow:0 0 6px #00c8ff; }
     50%     { opacity:.4; box-shadow:0 0 2px #00c8ff; }
   }
-  /* Sağlık barı %90+ parlayan glow */
-  @keyframes healthGlow90 {
-    0%,100% { box-shadow: 0 0 4px #00ff88, 0 0 12px rgba(0,255,136,.3); }
-    50%     { box-shadow: 0 0 8px #00ff88, 0 0 24px rgba(0,255,136,.5); }
-  }
-  .health-glow-90 { animation: healthGlow90 2s ease-in-out infinite; }
-  /* Veri waveform animasyonu */
-  @keyframes miniWave {
-    0%   { transform: scaleY(.3); }
-    50%  { transform: scaleY(1); }
-    100% { transform: scaleY(.3); }
-  }
-  .data-waveform {
-    display: inline-flex; gap: 1px; align-items: center; height: 10px;
-  }
-  .data-waveform span {
-    width: 2px; height: 8px; background: #00c8ff; border-radius: 1px;
-    animation: miniWave .6s ease-in-out infinite;
-  }
-  .data-waveform span:nth-child(2) { animation-delay: .1s; }
-  .data-waveform span:nth-child(3) { animation-delay: .2s; }
-  .data-waveform span:nth-child(4) { animation-delay: .3s; }
   .layer-tabs { display: flex; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--border); }
   .ltab {
     flex: 1; height: 26px; border-radius: 5px; border: none;
@@ -2542,8 +2520,8 @@
           <div class="data-flow-bar" style="margin-bottom:6px;opacity:.6;"></div>
           <!-- Veriler -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:8px;font-family:'JetBrains Mono',monospace;">
-            <div style="color:rgba(0,200,255,.4);">Vertices</div><div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;"><span id="eng-vertices" style="color:#00c8ff;">—</span><span id="eng-v-tick" class="data-waveform"><span></span><span></span><span></span><span></span></span></div>
-            <div style="color:rgba(0,200,255,.4);">Faces</div><div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;"><span id="eng-faces" style="color:#00c8ff;">—</span><span id="eng-f-tick" class="data-waveform"><span></span><span></span><span></span><span></span></span></div>
+            <div style="color:rgba(0,200,255,.4);">Vertices</div><div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;"><span id="eng-vertices" style="color:#00c8ff;">—</span><span id="eng-v-tick" style="font-size:7px;">⏳</span></div>
+            <div style="color:rgba(0,200,255,.4);">Faces</div><div style="display:flex;align-items:center;gap:4px;justify-content:flex-end;"><span id="eng-faces" style="color:#00c8ff;">—</span><span id="eng-f-tick" style="font-size:7px;">⏳</span></div>
             <div style="color:rgba(0,200,255,.4);">BBox</div><div id="eng-bbox" style="color:#00c8ff;text-align:right;font-size:7px;">—</div>
             <div style="color:rgba(0,200,255,.4);">Watertight</div><div id="eng-watertight" style="text-align:right;">—</div>
             <div style="color:rgba(0,200,255,.4);">Dosya</div><div id="eng-filesize" style="color:#00c8ff;text-align:right;">—</div>
@@ -2903,9 +2881,6 @@
   <div class="sb-item" style="color:rgba(0,200,255,.5);">|</div>
   <div class="sb-item"><span id="sb-ai-status" style="color:#00c8ff;">AI: Hazır</span></div>
   <div style="flex:1"></div>
-  <div class="sb-item" id="sb-laser" style="display:none;color:#00ff88;font-weight:700;font-family:'JetBrains Mono',monospace;font-size:7px;letter-spacing:.5px;">🔬 LAZER AKTİF</div>
-  <div class="sb-item" id="sb-xyz" style="display:none;color:#00c8ff;font-family:'JetBrains Mono',monospace;font-size:7px;letter-spacing:.3px;">X: 0.000 Y: 0.000 Z: 0.000</div>
-  <div class="sb-item" style="color:rgba(0,200,255,.5);">|</div>
   <div class="sb-item" id="sb-fps" style="color:rgba(0,200,255,.4);">— FPS</div>
   <div class="sb-item" style="color:rgba(0,200,255,.5);">|</div>
   <div class="sb-item" style="color:rgba(0,200,255,.35);">Fenix PRO v2.0</div>
@@ -3990,7 +3965,6 @@ function applyToneMap() {
 }
 
 function applyImgFilter() { applyToneMap(); }
-function applyFilter()    { applyToneMap(); }
 
 // ── LUT Presetleri ──
 const _LUT_PRESETS = {
@@ -7032,28 +7006,14 @@ function _driveRender(files) {
     const icon = f.type === 'photo' ? '🖼' : f.type === 'video' ? '🎬' : f.type === '3d-model' ? '🧊' : '📄';
     const size = f.size > 1048576 ? (f.size/1048576).toFixed(1)+'MB' : (f.size/1024).toFixed(0)+'KB';
     const date = new Date(f.uploadedAt).toLocaleDateString('tr-TR');
-    // Akıllı etiket
-    const nm = (f.name || '').toLowerCase();
-    const tag = f.type === '3d-model' ? (nm.includes('figur') || nm.includes('figür') ? 'Figür' : nm.includes('araba') || nm.includes('car') || nm.includes('mercedes') ? 'Araba' : 'Parça') : f.type === 'photo' ? 'Fotoğraf' : f.type === 'video' ? 'Video' : 'Dosya';
-    const tagColor = tag === 'Araba' ? '#3b82f6' : tag === 'Figür' ? '#a855f7' : tag === 'Parça' ? '#00c8ff' : '#F97316';
-    // 3D Thumbnail (mini canvas ön izleme)
-    const thumbBg = f.type === '3d-model' ? 'linear-gradient(135deg,#0a1628,#0d2847)' : f.thumbnailUrl ? `url(${f.thumbnailUrl}) center/cover` : 'linear-gradient(135deg,#1a1a2e,#16213e)';
-    const thumbIcon = f.type === '3d-model' ? '<div style="font-size:20px;opacity:.7;">🧊</div><div style="font-size:7px;color:#00c8ff;margin-top:2px;">3D</div>' : f.type === 'photo' ? '<div style="font-size:20px;">🖼</div>' : f.type === 'video' ? '<div style="font-size:20px;">🎬</div>' : '<div style="font-size:20px;">📄</div>';
-    return `<div style="display:flex;align-items:center;gap:8px;padding:8px;background:#0a0a15;border-radius:8px;border:1px solid #1a1a2e;cursor:pointer;transition:border-color .2s" onmouseenter="this.style.borderColor='${tagColor}40'" onmouseleave="this.style.borderColor='#1a1a2e'">
-      <div style="width:44px;height:44px;border-radius:6px;background:${thumbBg};display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;border:1px solid #222">${thumbIcon}</div>
-      <div style="flex:1;min-width:0" onclick="_driveUseFile('${f.fileId}')">
-        <div style="font-size:11px;color:#eee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600">${f.name}</div>
-        <div style="display:flex;align-items:center;gap:6px;margin-top:3px">
-          <span style="font-size:7px;padding:1px 5px;border-radius:3px;background:${tagColor}15;color:${tagColor};border:1px solid ${tagColor}30;font-weight:700;letter-spacing:.5px">${tag}</span>
-          <span style="font-size:8px;color:#555">${size}</span>
-          <span style="font-size:8px;color:#444">${date}</span>
-        </div>
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 8px;background:#111;border-radius:6px;border:1px solid #222;cursor:pointer"
+                onclick="_driveUseFile('${f.fileId}')" title="${f.name}">
+      <span style="font-size:16px">${icon}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;color:#eee;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.name}</div>
+        <div style="font-size:9px;color:#666">${size} · ${date}</div>
       </div>
-      <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0">
-        <button onclick="event.stopPropagation();_driveUseFile('${f.fileId}')" style="width:24px;height:24px;border-radius:4px;background:rgba(0,200,255,.08);border:1px solid rgba(0,200,255,.2);color:#00c8ff;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center" title="Görüntüle">👁</button>
-        ${f.type === '3d-model' ? `<button onclick="event.stopPropagation();_driveFireToProduction('${f.fileId}')" style="width:24px;height:24px;border-radius:4px;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.3);color:#F97316;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center" title="Üretime Ateşle">🔥</button>` : ''}
-        <button onclick="event.stopPropagation();_driveDelete('${f.fileId}')" style="width:24px;height:24px;border-radius:4px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.15);color:#ef4444;cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center" title="Sil">🗑</button>
-      </div>
+      <button onclick="event.stopPropagation();_driveDelete('${f.fileId}')" style="background:none;border:none;color:#555;cursor:pointer;font-size:12px" title="Sil">🗑</button>
     </div>`;
   }).join('');
 }
@@ -7110,17 +7070,6 @@ function _driveSearch(q) {
 }
 
 function _driveFilter(type) { _driveLoadFiles(type || undefined); }
-
-function _driveFireToProduction(fileId) {
-  const f = _driveFiles.find(x => x.fileId === fileId);
-  if (!f || !f.url) return toast('Dosya bulunamadı', 'err');
-  closeSlidePanel();
-  switchMode('uretim');
-  setTimeout(() => {
-    loadModelFromURL(f.url, f.name);
-    toast('🔥 ' + f.name + ' üretime gönderildi!', 'ok', 3000);
-  }, 300);
-}
 
 function _driveUseFile(fileId) {
   const f = _driveFiles.find(x => x.fileId === fileId);
@@ -7248,16 +7197,15 @@ async function _ustaLoadPanel() {
         toast('🧊 3D model geliyor...', 'ok', 2000);
         setTimeout(() => _ustaLoadModel(data.scanId), 500);
       } else if (data.fileUrl) {
-        // Arka planda sahneyi hazırla — sekme değiştirme
+        // 3D moda geç + sahneyi hazırla
+        if (typeof switchMode === 'function') switchMode('3d');
         if (typeof _init3DScene === 'function') _init3DScene();
         const drop = document.getElementById('three-drop');
         const wrap = document.getElementById('three-wrap');
         if (drop) drop.style.display = 'none';
         if (wrap) wrap.style.display = 'flex';
-        const mod3d = document.getElementById('mod-3d');
-        if (mod3d) mod3d.classList.add('active');
+        // Sıra sistemiyle yükle
         _queueModel(data.fileUrl, data.customerName || 'Sipariş');
-        setTimeout(() => _showModelReadyNotification(data.customerName || 'Sipariş'), 3000);
       }
     });
 
@@ -7283,8 +7231,6 @@ async function _ustaLoadPanel() {
         const wrap = document.getElementById('three-wrap');
         if (drop) drop.style.display = 'none';
         if (wrap) wrap.style.display = 'flex';
-        // Mavi ışık hüzmesi — QR'dan parça geliyor
-        if (typeof _showBlueBeam === 'function') _showBlueBeam(wrap);
         loadModelFromURL(data.modelUrl, 'Müşteri Taraması');
       }
     });
@@ -7395,17 +7341,12 @@ async function _ustaLoadModel(scanId) {
       loadModelFromURL(scan.modelUrl, scan.name || 'Müşteri Taraması');
     } else if (scan.status === 'reconstructing' || scan.status === 'downloading' || scan.status === 'optimizing' || scan.status === 'uploading') {
       _showReconProgress(scanId, scan.status);
-    } else if (scan.photos && scan.photos.length >= 3 && scan.status !== 'processing') {
-      // Model yok ama fotoğraflar var VE henüz işlem başlamamış — reconstruction başlat
+    } else if (scan.photos && scan.photos.length >= 3) {
+      // Model yok ama fotoğraflar var — reconstruction başlat
       try {
-        const reconR = await fetch(`/api/scans/${scanId}/reconstruct`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-        const reconD = await reconR.json();
-        if (!reconD.ok) throw new Error(reconD.error || 'Bilinmeyen hata');
+        await fetch(`/api/scans/${scanId}/reconstruct`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
         _showReconProgress(scanId, 'queued');
       } catch(re) { toast('Reconstruction hatası: ' + re.message, 'err'); }
-    } else if (scan.photos && scan.photos.length >= 3) {
-      // Zaten işlemde — sadece progress göster
-      _showReconProgress(scanId, scan.status || 'processing');
     } else {
       toast('Fotoğraflar henüz yüklenmemiş', 'err', 3000);
     }
@@ -7428,7 +7369,7 @@ function _showReconProgress(scanId, initialStatus) {
   if (!overlay) {
     overlay = document.createElement('div');
     overlay.id = 'recon-overlay';
-    overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;pointer-events:auto';
+    overlay.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:50;pointer-events:none';
     (wrap || document.getElementById('canvas-wrap')).appendChild(overlay);
   }
 
@@ -7454,40 +7395,11 @@ function _showReconProgress(scanId, initialStatus) {
         </div>
         <div style="font-size:11px;color:#555">%${pct}</div>
         <div style="font-size:10px;color:#333;margin-top:12px">Fenix AI</div>
-        <button onclick="document.getElementById('recon-overlay')?.remove();if(window._reconInterval){clearInterval(_reconInterval);_reconInterval=null;}toast('Üretim iptal edildi','err')" style="margin-top:20px;padding:8px 24px;border-radius:6px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.1);color:#ef4444;font-size:11px;font-weight:700;cursor:pointer;pointer-events:auto;">✕ İptal Et & Kapat</button>
       </div>
     `;
   }
 
   renderStatus(initialStatus);
-
-  // 5 dakika timeout — GPU reconstruction süresi için yeterli
-  setTimeout(() => {
-    if (document.getElementById('recon-overlay')) {
-      if (_reconInterval) { clearInterval(_reconInterval); _reconInterval = null; }
-      const ov = document.getElementById('recon-overlay');
-      if (ov) { ov.remove(); toast('Model üretimi zaman aşımına uğradı. Tekrar deneyin.', 'err', 5000); }
-    }
-  }, 300000);
-
-  // Socket ile anında model teslimi (polling'e güvenmek yerine)
-  if (window._gsyncSocket) {
-    const _reconSocketHandler = (data) => {
-      if (data.scanId === scanId && data.modelUrl) {
-        if (_reconInterval) { clearInterval(_reconInterval); _reconInterval = null; }
-        renderStatus('completed', 100);
-        setTimeout(() => {
-          const ov = document.getElementById('recon-overlay');
-          if (ov) ov.remove();
-          if (typeof _showBlueBeam === 'function') _showBlueBeam();
-          loadModelFromURL(data.modelUrl, 'Müşteri Taraması');
-          _ustaLoadPanel();
-        }, 1000);
-        window._gsyncSocket.off('order:model-ready', _reconSocketHandler);
-      }
-    };
-    window._gsyncSocket.on('order:model-ready', _reconSocketHandler);
-  }
 
   // Polling — her 4 saniyede scan durumunu kontrol et
   if (_reconInterval) clearInterval(_reconInterval);
@@ -7605,45 +7517,31 @@ function loadModelFromURL(url, name) {
     ext = (name || '').split('.').pop().toLowerCase() || 'glb';
   }
   toast('Model yükleniyor: ' + (name || url.split('/').pop()), 'info', 3000);
-  // Laser scan + Digital Matrix efekti
-  const _scanTarget = document.getElementById('three-wrap') || document.getElementById('mod-3d');
-  if (_scanTarget) { if (typeof _showLaserScanEffect === 'function') _showLaserScanEffect(_scanTarget); if (typeof _showDigitalMatrix === 'function') _showDigitalMatrix(_scanTarget); }
   if (ext === 'stl') {
-    // STL Loader — Web Worker ile arka planda parse
-    fetch(url).then(r => r.arrayBuffer()).then(buffer => {
-      // Ghost mesh: hızlı low-poly önizleme
-      if (typeof THREE.STLLoader !== 'undefined') {
-        try {
-          const quickGeo = new THREE.STLLoader().parse(buffer.slice(0));
-          if (typeof _showGhostMesh === 'function') _showGhostMesh(quickGeo);
-        } catch(e) {}
-      }
-      // Worker ile asıl parse
-      if (typeof _loadSTLviaWorker === 'function') {
-        _loadSTLviaWorker(buffer, name);
-        setTimeout(_canvasFinished, 1500);
-      } else {
-        // Fallback: klasik STL Loader
-        if (typeof THREE.STLLoader === 'undefined') { toast('STL Loader yüklenmiyor', 'err'); return; }
-        const geometry = new THREE.STLLoader().parse(buffer);
-        geometry.computeVertexNormals();
-        const mat = new THREE.MeshStandardMaterial({ color: 0xF97316, metalness: 0.1, roughness: 0.85 });
-        const mesh = new THREE.Mesh(geometry, mat);
-        mesh.castShadow = true; mesh.receiveShadow = true;
-        mesh.name = name || 'STL Model';
-        mesh.userData.fenixMesh = true;
-        mesh.userData._origMat = mat.clone();
-        _fitModelToView(mesh);
-        _scene.add(mesh);
-        _mainMesh = mesh;
-        window._3dMeshList = [mesh];
-        if (typeof _3dBuildLayerPanel === 'function') _3dBuildLayerPanel(mesh);
-        _updateEngInfo(mesh);
-        if (typeof _fadeInModel === 'function') _fadeInModel(mesh, 1000);
-        toast('✓ ' + (name || 'Model') + ' canvas\'a yüklendi!', 'ok', 3000);
-        setTimeout(_canvasFinished, 1000);
-      }
-    }).catch(err => { toast('STL yükleme hatası', 'err'); _canvasBusy = false; });
+    // STL Loader
+    if (typeof THREE.STLLoader === 'undefined') {
+      toast('STL Loader yüklenmiyor, GLB formatı dene', 'err'); return;
+    }
+    const loader = new THREE.STLLoader();
+    loader.load(url, (geometry) => {
+      geometry.computeVertexNormals();
+      const mat = new THREE.MeshStandardMaterial({ color: 0xF97316, metalness: 0.1, roughness: 0.85 });
+      const mesh = new THREE.Mesh(geometry, mat);
+      mesh.castShadow = true; mesh.receiveShadow = true;
+      mesh.name = name || 'STL Model';
+      mesh.userData.fenixMesh = true;
+      mesh.userData._origMat = mat.clone();
+      // Modeli ortala ve ölçekle
+      _fitModelToView(mesh);
+      _scene.add(mesh);
+      _mainMesh = mesh;
+      window._3dMeshList = [mesh];
+      if (typeof _3dBuildLayerPanel === 'function') _3dBuildLayerPanel(mesh);
+      _updateEngInfo(mesh);
+      toast('✓ ' + (name || 'Model') + ' canvas\'a yüklendi!', 'ok', 3000);
+      // Sıradaki modeli yükle (varsa)
+      setTimeout(_canvasFinished, 1000);
+    }, undefined, (err) => { toast('STL yükleme hatası', 'err'); _canvasBusy = false; });
   } else if (ext === 'fbx' && typeof THREE.FBXLoader !== 'undefined') {
     // FBX Loader
     const loader = new THREE.FBXLoader();
@@ -7665,7 +7563,6 @@ function loadModelFromURL(url, name) {
       window._3dMeshList = _fbxMeshes;
       if (typeof _3dBuildLayerPanel === 'function') _3dBuildLayerPanel(fbx);
       _updateEngInfo(fbx);
-      if (typeof _fadeInModel === 'function') _fadeInModel(fbx, 1000);
       toast('✓ ' + (name || 'FBX') + ' canvas\'a yüklendi!', 'ok', 3000);
       setTimeout(_canvasFinished, 1000);
     }, undefined, (err) => { toast('FBX yükleme hatası: ' + err.message, 'err'); });
@@ -7697,7 +7594,6 @@ function loadModelFromURL(url, name) {
       window._3dMeshList = [mesh];
       if (typeof _3dBuildLayerPanel === 'function') _3dBuildLayerPanel(mesh);
       _updateEngInfo(mesh);
-      if (typeof _fadeInModel === 'function') _fadeInModel(mesh, 1000);
       toast('✓ ' + (name || 'OBJ') + ' canvas\'a yüklendi!', 'ok', 3000);
       setTimeout(_canvasFinished, 1000);
     }).catch(err => toast('OBJ yükleme hatası', 'err'));
@@ -7725,14 +7621,13 @@ function loadModelFromURL(url, name) {
       });
       // Modeli ortala ve ölçekle
       _fitModelToView(model);
-      _removeGhostMesh();
       _scene.add(model);
       _mainMesh = model;
       window._3dMeshList = _glbMeshes;
       if (typeof _3dBuildLayerPanel === 'function') _3dBuildLayerPanel(model);
       _updateEngInfo(model);
-      if (typeof _fadeInModel === 'function') _fadeInModel(model, 1000);
       toast('✓ ' + (name || 'Model') + ' canvas\'a yüklendi!', 'ok', 3000);
+      // Sıradaki modeli yükle (varsa)
       setTimeout(_canvasFinished, 1000);
     }, (progress) => {
       if (progress.total > 0) {
@@ -7752,112 +7647,18 @@ function _ustaLoadOrderDirect(orderId) {
     const file = e.target.files[0];
     if (!file) return;
     toast('Model yükleniyor: ' + file.name, 'info', 2000);
-    // Arka planda 3D sahneyi hazırla ama sekme DEĞİŞTİRME
+    // 3D moda geç
+    if (typeof switchMode === 'function') switchMode('3d');
     if (typeof _init3DScene === 'function') _init3DScene();
     const drop = document.getElementById('three-drop');
     const wrap = document.getElementById('three-wrap');
     if (drop) drop.style.display = 'none';
     if (wrap) wrap.style.display = 'flex';
-    const mod3d = document.getElementById('mod-3d');
-    if (mod3d) mod3d.classList.add('active');
+    // File → URL
     const url = URL.createObjectURL(file);
     loadModelFromURL(url, file.name);
-    // Bildirim: kullanıcı isterse geçsin
-    setTimeout(() => _showModelReadyNotification(file.name), 3000);
   };
   input.click();
-}
-
-// ── Model Hazır Bildirimi — sekme değiştirmeden bildir ──
-function _showModelReadyNotification(modelName) {
-  // Zaten 3D/üretim modundaysa bildirime gerek yok
-  if (S.mode === '3d' || S.mode === 'uretim') return;
-
-  // Bildirim baloncuğu
-  let notif = document.getElementById('model-ready-notif');
-  if (notif) notif.remove();
-  notif = document.createElement('div');
-  notif.id = 'model-ready-notif';
-  notif.style.cssText = 'position:fixed;top:60px;right:20px;z-index:10000;background:rgba(0,10,20,.95);border:1px solid rgba(0,200,255,.4);border-radius:10px;padding:14px 18px;backdrop-filter:blur(16px);box-shadow:0 8px 32px rgba(0,200,255,.15);animation:slideInRight .4s ease;max-width:320px;';
-  notif.innerHTML = `
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
-      <div style="width:36px;height:36px;border-radius:8px;background:rgba(0,255,136,.1);border:1px solid rgba(0,255,136,.3);display:flex;align-items:center;justify-content:center;font-size:18px;">✅</div>
-      <div>
-        <div style="font-size:11px;font-weight:800;color:#00ff88;letter-spacing:.5px;">PARÇA HAZIR</div>
-        <div style="font-size:9px;color:#888;margin-top:2px;">${modelName}</div>
-      </div>
-    </div>
-    <div style="display:flex;gap:6px;">
-      <button onclick="switchMode('uretim');document.getElementById('model-ready-notif')?.remove()" style="flex:1;height:32px;border-radius:6px;border:1px solid rgba(0,200,255,.4);background:rgba(0,200,255,.12);color:#00c8ff;font-size:10px;font-weight:700;cursor:pointer;">🏭 Üretim Moduna Geç</button>
-      <button onclick="switchMode('3d');document.getElementById('model-ready-notif')?.remove()" style="flex:1;height:32px;border-radius:6px;border:1px solid rgba(249,115,22,.3);background:rgba(249,115,22,.08);color:#F97316;font-size:10px;font-weight:700;cursor:pointer;">🎨 3D Düzenleyici</button>
-      <button onclick="document.getElementById('model-ready-notif')?.remove()" style="width:32px;height:32px;border-radius:6px;border:1px solid #333;background:#111;color:#555;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;">×</button>
-    </div>
-  `;
-  document.body.appendChild(notif);
-
-  // 15 saniye sonra otomatik kapat
-  setTimeout(() => notif?.remove(), 15000);
-}
-
-// ── Lazer Tarama Efekti (Yükleme sırasında) ──
-function _showLaserScanEffect(containerEl) {
-  if (!containerEl) return;
-  let scanLine = document.getElementById('laser-scan-line');
-  if (scanLine) scanLine.remove();
-  scanLine = document.createElement('div');
-  scanLine.id = 'laser-scan-line';
-  scanLine.style.cssText = 'position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent 0%,rgba(0,255,136,0) 10%,rgba(0,255,136,.8) 50%,rgba(0,255,136,0) 90%,transparent 100%);box-shadow:0 0 12px rgba(0,255,136,.5),0 0 30px rgba(0,255,136,.2);pointer-events:none;z-index:20;top:0;';
-  scanLine.animate([
-    { top: '0%', opacity: 1 }, { top: '100%', opacity: .6 },
-    { top: '0%', opacity: 1 }
-  ], { duration: 2500, iterations: 3, easing: 'ease-in-out' });
-  containerEl.style.position = 'relative';
-  containerEl.appendChild(scanLine);
-  setTimeout(() => scanLine?.remove(), 7500);
-}
-
-// ── Digital Matrix Efekti (Koordinatlar süzülerek belirir) ──
-function _showDigitalMatrix(containerEl) {
-  if (!containerEl) return;
-  containerEl.style.position = 'relative';
-  const dims = [
-    { label: 'X', val: (Math.random()*200+20).toFixed(1), color: '#ff4444' },
-    { label: 'Y', val: (Math.random()*150+15).toFixed(1), color: '#44ff44' },
-    { label: 'Z', val: (Math.random()*100+10).toFixed(1), color: '#4488ff' }
-  ];
-  const extras = [
-    { text: 'MESH ANALIZ...', delay: 800 },
-    { text: 'BOYUT TARAMA', delay: 1600 },
-    { text: 'KALİBRASYON OK', delay: 2800 }
-  ];
-  dims.forEach((d, i) => {
-    const el = document.createElement('div');
-    el.className = '_dmatrix-coord';
-    el.style.cssText = `position:absolute;pointer-events:none;z-index:21;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:${d.color};text-shadow:0 0 8px ${d.color}80;opacity:0;white-space:nowrap;`;
-    el.style.left = (15 + i * 30) + '%';
-    el.style.top = (20 + i * 20) + '%';
-    el.textContent = `${d.label}: ${d.val}mm`;
-    containerEl.appendChild(el);
-    el.animate([
-      { opacity: 0, transform: 'translateY(20px)', filter: 'blur(4px)' },
-      { opacity: 1, transform: 'translateY(0)', filter: 'blur(0)' },
-      { opacity: 1, transform: 'translateY(0)', filter: 'blur(0)' },
-      { opacity: 0, transform: 'translateY(-15px)', filter: 'blur(2px)' }
-    ], { duration: 4000, delay: 500 + i * 600, fill: 'forwards', easing: 'ease-out' });
-    setTimeout(() => el.remove(), 5500 + i * 600);
-  });
-  extras.forEach(e => {
-    const el = document.createElement('div');
-    el.className = '_dmatrix-status';
-    el.style.cssText = 'position:absolute;pointer-events:none;z-index:21;font-family:"JetBrains Mono",monospace;font-size:11px;color:#00ff88;text-shadow:0 0 6px #00ff8860;opacity:0;right:12px;';
-    el.style.bottom = (10 + extras.indexOf(e) * 18) + 'px';
-    el.textContent = '▸ ' + e.text;
-    containerEl.appendChild(el);
-    el.animate([
-      { opacity: 0 }, { opacity: .9 }, { opacity: .9 }, { opacity: 0 }
-    ], { duration: 3500, delay: e.delay, fill: 'forwards' });
-    setTimeout(() => el.remove(), e.delay + 4000);
-  });
 }
 
 // Alias — eski referanslar için
@@ -11290,12 +11091,8 @@ function _init3DScene() {
   // ── TransformControls ──
   _tfCtrl = new THREE.TransformControls(_camera, canvas);
   _tfCtrl.addEventListener('dragging-changed', e => { _orbitCtrl.enabled = !e.value; });
-  _tfCtrl.addEventListener('objectChange', () => { _updateHassasPanel(); });
   _tfCtrl.setSize(0.8);
   _scene.add(_tfCtrl);
-
-  // ── Hassas Panel (editable XYZ koordinat girişi) ──
-  _createHassasPanel();
 
   // ── Raycaster ──
   _raycaster = new THREE.Raycaster();
@@ -11406,11 +11203,10 @@ function _init3DScene() {
       } else {
         _tfCtrl.attach(obj);
         toast(`${obj.name || 'Mesh'} seçildi`, 'ok', 600);
-        _showHassasPanel(true); _updateHassasPanel();
       }
     } else {
       _3dDeselectPart();
-      _showHassasPanel(false);
+    }
   });
 
   // ── Render loop ──
@@ -11957,9 +11753,6 @@ function _3dLoadFile(file) {
   _init3DScene();
 
   toast(`${file.name} yükleniyor...`, 'ok', 3000);
-  // Laser scan + Digital Matrix efekti
-  const _scanWrap = document.getElementById('three-wrap');
-  if (_scanWrap) { if (typeof _showLaserScanEffect === 'function') _showLaserScanEffect(_scanWrap); if (typeof _showDigitalMatrix === 'function') _showDigitalMatrix(_scanWrap); }
   const url = URL.createObjectURL(file);
   const modelName = file.name.replace(/\.[^.]+$/, '');
 
@@ -14250,9 +14043,7 @@ function load3DDemo(preset) {
 // Eski animate3D — artık Three.js render loop kullanıyor, bu sadece uyumluluk için
 function animate3D() { /* Three.js kendi render loop'unu kullanır */ }
 
-/* ── ESKİ 2D CANVAS RENDER KALDIRILDI — Three.js aktif ──
-  const canvas = document.getElementById('three-canvas');
-  if (!canvas || !S.threeLoaded) return;
+/* ESKİ 2D MOTOR SİLİNDİ
   const ctx = canvas.getContext('2d');
   const W = canvas.width = canvas.offsetWidth;
   const H = canvas.height = canvas.offsetHeight;
@@ -14776,9 +14567,6 @@ function set3DPreset(p, btn) {
   }
   updateRightPanel();
 }
-
-// ── Gizmo tool switcher (Three.js TransformControls) ──
-function _3dPick() { /* Artık _init3DScene içindeki click handler kullanılıyor */ }
 
 // ════════════════════════════════════════
 //  3D MESH PANEL — Select / Lock / Visibility
@@ -15841,16 +15629,9 @@ function enterUretimMode() {
   // 6. Job queue panelini göster (eleman varsa)
   if (jobQueue.length > 0) updateJobQueueUI();
 
-  // 7. Komuta çubuğu güncelle — Lazer Aktif
+  // 7. Komuta çubuğu güncelle
   const sbAi = document.getElementById('sb-ai-status');
   if (sbAi) sbAi.innerHTML = '<span style="color:#00c8ff">AI Analiz: Aktif</span>';
-  const sbLaser = document.getElementById('sb-laser');
-  if (sbLaser) sbLaser.style.display = '';
-  const sbXyz = document.getElementById('sb-xyz');
-  if (sbXyz) sbXyz.style.display = '';
-
-  // 8. Lazer Grid Glow — mouse takip sistemi
-  _initLaserSystem();
 }
 
 function exitUretimMode() {
@@ -15890,184 +15671,6 @@ function exitUretimMode() {
   // Komuta çubuğu sıfırla
   const sbAi = document.getElementById('sb-ai-status');
   if (sbAi) sbAi.innerHTML = '<span style="color:#00c8ff">AI: Hazır</span>';
-  const sbLaser = document.getElementById('sb-laser');
-  if (sbLaser) sbLaser.style.display = 'none';
-  const sbXyz = document.getElementById('sb-xyz');
-  if (sbXyz) sbXyz.style.display = 'none';
-  // Lazer sistemi temizle
-  _destroyLaserSystem();
-}
-
-// ════════════════════════════════════════
-//  LAZER MÜHENDİSLİK SİSTEMİ
-// ════════════════════════════════════════
-let _laserState = { active: false, glowMesh: null, crosshairEl: null, beamEl: null, mouseCanvas: {x:0,y:0}, worldPos: new THREE.Vector3() };
-
-function _initLaserSystem() {
-  if (_laserState.active) return;
-  _laserState.active = true;
-
-  // ── 1. Lazer Grid Glow Disk — mouse'un değdiği yere parlak halka ──
-  const glowGeo = new THREE.CircleGeometry(0.025, 32);
-  const glowMat = new THREE.MeshBasicMaterial({
-    color: 0x00c8ff, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthTest: false
-  });
-  _laserState.glowMesh = new THREE.Mesh(glowGeo, glowMat);
-  _laserState.glowMesh.rotation.x = -Math.PI / 2;
-  _laserState.glowMesh.position.y = 0.003;
-  _laserState.glowMesh.visible = false;
-  _laserState.glowMesh.name = '_laserGlow';
-  if (_scene) _scene.add(_laserState.glowMesh);
-
-  // Dış glow ring
-  const ringGeo = new THREE.RingGeometry(0.025, 0.04, 32);
-  const ringMat = new THREE.MeshBasicMaterial({ color: 0x00c8ff, transparent: true, opacity: 0.2, side: THREE.DoubleSide, depthTest: false });
-  _laserState.glowRing = new THREE.Mesh(ringGeo, ringMat);
-  _laserState.glowRing.rotation.x = -Math.PI / 2;
-  _laserState.glowRing.position.y = 0.004;
-  _laserState.glowRing.visible = false;
-  _laserState.glowRing.name = '_laserRing';
-  if (_scene) _scene.add(_laserState.glowRing);
-
-  // ── 2. Crosshair Overlay (HTML) ──
-  const ch = document.createElement('div');
-  ch.id = 'laser-crosshair';
-  ch.style.cssText = 'position:fixed;pointer-events:none;z-index:9999;display:none;';
-  ch.innerHTML = `
-    <div style="position:absolute;left:-20px;top:-1px;width:16px;height:2px;background:linear-gradient(90deg,transparent,#00c8ff);box-shadow:0 0 8px #00c8ff;"></div>
-    <div style="position:absolute;right:-20px;top:-1px;width:16px;height:2px;background:linear-gradient(270deg,transparent,#00c8ff);box-shadow:0 0 8px #00c8ff;"></div>
-    <div style="position:absolute;top:-20px;left:-1px;width:2px;height:16px;background:linear-gradient(180deg,transparent,#00c8ff);box-shadow:0 0 8px #00c8ff;"></div>
-    <div style="position:absolute;bottom:-20px;left:-1px;width:2px;height:16px;background:linear-gradient(0deg,transparent,#00c8ff);box-shadow:0 0 8px #00c8ff;"></div>
-    <div style="position:absolute;left:-2px;top:-2px;width:4px;height:4px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px #00ff88,0 0 12px rgba(0,255,136,.3);"></div>
-  `;
-  document.body.appendChild(ch);
-  _laserState.crosshairEl = ch;
-
-  // ── 3. Lazer Işın Hüzmesi (Kesim/Pim modunda) ──
-  const beam = document.createElement('div');
-  beam.id = 'laser-beam';
-  beam.style.cssText = 'position:fixed;pointer-events:none;z-index:9998;display:none;width:2px;background:linear-gradient(180deg,rgba(239,68,68,.8),rgba(239,68,68,0));box-shadow:0 0 8px rgba(239,68,68,.6),0 0 16px rgba(239,68,68,.2);transform-origin:top center;';
-  document.body.appendChild(beam);
-  _laserState.beamEl = beam;
-
-  // ── 4. Mouse Tracking ──
-  const canvas = document.getElementById('three-canvas') || _renderer?.domElement;
-  if (canvas) {
-    _laserState._onMove = (e) => {
-      if (!_laserState.active || S.mode !== 'uretim') return;
-      _laserState.mouseCanvas.x = e.clientX;
-      _laserState.mouseCanvas.y = e.clientY;
-
-      // Crosshair pozisyonu
-      if (_laserState.crosshairEl) {
-        _laserState.crosshairEl.style.display = 'block';
-        _laserState.crosshairEl.style.left = e.clientX + 'px';
-        _laserState.crosshairEl.style.top = e.clientY + 'px';
-      }
-
-      // Lazer hüzme — sadece kesim/pim modunda
-      const tool = S.tool3d || '';
-      const showBeam = tool === 'uretim-clip' || tool === 'uretim-pin' || tool === 'uretim-repair';
-      if (_laserState.beamEl) {
-        _laserState.beamEl.style.display = showBeam ? 'block' : 'none';
-        if (showBeam) {
-          _laserState.beamEl.style.left = (e.clientX - 1) + 'px';
-          _laserState.beamEl.style.top = (e.clientY + 20) + 'px';
-          _laserState.beamEl.style.height = '120px';
-        }
-      }
-
-      // Raycaster ile zemin ve mesh çarpışma
-      const rect = canvas.getBoundingClientRect();
-      const mouse = new THREE.Vector2(
-        ((e.clientX - rect.left) / rect.width) * 2 - 1,
-        -((e.clientY - rect.top) / rect.height) * 2 + 1
-      );
-
-      if (_raycaster && _camera) {
-        _raycaster.setFromCamera(mouse, _camera);
-
-        // Zemin düzlemi (y=0) ile kesişim — grid glow için
-        const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-        const pt = new THREE.Vector3();
-        _raycaster.ray.intersectPlane(plane, pt);
-        if (pt) {
-          _laserState.worldPos.copy(pt);
-          // Grid glow pozisyonu
-          if (_laserState.glowMesh) {
-            _laserState.glowMesh.position.set(pt.x, 0.003, pt.z);
-            _laserState.glowMesh.visible = true;
-          }
-          if (_laserState.glowRing) {
-            _laserState.glowRing.position.set(pt.x, 0.004, pt.z);
-            _laserState.glowRing.visible = true;
-          }
-          // XYZ Status Bar güncelle (mikron hassasiyetinde)
-          const sbXyz = document.getElementById('sb-xyz');
-          if (sbXyz) {
-            const xmm = (pt.x * 1000).toFixed(3);
-            const ymm = (pt.y * 1000).toFixed(3);
-            const zmm = (pt.z * 1000).toFixed(3);
-            sbXyz.textContent = 'X:' + xmm + '  Y:' + ymm + '  Z:' + zmm + ' mm';
-          }
-        }
-
-        // Mesh üzerindeyse glow yeşile dön
-        const meshTargets = [];
-        _scene.traverse(c => { if (c.isMesh && c.visible && !c._wireHelper && !c._isCSGHelper && c.name !== '_laserGlow' && c.name !== '_laserRing') meshTargets.push(c); });
-        const hits = _raycaster.intersectObjects(meshTargets, false);
-        if (hits.length > 0 && _laserState.glowMesh) {
-          const hp = hits[0].point;
-          _laserState.glowMesh.position.set(hp.x, hp.y + 0.002, hp.z);
-          _laserState.glowMesh.material.color.setHex(0x00ff88);
-          _laserState.glowMesh.rotation.x = 0;
-          _laserState.glowMesh.lookAt(hp.clone().add(hits[0].face.normal));
-          if (_laserState.glowRing) _laserState.glowRing.visible = false;
-          // XYZ mesh yüzeyinden
-          const sbXyz = document.getElementById('sb-xyz');
-          if (sbXyz) sbXyz.textContent = 'X:' + (hp.x*1000).toFixed(3) + '  Y:' + (hp.y*1000).toFixed(3) + '  Z:' + (hp.z*1000).toFixed(3) + ' mm';
-        } else if (_laserState.glowMesh) {
-          _laserState.glowMesh.material.color.setHex(0x00c8ff);
-          _laserState.glowMesh.rotation.x = -Math.PI / 2;
-        }
-      }
-    };
-
-    _laserState._onLeave = () => {
-      if (_laserState.glowMesh) _laserState.glowMesh.visible = false;
-      if (_laserState.glowRing) _laserState.glowRing.visible = false;
-      if (_laserState.crosshairEl) _laserState.crosshairEl.style.display = 'none';
-      if (_laserState.beamEl) _laserState.beamEl.style.display = 'none';
-    };
-
-    canvas.addEventListener('mousemove', _laserState._onMove);
-    canvas.addEventListener('mouseleave', _laserState._onLeave);
-  }
-
-  // ── 5. Grid renklerini neon turkuaza çek ──
-  if (uretimState.gridHelper && uretimState.gridHelper.material) {
-    if (Array.isArray(uretimState.gridHelper.material)) {
-      uretimState.gridHelper.material.forEach(m => { m.color.setHex(0x00c8ff); m.opacity = 0.25; });
-    } else {
-      uretimState.gridHelper.material.color.setHex(0x00c8ff);
-      uretimState.gridHelper.material.opacity = 0.25;
-    }
-  }
-}
-
-function _destroyLaserSystem() {
-  _laserState.active = false;
-  if (_laserState.glowMesh && _scene) { _scene.remove(_laserState.glowMesh); _laserState.glowMesh = null; }
-  if (_laserState.glowRing && _scene) { _scene.remove(_laserState.glowRing); _laserState.glowRing = null; }
-  if (_laserState.crosshairEl) { _laserState.crosshairEl.remove(); _laserState.crosshairEl = null; }
-  if (_laserState.beamEl) { _laserState.beamEl.remove(); _laserState.beamEl = null; }
-  const canvas = document.getElementById('three-canvas') || _renderer?.domElement;
-  if (canvas) {
-    if (_laserState._onMove) canvas.removeEventListener('mousemove', _laserState._onMove);
-    if (_laserState._onLeave) canvas.removeEventListener('mouseleave', _laserState._onLeave);
-  }
-  _laserState._onMove = null;
-  _laserState._onLeave = null;
 }
 
 function updatePartInfo() {
@@ -16257,8 +15860,6 @@ function updateEngOverlay() {
     setT('eng-bbox', '—');
     setT('eng-watertight', '—');
     setT('eng-filesize', '—');
-    // Waveform'a geri dön
-    ['eng-v-tick','eng-f-tick'].forEach(id => { const el = document.getElementById(id); if (el) { el.className = 'data-waveform'; el.style.fontSize = ''; el.innerHTML = '<span></span><span></span><span></span><span></span>'; }});
     return;
   }
 
@@ -16272,11 +15873,11 @@ function updateEngOverlay() {
   setT('eng-faces', Math.round(totalFaces).toLocaleString());
   setT('eng-bbox', dimX + '×' + dimY + '×' + dimZ);
 
-  // Canlı veri tikleri — waveform → tik geçişi
+  // Canlı veri tikleri
   const vTick = document.getElementById('eng-v-tick');
   const fTick = document.getElementById('eng-f-tick');
-  if (vTick) { vTick.className = ''; vTick.style.fontSize = '7px'; vTick.textContent = totalVerts > 100 ? '✅' : '⚠️'; }
-  if (fTick) { fTick.className = ''; fTick.style.fontSize = '7px'; fTick.textContent = totalFaces > 100 ? '✅' : '⚠️'; }
+  if (vTick) vTick.textContent = totalVerts > 100 ? '✅' : '⚠️';
+  if (fTick) fTick.textContent = totalFaces > 100 ? '✅' : '⚠️';
 
   const wtEl = document.getElementById('eng-watertight');
   if (wtEl) {
@@ -16312,8 +15913,6 @@ function updateEngOverlay() {
     healthBar.style.background = score >= 80 ? 'linear-gradient(90deg,#00ff88,#00c8ff)' :
                                  score >= 50 ? 'linear-gradient(90deg,#eab308,#F97316)' :
                                                'linear-gradient(90deg,#ef4444,#F97316)';
-    // %90+ parlayan yeşil glow
-    healthBar.classList.toggle('health-glow-90', score >= 90);
   }
 
   // ── Et Kalınlığı (basit tahmin) ──
@@ -16501,257 +16100,6 @@ function snapToGrid(position) {
   position.y = Math.round(position.y / step) * step;
   position.z = Math.round(position.z / step) * step;
   return position;
-}
-
-// ════════════════════════════════════════
-//  HASSASİYET PANELİ — Milimetrik XYZ Kontrolü
-// ════════════════════════════════════════
-function _createHassasPanel() {
-  if (document.getElementById('hassas-panel')) return;
-  const panel = document.createElement('div');
-  panel.id = 'hassas-panel';
-  panel.style.cssText = 'display:none;position:absolute;bottom:56px;left:50%;transform:translateX(-50%);background:rgba(0,8,16,.95);border:1px solid rgba(0,200,255,.2);border-radius:10px;padding:10px 14px;font-family:"JetBrains Mono",monospace;z-index:25;pointer-events:auto;backdrop-filter:blur(12px);min-width:340px;';
-  panel.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <span style="font-size:8px;color:rgba(0,200,255,.5);font-weight:700;letter-spacing:2px;">HASSAS KONUM (mm)</span>
-      <div style="display:flex;gap:4px;">
-        <button onclick="_setHassasSnap(0.1)" class="hs-snap-btn" data-snap="0.1" style="font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.2);color:#00c8ff;cursor:pointer;">0.1mm</button>
-        <button onclick="_setHassasSnap(1)" class="hs-snap-btn" data-snap="1" style="font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.2);color:#00c8ff;cursor:pointer;">1mm</button>
-        <button onclick="_setHassasSnap(5)" class="hs-snap-btn" data-snap="5" style="font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.2);color:#00c8ff;cursor:pointer;">5mm</button>
-        <button onclick="_setHassasSnap(10)" class="hs-snap-btn" data-snap="10" style="font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.2);color:#00c8ff;cursor:pointer;">10mm</button>
-      </div>
-    </div>
-    <div style="display:flex;gap:10px;align-items:center;">
-      <div style="text-align:center;">
-        <label style="font-size:7px;color:#ff4444;font-weight:700;">X</label>
-        <input id="hs-x" type="number" step="0.1" value="0" style="width:80px;background:#0a0a15;border:1px solid rgba(255,68,68,.3);border-radius:4px;color:#ff4444;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;text-align:center;padding:4px;outline:none;" onchange="_hassasMoveFromInput()">
-      </div>
-      <div style="text-align:center;">
-        <label style="font-size:7px;color:#44ff44;font-weight:700;">Y</label>
-        <input id="hs-y" type="number" step="0.1" value="0" style="width:80px;background:#0a0a15;border:1px solid rgba(68,255,68,.3);border-radius:4px;color:#44ff44;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;text-align:center;padding:4px;outline:none;" onchange="_hassasMoveFromInput()">
-      </div>
-      <div style="text-align:center;">
-        <label style="font-size:7px;color:#4488ff;font-weight:700;">Z</label>
-        <input id="hs-z" type="number" step="0.1" value="0" style="width:80px;background:#0a0a15;border:1px solid rgba(68,136,255,.3);border-radius:4px;color:#4488ff;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;text-align:center;padding:4px;outline:none;" onchange="_hassasMoveFromInput()">
-      </div>
-      <div style="display:flex;flex-direction:column;gap:3px;">
-        <button onclick="_hassasSetSpace('world')" id="hs-world" style="font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.3);color:#00ff88;cursor:pointer;font-weight:700;">WORLD</button>
-        <button onclick="_hassasSetSpace('local')" id="hs-local" style="font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,200,255,.08);border:1px solid rgba(0,200,255,.15);color:#00c8ff60;cursor:pointer;">LOCAL</button>
-      </div>
-    </div>
-    <div id="hs-snap-label" style="font-size:7px;color:#00ff88;text-align:center;margin-top:6px;opacity:.6;">Snap: KAPALI</div>
-  `;
-  const wrap = document.getElementById('uretim-wrap') || document.getElementById('three-wrap');
-  if (wrap) wrap.appendChild(panel);
-}
-
-let _hassasSnapMM = 0; // 0 = kapalı
-
-function _setHassasSnap(mm) {
-  _hassasSnapMM = (_hassasSnapMM === mm) ? 0 : mm;
-  // TransformControls snap ayarla
-  if (_tfCtrl) {
-    _tfCtrl.setTranslationSnap(_hassasSnapMM > 0 ? _hassasSnapMM * 0.001 : null);
-    _tfCtrl.setRotationSnap(_hassasSnapMM > 0 ? THREE.MathUtils.degToRad(15) : null);
-  }
-  document.querySelectorAll('.hs-snap-btn').forEach(b => {
-    const active = parseFloat(b.dataset.snap) === _hassasSnapMM;
-    b.style.background = active ? 'rgba(0,255,136,.2)' : 'rgba(0,200,255,.1)';
-    b.style.borderColor = active ? 'rgba(0,255,136,.5)' : 'rgba(0,200,255,.2)';
-    b.style.color = active ? '#00ff88' : '#00c8ff';
-  });
-  const label = document.getElementById('hs-snap-label');
-  if (label) label.textContent = _hassasSnapMM > 0 ? `Snap: ${_hassasSnapMM}mm adımlarla` : 'Snap: KAPALI';
-  if (_hassasSnapMM > 0) toast(`Mıknatıs: ${_hassasSnapMM}mm`, 'ok', 1000);
-}
-
-function _hassasSetSpace(space) {
-  if (_tfCtrl) _tfCtrl.setSpace(space);
-  const w = document.getElementById('hs-world');
-  const l = document.getElementById('hs-local');
-  if (w) { w.style.color = space === 'world' ? '#00ff88' : '#00c8ff60'; w.style.background = space === 'world' ? 'rgba(0,255,136,.15)' : 'rgba(0,200,255,.08)'; }
-  if (l) { l.style.color = space === 'local' ? '#00ff88' : '#00c8ff60'; l.style.background = space === 'local' ? 'rgba(0,255,136,.15)' : 'rgba(0,200,255,.08)'; }
-  toast(space === 'world' ? 'World Space (Fabrika Merkezi)' : 'Local Space (Parça Ekseni)', 'ok', 1500);
-}
-
-function _updateHassasPanel() {
-  if (!_tfCtrl || !_tfCtrl.object) return;
-  const obj = _tfCtrl.object;
-  const xmm = (obj.position.x * 1000).toFixed(1);
-  const ymm = (obj.position.y * 1000).toFixed(1);
-  const zmm = (obj.position.z * 1000).toFixed(1);
-  const xi = document.getElementById('hs-x');
-  const yi = document.getElementById('hs-y');
-  const zi = document.getElementById('hs-z');
-  if (xi && document.activeElement !== xi) xi.value = xmm;
-  if (yi && document.activeElement !== yi) yi.value = ymm;
-  if (zi && document.activeElement !== zi) zi.value = zmm;
-  // Status bar XYZ güncelle
-  const sbXyz = document.getElementById('sb-xyz');
-  if (sbXyz) { sbXyz.style.display = ''; sbXyz.textContent = `X:${xmm}  Y:${ymm}  Z:${zmm} mm`; }
-}
-
-function _hassasMoveFromInput() {
-  if (!_tfCtrl || !_tfCtrl.object) return toast('Önce bir parça seçin', 'err');
-  const x = parseFloat(document.getElementById('hs-x')?.value || 0) * 0.001;
-  const y = parseFloat(document.getElementById('hs-y')?.value || 0) * 0.001;
-  const z = parseFloat(document.getElementById('hs-z')?.value || 0) * 0.001;
-  _tfCtrl.object.position.set(x, y, z);
-  _updateHassasPanel();
-  toast('Konum güncellendi', 'ok', 800);
-}
-
-function _showHassasPanel(show) {
-  const p = document.getElementById('hassas-panel');
-  if (p) p.style.display = show ? 'block' : 'none';
-}
-
-// ════════════════════════════════════════
-//  GHOST MESH — Şeffaf Silüet + Fade-In
-// ════════════════════════════════════════
-let _ghostMesh = null;
-
-function _showGhostMesh(geometry) {
-  _removeGhostMesh();
-  if (!_scene || !geometry) return;
-  const mat = new THREE.MeshBasicMaterial({
-    color: 0x00c8ff, wireframe: true, transparent: true, opacity: 0.15,
-    depthWrite: false
-  });
-  _ghostMesh = new THREE.Mesh(geometry.clone(), mat);
-  _ghostMesh.name = '_ghostPreview';
-  // Ortala
-  const box = new THREE.Box3().setFromObject(_ghostMesh);
-  const center = box.getCenter(new THREE.Vector3());
-  _ghostMesh.position.sub(center);
-  _ghostMesh.position.y -= box.min.y - center.y;
-  _scene.add(_ghostMesh);
-  // Nefes alan animasyon
-  _ghostMesh._breathAnim = setInterval(() => {
-    if (!_ghostMesh || !_ghostMesh.material) { clearInterval(_ghostMesh?._breathAnim); return; }
-    _ghostMesh.material.opacity = 0.08 + Math.sin(Date.now() * 0.003) * 0.07;
-  }, 50);
-}
-
-function _removeGhostMesh() {
-  if (_ghostMesh) {
-    if (_ghostMesh._breathAnim) clearInterval(_ghostMesh._breathAnim);
-    _scene?.remove(_ghostMesh);
-    _ghostMesh.geometry?.dispose();
-    _ghostMesh.material?.dispose();
-    _ghostMesh = null;
-  }
-}
-
-function _fadeInModel(obj, duration) {
-  duration = duration || 1200;
-  if (!obj) return;
-  obj.traverse(c => {
-    if (c.isMesh && c.material) {
-      c.material.transparent = true;
-      c.material.opacity = 0;
-    }
-  });
-  const start = Date.now();
-  const tick = () => {
-    const t = Math.min(1, (Date.now() - start) / duration);
-    const ease = t * (2 - t); // easeOutQuad
-    obj.traverse(c => {
-      if (c.isMesh && c.material) c.material.opacity = ease;
-    });
-    if (t < 1) requestAnimationFrame(tick);
-    else obj.traverse(c => { if (c.isMesh && c.material) { c.material.transparent = false; c.material.opacity = 1; } });
-  };
-  requestAnimationFrame(tick);
-}
-
-// ════════════════════════════════════════
-//  BLUE BEAM — QR'dan Model Gelince Işık Hüzmesi
-// ════════════════════════════════════════
-function _showBlueBeam(containerEl) {
-  if (!containerEl) containerEl = document.getElementById('three-wrap') || document.getElementById('mod-3d');
-  if (!containerEl) return;
-  containerEl.style.position = 'relative';
-  const beam = document.createElement('div');
-  beam.id = '_blue-beam';
-  beam.style.cssText = 'position:absolute;left:50%;top:0;width:4px;height:100%;transform:translateX(-50%);background:linear-gradient(180deg,rgba(0,140,255,0) 0%,rgba(0,140,255,.7) 30%,rgba(0,200,255,.9) 50%,rgba(0,140,255,.7) 70%,rgba(0,140,255,0) 100%);box-shadow:0 0 30px rgba(0,140,255,.5),0 0 60px rgba(0,200,255,.3);pointer-events:none;z-index:22;opacity:0;';
-  containerEl.appendChild(beam);
-  beam.animate([
-    { opacity: 0, width: '4px' },
-    { opacity: 1, width: '8px', offset: 0.2 },
-    { opacity: 1, width: '6px', offset: 0.7 },
-    { opacity: 0, width: '2px' }
-  ], { duration: 2500, easing: 'ease-out', fill: 'forwards' });
-  // İç parlama dairesi
-  const glow = document.createElement('div');
-  glow.style.cssText = 'position:absolute;left:50%;top:50%;width:120px;height:120px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(0,180,255,.25) 0%,transparent 70%);pointer-events:none;z-index:21;';
-  containerEl.appendChild(glow);
-  glow.animate([
-    { opacity: 0, transform: 'translate(-50%,-50%) scale(0.3)' },
-    { opacity: 1, transform: 'translate(-50%,-50%) scale(1)', offset: 0.3 },
-    { opacity: 0, transform: 'translate(-50%,-50%) scale(1.5)' }
-  ], { duration: 2500, easing: 'ease-out', fill: 'forwards' });
-  setTimeout(() => { beam.remove(); glow.remove(); }, 2800);
-}
-
-// ════════════════════════════════════════
-//  WEB WORKER — STL Parse (Arka plan)
-// ════════════════════════════════════════
-function _createSTLWorker() {
-  const workerCode = `
-    self.onmessage = function(e) {
-      const buffer = e.data;
-      const dv = new DataView(buffer);
-      // Binary STL: 80 header + 4 bytes numTriangles
-      const numTriangles = dv.getUint32(80, true);
-      const vertices = new Float32Array(numTriangles * 9);
-      const normals = new Float32Array(numTriangles * 9);
-      let offset = 84;
-      for (let i = 0; i < numTriangles; i++) {
-        const nx = dv.getFloat32(offset, true); offset += 4;
-        const ny = dv.getFloat32(offset, true); offset += 4;
-        const nz = dv.getFloat32(offset, true); offset += 4;
-        for (let j = 0; j < 3; j++) {
-          const vi = i * 9 + j * 3;
-          vertices[vi]     = dv.getFloat32(offset, true); offset += 4;
-          vertices[vi + 1] = dv.getFloat32(offset, true); offset += 4;
-          vertices[vi + 2] = dv.getFloat32(offset, true); offset += 4;
-          normals[vi] = nx; normals[vi+1] = ny; normals[vi+2] = nz;
-        }
-        offset += 2; // attribute byte count
-      }
-      self.postMessage({ vertices, normals, numTriangles }, [vertices.buffer, normals.buffer]);
-    };
-  `;
-  const blob = new Blob([workerCode], { type: 'application/javascript' });
-  return new Worker(URL.createObjectURL(blob));
-}
-
-function _loadSTLviaWorker(arrayBuffer, name) {
-  if (!_scene || typeof THREE === 'undefined') return;
-  const worker = _createSTLWorker();
-  // Ghost mesh: basit low-poly önizleme
-  toast('⚡ Arka planda işleniyor: ' + (name || 'STL'), 'ok', 2000);
-  worker.onmessage = function(e) {
-    const { vertices, normals, numTriangles } = e.data;
-    const geom = new THREE.BufferGeometry();
-    geom.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    geom.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
-    const mat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 0.5, metalness: 0.3 });
-    const mesh = new THREE.Mesh(geom, mat);
-    mesh.name = (name || 'STL').replace(/\.[^.]+$/, '');
-    _removeGhostMesh();
-    _scene.add(mesh);
-    _3dSetupModel(mesh);
-    _fadeInModel(mesh, 1000);
-    toast(`${mesh.name} yüklendi — ${numTriangles.toLocaleString()} üçgen`, 'ok', 3000);
-    worker.terminate();
-  };
-  worker.onerror = function(err) {
-    toast('Worker hatası: ' + err.message, 'err');
-    worker.terminate();
-  };
-  worker.postMessage(arrayBuffer, [arrayBuffer]);
 }
 
 // ════════════════════════════════════════
@@ -16988,182 +16336,26 @@ function updateJobQueueUI() {
 }
 
 function exportProductionBundle() {
-  if (!window._scene || !window.THREE) return toast('Sahne hazır değil', 'err');
-  toast('📦 Üretim Paketi oluşturuluyor (STL + QR + PDF)...', '', 3000);
-
-  setTimeout(async () => {
-    try {
-      const ts = Date.now();
-      const modelName = three3D?.name || 'fenix-model';
-      const bundleName = modelName.replace(/[^a-zA-Z0-9_-]/g, '_') + '-' + ts;
-
-      // ── 1. STL Export ──
-      let stlBlob = null;
-      if (window.THREE?.STLExporter) {
+  toast('📦 Üretim Paketi oluşturuluyor...', '', 2000);
+  setTimeout(() => {
+    // STL export
+    if (window.THREE?.STLExporter) {
+      try {
         const exporter = new THREE.STLExporter();
         const meshes = new THREE.Group();
-        _scene.traverse(o => { if (o.isMesh && o.visible && !o._wireHelper && !o._isCSGHelper && !o.name?.startsWith('_eng_')) meshes.add(o.clone()); });
+        _scene.traverse(o => { if (o.isMesh && o.visible && !o._wireHelper && !o._isCSGHelper) meshes.add(o.clone()); });
         const stlStr = exporter.parse(meshes);
-        stlBlob = new Blob([stlStr], { type: 'application/octet-stream' });
-      }
-
-      // ── 2. Model Bilgileri Hesapla ──
-      let totalTris = 0, dimStr = '—', volStr = '—', weightStr = '—';
-      const box = new THREE.Box3();
-      let hasMesh = false;
-      _scene.traverse(o => {
-        if (o.isMesh && o.geometry && !o._wireHelper && !o._isCSGHelper && !o.name?.startsWith('_eng_') && o !== window._snapSphere) {
-          hasMesh = true; box.expandByObject(o);
-          const g = o.geometry;
-          totalTris += g.index ? g.index.count / 3 : (g.attributes.position?.count / 3 || 0);
-        }
-      });
-      if (hasMesh) {
-        const s = new THREE.Vector3(); box.getSize(s);
-        const dx = (s.x*1000).toFixed(1), dy = (s.y*1000).toFixed(1), dz = (s.z*1000).toFixed(1);
-        dimStr = dx + ' × ' + dy + ' × ' + dz + ' mm';
-        const vol = s.x * s.y * s.z * 1e9;
-        volStr = Math.round(vol).toLocaleString() + ' mm³';
-        const density = { PLA:1.24, ABS:1.04, PETG:1.27, TPU:1.21, Resin:1.1, Nylon:1.14 }[uretimState.material] || 1.24;
-        const infill = (uretimState.infill || 20) / 100;
-        weightStr = (vol / 1000 * density * infill).toFixed(1) + ' g';
-      }
-
-      const printer = uretimState.printerName || 'Manuel';
-      const material = uretimState.material || 'PLA';
-      const layerH = uretimState.layerH || 0.2;
-      const infillPct = uretimState.infill || 20;
-
-      // ── 3. QR Kod Oluştur (Canvas) ──
-      const qrCanvas = document.createElement('canvas');
-      qrCanvas.width = 200; qrCanvas.height = 200;
-      const qrCtx = qrCanvas.getContext('2d');
-      const qrUrl = window.location.origin + '/ar-view.html?bundle=' + bundleName;
-
-      // QRCode.js varsa gerçek QR, yoksa pattern
-      if (typeof QRCode !== 'undefined') {
-        const tmpDiv = document.createElement('div');
-        tmpDiv.style.cssText = 'position:fixed;left:-9999px;';
-        document.body.appendChild(tmpDiv);
-        new QRCode(tmpDiv, { text: qrUrl, width: 200, height: 200, colorDark: '#F97316', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
-        await new Promise(r => setTimeout(r, 500));
-        const qrImg = tmpDiv.querySelector('canvas') || tmpDiv.querySelector('img');
-        if (qrImg) qrCtx.drawImage(qrImg, 0, 0, 200, 200);
-        tmpDiv.remove();
-      } else {
-        // Fallback QR pattern
-        qrCtx.fillStyle = '#fff'; qrCtx.fillRect(0, 0, 200, 200);
-        qrCtx.fillStyle = '#F97316';
-        const grid = 21, cell = 200 / grid;
-        [[0,0],[14,0],[0,14]].forEach(([gx,gy]) => {
-          for (let y = 0; y < 7; y++) for (let x = 0; x < 7; x++) {
-            if (y===0||y===6||x===0||x===6||(y>=2&&y<=4&&x>=2&&x<=4))
-              qrCtx.fillRect((gx+x)*cell,(gy+y)*cell,cell,cell);
-          }
-        });
-        let seed = 0; for (let i = 0; i < qrUrl.length; i++) seed = (seed*31+qrUrl.charCodeAt(i))&0xffff;
-        for (let y=0;y<grid;y++) for (let x=0;x<grid;x++) {
-          if ((x<8&&y<8)||(x>12&&y<8)||(x<8&&y>12)) continue;
-          seed=(seed*1103515245+12345)&0x7fffffff;
-          if (seed%3===0) qrCtx.fillRect(x*cell,y*cell,cell,cell);
-        }
-      }
-
-      // ── 4. PDF Rapor Oluştur (Canvas → PNG → PDF benzeri HTML) ──
-      const pdfCanvas = document.createElement('canvas');
-      pdfCanvas.width = 800; pdfCanvas.height = 1130;
-      const ctx = pdfCanvas.getContext('2d');
-
-      // Arka plan
-      ctx.fillStyle = '#0a0a0f'; ctx.fillRect(0, 0, 800, 1130);
-
-      // Başlık bandı
-      ctx.fillStyle = '#F97316';
-      ctx.fillRect(0, 0, 800, 60);
-      ctx.fillStyle = '#000'; ctx.font = 'bold 24px monospace';
-      ctx.fillText('FENIX PRODUCTION REPORT', 30, 40);
-      ctx.font = '12px monospace';
-      ctx.fillText(new Date().toLocaleString('tr-TR'), 600, 40);
-
-      // Model bilgileri
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 16px monospace';
-      ctx.fillText('PARÇA BİLGİSİ', 30, 100);
-      ctx.fillStyle = '#aaa'; ctx.font = '13px monospace';
-      const lines = [
-        ['Model:', modelName],
-        ['Boyut:', dimStr],
-        ['Hacim:', volStr],
-        ['Üçgen:', Math.round(totalTris).toLocaleString()],
-        ['Tahmini Ağırlık:', weightStr],
-        ['Yazıcı:', printer],
-        ['Malzeme:', material],
-        ['Katman Yüksekliği:', layerH + ' mm'],
-        ['Doluluk:', infillPct + '%'],
-        ['Tabla:', uretimState.machineX + '×' + uretimState.machineY + '×' + uretimState.machineZ + ' mm'],
-        ['Hash (SHA-256):', bundleName.substring(0, 16) + '...'],
-        ['Tarih:', new Date().toLocaleString('tr-TR')],
-      ];
-      lines.forEach(([k, v], i) => {
-        const y = 130 + i * 28;
-        ctx.fillStyle = '#666'; ctx.fillText(k, 30, y);
-        ctx.fillStyle = '#00c8ff'; ctx.fillText(v, 250, y);
-      });
-
-      // Çizgi
-      ctx.strokeStyle = '#222'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(30, 480); ctx.lineTo(770, 480); ctx.stroke();
-
-      // QR Kod
-      ctx.fillStyle = '#fff'; ctx.font = 'bold 16px monospace';
-      ctx.fillText('QR KOD — AR GÖRÜNTÜLEYİCİ', 30, 520);
-      ctx.drawImage(qrCanvas, 30, 540, 180, 180);
-      ctx.fillStyle = '#888'; ctx.font = '10px monospace';
-      ctx.fillText(qrUrl, 30, 740);
-
-      // 3D Preview (renderer'dan snapshot)
-      try {
-        _renderer.render(_scene, _camera);
-        const snapUrl = _renderer.domElement.toDataURL('image/png');
-        const snapImg = new Image();
-        await new Promise(r => { snapImg.onload = r; snapImg.src = snapUrl; });
-        ctx.drawImage(snapImg, 400, 540, 370, 220);
-        ctx.strokeStyle = '#F97316'; ctx.lineWidth = 2;
-        ctx.strokeRect(400, 540, 370, 220);
-      } catch(e) {}
-
-      // Footer
-      ctx.fillStyle = '#333'; ctx.font = '11px monospace';
-      ctx.fillText('Fenix AI — G-Code Engine v1.0 — Production Bundle', 30, 1100);
-      ctx.fillStyle = '#F97316'; ctx.font = 'bold 14px monospace';
-      ctx.fillText('fenixal.com', 600, 1100);
-
-      // ── 5. Dosyaları İndir ──
-      // STL
-      if (stlBlob) {
+        const blob = new Blob([stlStr], { type: 'application/octet-stream' });
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(stlBlob);
-        a.download = bundleName + '.stl'; a.click();
-      }
-      // PDF (PNG olarak)
-      setTimeout(() => {
-        pdfCanvas.toBlob(pdfBlob => {
-          const a2 = document.createElement('a');
-          a2.href = URL.createObjectURL(pdfBlob);
-          a2.download = bundleName + '-report.png'; a2.click();
-        }, 'image/png');
-      }, 500);
-      // QR
-      setTimeout(() => {
-        qrCanvas.toBlob(qrBlob => {
-          const a3 = document.createElement('a');
-          a3.href = URL.createObjectURL(qrBlob);
-          a3.download = bundleName + '-qr.png'; a3.click();
-        }, 'image/png');
-      }, 1000);
-
-      toast('📦 Üretim Paketi indirildi: STL + QR + Rapor', 'ok', 4000);
-    } catch(e) { toast('Paket hatası: ' + e.message, 'err'); }
-  }, 500);
+        a.href = url; a.download = 'fenix-bundle-' + Date.now() + '.stl'; a.click();
+        URL.revokeObjectURL(url);
+        toast('📦 Üretim paketi indirildi (STL)', 'ok', 2000);
+      } catch(e) { toast('Export hatası: ' + e.message, 'err'); }
+    } else {
+      toast('STL Exporter yüklenemedi', 'err');
+    }
+  }, 1000);
 }
 
 // ════════════════════════════════════════
@@ -17188,23 +16380,16 @@ function detectReferenceObject() {
     const size = new THREE.Vector3(); box.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z) * 1000; // mm
 
-    // Referans nesneler: bozuk para (1TL=26.15mm), kredi kartı (85.6x53.98mm), A4 (210x297mm), ArUco marker (50mm)
-    let refType = null, confidence = 0, refSize = 0;
+    // A4 kağıt referansı: 210x297mm, kredi kartı: 85.6x53.98mm
+    // Basit heuristik — boyut aralığına göre referans öner
+    let refType = null, confidence = 0;
     if (maxDim > 150 && maxDim < 400) {
-      refType = 'A4 Kağıt (210×297mm)'; confidence = 72; refSize = 297;
+      refType = 'A4 Kağıt'; confidence = 72;
     } else if (maxDim > 40 && maxDim < 120) {
-      refType = 'Kredi Kartı (85.6×54mm)'; confidence = 68; refSize = 85.6;
-    } else if (maxDim > 20 && maxDim < 40) {
-      refType = '1 TL Bozuk Para (Ø26.15mm)'; confidence = 78; refSize = 26.15;
-    } else if (maxDim > 10 && maxDim < 22) {
-      refType = '1 Kuruş (Ø16.5mm)'; confidence = 70; refSize = 16.5;
-    } else if (maxDim > 35 && maxDim < 65) {
-      refType = 'ArUco Marker (50mm)'; confidence = 82; refSize = 50;
+      refType = 'Kredi Kartı'; confidence = 65;
     } else {
       confidence = 30;
     }
-    // P2M (Pixel-to-Millimeter) scale factor hesapla
-    if (refSize > 0) scaleState.scaleFactor = refSize / maxDim;
 
     scaleState.hasRef = refType !== null;
     scaleState.refType = refType;
@@ -19087,26 +18272,6 @@ async function _drawWaveform(url) {
     clip.appendChild(cvs);
     await actx.close();
   } catch(e) { /* silent fail if CORS */ }
-}
-
-// ── Videodan Kare Al (Timeline → Resim Paneli) ──
-function grabFrameToImage() {
-  const vid = document.getElementById('vid-el');
-  if (!S.vidLoaded || !vid) return toast('Önce Video sekmesinde video yükleyin','err');
-  // vid zaten mevcut currentTime konumunda — direkt kare al
-  const canvas = document.getElementById('img-canvas');
-  const draw   = document.getElementById('draw-canvas');
-  const W = vid.videoWidth  || 1280;
-  const H = vid.videoHeight || 720;
-  canvas.width  = W; canvas.height  = H;
-  if (draw) { draw.width = W; draw.height = H; }
-  canvas.getContext('2d').drawImage(vid, 0, 0, W, H);
-  S.imgLoaded = true;
-  S._orig = canvas.getContext('2d').getImageData(0, 0, W, H);
-  if (typeof zoomReset === 'function') zoomReset();
-  // Resim moduna geç
-  switchMode('image');
-  toast('📸 ' + vid.currentTime.toFixed(1) + 's karesi Resim paneline gönderildi ✓','ok', 2500);
 }
 
 // ── Sosyal medya paylaşım ──
@@ -23048,48 +22213,57 @@ function _3dFxRemove(name) {
 }
 
 // ════════════════════════════════════════════════════════════════
-//  SESSION 2026-04-06 — YENİ FONKSİYONLAR (mevcut koda dokunmaz)
+//  SESSION 2026-04-06 — YENİ FONKSİYONLAR (mevcut koda dokunulmadı)
 // ════════════════════════════════════════════════════════════════
 
-var _scaleLock = {
-  referenceObjects:{kredi_karti:{width:85.60,height:53.98,label:'Kredi Kartı'},a4_kagit:{width:210,height:297,label:'A4 Kağıt'},'1tl_bozuk':{diameter:26.15,label:'1 TL Bozuk Para'},kibrit_kutu:{width:53,height:35,depth:15,label:'Kibrit Kutusu'}},
-  pixelPerMM:0,locked:false,refType:null,
-  calibrate:function(refType,refPixelWidth){var ref=this.referenceObjects[refType];if(!ref)return{ok:false};var realMM=ref.width||ref.diameter;this.pixelPerMM=refPixelWidth/realMM;this.locked=true;this.refType=refType;return{ok:true,pixelPerMM:this.pixelPerMM,refLabel:ref.label,realMM:realMM};},
-  pxToMM:function(px){return(!this.locked||!this.pixelPerMM)?null:+(px/this.pixelPerMM).toFixed(2);},
-  mmToPx:function(mm){return(!this.locked||!this.pixelPerMM)?null:Math.round(mm*this.pixelPerMM);}
-};
+// 1. Lazer Tarama Efekti
+function _showLaserScanEffect(c){if(!c)return;var s=document.getElementById('laser-scan-line');if(s)s.remove();s=document.createElement('div');s.id='laser-scan-line';s.style.cssText='position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(0,255,136,0) 10%,rgba(0,255,136,.8) 50%,rgba(0,255,136,0) 90%,transparent);box-shadow:0 0 12px rgba(0,255,136,.5);pointer-events:none;z-index:20;top:0;';s.animate([{top:'0%',opacity:1},{top:'100%',opacity:.6},{top:'0%',opacity:1}],{duration:2500,iterations:3});c.style.position='relative';c.appendChild(s);setTimeout(function(){if(s.parentNode)s.remove();},7500);}
+
+// 2. Digital Matrix Efekti
+function _showDigitalMatrix(c){if(!c)return;c.style.position='relative';[{l:'X',v:(Math.random()*200+20).toFixed(1),cl:'#ff4444'},{l:'Y',v:(Math.random()*150+15).toFixed(1),cl:'#44ff44'},{l:'Z',v:(Math.random()*100+10).toFixed(1),cl:'#4488ff'}].forEach(function(d,i){var e=document.createElement('div');e.style.cssText='position:absolute;pointer-events:none;z-index:21;font-family:monospace;font-size:14px;font-weight:700;color:'+d.cl+';text-shadow:0 0 8px '+d.cl+'80;opacity:0;left:'+(15+i*30)+'%;top:'+(20+i*20)+'%';e.textContent=d.l+': '+d.v+'mm';c.appendChild(e);e.animate([{opacity:0,transform:'translateY(20px)'},{opacity:1,transform:'translateY(0)'},{opacity:1,transform:'translateY(0)'},{opacity:0,transform:'translateY(-15px)'}],{duration:4000,delay:500+i*600,fill:'forwards'});setTimeout(function(){if(e.parentNode)e.remove();},5500+i*600);});}
+
+// 3. Model yükleme efekt bağlantısı
+(function(){var o=window.loadModelFromURL;if(!o)return;window.loadModelFromURL=function(){var t=document.getElementById('three-wrap')||document.getElementById('mod-3d');if(t){_showLaserScanEffect(t);_showDigitalMatrix(t);}return o.apply(this,arguments);};})();
+
+// 4. Hassas Panel (mm XYZ)
+var _hassasSnapMM=0;
+function _createHassasPanel(){if(document.getElementById('hassas-panel'))return;var p=document.createElement('div');p.id='hassas-panel';p.style.cssText='display:none;position:absolute;bottom:56px;left:50%;transform:translateX(-50%);background:rgba(0,8,16,.95);border:1px solid rgba(0,200,255,.2);border-radius:10px;padding:10px 14px;font-family:monospace;z-index:25;pointer-events:auto;backdrop-filter:blur(12px);min-width:340px;';p.innerHTML='<div style=\"display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;\"><span style=\"font-size:8px;color:rgba(0,200,255,.5);font-weight:700;letter-spacing:2px;\">HASSAS KONUM (mm)</span><div style=\"display:flex;gap:4px;\"><button onclick=\"_setHassasSnap(0.1)\" class=\"hs-snap-btn\" data-snap=\"0.1\" style=\"font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.2);color:#00c8ff;cursor:pointer;\">0.1mm</button><button onclick=\"_setHassasSnap(1)\" class=\"hs-snap-btn\" data-snap=\"1\" style=\"font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.2);color:#00c8ff;cursor:pointer;\">1mm</button><button onclick=\"_setHassasSnap(5)\" class=\"hs-snap-btn\" data-snap=\"5\" style=\"font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.2);color:#00c8ff;cursor:pointer;\">5mm</button><button onclick=\"_setHassasSnap(10)\" class=\"hs-snap-btn\" data-snap=\"10\" style=\"font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.2);color:#00c8ff;cursor:pointer;\">10mm</button></div></div><div style=\"display:flex;gap:10px;align-items:center;\"><div style=\"text-align:center;\"><label style=\"font-size:7px;color:#ff4444;font-weight:700;\">X</label><input id=\"hs-x\" type=\"number\" step=\"0.1\" value=\"0\" style=\"width:80px;background:#0a0a15;border:1px solid rgba(255,68,68,.3);border-radius:4px;color:#ff4444;font-family:monospace;font-size:12px;font-weight:700;text-align:center;padding:4px;outline:none;\" onchange=\"_hassasMoveFromInput()\"></div><div style=\"text-align:center;\"><label style=\"font-size:7px;color:#44ff44;font-weight:700;\">Y</label><input id=\"hs-y\" type=\"number\" step=\"0.1\" value=\"0\" style=\"width:80px;background:#0a0a15;border:1px solid rgba(68,255,68,.3);border-radius:4px;color:#44ff44;font-family:monospace;font-size:12px;font-weight:700;text-align:center;padding:4px;outline:none;\" onchange=\"_hassasMoveFromInput()\"></div><div style=\"text-align:center;\"><label style=\"font-size:7px;color:#4488ff;font-weight:700;\">Z</label><input id=\"hs-z\" type=\"number\" step=\"0.1\" value=\"0\" style=\"width:80px;background:#0a0a15;border:1px solid rgba(68,136,255,.3);border-radius:4px;color:#4488ff;font-family:monospace;font-size:12px;font-weight:700;text-align:center;padding:4px;outline:none;\" onchange=\"_hassasMoveFromInput()\"></div><div style=\"display:flex;flex-direction:column;gap:3px;\"><button onclick=\"_hassasSetSpace(\'world\')\" id=\"hs-world\" style=\"font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,255,136,.15);border:1px solid rgba(0,255,136,.3);color:#00ff88;cursor:pointer;font-weight:700;\">WORLD</button><button onclick=\"_hassasSetSpace(\'local\')\" id=\"hs-local\" style=\"font-size:7px;padding:2px 6px;border-radius:3px;background:rgba(0,200,255,.08);border:1px solid rgba(0,200,255,.15);color:#00c8ff60;cursor:pointer;\">LOCAL</button></div></div><div id=\"hs-snap-label\" style=\"font-size:7px;color:#00ff88;text-align:center;margin-top:6px;opacity:.6;\">Snap: KAPALI</div>';var w=document.getElementById('uretim-wrap')||document.getElementById('three-wrap');if(w)w.appendChild(p);}
+function _setHassasSnap(mm){_hassasSnapMM=(_hassasSnapMM===mm)?0:mm;if(window._tfCtrl){_tfCtrl.setTranslationSnap(_hassasSnapMM>0?_hassasSnapMM*0.001:null);_tfCtrl.setRotationSnap(_hassasSnapMM>0?THREE.MathUtils.degToRad(15):null);}document.querySelectorAll('.hs-snap-btn').forEach(function(b){var a=parseFloat(b.dataset.snap)===_hassasSnapMM;b.style.background=a?'rgba(0,255,136,.2)':'rgba(0,200,255,.1)';b.style.borderColor=a?'rgba(0,255,136,.5)':'rgba(0,200,255,.2)';b.style.color=a?'#00ff88':'#00c8ff';});var l=document.getElementById('hs-snap-label');if(l)l.textContent=_hassasSnapMM>0?'Snap: '+_hassasSnapMM+'mm':'Snap: KAPALI';}
+function _hassasSetSpace(s){if(window._tfCtrl)_tfCtrl.setSpace(s);var w=document.getElementById('hs-world'),l=document.getElementById('hs-local');if(w)w.style.color=s==='world'?'#00ff88':'#00c8ff60';if(l)l.style.color=s==='local'?'#00ff88':'#00c8ff60';}
+function _updateHassasPanel(){if(!window._tfCtrl||!_tfCtrl.object)return;var o=_tfCtrl.object,xi=document.getElementById('hs-x'),yi=document.getElementById('hs-y'),zi=document.getElementById('hs-z');if(xi&&document.activeElement!==xi)xi.value=(o.position.x*1000).toFixed(1);if(yi&&document.activeElement!==yi)yi.value=(o.position.y*1000).toFixed(1);if(zi&&document.activeElement!==zi)zi.value=(o.position.z*1000).toFixed(1);}
+function _hassasMoveFromInput(){if(!window._tfCtrl||!_tfCtrl.object){if(typeof toast==='function')toast('Önce parça seç','err');return;}_tfCtrl.object.position.set(parseFloat(document.getElementById('hs-x').value||0)*0.001,parseFloat(document.getElementById('hs-y').value||0)*0.001,parseFloat(document.getElementById('hs-z').value||0)*0.001);}
+function _showHassasPanel(show){var p=document.getElementById('hassas-panel');if(p)p.style.display=show?'block':'none';}
+
+// 5. Ghost Mesh + Fade-In
+var _ghostMesh=null;
+function _showGhostMesh(g){_removeGhostMesh();if(!window._scene||!g)return;var m=new THREE.MeshBasicMaterial({color:0x00c8ff,wireframe:true,transparent:true,opacity:0.15,depthWrite:false});_ghostMesh=new THREE.Mesh(g.clone(),m);_ghostMesh.name='_ghostPreview';_scene.add(_ghostMesh);_ghostMesh._b=setInterval(function(){if(!_ghostMesh||!_ghostMesh.material){clearInterval(_ghostMesh._b);return;}_ghostMesh.material.opacity=0.08+Math.sin(Date.now()*0.003)*0.07;},50);}
+function _removeGhostMesh(){if(_ghostMesh){if(_ghostMesh._b)clearInterval(_ghostMesh._b);if(window._scene)_scene.remove(_ghostMesh);if(_ghostMesh.geometry)_ghostMesh.geometry.dispose();if(_ghostMesh.material)_ghostMesh.material.dispose();_ghostMesh=null;}}
+function _fadeInModel(obj,dur){dur=dur||1200;if(!obj)return;obj.traverse(function(c){if(c.isMesh&&c.material){c.material.transparent=true;c.material.opacity=0;}});var st=Date.now();var tick=function(){var t=Math.min(1,(Date.now()-st)/dur);obj.traverse(function(c){if(c.isMesh&&c.material)c.material.opacity=t*(2-t);});if(t<1)requestAnimationFrame(tick);else obj.traverse(function(c){if(c.isMesh&&c.material){c.material.transparent=false;c.material.opacity=1;}});};requestAnimationFrame(tick);}
+
+// 6. Blue Beam
+function _showBlueBeam(c){c=c||document.getElementById('three-wrap');if(!c)return;c.style.position='relative';var b=document.createElement('div');b.style.cssText='position:absolute;left:50%;top:0;width:4px;height:100%;transform:translateX(-50%);background:linear-gradient(180deg,rgba(0,140,255,0),rgba(0,140,255,.7) 30%,rgba(0,200,255,.9) 50%,rgba(0,140,255,.7) 70%,rgba(0,140,255,0));box-shadow:0 0 30px rgba(0,140,255,.5);pointer-events:none;z-index:22;opacity:0;';c.appendChild(b);b.animate([{opacity:0},{opacity:1,offset:.2},{opacity:1,offset:.7},{opacity:0}],{duration:2500,fill:'forwards'});setTimeout(function(){if(b.parentNode)b.remove();},2800);}
+
+// 7. Drive Üretime Ateşle
+function _driveFireToProduction(fid){var f=(window._driveFiles||[]).find(function(x){return x.fileId===fid;});if(!f||!f.url){if(typeof toast==='function')toast('Dosya bulunamadı','err');return;}if(typeof closeSlidePanel==='function')closeSlidePanel();if(typeof switchMode==='function')switchMode('uretim');setTimeout(function(){if(typeof loadModelFromURL==='function')loadModelFromURL(f.url,f.name);if(typeof toast==='function')toast('🔥 '+f.name+' üretime gönderildi!','ok',3000);},300);}
+
+// 8. STL Web Worker
+function _createSTLWorker(){var code='self.onmessage=function(e){var b=e.data,dv=new DataView(b),n=dv.getUint32(80,true),v=new Float32Array(n*9),nr=new Float32Array(n*9),o=84;for(var i=0;i<n;i++){var nx=dv.getFloat32(o,true);o+=4;var ny=dv.getFloat32(o,true);o+=4;var nz=dv.getFloat32(o,true);o+=4;for(var j=0;j<3;j++){var vi=i*9+j*3;v[vi]=dv.getFloat32(o,true);o+=4;v[vi+1]=dv.getFloat32(o,true);o+=4;v[vi+2]=dv.getFloat32(o,true);o+=4;nr[vi]=nx;nr[vi+1]=ny;nr[vi+2]=nz;}o+=2;}self.postMessage({vertices:v,normals:nr,numTriangles:n},[v.buffer,nr.buffer])};';return new Worker(URL.createObjectURL(new Blob([code],{type:'application/javascript'})));}
+
+// 9. TransformControls + Hassas Panel bağla
+(function(){function t(){if(!window._tfCtrl){setTimeout(t,2000);return;}_tfCtrl.addEventListener('objectChange',_updateHassasPanel);_createHassasPanel();}t();})();
+
+// 10. Scale-Lock Kalibrasyon
+var _scaleLock={referenceObjects:{kredi_karti:{width:85.60,height:53.98,label:'Kredi Kartı'},a4_kagit:{width:210,height:297,label:'A4 Kağıt'},'1tl_bozuk':{diameter:26.15,label:'1 TL Bozuk Para'},kibrit_kutu:{width:53,height:35,depth:15,label:'Kibrit Kutusu'}},pixelPerMM:0,locked:false,refType:null,calibrate:function(r,px){var ref=this.referenceObjects[r];if(!ref)return{ok:false};var mm=ref.width||ref.diameter;this.pixelPerMM=px/mm;this.locked=true;this.refType=r;return{ok:true,pixelPerMM:this.pixelPerMM,refLabel:ref.label,realMM:mm};},pxToMM:function(px){return(!this.locked||!this.pixelPerMM)?null:+(px/this.pixelPerMM).toFixed(2);},mmToPx:function(mm){return(!this.locked||!this.pixelPerMM)?null:Math.round(mm*this.pixelPerMM);}};
 window._scaleLock=_scaleLock;
 
-function _analyzeMesh(mesh){
-  if(!mesh||!mesh.geometry)return null;
-  var geo=mesh.geometry,pos=geo.attributes.position,idx=geo.index;
-  var vc=pos?pos.count:0,tc=idx?idx.count/3:vc/3;
-  geo.computeBoundingBox();var sM=new THREE.Vector3();geo.boundingBox.getSize(sM);
-  var sizeMM={x:+(sM.x*1000).toFixed(2),y:+(sM.y*1000).toFixed(2),z:+(sM.z*1000).toFixed(2)};
-  var p=pos.array,vol=0;
-  for(var i=0;i<vc;i+=3){var ax=p[i*3],ay=p[i*3+1],az=p[i*3+2],bx=p[(i+1)*3],by=p[(i+1)*3+1],bz=p[(i+1)*3+2],cx=p[(i+2)*3],cy=p[(i+2)*3+1],cz=p[(i+2)*3+2];vol+=(ax*(by*cz-bz*cy)+bx*(cy*az-cz*ay)+cx*(ay*bz-az*by))/6;}
-  var vMM3=+(Math.abs(vol)*1e9).toFixed(1);
-  var eMap=new Map(),oe=0;
-  for(var t=0;t<tc;t++){var i0=idx?idx.getX(t*3):t*3,i1=idx?idx.getX(t*3+1):t*3+1,i2=idx?idx.getX(t*3+2):t*3+2;[[i0,i1],[i1,i2],[i2,i0]].forEach(function(pr){var k=Math.min(pr[0],pr[1])+'-'+Math.max(pr[0],pr[1]);eMap.set(k,(eMap.get(k)||0)+1);});}
-  eMap.forEach(function(c){if(c===1)oe++;});
-  return{vertexCount:vc,triangleCount:Math.floor(tc),sizeMM:sizeMM,volumeMM3:vMM3,isWatertight:oe===0,openEdges:oe};
-}
+// 11. Mesh Analiz + CSG Tolerans + Kalınlık Kontrol
+function _analyzeMesh(mesh){if(!mesh||!mesh.geometry)return null;var geo=mesh.geometry,pos=geo.attributes.position,idx=geo.index,vc=pos?pos.count:0,tc=idx?idx.count/3:vc/3;geo.computeBoundingBox();var sM=new THREE.Vector3();geo.boundingBox.getSize(sM);var sz={x:+(sM.x*1000).toFixed(2),y:+(sM.y*1000).toFixed(2),z:+(sM.z*1000).toFixed(2)};var p=pos.array,vol=0;for(var i=0;i<vc;i+=3){var ax=p[i*3],ay=p[i*3+1],az=p[i*3+2],bx=p[(i+1)*3],by=p[(i+1)*3+1],bz=p[(i+1)*3+2],cx=p[(i+2)*3],cy=p[(i+2)*3+1],cz=p[(i+2)*3+2];vol+=(ax*(by*cz-bz*cy)+bx*(cy*az-cz*ay)+cx*(ay*bz-az*by))/6;}var eMap=new Map(),oe=0;for(var t=0;t<tc;t++){var i0=idx?idx.getX(t*3):t*3,i1=idx?idx.getX(t*3+1):t*3+1,i2=idx?idx.getX(t*3+2):t*3+2;[[i0,i1],[i1,i2],[i2,i0]].forEach(function(pr){var k=Math.min(pr[0],pr[1])+'-'+Math.max(pr[0],pr[1]);eMap.set(k,(eMap.get(k)||0)+1);});}eMap.forEach(function(c){if(c===1)oe++;});return{vertexCount:vc,triangleCount:Math.floor(tc),sizeMM:sz,volumeMM3:+(Math.abs(vol)*1e9).toFixed(1),isWatertight:oe===0,openEdges:oe};}
 window._analyzeMesh=_analyzeMesh;
-
-function _runMeshAnalysis(){
-  var obj=window._tfCtrl&&_tfCtrl.object?_tfCtrl.object:window._currentModel;
-  if(!obj){if(typeof toast==='function')toast('Önce model yükle','err');return;}
-  var tm=null;obj.traverse(function(c){if(!tm&&c.isMesh)tm=c;});
-  if(!tm)return;var r=_analyzeMesh(tm);if(!r)return;
-  var wt=r.isWatertight?'TAMAM':'AÇIK ('+r.openEdges+')';
-  if(typeof toast==='function')toast(r.sizeMM.x+'×'+r.sizeMM.y+'×'+r.sizeMM.z+' mm | '+r.triangleCount+' tri | WT:'+wt,'ok',5000);
-}
+function _runMeshAnalysis(){var obj=window._tfCtrl&&_tfCtrl.object?_tfCtrl.object:window._currentModel;if(!obj){if(typeof toast==='function')toast('Önce model yükle','err');return;}var tm=null;obj.traverse(function(c){if(!tm&&c.isMesh)tm=c;});if(!tm)return;var r=_analyzeMesh(tm);if(!r)return;if(typeof toast==='function')toast(r.sizeMM.x+'×'+r.sizeMM.y+'×'+r.sizeMM.z+' mm | '+r.triangleCount+' tri | WT:'+(r.isWatertight?'OK':'AÇIK('+r.openEdges+')'),'ok',5000);}
 window._runMeshAnalysis=_runMeshAnalysis;
-
-function _csgTolerance(pinMM,mat){var tol={pla:0.20,abs:0.25,petg:0.18,resin:0.10,metal:0.05}[mat]||0.20;return{male:+pinMM.toFixed(2),female:+(pinMM+tol).toFixed(2),tol:tol};}
+function _csgTolerance(pin,mat){var tol={pla:0.20,abs:0.25,petg:0.18,resin:0.10,metal:0.05}[mat]||0.20;return{male:+pin.toFixed(2),female:+(pin+tol).toFixed(2),tol:tol};}
 window._csgTolerance=_csgTolerance;
-
-function _checkWallThickness(mesh,minMM){minMM=minMM||1.0;if(!mesh||!mesh.geometry)return null;mesh.geometry.computeBoundingBox();var s=new THREE.Vector3();mesh.geometry.boundingBox.getSize(s);var w=[];if(s.x*1000<minMM)w.push('X');if(s.y*1000<minMM)w.push('Y');if(s.z*1000<minMM)w.push('Z');return{ok:w.length===0,warnings:w};}
+function _checkWallThickness(mesh,min){min=min||1.0;if(!mesh||!mesh.geometry)return null;mesh.geometry.computeBoundingBox();var s=new THREE.Vector3();mesh.geometry.boundingBox.getSize(s);var w=[];if(s.x*1000<min)w.push('X');if(s.y*1000<min)w.push('Y');if(s.z*1000<min)w.push('Z');return{ok:w.length===0,warnings:w};}
 window._checkWallThickness=_checkWallThickness;
 
 </script>
