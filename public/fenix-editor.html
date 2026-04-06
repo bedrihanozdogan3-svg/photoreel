@@ -2559,6 +2559,16 @@
           <button onclick="toggleMeasureMode()" id="btn-measure" title="Akıllı Ölçüm — Kumpas" class="uretim-tool-btn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 8h20M2 16h20M6 8v8M10 8v4M14 8v8M18 8v4"/></svg>
           </button>
+          <div style="height:1px;background:rgba(0,255,136,.15);margin:2px 0;"></div>
+          <button onclick="_toggleLaserScan()" id="btn-laser" title="Lazer Tarama — Scan Mode" class="uretim-tool-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00ff88" stroke-width="1.5"><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/><circle cx="12" cy="12" r="3" stroke-opacity=".6"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 2" stroke-opacity=".3"/></svg>
+          </button>
+          <button onclick="_toggleAutoDimension()" id="btn-autodim" title="Otomatik Ölçüm — Auto-Dimension" class="uretim-tool-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00c8ff" stroke-width="1.5"><path d="M2 20h20M4 20v-4M20 20v-4"/><path d="M4 18h16" stroke-dasharray="3 2"/><text x="12" y="15" text-anchor="middle" fill="#00c8ff" font-size="6" font-family="monospace">mm</text></svg>
+          </button>
+          <button onclick="_runMeshAnalysis()" id="btn-analysis" title="Milimetrik Analiz" class="uretim-tool-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          </button>
         </div>
 
         <!-- ═══ SAĞ ÜST: SIĞMA UYARISI ═══ -->
@@ -22265,6 +22275,105 @@ function _csgTolerance(pin,mat){var tol={pla:0.20,abs:0.25,petg:0.18,resin:0.10,
 window._csgTolerance=_csgTolerance;
 function _checkWallThickness(mesh,min){min=min||1.0;if(!mesh||!mesh.geometry)return null;mesh.geometry.computeBoundingBox();var s=new THREE.Vector3();mesh.geometry.boundingBox.getSize(s);var w=[];if(s.x*1000<min)w.push('X');if(s.y*1000<min)w.push('Y');if(s.z*1000<min)w.push('Z');return{ok:w.length===0,warnings:w};}
 window._checkWallThickness=_checkWallThickness;
+
+// ── Lazer Tarama Modu (sürekli scan çizgisi) ──
+var _laserActive=false,_laserEl=null;
+function _toggleLaserScan(){
+  _laserActive=!_laserActive;
+  var btn=document.getElementById('btn-laser');
+  if(btn)btn.classList.toggle('active',_laserActive);
+  var wrap=document.getElementById('three-wrap')||document.getElementById('uretim-wrap');
+  if(!wrap)return;
+  if(_laserActive){
+    if(_laserEl)_laserEl.remove();
+    _laserEl=document.createElement('div');
+    _laserEl.id='laser-persistent';
+    _laserEl.style.cssText='position:absolute;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(0,255,136,0) 5%,rgba(0,255,136,.7) 50%,rgba(0,255,136,0) 95%,transparent);box-shadow:0 0 15px rgba(0,255,136,.4),0 0 40px rgba(0,255,136,.15);pointer-events:none;z-index:20;top:0;';
+    var style=document.createElement('style');style.id='laser-anim-style';
+    style.textContent='@keyframes laserSweep{0%{top:0%}50%{top:100%}100%{top:0%}} #laser-persistent{animation:laserSweep 3s ease-in-out infinite;}';
+    if(!document.getElementById('laser-anim-style'))document.head.appendChild(style);
+    wrap.style.position='relative';wrap.appendChild(_laserEl);
+    if(typeof toast==='function')toast('Lazer Tarama aktif','ok',1500);
+  } else {
+    if(_laserEl&&_laserEl.parentNode)_laserEl.remove();_laserEl=null;
+    if(typeof toast==='function')toast('Lazer Tarama kapalı','info',1500);
+  }
+}
+window._toggleLaserScan=_toggleLaserScan;
+
+// ── Otomatik Ölçüm (BoundingBox boyutlarını sahneye çiz) ──
+var _autoDimActive=false,_dimLabels=[];
+function _toggleAutoDimension(){
+  _autoDimActive=!_autoDimActive;
+  var btn=document.getElementById('btn-autodim');
+  if(btn)btn.classList.toggle('active',_autoDimActive);
+  if(!_autoDimActive){_clearDimLabels();if(typeof toast==='function')toast('Ölçüm kapalı','info',1500);return;}
+  var obj=window._tfCtrl&&_tfCtrl.object?_tfCtrl.object:window._currentModel;
+  if(!obj){if(typeof toast==='function')toast('Önce model yükle','err');_autoDimActive=false;if(btn)btn.classList.remove('active');return;}
+  _clearDimLabels();
+  var box=new THREE.Box3().setFromObject(obj);
+  var size=new THREE.Vector3();box.getSize(size);
+  var center=new THREE.Vector3();box.getCenter(center);
+  var dims=[
+    {axis:'X',val:+(size.x*1000).toFixed(1),color:'#ff4444',pos:new THREE.Vector3(center.x,box.min.y-size.y*0.15,center.z)},
+    {axis:'Y',val:+(size.y*1000).toFixed(1),color:'#44ff44',pos:new THREE.Vector3(box.min.x-size.x*0.15,center.y,center.z)},
+    {axis:'Z',val:+(size.z*1000).toFixed(1),color:'#4488ff',pos:new THREE.Vector3(center.x,center.y,box.max.z+size.z*0.15)}
+  ];
+  dims.forEach(function(d){
+    var sprite=_makeTextSprite(d.axis+': '+d.val+' mm',d.color);
+    sprite.position.copy(d.pos);
+    if(window._scene)_scene.add(sprite);
+    _dimLabels.push(sprite);
+  });
+  // BoundingBox helper
+  var helper=new THREE.Box3Helper(box,0x00c8ff);
+  helper.name='_autoDimHelper';
+  if(window._scene)_scene.add(helper);
+  _dimLabels.push(helper);
+  if(typeof toast==='function')toast('Ölçüm: '+dims[0].val+'×'+dims[1].val+'×'+dims[2].val+' mm','ok',3000);
+}
+function _clearDimLabels(){_dimLabels.forEach(function(s){if(window._scene)_scene.remove(s);if(s.material){if(s.material.map)s.material.map.dispose();s.material.dispose();}});_dimLabels=[];}
+function _makeTextSprite(text,color){
+  var canvas=document.createElement('canvas');canvas.width=256;canvas.height=64;
+  var ctx=canvas.getContext('2d');
+  ctx.fillStyle='rgba(0,8,16,0.85)';ctx.beginPath();ctx.roundRect(0,0,256,64,8);ctx.fill();
+  ctx.strokeStyle=color;ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(0,0,256,64,8);ctx.stroke();
+  ctx.font='bold 28px monospace';ctx.fillStyle=color;ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.shadowColor=color;ctx.shadowBlur=8;ctx.fillText(text,128,32);
+  var tex=new THREE.CanvasTexture(canvas);tex.needsUpdate=true;
+  var mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false});
+  var sprite=new THREE.Sprite(mat);sprite.scale.set(0.15,0.0375,1);
+  return sprite;
+}
+window._toggleAutoDimension=_toggleAutoDimension;
+
+// ── Mouse koordinat göstergesi (Dijital Kumpas) ──
+(function(){
+  function initCrosshair(){
+    var wrap=document.getElementById('three-wrap');
+    if(!wrap){setTimeout(initCrosshair,3000);return;}
+    var tip=document.createElement('div');tip.id='coord-tooltip';
+    tip.style.cssText='display:none;position:absolute;pointer-events:none;z-index:30;background:rgba(0,8,16,.9);border:1px solid rgba(0,200,255,.3);border-radius:4px;padding:2px 6px;font-family:monospace;font-size:9px;color:#00c8ff;white-space:nowrap;backdrop-filter:blur(4px);';
+    wrap.appendChild(tip);
+    wrap.addEventListener('mousemove',function(e){
+      if(!window._scene||!window._camera)return;
+      var rect=wrap.getBoundingClientRect();
+      var mx=((e.clientX-rect.left)/rect.width)*2-1;
+      var my=-((e.clientY-rect.top)/rect.height)*2+1;
+      var ray=new THREE.Raycaster();ray.setFromCamera(new THREE.Vector2(mx,my),_camera);
+      var plane=new THREE.Plane(new THREE.Vector3(0,1,0),0);
+      var pt=new THREE.Vector3();
+      if(ray.ray.intersectPlane(plane,pt)){
+        tip.style.display='block';
+        tip.style.left=(e.clientX-rect.left+12)+'px';
+        tip.style.top=(e.clientY-rect.top-8)+'px';
+        tip.textContent='X:'+(pt.x*1000).toFixed(1)+' Y:'+(pt.y*1000).toFixed(1)+' Z:'+(pt.z*1000).toFixed(1)+' mm';
+      }
+    });
+    wrap.addEventListener('mouseleave',function(){tip.style.display='none';});
+  }
+  if(document.readyState==='complete')initCrosshair();else window.addEventListener('load',initCrosshair);
+})();
 
 </script>
 
