@@ -1211,8 +1211,239 @@ startCamera = async function() {
   _speak('Tarama başlıyor. Parçayı merkeze al.');
   // Tracking loop
   setInterval(_checkObjectInFrame, 500);
+  // İlk karede kilitlenme başlat
+  _initTargetAcquisition();
 };
 
+// ════════════════════════════════════════════════════════════
+//  İLK KAREDE KİLİTLENME — Target Acquisition + Segmentation
+//  + Keypoints + Lock-on
+// ════════════════════════════════════════════════════════════
+
+var _lockState = 'searching'; // searching | locking | locked
+var _lockKeypoints = null;
+var _lockBBox = null;
+var _lockFrameEl = null;
+var _lockStatusEl = null;
+
+function _initTargetAcquisition() {
+  _lockState = 'searching';
+  _lockKeypoints = null;
+
+  // Hedefleme karesi oluştur
+  if (!_lockFrameEl) {
+    _lockFrameEl = document.createElement('div');
+    _lockFrameEl.id = 'target-lock-frame';
+    _lockFrameEl.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:55vw;height:40vh;border:2px solid #F97316;border-radius:12px;z-index:15;pointer-events:none;transition:all .4s;box-shadow:0 0 30px rgba(249,115,22,.2);';
+    // Köşe nişangahları
+    _lockFrameEl.innerHTML = '<div style="position:absolute;top:-2px;left:-2px;width:16px;height:16px;border-top:3px solid #F97316;border-left:3px solid #F97316;border-radius:3px 0 0 0"></div><div style="position:absolute;top:-2px;right:-2px;width:16px;height:16px;border-top:3px solid #F97316;border-right:3px solid #F97316;border-radius:0 3px 0 0"></div><div style="position:absolute;bottom:-2px;left:-2px;width:16px;height:16px;border-bottom:3px solid #F97316;border-left:3px solid #F97316;border-radius:0 0 0 3px"></div><div style="position:absolute;bottom:-2px;right:-2px;width:16px;height:16px;border-bottom:3px solid #F97316;border-right:3px solid #F97316;border-radius:0 0 3px 0"></div><div id="lock-crosshair" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:24px;height:24px;"><div style="position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(249,115,22,.4)"></div><div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(249,115,22,.4)"></div></div>';
+    var overlay = document.querySelector('.cam-overlay');
+    if (overlay) overlay.appendChild(_lockFrameEl);
+  }
+
+  // Durum badge
+  if (!_lockStatusEl) {
+    _lockStatusEl = document.createElement('div');
+    _lockStatusEl.id = 'lock-status';
+    _lockStatusEl.style.cssText = 'position:absolute;top:38px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);border:1px solid #F97316;border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;z-index:20;pointer-events:none;transition:all .4s;';
+    _lockStatusEl.textContent = '🔍 Parçayı kutuya sok...';
+    _lockStatusEl.style.color = '#F97316';
+    var overlay = document.querySelector('.cam-overlay');
+    if (overlay) overlay.appendChild(_lockStatusEl);
+  }
+
+  // Arama döngüsü
+  _lockScanInterval = setInterval(_scanForTarget, 300);
+}
+
+var _lockScanInterval = null;
+
+function _scanForTarget() {
+  if (_lockState === 'locked') return;
+
+  var video = document.getElementById('camera-video');
+  if (!video || !video.videoWidth) return;
+
+  // Merkez bölgeyi analiz et
+  var c = document.createElement('canvas');
+  var vw = video.videoWidth, vh = video.videoHeight;
+  var cx = vw * 0.2, cy = vh * 0.2, cw = vw * 0.6, ch = vh * 0.6;
+  c.width = 128; c.height = 96;
+  c.getContext('2d').drawImage(video, cx, cy, cw, ch, 0, 0, 128, 96);
+  var data = c.getContext('2d').getImageData(0, 0, 128, 96).data;
+
+  // Kenar yoğunluğu hesapla (Sobel basitleştirilmiş)
+  var edgeCount = 0;
+  var gray = new Uint8Array(128 * 96);
+  for (var i = 0; i < gray.length; i++) {
+    gray[i] = Math.round(data[i*4] * 0.299 + data[i*4+1] * 0.587 + data[i*4+2] * 0.114);
+  }
+  for (var y = 1; y < 95; y++) {
+    for (var x = 1; x < 127; x++) {
+      var idx = y * 128 + x;
+      var gx = Math.abs(gray[idx+1] - gray[idx-1]);
+      var gy = Math.abs(gray[idx+128] - gray[idx-128]);
+      if (gx + gy > 30) edgeCount++;
+    }
+  }
+
+  var edgeDensity = edgeCount / (126 * 94);
+
+  // Renk varyansı
+  var rSum=0,gSum=0,bSum=0,n=data.length/4;
+  for (var i=0;i<data.length;i+=4){rSum+=data[i];gSum+=data[i+1];bSum+=data[i+2];}
+  var rMean=rSum/n,gMean=gSum/n,bMean=bSum/n;
+  var rVar=0,gVar=0,bVar=0;
+  for (var i=0;i<data.length;i+=4){rVar+=Math.pow(data[i]-rMean,2);gVar+=Math.pow(data[i+1]-gMean,2);bVar+=Math.pow(data[i+2]-bMean,2);}
+  var colorVariance = (rVar+gVar+bVar)/(3*n);
+
+  // Parça tespit edildi mi?
+  var detected = edgeDensity > 0.05 && colorVariance > 200;
+
+  if (_lockState === 'searching' && detected) {
+    _lockState = 'locking';
+    _lockFrameEl.style.borderColor = '#F59E0B';
+    _lockFrameEl.style.boxShadow = '0 0 30px rgba(245,158,11,.3)';
+    _lockStatusEl.textContent = '⏳ Kilitleniyor...';
+    _lockStatusEl.style.color = '#F59E0B';
+    _lockStatusEl.style.borderColor = '#F59E0B';
+
+    // 1 saniye sabit kalırsa kilitle
+    setTimeout(function() {
+      if (_lockState !== 'locking') return;
+      _performLockOn(c, edgeDensity, colorVariance);
+    }, 1000);
+
+  } else if (_lockState === 'locking' && !detected) {
+    // Parça çıktı, aramaya dön
+    _lockState = 'searching';
+    _lockFrameEl.style.borderColor = '#F97316';
+    _lockFrameEl.style.boxShadow = '0 0 30px rgba(249,115,22,.2)';
+    _lockStatusEl.textContent = '🔍 Parçayı kutuya sok...';
+    _lockStatusEl.style.color = '#F97316';
+    _lockStatusEl.style.borderColor = '#F97316';
+  }
+}
+
+function _performLockOn(canvas, edgeDensity, colorVariance) {
+  _lockState = 'locked';
+
+  // Keypoints oluştur (ORB benzeri — köşe noktaları)
+  var data = canvas.getContext('2d').getImageData(0, 0, 128, 96).data;
+  var gray = new Uint8Array(128 * 96);
+  for (var i = 0; i < gray.length; i++) {
+    gray[i] = Math.round(data[i*4] * 0.299 + data[i*4+1] * 0.587 + data[i*4+2] * 0.114);
+  }
+
+  // Harris corner detection (basitleştirilmiş)
+  _lockKeypoints = [];
+  for (var y = 2; y < 94; y += 4) {
+    for (var x = 2; x < 126; x += 4) {
+      var idx = y * 128 + x;
+      var dx = gray[idx+1] - gray[idx-1];
+      var dy = gray[idx+128] - gray[idx-128];
+      var corner = Math.abs(dx) + Math.abs(dy);
+      if (corner > 40) {
+        _lockKeypoints.push({ x: x, y: y, strength: corner });
+      }
+    }
+  }
+  _lockKeypoints.sort(function(a,b) { return b.strength - a.strength; });
+  _lockKeypoints = _lockKeypoints.slice(0, 50); // En güçlü 50 nokta
+
+  // Parmak izi kaydet
+  _lockBBox = { edgeDensity: edgeDensity, colorVariance: colorVariance, keypointCount: _lockKeypoints.length };
+
+  // Görsel efekt — YEŞİL kilitlenme
+  _lockFrameEl.style.borderColor = '#00ff88';
+  _lockFrameEl.style.boxShadow = '0 0 40px rgba(0,255,136,.4), inset 0 0 30px rgba(0,255,136,.05)';
+  _lockFrameEl.style.transition = 'all .2s';
+
+  // Köşe nişangahları yeşile
+  _lockFrameEl.querySelectorAll('div').forEach(function(d) {
+    if (d.style.borderTop) d.style.borderTopColor = '#00ff88';
+    if (d.style.borderBottom) d.style.borderBottomColor = '#00ff88';
+    if (d.style.borderLeft) d.style.borderLeftColor = '#00ff88';
+    if (d.style.borderRight) d.style.borderRightColor = '#00ff88';
+  });
+
+  // Durum
+  _lockStatusEl.innerHTML = '🎯 HEDEF MÜHÜRLENDİ — <span style="font-size:9px;opacity:.7">' + _lockKeypoints.length + ' nokta</span>';
+  _lockStatusEl.style.color = '#00ff88';
+  _lockStatusEl.style.borderColor = '#00ff88';
+  _lockStatusEl.style.background = 'rgba(0,20,10,.9)';
+
+  // Keypoint noktalarını göster (kısa süreliğine)
+  _showKeypointFlash();
+
+  // Haptic + ses
+  if (navigator.vibrate) navigator.vibrate([50, 30, 100]);
+  _speak('Hedef mühürlendi Kaptan. Operasyona hazırım!');
+
+  // Scan interval'ı tracking'e çevir
+  clearInterval(_lockScanInterval);
+  setInterval(_trackLockedTarget, 500);
+
+  // Shutter lock'ı aç
+  _shutterLocked = false;
+  var btn = document.getElementById('cam-capture-btn');
+  if (btn) { btn.style.opacity = '1'; btn.style.border = '4px solid #22C55E'; btn.style.pointerEvents = 'auto'; }
+}
+
+function _showKeypointFlash() {
+  if (!_lockKeypoints || !_lockKeypoints.length) return;
+  var overlay = document.querySelector('.cam-overlay');
+  if (!overlay) return;
+
+  var kpContainer = document.createElement('div');
+  kpContainer.style.cssText = 'position:absolute;top:20%;left:20%;width:60%;height:60%;pointer-events:none;z-index:16;';
+
+  _lockKeypoints.forEach(function(kp) {
+    var dot = document.createElement('div');
+    var px = (kp.x / 128) * 100;
+    var py = (kp.y / 96) * 100;
+    dot.style.cssText = 'position:absolute;width:4px;height:4px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px #00ff88;opacity:0;left:'+px+'%;top:'+py+'%;';
+    dot.animate([{opacity:0,transform:'scale(0)'},{opacity:1,transform:'scale(1.5)'},{opacity:0,transform:'scale(0.5)'}],{duration:1500,delay:Math.random()*300});
+    kpContainer.appendChild(dot);
+  });
+
+  overlay.appendChild(kpContainer);
+  setTimeout(function() { kpContainer.remove(); }, 2000);
+}
+
+function _trackLockedTarget() {
+  if (_lockState !== 'locked') return;
+  // Parça hala merkezdeyse tracking devam
+  _checkObjectInFrame();
+
+  // Kaybedilirse kilit kırılır
+  if (_trackingLost) {
+    _lockFrameEl.style.borderColor = '#ef4444';
+    _lockFrameEl.style.boxShadow = '0 0 40px rgba(239,68,68,.3)';
+    _lockStatusEl.textContent = '⚠ KİLİT KIRILDI — Parçayı geri getir!';
+    _lockStatusEl.style.color = '#ef4444';
+    _lockStatusEl.style.borderColor = '#ef4444';
+
+    // Shutter lock'ı kapat
+    _shutterLocked = true;
+    var btn = document.getElementById('cam-capture-btn');
+    if (btn) { btn.style.opacity = '0.3'; btn.style.border = '4px solid #ef4444'; btn.style.pointerEvents = 'none'; }
+  } else if (_lockFrameEl.style.borderColor !== 'rgb(0, 255, 136)') {
+    // Tekrar bulundu
+    _lockFrameEl.style.borderColor = '#00ff88';
+    _lockFrameEl.style.boxShadow = '0 0 40px rgba(0,255,136,.4)';
+    _lockStatusEl.innerHTML = '🎯 HEDEF MÜHÜRLENDİ';
+    _lockStatusEl.style.color = '#00ff88';
+    _lockStatusEl.style.borderColor = '#00ff88';
+    _shutterLocked = false;
+    var btn = document.getElementById('cam-capture-btn');
+    if (btn) { btn.style.opacity = '1'; btn.style.border = '4px solid #22C55E'; btn.style.pointerEvents = 'auto'; }
+    _speak('Hedef tekrar kilitlendi.');
+  }
+}
+
 </script>
+</body>
+</html>
 </body>
 </html>
