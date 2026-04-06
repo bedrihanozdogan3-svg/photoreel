@@ -1439,6 +1439,22 @@ app.post('/api/scans/:scanId/reconstruct', async (req, res) => {
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
 });
 
+// Usta profili
+app.get('/api/usta/profile', async (req, res) => {
+  try {
+    const userId = req.query.userId || 'default';
+    try {
+      const db = require('firebase-admin').firestore();
+      const doc = await db.collection('qr-tokens').where('userId', '==', userId).limit(1).get();
+      let pw = '------', interval = 5;
+      if (!doc.empty) { const d = doc.docs[0].data(); pw = d.password || pw; interval = d.intervalMin || 5; }
+      res.json({ ok: true, usta: { active: true, plan: 'pro', totalOrders: 0, currentPassword: pw, qrPasswordInterval: interval } });
+    } catch(e) {
+      res.json({ ok: true, usta: { active: true, plan: 'pro', totalOrders: 0, currentPassword: '------', qrPasswordInterval: 5 } });
+    }
+  } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
 // Usta paneli — siparişleri listele
 app.get('/api/usta/orders', async (req, res) => {
   try {
