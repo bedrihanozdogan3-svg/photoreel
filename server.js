@@ -43,7 +43,10 @@ const { promptInjectionGuard, authLimiter, bruteForceCheck, auditLog } = require
 // Güvenlik — production'da tam Helmet, dev'de minimal (uzantı uyumu)
 if (config.isProd) {
   app.use(helmet({
-    contentSecurityPolicy: false
+    contentSecurityPolicy: false,
+    frameguard: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: false
   }));
 } else {
   // Dev — minimal güvenlik, tarayıcı uzantılarıyla uyumlu
