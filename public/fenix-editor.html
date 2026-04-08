@@ -2105,6 +2105,15 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
         <span class="sb-lbl">ÖLÇEK</span>
       </button>
+      <div class="sb-sep"></div>
+      <button class="sb-btn" data-tool="uretim-qr" title="QR Kod Üret — Müşteriye tarama linki oluştur" onclick="setUretimTool('qr');_uretimGenerateQR()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/></svg>
+        <span class="sb-lbl">QR ÜRET</span>
+      </button>
+      <button class="sb-btn" data-tool="uretim-export" title="Dışa Aktar — STL, GLTF, OBJ + üretim paketi" onclick="setUretimTool('export');openUretimSlide('export')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span class="sb-lbl">ÇIKIŞ</span>
+      </button>
     </div>
 
   </div>
@@ -11515,13 +11524,20 @@ function _fenixLogEngTool(tool, state) {
   try { fetch('/api/fenix/log', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ type:'engineering_tool', tool, state, ts: Date.now() }) }).catch(()=>{}); } catch(e){}
 }
 
+// ── Aktif sahneyi döndür: üretim modunda _uScene, diğerlerinde _scene ──
+function _getActiveScene() {
+  if (S.mode === 'uretim' && window._uScene) return window._uScene;
+  return window._scene;
+}
+
 function _toggle3DWireframe() {
   _engWireframe = !_engWireframe;
   _fenixLogEngTool('wireframe', _engWireframe);
   const btn = document.getElementById('btn-wireframe');
   if (btn) btn.style.color = _engWireframe ? '#F97316' : '#888';
-  if (!_scene) return;
-  _scene.traverse(child => {
+  const activeScene = _getActiveScene();
+  if (!activeScene) return;
+  activeScene.traverse(child => {
     if (child.isMesh && child.material && !child.name.startsWith('_eng_')) {
       if (Array.isArray(child.material)) {
         child.material.forEach(m => { m.wireframe = _engWireframe; });
@@ -11537,27 +11553,27 @@ function _toggle3DEdges() {
   _fenixLogEngTool('edge_highlight', _engEdges);
   const btn = document.getElementById('btn-edges');
   if (btn) btn.style.color = _engEdges ? '#F97316' : '#888';
-  if (!_scene) return;
+  const activeScene = _getActiveScene();
+  if (!activeScene) return;
   // Mevcut edge çizgilerini temizle
-  _edgeLines.forEach(l => { _scene.remove(l); if (l.geometry) l.geometry.dispose(); if (l.material) l.material.dispose(); });
+  _edgeLines.forEach(l => { (l.parent || activeScene).remove(l); if (l.geometry) l.geometry.dispose(); if (l.material) l.material.dispose(); });
   _edgeLines = [];
   if (!_engEdges) return;
   // Keskin kenarları çiz (30° eşik)
-  _scene.traverse(child => {
+  activeScene.traverse(child => {
     if (child.isMesh && child.geometry && !child.name.startsWith('_eng_')) {
       try {
         const edges = new THREE.EdgesGeometry(child.geometry, 30);
         const lineMat = new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 1, transparent: true, opacity: 0.7 });
         const line = new THREE.LineSegments(edges, lineMat);
         line.name = '_eng_edge';
-        // Model'in dünya pozisyonunu kopyala
         line.position.copy(child.position);
         line.rotation.copy(child.rotation);
         line.scale.copy(child.scale);
-        if (child.parent && child.parent !== _scene) {
+        if (child.parent && child.parent !== activeScene) {
           child.parent.add(line);
         } else {
-          _scene.add(line);
+          activeScene.add(line);
         }
         _edgeLines.push(line);
       } catch(e) {}
@@ -11570,8 +11586,9 @@ function _toggle3DMatte() {
   _fenixLogEngTool('matte_material', _engMatte);
   const btn = document.getElementById('btn-matte');
   if (btn) btn.style.color = _engMatte ? '#F97316' : '#888';
-  if (!_scene) return;
-  _scene.traverse(child => {
+  const activeScene = _getActiveScene();
+  if (!activeScene) return;
+  activeScene.traverse(child => {
     if (child.isMesh && child.material && !child.name.startsWith('_eng_')) {
       if (_engMatte) {
         // Orijinali sakla
@@ -11602,8 +11619,9 @@ function _toggle3DHeatmap() {
   _fenixLogEngTool('curvature_heatmap', _engHeatmap);
   const btn = document.getElementById('btn-heatmap');
   if (btn) btn.style.color = _engHeatmap ? '#F97316' : '#888';
-  if (!_scene) return;
-  _scene.traverse(child => {
+  const activeScene = _getActiveScene();
+  if (!activeScene) return;
+  activeScene.traverse(child => {
     if (child.isMesh && child.geometry && !child.name.startsWith('_eng_')) {
       if (_engHeatmap) {
         // Eğim (curvature) bazlı vertex renklendirme
@@ -16336,6 +16354,74 @@ function runSlicerExport() {
   }, 3000);
 }
 
+// ── ÜRETİM QR ÜRET — Sidebar'dan çağrılır ──
+function _uretimGenerateQR() {
+  // Üretim slide panelinde QR oluştur
+  const el = document.getElementById('uretim-slide-panel');
+  const title = document.getElementById('usp-title');
+  const body = document.getElementById('usp-body');
+  if (!el || !body) return;
+
+  _uretimSlideOpen = 'qr';
+  if (title) title.textContent = '📱 QR KOD ÜRET';
+  body.innerHTML = `
+    <div class="usp-section">
+      <div class="usp-section-title">MÜŞTERİ TARAMA LİNKİ</div>
+      <div class="usp-info">Müşteriye QR kod gönderin, telefonundan parçayı tarasın. Şifre otomatik yenilenir.</div>
+      <div class="usp-row">
+        <span class="usp-label">Şifre Yenileme</span>
+        <select id="uretim-qr-interval" style="background:#111;border:1px solid #222;color:#ccc;border-radius:4px;padding:2px 6px;font-size:10px;">
+          <option value="5">5 dk</option>
+          <option value="10">10 dk</option>
+          <option value="15">15 dk</option>
+          <option value="30">30 dk</option>
+        </select>
+      </div>
+      <button class="usp-btn green" onclick="_uretimDoGenerateQR()">+ Yeni QR Üret</button>
+      <div id="uretim-qr-result" style="margin-top:8px;"></div>
+    </div>
+  `;
+  el.classList.add('open');
+}
+
+async function _uretimDoGenerateQR() {
+  try {
+    const interval = document.getElementById('uretim-qr-interval')?.value || 5;
+    const r = await fetch('/api/usta/qr/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: _driveUserId(), interval: interval })
+    });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error);
+
+    const fullUrl = location.origin + d.url;
+    const el = document.getElementById('uretim-qr-result');
+    if (!el) return;
+    el.innerHTML = `
+      <div style="background:#0a0a15;border-radius:6px;padding:8px;text-align:center">
+        <div id="uretim-qr-canvas"></div>
+        <div style="font-size:10px;color:#00c8ff;margin-top:6px;font-weight:700">Şifre: <span id="uretim-pw-display">${d.password}</span></div>
+        <div id="uretim-pw-timer" style="font-size:8px;color:#666;margin-top:2px"></div>
+        <div style="font-size:9px;color:#555;margin-top:2px;word-break:break-all">${fullUrl}</div>
+        <div style="font-size:8px;color:#22C55E;margin-top:4px">QR sabit · Şifre ${interval} dk'da bir değişir</div>
+        <div style="display:flex;gap:4px;margin-top:6px">
+          <button onclick="navigator.clipboard.writeText('${fullUrl}');toast('Kopyalandı','ok',1500)" style="flex:1;height:26px;border-radius:4px;background:#1a1a2e;border:1px solid #333;color:#ccc;font-size:10px;cursor:pointer">📋 Kopyala</button>
+          <button onclick="navigator.share?.({url:'${fullUrl}',title:'Fenixal Tarama'})" style="flex:1;height:26px;border-radius:4px;background:#1a1a2e;border:1px solid #333;color:#ccc;font-size:10px;cursor:pointer">📤 Paylaş</button>
+        </div>
+      </div>`;
+
+    if (typeof QRCode !== 'undefined') {
+      new QRCode(document.getElementById('uretim-qr-canvas'), {
+        text: fullUrl, width: 160, height: 160,
+        colorDark: '#00c8ff', colorLight: '#0a0a15'
+      });
+    }
+
+    toast('QR oluşturuldu — şifre ' + interval + ' dk\'da bir yenilenir', 'ok', 3000);
+  } catch(e) { toast('QR hatası: ' + e.message, 'err'); }
+}
+
 function updateExportEstimates() {
   let vol = 0;
   if (window._scene) {
@@ -17048,26 +17134,29 @@ function updateEngOverlay() {
 
 // ── Kesit Görünümü (X-Ray Cut) ──
 function toggleXRayCut() {
-  if (!window._scene || !window.THREE) return;
+  const activeScene = _getActiveScene();
+  if (!activeScene || !window.THREE) return;
   const btn = document.getElementById('btn-xray-cut');
   uretimState.clipActive = !uretimState.clipActive;
   btn?.classList.toggle('active', uretimState.clipActive);
 
+  // Üretim modunda _uRenderer kullan
+  const activeRenderer = (S.mode === 'uretim' && window._uRenderer) ? window._uRenderer : window._renderer;
+
   if (uretimState.clipActive) {
-    // Clip plane oluştur
     const plane = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0);
     uretimState.clipPlane = plane;
-    _scene.traverse(obj => {
+    activeScene.traverse(obj => {
       if (obj.isMesh && obj.material) {
         obj.material.clippingPlanes = [plane];
         obj.material.clipShadows = true;
         obj.material.needsUpdate = true;
       }
     });
-    if (window._renderer) _renderer.localClippingEnabled = true;
+    if (activeRenderer) activeRenderer.localClippingEnabled = true;
     toast('Kesit görünümü aktif — parça ortadan kesildi', 'ok', 2000);
   } else {
-    _scene.traverse(obj => {
+    activeScene.traverse(obj => {
       if (obj.isMesh && obj.material) {
         obj.material.clippingPlanes = [];
         obj.material.needsUpdate = true;
@@ -17092,8 +17181,10 @@ function toggleMeasureMode() {
     const valEl = document.getElementById('uretim-measure-val');
     if (valEl) valEl.textContent = '— mm';
     toast('Ölçüm modu — modele iki noktaya tıklayın', 'ok', 2500);
-    // Canvas'a tıklama dinleyicisi
-    const canvas = document.querySelector('#mod-3d canvas') || document.getElementById('three-canvas');
+    // Canvas'a tıklama dinleyicisi — aktif moda göre
+    const canvas = S.mode === 'uretim'
+      ? document.getElementById('uretim-canvas')
+      : (document.querySelector('#mod-3d canvas') || document.getElementById('three-canvas'));
     if (canvas && !canvas._measureHandler) {
       canvas._measureHandler = function(e) {
         if (!uretimState.measureMode || !window._raycaster || !window._camera) return;
