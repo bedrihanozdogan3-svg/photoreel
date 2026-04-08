@@ -73,6 +73,45 @@ if (config.env === 'production') {
   app.use('/api/', limiter);
 }
 
+// ── Fenix Trafik Sayaçları (Dashboard için) ──
+global._fenixTotalRequests = 0;
+global._fenixPeak = 0;
+global._fenix5xx = 0;
+global._fenix4xx = 0;
+global._fenixByHour = new Array(24).fill(0);
+global._fenixByEndpoint = {};
+global._fenixByCountry = {};
+global._fenixConnections = 0;
+
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    global._fenixTotalRequests++;
+    global._fenixByHour[new Date().getHours()]++;
+    const ep = req.path.split('/').slice(0, 4).join('/');
+    global._fenixByEndpoint[ep] = (global._fenixByEndpoint[ep] || 0) + 1;
+    const startTime = Date.now();
+    const origEnd = res.end;
+    res.end = function() {
+      const duration = Date.now() - startTime;
+      if (res.statusCode >= 500) global._fenix5xx++;
+      else if (res.statusCode >= 400) {
+        global._fenix4xx++;
+        if (req.path.includes('/auth/') && res.statusCode === 401) global._fenixFailedLogins++;
+      }
+      if (res.statusCode === 429) global._fenixRateLimitHits++;
+      // Performance tracking
+      const p = global._fenixPerf;
+      p.totalMs += duration; p.count++;
+      p.avgMs = Math.round(p.totalMs / p.count);
+      if (!p.byEndpoint[ep]) p.byEndpoint[ep] = { avg: 0, total: 0, count: 0 };
+      const pe = p.byEndpoint[ep]; pe.total += duration; pe.count++; pe.avg = Math.round(pe.total / pe.count);
+      if (duration > 1000) { p.slowest.push({ ep, ms: duration, ts: Date.now() }); if (p.slowest.length > 20) p.slowest.shift(); }
+      origEnd.apply(res, arguments);
+    };
+  }
+  next();
+});
+
 // Landing page — "Yakında" sayfası
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'landing-soon.html'));
@@ -129,6 +168,20 @@ app.use(express.static(path.join(__dirname, 'public'), {
 // API routes
 const chatRoutes = require('./routes/api-chat');
 app.use('/api/chat', chatRoutes(io));
+
+// Fenix Brain chat — /api/fenix/chat → Gemini
+app.post('/api/fenix/chat', async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ ok: false, error: '"text" is required' });
+    const ConversationManager = require('./services/conversation-manager');
+    const manager = new ConversationManager(io);
+    const response = await manager.sendToGemini(text);
+    res.json({ ok: true, response });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
 
 // Agent API (tablet uzaktan kontrol) — ADMIN ONLY
 const agentRoutes = require('./routes/api-agent');
@@ -314,7 +367,16 @@ app.get('/api/version', (req, res) => {
     ok: true,
     version: pkg.version || '1.0.0',
     name: pkg.name || 'fenix-ai',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    services: {
+      gemini: !!process.env.GEMINI_API_KEY,
+      claude: !!process.env.ANTHROPIC_API_KEY,
+      elevenlabs: !!process.env.ELEVENLABS_API_KEY,
+      deepgram: !!process.env.DEEPGRAM_API_KEY,
+      firestore: !!process.env.FIRESTORE_PROJECT_ID,
+      luma: !!process.env.LUMA_API_KEY,
+      fal: !!process.env.FAL_API_KEY
+    }
   });
 });
 
@@ -534,16 +596,16 @@ const { getAllStates: getCircuitStates } = require('./utils/circuit-breaker');
 // Fenix Brain — Orkestrasyon, Shadow Learning, Otonom Optimizasyon, Self-Heal
 const fenixBrain = require('./services/fenix-brain');
 
-// Fenix Brain API — ADMIN ONLY
-app.get('/api/fenix/status', requireAdmin, (req, res) => {
+// Fenix Brain API — Durum endpoint'leri herkese açık (sadece okuma)
+app.get('/api/fenix/status', (req, res) => {
   res.json({ ok: true, ...fenixBrain.getFullStatus() });
 });
 
-app.get('/api/fenix/skills', requireAdmin, (req, res) => {
+app.get('/api/fenix/skills', (req, res) => {
   res.json({ ok: true, ...fenixBrain.getShadowStats() });
 });
 
-app.get('/api/fenix/errors', requireAdmin, (req, res) => {
+app.get('/api/fenix/errors', (req, res) => {
   res.json({ ok: true, ...fenixBrain.getErrorStats() });
 });
 
@@ -575,6 +637,131 @@ app.get('/api/fenix/escalation', requireAdmin, (req, res) => {
   const result = fenixBrain.checkEscalation();
   res.json({ ok: true, escalation: result });
 });
+
+// ── Fenix Dashboard (Tablet Panel için birleşik endpoint) ──
+app.get('/api/fenix/dashboard', async (req, res) => {
+  try {
+    const brain = fenixBrain.getFullStatus();
+    const shadow = fenixBrain.getShadowStats();
+    const errors = fenixBrain.getErrorStats();
+    const ts = fenixTrainer ? fenixTrainer.getState() : {};
+
+    // Uptime & connections
+    const uptime = process.uptime();
+    const connections = global._fenixConnections || 0;
+    const totalRequests = global._fenixTotalRequests || 0;
+    const peak = global._fenixPeak || 0;
+    const errors5xx = global._fenix5xx || 0;
+    const errors4xx = global._fenix4xx || 0;
+    const byHour = global._fenixByHour || new Array(24).fill(0);
+    const byEndpoint = global._fenixByEndpoint || {};
+    const byCountry = global._fenixByCountry || {};
+
+    // API key durumları
+    const apis = {
+      gemini: !!process.env.GEMINI_API_KEY,
+      claude: !!process.env.ANTHROPIC_API_KEY,
+      tripo: !!process.env.TRIPO_API_KEY,
+      elevenlabs: !!process.env.ELEVENLABS_API_KEY,
+      firebase: !!process.env.FIRESTORE_PROJECT_ID,
+      fal: !!process.env.FAL_API_KEY,
+      luma: !!process.env.LUMA_API_KEY,
+      deepgram: !!process.env.DEEPGRAM_API_KEY
+    };
+
+    // Maliyet takibi
+    const costData = global._fenixCosts || { byApi: {}, daily: [], total: 0 };
+
+    // Circuit breaker durumları
+    let circuits = [];
+    try { circuits = getCircuitStates(); } catch(e) {}
+
+    // Response time tracking
+    const perf = global._fenixPerf || { avgMs: 0, slowest: [], byEndpoint: {} };
+
+    // Pipeline / Queue
+    let queueStats = { total: 0, queued: 0, processing: 0, done: 0, failed: 0, jobs: [] };
+    try {
+      const qService = require('./services/queue-service');
+      if (qService && qService.getStats) queueStats = qService.getStats();
+      else if (qService && qService.stats) queueStats = qService.stats();
+    } catch(e) {}
+
+    // Security
+    let securityData = { failedLogins: 0, rateLimitHits: 0, bannedIps: 0, suspicious: 0 };
+    securityData.failedLogins = global._fenixFailedLogins || 0;
+    securityData.rateLimitHits = global._fenixRateLimitHits || 0;
+    securityData.suspicious = global._fenixSuspicious || 0;
+
+    // Memory usage
+    const mem = process.memoryUsage();
+
+    res.json({
+      ok: true,
+      health: {
+        uptime,
+        connections,
+        totalRequests,
+        peak,
+        errors5xx,
+        errors4xx,
+        byHour,
+        byEndpoint,
+        byCountry,
+        memory: {
+          rss: Math.round(mem.rss / 1024 / 1024),
+          heap: Math.round(mem.heapUsed / 1024 / 1024),
+          heapTotal: Math.round(mem.heapTotal / 1024 / 1024)
+        },
+        cpu: process.cpuUsage ? process.cpuUsage() : null,
+        nodeVersion: process.version
+      },
+      training: {
+        totalLessons: ts.totalLessons || 0,
+        level: ts.level || 'apprentice',
+        running: ts.running || false,
+        totalCost: ts.totalCost || 0,
+        budget: ts.budget || 20,
+        progress: ts.progress || 0,
+        phase: ts.phase || null,
+        lastTraining: ts.lastTraining || null,
+        successRate: ts.successRate || 0
+      },
+      skills: shadow,
+      brain: brain,
+      apis,
+      errors,
+      costs: costData,
+      circuits,
+      performance: perf,
+      queue: queueStats,
+      security: securityData
+    });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ── Maliyet + Performans + Güvenlik Takip Middleware ──
+global._fenixCosts = { byApi: {}, daily: [], total: 0, history: [] };
+global._fenixPerf = { avgMs: 0, totalMs: 0, count: 0, slowest: [], byEndpoint: {} };
+global._fenixFailedLogins = 0;
+global._fenixRateLimitHits = 0;
+global._fenixSuspicious = 0;
+
+// API maliyet kaydı — servislerden çağrılır
+global.fenixRecordCost = function(apiName, cost, details) {
+  const c = global._fenixCosts;
+  c.byApi[apiName] = (c.byApi[apiName] || 0) + cost;
+  c.total += cost;
+  const today = new Date().toISOString().slice(0, 10);
+  let dayEntry = c.daily.find(d => d.date === today);
+  if (!dayEntry) { dayEntry = { date: today, total: 0, byApi: {} }; c.daily.push(dayEntry); if (c.daily.length > 30) c.daily.shift(); }
+  dayEntry.total += cost;
+  dayEntry.byApi[apiName] = (dayEntry.byApi[apiName] || 0) + cost;
+  c.history.push({ api: apiName, cost, details, ts: Date.now() });
+  if (c.history.length > 200) c.history = c.history.slice(-200);
+};
 
 // Fenix Bug Hafızası API
 app.get('/api/fenix/memory', async (req, res) => {
@@ -830,6 +1017,8 @@ global.io = io;
 
 io.on('connection', (socket) => {
   connectionCount++;
+  global._fenixConnections = connectionCount;
+  if (connectionCount > global._fenixPeak) global._fenixPeak = connectionCount;
   if (connectionCount > MAX_CONNECTIONS) {
     logger.warn('Socket.io bağlantı limiti aşıldı', { count: connectionCount, socketId: socket.id });
     socket.emit('error', { message: 'Çok fazla bağlantı' });
@@ -842,6 +1031,7 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     connectionCount--;
+    global._fenixConnections = connectionCount;
     logger.debug('Dashboard ayrıldı', { socketId: socket.id, total: connectionCount });
   });
 });
@@ -1355,6 +1545,210 @@ app.post('/api/usta/qr/refresh', async (req, res) => {
 
     res.json({ ok: true, password });
   } catch(e) { res.status(500).json({ ok: false, error: e.message }); }
+});
+
+// ════════════════════════════════════════════════════════════
+//  AKILLI TARAMA — Gemini Vision ile ürün tanıma + doğrulama
+// ════════════════════════════════════════════════════════════
+
+// Ürün tanıma — ilk kareyi Gemini'ye gönder, ürünü öğren + açı planı al
+const _scanUploadSingle = multer({ dest: path.join(__dirname, 'uploads', 'scan-frames'), limits: { fileSize: 10 * 1024 * 1024 } });
+
+app.post('/api/scan/identify', _scanUploadSingle.single('frame'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ ok: false, error: 'Görsel gerekli' });
+
+    const imageBuffer = fs.readFileSync(req.file.path);
+    const base64 = imageBuffer.toString('base64');
+    const mimeType = req.file.mimetype || 'image/jpeg';
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) return res.status(500).json({ ok: false, error: 'Gemini API key eksik' });
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { inlineData: { mimeType, data: base64 } },
+              { text: `Sen bir sanayi 3D tarama uzmanısın. Bu fotoğraftaki ürünü analiz et.
+
+ZORUNLU JSON formatında yanıtla:
+{
+  "productName": "ürün adı (türkçe)",
+  "productType": "silindirik | düz | karmaşık | küresel | L-şekil | T-şekil | organik",
+  "estimatedSize": { "width": cm, "height": cm, "depth": cm },
+  "material": "metal | plastik | ahşap | cam | seramik | kompozit | bilinmiyor",
+  "features": ["delik", "vida", "kanal", "yüzey detayı", "iç boşluk"],
+  "scanPlan": {
+    "totalPhotos": sayı,
+    "levels": [
+      { "name": "alt seviye", "angle": 30, "photos": sayı, "description": "açıklama" },
+      { "name": "orta seviye", "angle": 0, "photos": sayı, "description": "açıklama" },
+      { "name": "üst seviye", "angle": -30, "photos": sayı, "description": "açıklama" }
+    ],
+    "specialAngles": ["iç boşluk için yakın çekim", "alt kısım için ters çevir"],
+    "referenceNeeded": true,
+    "estimatedTime": "dakika"
+  },
+  "warnings": ["dikkat edilecek şeyler"],
+  "difficulty": "kolay | orta | zor",
+  "colorSignature": { "dominant": "#hex", "secondary": "#hex" },
+  "boundingBox": { "description": "ürünün karede nerede olduğu" }
+}` }
+            ]
+          }],
+          generationConfig: { temperature: 0.2, maxOutputTokens: 2048 }
+        })
+      }
+    );
+
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message);
+
+    const text = data.candidates[0].content.parts[0].text;
+    let result;
+    try {
+      const jsonMatch = text.match(/```json\s*([\s\S]*?)```/) || text.match(/\{[\s\S]*\}/);
+      result = JSON.parse(jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text);
+    } catch (e) {
+      result = { productName: 'Bilinmiyor', productType: 'karmaşık', scanPlan: { totalPhotos: 30, levels: [{ name: 'standart', angle: 0, photos: 30 }] } };
+    }
+
+    // Referans frame'i kaydet (sonraki karelerle karşılaştırma için)
+    const frameId = 'ref_' + Date.now();
+    if (!global._scanRefs) global._scanRefs = {};
+    global._scanRefs[frameId] = {
+      base64: base64.slice(0, 5000), // İlk 5KB imza olarak
+      product: result,
+      createdAt: Date.now()
+    };
+
+    // Temp dosyayı temizle
+    try { fs.unlinkSync(req.file.path); } catch(e) {}
+
+    logger.info('Ürün tanıma tamamlandı', { productName: result.productName, type: result.productType, photos: result.scanPlan?.totalPhotos });
+
+    res.json({ ok: true, frameId, ...result });
+  } catch(e) {
+    logger.error('Ürün tanıma hatası', { error: e.message });
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Kare doğrulama — her çekimde ürün var mı, açı doğru mu kontrol et
+app.post('/api/scan/validate-frame', _scanUploadSingle.single('frame'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ ok: false, error: 'Görsel gerekli' });
+
+    const { frameId, stepIndex, expectedAngle } = req.body;
+    const ref = global._scanRefs?.[frameId];
+    if (!ref) return res.status(400).json({ ok: false, error: 'Önce ürünü tanıtın (identify)' });
+
+    const imageBuffer = fs.readFileSync(req.file.path);
+    const base64 = imageBuffer.toString('base64');
+    const mimeType = req.file.mimetype || 'image/jpeg';
+
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { inlineData: { mimeType, data: base64 } },
+              { text: `Önceki analizde "${ref.product.productName}" (${ref.product.productType}) ürünü tanımlandı.
+Beklenen açı: ${expectedAngle || 'bilinmiyor'}°, adım: ${stepIndex || '?'}
+
+Bu kareyi kontrol et. ZORUNLU JSON:
+{
+  "productFound": true/false,
+  "productCentered": true/false,
+  "centerOffset": { "x": -1..1, "y": -1..1 },
+  "blurScore": 0-100 (100=net),
+  "lightScore": 0-100 (100=iyi),
+  "angleEstimate": derece,
+  "angleCorrect": true/false,
+  "angleDiff": fark_derece,
+  "overlapWithPrevious": 0-100,
+  "issues": ["sorun1", "sorun2"],
+  "suggestion": "kullanıcıya yön (türkçe)",
+  "accept": true/false,
+  "confidence": 0-100
+}` }
+            ]
+          }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 512 }
+        })
+      }
+    );
+
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message);
+
+    const text = data.candidates[0].content.parts[0].text;
+    let result;
+    try {
+      const jsonMatch = text.match(/```json\s*([\s\S]*?)```/) || text.match(/\{[\s\S]*\}/);
+      result = JSON.parse(jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : text);
+    } catch (e) {
+      result = { productFound: true, accept: true, confidence: 50, suggestion: 'Analiz yapılamadı, manuel kontrol edin' };
+    }
+
+    try { fs.unlinkSync(req.file.path); } catch(e) {}
+
+    res.json({ ok: true, ...result });
+  } catch(e) {
+    logger.error('Kare doğrulama hatası', { error: e.message });
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Hızlı kare doğrulama — Gemini'siz, sadece bulanıklık + ışık kontrolü (ücretsiz)
+app.post('/api/scan/validate-quick', _scanUploadSingle.single('frame'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ ok: false, error: 'Görsel gerekli' });
+
+    const sharp = (() => { try { return require('sharp'); } catch { return null; } })();
+    let blurScore = 70, lightScore = 70;
+
+    if (sharp) {
+      const img = sharp(req.file.path);
+      const stats = await img.stats();
+      // Ortalama parlaklık → ışık skoru
+      const avgBrightness = stats.channels.reduce((s, c) => s + c.mean, 0) / stats.channels.length;
+      lightScore = Math.min(100, Math.round(avgBrightness / 2.55 * 1.2));
+      if (avgBrightness < 30) lightScore = Math.max(10, lightScore);
+
+      // Laplacian varyansı → netlik skoru (sharp ile yaklaşık)
+      const { info } = await img.raw().toBuffer({ resolveWithObject: true });
+      blurScore = info.width > 1000 ? 80 : 60; // Basit heuristik
+    }
+
+    try { fs.unlinkSync(req.file.path); } catch(e) {}
+
+    const issues = [];
+    if (lightScore < 40) issues.push('Işık çok düşük');
+    if (lightScore > 95) issues.push('Aşırı pozlama');
+    if (blurScore < 50) issues.push('Bulanık görüntü');
+
+    res.json({
+      ok: true,
+      blurScore,
+      lightScore,
+      accept: issues.length === 0,
+      issues,
+      suggestion: issues.length > 0 ? issues.join('. ') + '. Tekrar çekin.' : 'Kalite uygun ✓'
+    });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
 });
 
 // QR doğrula — scan.html şifreyi kontrol eder

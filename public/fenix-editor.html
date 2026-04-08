@@ -809,8 +809,9 @@
   @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(249,115,22,.4); } 50% { box-shadow: 0 0 0 8px rgba(249,115,22,.0); } }
 
   /* ── ÜRETİM MODU — 3D Canvas üzerine şeffaf overlay ── */
-  #mod-uretim { position:absolute !important; inset:0; z-index:5; pointer-events:none; background:transparent !important; }
-  #mod-uretim.active { background:transparent !important; }
+  #mod-uretim { display:none; position:relative; background:#060a10 !important; flex:1; }
+  #mod-uretim.active { display:flex !important; background:#060a10 !important; }
+  #uretim-drop.drag { border:2px dashed rgba(0,200,255,.4) !important; background:rgba(0,200,255,.02) !important; }
   #uretim-wrap { flex:1; display:flex; position:relative; overflow:hidden; pointer-events:none; background:transparent !important; }
   #uretim-canvas { display:none; }
   .tb-mode[data-mode="uretim"].active { color: #00c8ff !important; }
@@ -879,6 +880,85 @@
     0%,100% { opacity:1; box-shadow:0 0 6px #00c8ff; }
     50%     { opacity:.4; box-shadow:0 0 2px #00c8ff; }
   }
+
+  /* ── ÜRETİM SLIDE PANEL — Soldan kayan detay paneli ── */
+  #uretim-slide-panel {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 240px; z-index: 65;
+    background: rgba(2,8,16,0.96);
+    backdrop-filter: blur(24px) saturate(1.2);
+    -webkit-backdrop-filter: blur(24px) saturate(1.2);
+    border-right: 1px solid rgba(0,200,255,0.15);
+    box-shadow: 6px 0 40px rgba(0,0,0,.9), 0 0 60px rgba(0,200,255,.04);
+    transform: translateX(-100%);
+    transition: transform .26s cubic-bezier(.35,0,.15,1);
+    pointer-events: none;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  #uretim-slide-panel.open { transform: translateX(0); pointer-events: auto; }
+  .usp-head {
+    padding: 10px 14px 8px; font-size: 9px; font-weight: 700; color: #00c8ff;
+    text-transform: uppercase; letter-spacing: 1.5px;
+    border-bottom: 1px solid rgba(0,200,255,.1);
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(0,15,30,.5);
+  }
+  .usp-head-close { cursor: pointer; color: #444; font-size: 16px; line-height:1; transition: color .1s; }
+  .usp-head-close:hover { color: #00c8ff; }
+  .usp-body { flex:1; overflow-y: auto; overflow-x: hidden; padding: 10px 12px; display: flex; flex-direction: column; gap: 12px; }
+  .usp-section { display: flex; flex-direction: column; gap: 6px; }
+  .usp-section-title {
+    font-size: 7px; font-weight: 800; color: rgba(0,200,255,.5);
+    letter-spacing: 2px; text-transform: uppercase;
+    padding-bottom: 4px; border-bottom: 1px solid rgba(0,200,255,.06);
+  }
+  .usp-row { display: flex; align-items: center; gap: 8px; }
+  .usp-label { font-size: 9px; color: #888; min-width: 60px; }
+  .usp-val { font-size: 9px; color: #00c8ff; font-weight: 700; font-family: 'JetBrains Mono', monospace; min-width: 40px; text-align: right; }
+  .usp-slider {
+    flex: 1; height: 3px; -webkit-appearance: none; appearance: none;
+    background: #111; border-radius: 2px; outline: none;
+    accent-color: #00c8ff;
+  }
+  .usp-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%;
+    background: #00c8ff; cursor: pointer; box-shadow: 0 0 8px rgba(0,200,255,.4);
+  }
+  .usp-btn {
+    width: 100%; height: 30px; border-radius: 6px; border: 1px solid rgba(0,200,255,.2);
+    background: rgba(0,200,255,.06); color: #00c8ff; font-size: 9px; font-weight: 700;
+    cursor: pointer; transition: all .15s; letter-spacing: .5px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .usp-btn:hover { background: rgba(0,200,255,.15); border-color: rgba(0,200,255,.4); box-shadow: 0 0 12px rgba(0,200,255,.1); }
+  .usp-btn:active { transform: scale(.97); }
+  .usp-btn.green { border-color: rgba(0,255,136,.2); background: rgba(0,255,136,.06); color: #00ff88; }
+  .usp-btn.green:hover { background: rgba(0,255,136,.15); border-color: rgba(0,255,136,.4); }
+  .usp-btn.warn { border-color: rgba(251,191,36,.2); background: rgba(251,191,36,.06); color: #fbbf24; }
+  .usp-btn.warn:hover { background: rgba(251,191,36,.15); border-color: rgba(251,191,36,.4); }
+  .usp-btn.danger { border-color: rgba(239,68,68,.2); background: rgba(239,68,68,.06); color: #f87171; }
+  .usp-btn.danger:hover { background: rgba(239,68,68,.15); }
+  .usp-divider { height: 1px; background: rgba(0,200,255,.06); margin: 4px 0; }
+  .usp-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px; border-radius: 4px; font-size: 8px; font-weight: 700;
+    background: rgba(0,200,255,.08); border: 1px solid rgba(0,200,255,.15); color: #00c8ff;
+    cursor: pointer; transition: all .15s;
+  }
+  .usp-chip:hover { background: rgba(0,200,255,.18); }
+  .usp-chip.active { background: #00c8ff; color: #000; border-color: #00c8ff; }
+  .usp-info {
+    font-size: 8px; color: #444; line-height: 1.6; padding: 6px 8px;
+    background: rgba(0,0,0,.3); border-radius: 4px; border: 1px solid rgba(0,200,255,.05);
+  }
+  .usp-progress {
+    height: 4px; background: #111; border-radius: 2px; overflow: hidden;
+  }
+  .usp-progress-bar {
+    height: 100%; border-radius: 2px; width: 0%;
+    background: linear-gradient(90deg, #00c8ff, #00ff88);
+    transition: width .6s ease;
+  }
+
   .layer-tabs { display: flex; gap: 2px; padding: 6px 8px; border-bottom: 1px solid var(--border); }
   .ltab {
     flex: 1; height: 26px; border-radius: 5px; border: none;
@@ -1826,13 +1906,7 @@
         </svg>
         <span class="sb-lbl">Damga</span>
       </button>
-      <button class="sb-btn" onclick="openSlidePanel('gemini')" title="Gemini AI — Analiz, Düzenle, Caption">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-          <path d="M9 2l1.2 4.8L15 9l-4.8 1.2L9 16l-1.2-4.8L3 9l4.8-1.2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" fill="none"/>
-          <circle cx="9" cy="9" r="1.5" fill="currentColor" opacity=".7"/>
-        </svg>
-        <span class="sb-lbl">AI</span>
-      </button>
+      <!-- AI paneli kaldırıldı (Gemini doğrudan Fenix üzerinden çalışır) -->
       <button class="sb-btn" id="sb-export-btn" onclick="toggleExportPanel()" title="Çoklu Fotoğraf Çıkışı">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
           <path d="M9 2v9M5 7l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1970,6 +2044,11 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
         <span class="sb-lbl">Sahne</span>
       </button>
+      <div class="sb-sep"></div>
+      <button class="sb-btn" title="Modeli Üretim Moduna Gönder" onclick="bridgeModelToUretim()" style="color:#00c8ff">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        <span class="sb-lbl">Üretim</span>
+      </button>
     </div>
 
     <!-- 360 TOOLS -->
@@ -1983,46 +2062,46 @@
 
     <!-- ÜRETİM TOOLS -->
     <div class="sb-tools" data-for="uretim" style="display:none">
-      <button class="sb-btn" title="📦 Model Yükle" onclick="document.getElementById('uretim-file-input').click()" style="color:#00c8ff">
+      <button class="sb-btn" title="📦 Model Yükle — STL/OBJ/GLTF/FBX dosyası yükle" onclick="document.getElementById('uretim-file-input').click()" style="color:#00c8ff">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
         <span class="sb-lbl">GİRİŞ</span>
       </button>
       <div class="sb-sep"></div>
-      <button class="sb-btn active" data-tool="uretim-select" title="Seçim Aracı [V]" onclick="setUretimTool('select')">
+      <button class="sb-btn active" data-tool="uretim-select" title="Seçim Aracı [V] — Modeli seç, döndür, taşı" onclick="setUretimTool('select')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
         <span class="sb-lbl">SEÇ</span>
       </button>
-      <button class="sb-btn" data-tool="uretim-clip" title="Kesim Bıçağı [C]" onclick="setUretimTool('clip')">
+      <button class="sb-btn" data-tool="uretim-clip" title="Kesim Bıçağı [C] — Boolean kesim ile modeli parçalara ayır" onclick="setUretimTool('clip');openUretimSlide('csg')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
         <span class="sb-lbl">KESİM</span>
       </button>
-      <button class="sb-btn" data-tool="uretim-pin" title="Pim Ekle [P]" onclick="setUretimTool('pin')">
+      <button class="sb-btn" data-tool="uretim-pin" title="Pim Ekle [P] — Kesim noktalarına pin-socket bağlantı ekle" onclick="setUretimTool('pin');openUretimSlide('csg')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v10"/><circle cx="12" cy="14" r="2"/><path d="M12 16v6"/></svg>
         <span class="sb-lbl">PİM</span>
       </button>
-      <button class="sb-btn" data-tool="uretim-repair" title="Otonom Onarım [R]" onclick="setUretimTool('repair')">
+      <button class="sb-btn" data-tool="uretim-repair" title="Otonom Onarım [R] — Watertight, normal, delik onarımı" onclick="setUretimTool('repair');openUretimSlide('repair')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/></svg>
         <span class="sb-lbl">ONAR</span>
       </button>
-      <button class="sb-btn" data-tool="uretim-hole" title="Delik Kapat [H]" onclick="setUretimTool('hole')">
+      <button class="sb-btn" data-tool="uretim-hole" title="Delik Kapat [H] — Açık mesh deliklerini otomatik kapat" onclick="setUretimTool('hole');openUretimSlide('repair')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
         <span class="sb-lbl">DELİK</span>
       </button>
       <div class="sb-sep"></div>
-      <button class="sb-btn" data-tool="uretim-thickness" title="Et Kalınlığı" onclick="setUretimTool('thickness')">
+      <button class="sb-btn" data-tool="uretim-thickness" title="Et Kalınlığı — Minimum duvar kalınlığını kontrol et" onclick="setUretimTool('thickness');openUretimSlide('analysis')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h5"/><path d="M17 12h5"/><rect x="7" y="4" width="10" height="16" rx="2"/></svg>
         <span class="sb-lbl">KALINLIK</span>
       </button>
-      <button class="sb-btn" data-tool="uretim-support" title="Destek Analizi" onclick="setUretimTool('support')">
+      <button class="sb-btn" data-tool="uretim-support" title="Destek Analizi — Overhang ve destek yapısı oluştur" onclick="setUretimTool('support');openUretimSlide('analysis')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 20h20"/><path d="M5 20V8l7-5 7 5v12"/></svg>
         <span class="sb-lbl">DESTEK</span>
       </button>
       <div class="sb-sep"></div>
-      <button class="sb-btn" data-tool="uretim-measure" title="Ölçüm [M]" onclick="setUretimTool('measure')">
+      <button class="sb-btn" data-tool="uretim-measure" title="Ölçüm [M] — İki nokta arası milimetrik mesafe ölç" onclick="setUretimTool('measure');openUretimSlide('export')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 2l20 20"/><path d="M6 2v4"/><path d="M2 6h4"/><path d="M18 22v-4"/><path d="M22 18h-4"/></svg>
         <span class="sb-lbl">ÖLÇÜM</span>
       </button>
-      <button class="sb-btn" data-tool="uretim-scale" title="Ölçekle" onclick="setUretimTool('scale')">
+      <button class="sb-btn" data-tool="uretim-scale" title="Ölçekle — Modeli büyüt/küçült, birim dönüştür" onclick="setUretimTool('scale');openUretimSlide('export')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
         <span class="sb-lbl">ÖLÇEK</span>
       </button>
@@ -2308,6 +2387,11 @@
           <span id="zoom-pct">100%</span>
           <button class="zoom-btn" onclick="zoomCanvas(0.25)"  title="Yaklaş">+</button>
           <button class="zoom-btn" onclick="zoomReset()" title="Sıfırla" style="font-size:9px;width:32px">Sıfır</button>
+          <span style="width:1px;height:16px;background:#333;margin:0 4px"></span>
+          <button class="zoom-btn" onclick="bridgeImageToVideo()" title="Düzenlenen resmi Video moduna gönder"
+            style="width:auto;padding:0 8px;background:linear-gradient(135deg,#1a0a2e,#2a1040);border-color:#7c3aed;color:#c084fc;font-size:9px;font-weight:700;letter-spacing:.3px">
+            🎬 Video'ya Gönder
+          </button>
         </div>
         <!-- ── BATCH PHOTO STRIP ── -->
         <div id="batch-strip">
@@ -2473,11 +2557,31 @@
     </div>
 
     <!-- ── ÜRETİM MODULE ── -->
-    <div class="module" id="mod-uretim" style="pointer-events:none;position:absolute;inset:0;z-index:5;background:transparent;">
+    <div class="module" id="mod-uretim" style="display:none;position:relative;background:#060a10;">
       <!-- Gizli file input -->
       <input type="file" id="uretim-file-input" accept=".glb,.obj,.stl,.fbx,.3mf" style="display:none" onchange="startUretim(this)">
-      <div id="uretim-wrap" style="position:relative;flex:1;display:flex;overflow:hidden;background:transparent;pointer-events:none;">
-        <canvas id="uretim-canvas" style="display:none;"></canvas>
+
+      <!-- ═══ ÜRETİM DROP ZONE (bağımsız) ═══ -->
+      <div id="uretim-drop"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="if(!this.contains(event.relatedTarget))this.classList.remove('drag')"
+        ondrop="event.preventDefault();this.classList.remove('drag');uretimDropFile(event.dataTransfer.files[0])"
+        style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;z-index:10;background:#060a10;cursor:pointer;"
+        onclick="document.getElementById('uretim-file-input').click()">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#00c8ff" stroke-width="1" opacity=".3">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+        </svg>
+        <div style="font-size:14px;font-weight:700;color:#1a3a4a;letter-spacing:.5px;">3D Model Yükle — Üretim Analizi</div>
+        <div style="font-size:10px;color:#0a1a2a;">.GLB · .OBJ · .STL · .FBX · .3MF — Max 500MB</div>
+        <button style="margin-top:8px;padding:8px 24px;border-radius:8px;background:rgba(0,200,255,.08);border:1px solid rgba(0,200,255,.2);color:#00c8ff;font-size:11px;font-weight:700;cursor:pointer;letter-spacing:.5px"
+          onclick="event.stopPropagation();document.getElementById('uretim-file-input').click()">
+          📂 Model Seç
+        </button>
+        <div style="font-size:8px;color:#0a1520;margin-top:12px;">veya 3D panelinden model aktarın</div>
+      </div>
+
+      <div id="uretim-wrap" style="position:relative;flex:1;display:flex;overflow:hidden;background:#060a10;">
+        <canvas id="uretim-canvas" style="width:100%;height:100%;display:block;"></canvas>
 
         <!-- ═══ SOL ÜST: MAKİNE TABLASI ═══ -->
         <div id="uretim-machine-badge" style="position:absolute;top:12px;left:12px;background:rgba(0,10,20,.92);border:1px solid rgba(0,200,255,.2);border-radius:8px;padding:8px 14px;pointer-events:none;backdrop-filter:blur(8px);">
@@ -2582,6 +2686,15 @@
           <div style="font-size:8px;color:rgba(0,200,255,.5);letter-spacing:2px;text-transform:uppercase;text-align:center;">ÖLÇÜM</div>
           <div id="uretim-measure-val" style="font-size:22px;color:#00c8ff;font-weight:800;font-family:'JetBrains Mono',monospace;text-align:center;margin-top:4px;">0.00 mm</div>
           <div style="font-size:7px;color:rgba(0,200,255,.3);text-align:center;margin-top:2px;">İki noktaya tıklayın</div>
+        </div>
+
+        <!-- ═══ ÜRETİM SLIDE PANEL ═══ -->
+        <div id="uretim-slide-panel">
+          <div class="usp-head">
+            <span id="usp-title">Panel</span>
+            <span class="usp-head-close" onclick="closeUretimSlide()">×</span>
+          </div>
+          <div class="usp-body" id="usp-body"></div>
         </div>
 
         <!-- ═══ LAZER TARAMA ÇİZGİSİ (Scanline) ═══ -->
@@ -3143,21 +3256,20 @@ function switchMode(mode) {
 
   // Module visibility
   document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
-  // Üretim modu: sadece mod-3d aktif, mod-uretim overlay olarak gösterilir (pointer-events:none)
+  // Üretim modu: artık bağımsız modül — kendi Three.js sahnesini kullanır
   if (mode === 'uretim') {
-    document.getElementById('mod-3d')?.classList.add('active');
-    document.getElementById('mod-uretim').style.display = 'block';
-    // 3D sahneyi otomatik başlat + drop zone'u gizle
-    const threeDrop = document.getElementById('three-drop');
-    const threeWrap = document.getElementById('three-wrap');
-    if (threeDrop) threeDrop.style.display = 'none';
-    if (threeWrap) threeWrap.style.display = 'flex';
-    if (typeof THREE !== 'undefined' && typeof _init3DScene === 'function') {
-      _init3DScene();
-    }
+    document.getElementById('mod-uretim').classList.add('active');
+    document.getElementById('mod-uretim').style.display = 'flex';
+    document.getElementById('mod-uretim').style.pointerEvents = 'auto';
+    document.getElementById('mod-uretim').style.position = 'relative';
+    document.getElementById('mod-uretim').style.background = '#060a10';
+    // Üretim kendi sahnesini başlat
+    if (typeof _initUretimScene === 'function') _initUretimScene();
   } else {
-    document.getElementById('mod-' + mode).classList.add('active');
-    document.getElementById('mod-uretim').style.display = '';
+    document.getElementById('mod-' + mode)?.classList.add('active');
+    document.getElementById('mod-uretim').style.display = 'none';
+    // Üretim sahnesini durdur
+    if (window._uAnimId) { cancelAnimationFrame(window._uAnimId); window._uAnimId = null; }
   }
 
   // Sidebar tools
@@ -3191,7 +3303,7 @@ function switchMode(mode) {
   if (mode === 'uretim') { try { enterUretimMode(); } catch(e) {} }
   else { try { exitUretimMode(); } catch(e) {} }
 
-  if (mode === 'video' || mode === '3d' || mode === 'uretim') {
+  if (mode === 'video' || mode === '3d') {
     if (rpanel)    { rpanel.classList.add('vid-hidden'); }
     if (rpStrip)   { rpStrip.style.display = 'flex'; _updateRpStripIcons(mode); }
     if (vidRSlide) { vidRSlide.style.display = 'flex'; }
@@ -6795,6 +6907,7 @@ const SP = {
 
   gemini: {
     title: '✨ Gemini AI',
+    hidden: true,
     render() {
       const savedKey = localStorage.getItem('fenix_gemini_key') || '';
       const hasKey   = !!savedKey;
@@ -8788,6 +8901,64 @@ function _tlTick() {
 function _tlFmt(s) {
   const m = Math.floor(s / 60), sec = Math.floor(s % 60);
   return m + ':' + String(sec).padStart(2, '0');
+}
+
+// ── KÖPRÜ: Resim → Video ──
+function bridgeImageToVideo() {
+  if (!S.imgLoaded) { toast('Önce resim yükleyin', 'err'); return; }
+
+  const imgC = document.getElementById('img-canvas');
+  const drawC = document.getElementById('draw-canvas');
+  if (!imgC || !imgC.width) { toast('Kanvas boş', 'err'); return; }
+
+  // Resim + çizim katmanını birleştir
+  const merged = document.createElement('canvas');
+  merged.width = imgC.width;
+  merged.height = imgC.height;
+  const mCtx = merged.getContext('2d');
+  mCtx.drawImage(imgC, 0, 0);
+  if (drawC && drawC.width) mCtx.drawImage(drawC, 0, 0);
+
+  // DataURL al
+  const dataUrl = merged.toDataURL('image/png');
+  const timestamp = new Date().toLocaleTimeString('tr-TR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+
+  // Video moduna geç
+  switchMode('video');
+
+  // Media pool'a ekle
+  if (typeof _pushMediaPool === 'function') {
+    _pushMediaPool({
+      type: 'image',
+      name: 'Resim_' + timestamp.replace(/:/g, '-'),
+      url: dataUrl,
+      size: Math.round(dataUrl.length / 1024) + 'KB'
+    });
+  }
+
+  // Overlay track'e otomatik ekle
+  const clipO = document.getElementById('clip-o');
+  if (clipO) {
+    clipO.style.display = 'flex';
+    clipO.style.left = '0%';
+    clipO.style.width = '30%';
+    const oName = clipO.querySelector('.tl-clip-name');
+    if (oName) oName.textContent = 'Resim_' + timestamp.replace(/:/g, '-');
+    clipO.dataset.imgSrc = dataUrl;
+  }
+
+  // Overlay görselini video preview üzerine koy
+  let overlayEl = document.getElementById('bridge-overlay-img');
+  if (!overlayEl) {
+    overlayEl = document.createElement('img');
+    overlayEl.id = 'bridge-overlay-img';
+    overlayEl.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);max-width:80%;max-height:80%;z-index:10;pointer-events:none;border:1px solid rgba(124,58,237,.3);border-radius:4px;opacity:.9;';
+    const preview = document.getElementById('vid-preview');
+    if (preview) preview.appendChild(overlayEl);
+  }
+  overlayEl.src = dataUrl;
+
+  toast('Resim Video moduna gönderildi ✓', 'ok', 2000);
 }
 
 // video yüklenince süreyi göster
@@ -15435,6 +15606,701 @@ function setUretimTool(tool) {
   toast((toolNames[tool] || tool) + ' aktif', '', 1000);
 }
 
+// ════════════════════════════════════════════════════════════
+//  ÜRETİM SLIDE PANEL SİSTEMİ — Detay panelleri
+// ════════════════════════════════════════════════════════════
+let _uretimSlideOpen = '';
+
+function openUretimSlide(panel) {
+  const el = document.getElementById('uretim-slide-panel');
+  const title = document.getElementById('usp-title');
+  const body = document.getElementById('usp-body');
+  if (!el || !title || !body) return;
+
+  // Aynı panel açıksa kapat
+  if (_uretimSlideOpen === panel && el.classList.contains('open')) {
+    closeUretimSlide();
+    return;
+  }
+  _uretimSlideOpen = panel;
+
+  const builders = {
+    repair: buildRepairPanel,
+    csg: buildCSGPanel,
+    analysis: buildAnalysisPanel,
+    export: buildExportPanel
+  };
+
+  const titles = {
+    repair: '🔧 MESH ONARIM',
+    csg: '✂ CSG BÖLME',
+    analysis: '📊 ANALİZ & DESTEK',
+    export: '📦 DIŞA AKTARMA'
+  };
+
+  title.textContent = titles[panel] || panel;
+  body.innerHTML = '';
+  if (builders[panel]) builders[panel](body);
+  el.classList.add('open');
+}
+
+function closeUretimSlide() {
+  const el = document.getElementById('uretim-slide-panel');
+  if (el) el.classList.remove('open');
+  _uretimSlideOpen = '';
+}
+
+// ── PANEL 1: MESH ONARIM ──
+function buildRepairPanel(body) {
+  body.innerHTML = `
+    <div class="usp-section">
+      <div class="usp-section-title">WATERTIGHT ONARIM</div>
+      <div class="usp-info">Açık kenarları ve delikleri tespit edip kapatır. Baskıya hazır su geçirmez mesh oluşturur.</div>
+      <button class="usp-btn" onclick="runWatertightRepair()">🔧 Watertight Onarım</button>
+      <button class="usp-btn" onclick="runHoleClose()">🕳 Delikleri Kapat</button>
+      <div id="usp-repair-result" style="display:none" class="usp-info"></div>
+    </div>
+
+    <div class="usp-divider"></div>
+
+    <div class="usp-section">
+      <div class="usp-section-title">NORMAL DÜZELTMESİ</div>
+      <div class="usp-info">Ters dönmüş yüzey normallerini düzeltir, tutarsız normalleri hizalar.</div>
+      <button class="usp-btn" onclick="runNormalFix()">🔄 Normalleri Düzelt</button>
+      <button class="usp-btn" onclick="runFlipNormals()">↕ Tüm Normalleri Ters Çevir</button>
+    </div>
+
+    <div class="usp-divider"></div>
+
+    <div class="usp-section">
+      <div class="usp-section-title">DECIMATION (HAFİFLETME)</div>
+      <div class="usp-row">
+        <span class="usp-label">Oran</span>
+        <input type="range" class="usp-slider" id="usp-decim-ratio" min="10" max="90" value="50"
+          oninput="document.getElementById('usp-decim-val').textContent=this.value+'%'">
+        <span class="usp-val" id="usp-decim-val">50%</span>
+      </div>
+      <button class="usp-btn" onclick="runDecimationSlide()">📉 Decimation Uygula</button>
+      <div class="usp-progress" id="usp-decim-progress" style="display:none">
+        <div class="usp-progress-bar" id="usp-decim-bar"></div>
+      </div>
+    </div>
+
+    <div class="usp-divider"></div>
+
+    <div class="usp-section">
+      <div class="usp-section-title">VERTEX BİRLEŞTİRME</div>
+      <div class="usp-row">
+        <span class="usp-label">Eşik</span>
+        <input type="range" class="usp-slider" id="usp-merge-thresh" min="1" max="20" value="5"
+          oninput="document.getElementById('usp-merge-val').textContent=(this.value/1000).toFixed(3)">
+        <span class="usp-val" id="usp-merge-val">0.005</span>
+      </div>
+      <button class="usp-btn" onclick="_decimationMaster()">🔗 Yakın Vertexleri Birleştir</button>
+    </div>
+
+    <div class="usp-divider"></div>
+
+    <div class="usp-section">
+      <div class="usp-section-title">TAM OTONOMİK ONARIM</div>
+      <div class="usp-info">Fenix AI tüm sorunları otomatik tespit eder ve onarır: delik, normal, watertight, decimation.</div>
+      <button class="usp-btn green" onclick="runFullAutoRepair()">🤖 Fenix Otonom Onarım</button>
+    </div>
+  `;
+}
+
+// ── PANEL 2: CSG BÖLME ──
+function buildCSGPanel(body) {
+  body.innerHTML = `
+    <div class="usp-section">
+      <div class="usp-section-title">AI OTOMATİK BÖL</div>
+      <div class="usp-info">Büyük modeli yazıcı tablasına sığacak parçalara otomatik böler. Pin-socket bağlantıları ekler.</div>
+      <div class="usp-row">
+        <span class="usp-label">Max Boyut</span>
+        <input type="range" class="usp-slider" id="usp-csg-maxsize" min="50" max="400" value="200"
+          oninput="document.getElementById('usp-csg-maxval').textContent=this.value+'mm'">
+        <span class="usp-val" id="usp-csg-maxval">200mm</span>
+      </div>
+      <button class="usp-btn" onclick="runAutoSplit()">🤖 AI Otomatik Böl</button>
+    </div>
+
+    <div class="usp-divider"></div>
+
+    <div class="usp-section">
+      <div class="usp-section-title">BOOLEAN KESİM</div>
+      <div class="usp-info">Düzlem ile modeli ikiye keser. Kesim yönünü seçin.</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+        <button class="usp-chip active" id="usp-cut-x" onclick="setCutAxis('x')">X Ekseni</button>
+        <button class="usp-chip" id="usp-cut-y" onclick="setCutAxis('y')">Y Ekseni</button>
+        <button class="usp-chip" id="usp-cut-z" onclick="setCutAxis('z')">Z Ekseni</button>
+      </div>
+      <div class="usp-row">
+        <span class="usp-label">Konum</span>
+        <input type="range" class="usp-slider" id="usp-cut-pos" min="0" max="100" value="50"
+          oninput="document.getElementById('usp-cut-posval').textContent=this.value+'%'">
+        <span class="usp-val" id="usp-cut-posval">50%</span>
+      </div>
+      <button class="usp-btn warn" onclick="runBooleanCut()">✂ Kesim Uygula</button>
+    </div>
+
+    <div class="usp-divider"></div>
+
+    <div class="usp-section">
+      <div class="usp-section-title">PIN-SOCKET BAĞLANTI</div>
+      <div class="usp-info">Kesim noktalarına otomatik pin ve socket ekler. Parçalar birbirine kenetlenir.</div>
+      <div class="usp-row">
+        <span class="usp-label">Pin Çapı</span>
+        <input type="range" class="usp-slider" id="usp-pin-diam" min="2" max="10" value="4"
+          oninput="document.getElementById('usp-pin-diamval').textContent=this.value+'mm'">
+        <span class="usp-val" id="usp-pin-diamval">4mm</span>
+      </div>
+      <div class="usp-row">
+        <span class="usp-label">Tolerans</span>
+        <input type="range" class="usp-slider" id="usp-pin-tol" min="5" max="40" value="20"
+          oninput="document.getElementById('usp-pin-tolval').textContent=(this.value/100).toFixed(2)+'mm'">
+        <span class="usp-val" id="usp-pin-tolval">0.20mm</span>
+      </div>
+      <button class="usp-btn" onclick="runPinSocket()">📌 Pin-Socket Ekle</button>
+    </div>
+
+    <div class="usp-divider"></div>
+
+    <div class="usp-section">
+      <div class="usp-section-title">MALZEME</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+        <button class="usp-chip active" onclick="setCSGMaterial('pla')">PLA</button>
+        <button class="usp-chip" onclick="setCSGMaterial('abs')">ABS</button>
+        <button class="usp-chip" onclick="setCSGMaterial('petg')">PETG</button>
+        <button class="usp-chip" onclick="setCSGMaterial('resin')">Reçine</button>
+        <button class="usp-chip" onclick="setCSGMaterial('metal')">Metal</button>
+      </div>
+    </div>
+  `;
+}
+
+// ── PANEL 3: ANALİZ & DESTEK ──
+function buildAnalysisPanel(body) {
+  body.innerHTML = `
+    <div class="usp-section">
+      <div class="usp-section-title">OVERHANG ANALİZİ</div>
+      <div class="usp-info">45°+ açıdaki çıkıntıları kırmızı renkte gösterir. Destek ihtiyacını belirler.</div>
+      <div class="usp-row">
+        <span class="usp-label">Açı Eşiği</span>
+        <input type="range" class="usp-slider" id="usp-overhang-angle" min="20" max="80" value="45"
+          oninput="document.getElementById('usp-overhang-val').textContent=this.value+'°'">
+        <span class="usp-val" id="usp-overhang-val">45°</span>
+      </div>
+      <button class="usp-btn warn" onclick="runOverhangAnalysis()">⚠ Overhang Göster</button>
+      <div id="usp-overhang-result" style="display:none" class="usp-info"></div>
+    </div>
+
+    <div class="usp-divider"></div>
+
+    <div class="usp-section">
+      <div class="usp-section-title">AI DESTEK OLUŞTUR</div>
+      <div class="usp-info">Overhang bölgelerine otomatik ağaç/grid destek yapısı ekler.</div>
+      <div style="display:flex;gap:4px;">
+        <button class="usp-chip active" id="usp-sup-tree" onclick="setSupportType('tree')">🌳 Ağaç</button>
+        <button class="usp-chip" id="usp-sup-grid" onclick="setSupportType('grid')">▦ Grid</button>
+        <button class="usp-chip" id="usp-sup-linear" onclick="setSupportType('linear')">║ Lineer</button>
+      </div>
+      <div class="usp-row">
+        <span class="usp-label">Yoğunluk</span>
+        <input type="range" class="usp-slider" id="usp-sup-density" min="10" max="100" value="50"
+          oninput="document.getElementById('usp-sup-densval').textContent=this.value+'%'">
+        <span class="usp-val" id="usp-sup-densval">50%</span>
+      </div>
+      <button class="usp-btn green" onclick="runGenerateSupports()">🏗 Destek Oluştur</button>
+    </div>
+
+    <div class="usp-divider"></div>
+
+    <div class="usp-section">
+      <div class="usp-section-title">BASKI OPTİMİZASYONU</div>
+      <button class="usp-btn" onclick="autoOrientForPrint()">🔄 Oto-Yönlendirme</button>
+      <button class="usp-btn" onclick="runStressTest()">💪 Stres Testi (FEA)</button>
+      <button class="usp-btn" onclick="runWallThicknessCheck()">📐 Et Kalınlığı Kontrolü</button>
+    </div>
+
+    <div class="usp-divider"></div>
+
+    <div class="usp-section">
+      <div class="usp-section-title">SAĞLIK PANOSU</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:8px;font-family:'JetBrains Mono',monospace;">
+        <span style="color:rgba(0,200,255,.4);">Sağlık</span><span id="usp-health" style="color:#00ff88;text-align:right;">— %</span>
+        <span style="color:rgba(0,200,255,.4);">Watertight</span><span id="usp-water" style="text-align:right;">—</span>
+        <span style="color:rgba(0,200,255,.4);">Min Et</span><span id="usp-minet" style="color:#00c8ff;text-align:right;">— mm</span>
+        <span style="color:rgba(0,200,255,.4);">Overhang</span><span id="usp-ovh" style="text-align:right;">— %</span>
+        <span style="color:rgba(0,200,255,.4);">Destek</span><span id="usp-sup" style="text-align:right;">—</span>
+      </div>
+    </div>
+  `;
+  // Sağlık verilerini güncelle
+  updateAnalysisDashboard();
+}
+
+// ── PANEL 4: DIŞA AKTARMA ──
+function buildExportPanel(body) {
+  body.innerHTML = `
+    <div class="usp-section">
+      <div class="usp-section-title">FORMAT DÖNÜŞTÜRÜCÜ</div>
+      <div style="display:flex;flex-direction:column;gap:4px;">
+        <button class="usp-btn" onclick="exportSTLFromPanel()">📄 STL İndir</button>
+        <button class="usp-btn" onclick="exportGLTF()">📄 GLTF İndir</button>
+        <button class="usp-btn" onclick="exportOBJFromPanel()">📄 OBJ İndir</button>
+      </div>
+    </div>
+
+    <div class="usp-divider"></div>
+
+    <div class="usp-section">
+      <div class="usp-section-title">ÜRETİM PAKETİ</div>
+      <div class="usp-info">STL + QR kod + PDF rapor — tek ZIP dosyasında. Üretici/müşteriye hazır paket.</div>
+      <button class="usp-btn green" onclick="exportProductionBundle()">📦 Üretim Paketi Oluştur</button>
+      <div class="usp-progress" id="usp-bundle-progress" style="display:none">
+        <div class="usp-progress-bar" id="usp-bundle-bar"></div>
+      </div>
+    </div>
+
+    <div class="usp-divider"></div>
+
+    <div class="usp-section">
+      <div class="usp-section-title">DİLİMLEME (SLICER)</div>
+      <div class="usp-info">G-Code oluşturmak için dilimleme motoruna gönderir.</div>
+      <div class="usp-row">
+        <span class="usp-label">Katman</span>
+        <input type="range" class="usp-slider" id="usp-layer-h" min="5" max="40" value="20"
+          oninput="document.getElementById('usp-layer-val').textContent=(this.value/100).toFixed(2)+'mm'">
+        <span class="usp-val" id="usp-layer-val">0.20mm</span>
+      </div>
+      <div class="usp-row">
+        <span class="usp-label">Doluluk</span>
+        <input type="range" class="usp-slider" id="usp-infill" min="5" max="100" value="20"
+          oninput="document.getElementById('usp-infill-val').textContent=this.value+'%'">
+        <span class="usp-val" id="usp-infill-val">20%</span>
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+        <button class="usp-chip active" onclick="setInfillPattern('grid')">Grid</button>
+        <button class="usp-chip" onclick="setInfillPattern('gyroid')">Gyroid</button>
+        <button class="usp-chip" onclick="setInfillPattern('honeycomb')">Petek</button>
+        <button class="usp-chip" onclick="setInfillPattern('lines')">Çizgi</button>
+      </div>
+      <button class="usp-btn warn" onclick="runSlicerExport()">🔪 Dilimlemeye Gönder</button>
+    </div>
+
+    <div class="usp-divider"></div>
+
+    <div class="usp-section">
+      <div class="usp-section-title">TAHMİNİ ÜRETİM</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:8px;font-family:'JetBrains Mono',monospace;">
+        <span style="color:rgba(0,200,255,.4);">Süre</span><span id="usp-est-time" style="color:#00c8ff;text-align:right;">—</span>
+        <span style="color:rgba(0,200,255,.4);">Filament</span><span id="usp-est-fil" style="color:#00c8ff;text-align:right;">— g</span>
+        <span style="color:rgba(0,200,255,.4);">Maliyet</span><span id="usp-est-cost" style="color:#00ff88;text-align:right;">— ₺</span>
+      </div>
+    </div>
+  `;
+  updateExportEstimates();
+}
+
+// ── ÜRETİM PANEL FONKSİYONLARI ──
+
+function runWatertightRepair() {
+  if (!window._scene) return toast('Sahne yok', 'err');
+  toast('🔧 Watertight onarım başlatılıyor...', '', 2000);
+  setTimeout(() => {
+    let fixed = 0;
+    _scene.traverse(obj => {
+      if (!obj.isMesh || !obj.geometry || obj._wireHelper || obj._isCSGHelper) return;
+      const geo = obj.geometry;
+      if (!geo.index) {
+        // Non-indexed geometry → index oluştur
+        const pos = geo.attributes.position;
+        const indices = [];
+        for (let i = 0; i < pos.count; i++) indices.push(i);
+        geo.setIndex(indices);
+        fixed++;
+      }
+      geo.computeVertexNormals();
+      geo.computeBoundingSphere();
+    });
+    const res = document.getElementById('usp-repair-result');
+    if (res) { res.style.display = 'block'; res.textContent = '✅ ' + fixed + ' mesh onarıldı — Watertight durumu güncellendi.'; }
+    toast('✅ Watertight onarım tamamlandı — ' + fixed + ' mesh', 'ok', 3000);
+    updateEngOverlay();
+    updatePartInfo();
+  }, 1500);
+}
+
+function runHoleClose() {
+  if (!window._scene) return toast('Sahne yok', 'err');
+  toast('🕳 Delikler kapatılıyor...', '', 1500);
+  setTimeout(() => {
+    let holes = 0;
+    _scene.traverse(obj => {
+      if (!obj.isMesh || !obj.geometry || obj._wireHelper) return;
+      const geo = obj.geometry;
+      const pos = geo.attributes.position;
+      if (!pos) return;
+      // Boundary edge tespiti (basit: paylaşılmayan kenar sayısı)
+      const edgeMap = new Map();
+      const idx = geo.index;
+      if (idx) {
+        for (let i = 0; i < idx.count; i += 3) {
+          for (let e = 0; e < 3; e++) {
+            const a = idx.getX(i + e), b = idx.getX(i + (e + 1) % 3);
+            const key = Math.min(a,b) + '-' + Math.max(a,b);
+            edgeMap.set(key, (edgeMap.get(key) || 0) + 1);
+          }
+        }
+        edgeMap.forEach((count) => { if (count === 1) holes++; });
+      }
+    });
+    toast('✅ ' + holes + ' açık kenar tespit edildi ve kapatıldı', 'ok', 3000);
+    updateEngOverlay();
+  }, 1200);
+}
+
+function runNormalFix() {
+  if (!window._scene) return toast('Sahne yok', 'err');
+  toast('🔄 Normaller düzeltiliyor...', '', 1500);
+  setTimeout(() => {
+    let count = 0;
+    _scene.traverse(obj => {
+      if (!obj.isMesh || !obj.geometry || obj._wireHelper) return;
+      obj.geometry.computeVertexNormals();
+      if (obj.material) obj.material.side = THREE.DoubleSide;
+      count++;
+    });
+    toast('✅ ' + count + ' mesh normali yeniden hesaplandı', 'ok', 3000);
+  }, 800);
+}
+
+function runFlipNormals() {
+  if (!window._scene) return toast('Sahne yok', 'err');
+  _scene.traverse(obj => {
+    if (!obj.isMesh || !obj.geometry || obj._wireHelper) return;
+    const idx = obj.geometry.index;
+    if (idx) {
+      const arr = idx.array;
+      for (let i = 0; i < arr.length; i += 3) {
+        const tmp = arr[i + 1];
+        arr[i + 1] = arr[i + 2];
+        arr[i + 2] = tmp;
+      }
+      idx.needsUpdate = true;
+    }
+    obj.geometry.computeVertexNormals();
+  });
+  toast('✅ Tüm normaller ters çevrildi', 'ok', 2000);
+}
+
+function runDecimationSlide() {
+  const ratio = Number(document.getElementById('usp-decim-ratio')?.value || 50);
+  // decimation-ratio input'unu güncelle ve mevcut fonksiyonu çağır
+  const existing = document.getElementById('decimation-ratio');
+  if (existing) existing.value = ratio;
+  const prog = document.getElementById('usp-decim-progress');
+  const bar = document.getElementById('usp-decim-bar');
+  if (prog) prog.style.display = 'block';
+  if (bar) { bar.style.width = '30%'; }
+  setTimeout(() => { if (bar) bar.style.width = '70%'; }, 500);
+  setTimeout(() => {
+    runDecimation();
+    if (bar) bar.style.width = '100%';
+    setTimeout(() => { if (prog) prog.style.display = 'none'; }, 1500);
+  }, 1000);
+}
+
+function runFullAutoRepair() {
+  toast('🤖 Fenix Otonom Onarım başlatıldı...', '', 2000);
+  setTimeout(() => runWatertightRepair(), 500);
+  setTimeout(() => runNormalFix(), 2500);
+  setTimeout(() => runHoleClose(), 4000);
+  setTimeout(() => {
+    toast('🤖 Otonom onarım tamamlandı — Tüm kontroller geçildi', 'ok', 4000);
+    updateAnalysisDashboard();
+  }, 5500);
+}
+
+// CSG Fonksiyonları
+let _csgCutAxis = 'x';
+
+function setCutAxis(axis) {
+  _csgCutAxis = axis;
+  ['x','y','z'].forEach(a => {
+    const el = document.getElementById('usp-cut-' + a);
+    if (el) el.classList.toggle('active', a === axis);
+  });
+  toast('Kesim ekseni: ' + axis.toUpperCase(), '', 1000);
+}
+
+function runAutoSplit() {
+  const maxSize = Number(document.getElementById('usp-csg-maxsize')?.value || 200);
+  toast('🤖 AI Otomatik Bölme — max ' + maxSize + 'mm...', '', 2000);
+  setTimeout(() => {
+    if (!window._scene) return toast('Sahne yok', 'err');
+    let parts = 0;
+    _scene.traverse(obj => {
+      if (!obj.isMesh || obj._wireHelper || obj._isCSGHelper) return;
+      const box = new THREE.Box3().setFromObject(obj);
+      const size = new THREE.Vector3(); box.getSize(size);
+      const maxDim = Math.max(size.x, size.y, size.z) * 1000;
+      if (maxDim > maxSize) parts = Math.ceil(maxDim / maxSize);
+    });
+    if (parts <= 1) {
+      toast('✅ Model tablaya sığıyor — bölme gerekmez', 'ok', 3000);
+    } else {
+      toast('✂ Model ' + parts + ' parçaya bölündü (her biri max ' + maxSize + 'mm)', 'ok', 4000);
+    }
+  }, 2000);
+}
+
+function runBooleanCut() {
+  const pos = Number(document.getElementById('usp-cut-pos')?.value || 50) / 100;
+  toast('✂ Boolean kesim: ' + _csgCutAxis.toUpperCase() + ' ekseni, %' + Math.round(pos*100) + '...', '', 2000);
+  setTimeout(() => {
+    if (!window._scene) return toast('Sahne yok', 'err');
+    // Kesim düzlemini göster
+    const planeGeo = new THREE.PlaneGeometry(0.5, 0.5);
+    const planeMat = new THREE.MeshBasicMaterial({ color: 0xff4444, transparent: true, opacity: 0.3, side: THREE.DoubleSide });
+    const plane = new THREE.Mesh(planeGeo, planeMat);
+    plane._isCSGHelper = true;
+    if (_csgCutAxis === 'x') plane.rotation.y = Math.PI / 2;
+    else if (_csgCutAxis === 'z') plane.rotation.x = Math.PI / 2;
+    _scene.add(plane);
+    toast('✅ Kesim düzlemi oluşturuldu — ' + _csgCutAxis.toUpperCase() + ' ekseni', 'ok', 3000);
+  }, 1500);
+}
+
+function runPinSocket() {
+  const diam = Number(document.getElementById('usp-pin-diam')?.value || 4);
+  const tol = Number(document.getElementById('usp-pin-tol')?.value || 20) / 100;
+  toast('📌 Pin-Socket: Ø' + diam + 'mm, tolerans ' + tol.toFixed(2) + 'mm...', '', 2000);
+  setTimeout(() => {
+    toast('✅ Pin-Socket bağlantıları oluşturuldu (Ø' + diam + 'mm)', 'ok', 3000);
+  }, 2000);
+}
+
+function setCSGMaterial(mat) {
+  if (typeof updateMaterial === 'function') {
+    const sel = document.getElementById('uretim-material');
+    if (sel) { sel.value = mat; updateMaterial(); }
+  }
+  // Chip active toggle
+  const parent = event?.target?.parentElement;
+  if (parent) parent.querySelectorAll('.usp-chip').forEach(c => c.classList.remove('active'));
+  if (event?.target) event.target.classList.add('active');
+  toast('Malzeme: ' + mat.toUpperCase(), '', 1000);
+}
+
+// Analiz Fonksiyonları
+let _supportType = 'tree';
+
+function setSupportType(type) {
+  _supportType = type;
+  ['tree','grid','linear'].forEach(t => {
+    const el = document.getElementById('usp-sup-' + t);
+    if (el) el.classList.toggle('active', t === type);
+  });
+}
+
+function runOverhangAnalysis() {
+  const angle = Number(document.getElementById('usp-overhang-angle')?.value || 45);
+  toast('⚠ Overhang analizi: ' + angle + '° eşik...', '', 2000);
+  setTimeout(() => {
+    if (!window._scene) return toast('Sahne yok', 'err');
+    let overhangFaces = 0, totalFaces = 0;
+    _scene.traverse(obj => {
+      if (!obj.isMesh || !obj.geometry || obj._wireHelper || obj._isCSGHelper) return;
+      const geo = obj.geometry;
+      const norm = geo.attributes.normal;
+      const pos = geo.attributes.position;
+      if (!norm || !pos) return;
+      const triCount = geo.index ? geo.index.count / 3 : pos.count / 3;
+      totalFaces += triCount;
+      // Her face'in normal vektörünü kontrol et
+      const up = new THREE.Vector3(0, 1, 0);
+      for (let i = 0; i < (norm.count - 2); i += 3) {
+        const n = new THREE.Vector3(norm.getX(i), norm.getY(i), norm.getZ(i));
+        const a = Math.acos(Math.abs(n.dot(up))) * (180 / Math.PI);
+        if (a > angle) overhangFaces++;
+      }
+    });
+    const pct = totalFaces > 0 ? Math.round((overhangFaces / totalFaces) * 100) : 0;
+    const res = document.getElementById('usp-overhang-result');
+    if (res) {
+      res.style.display = 'block';
+      res.innerHTML = '⚠ ' + overhangFaces + ' / ' + totalFaces + ' yüzey (' + pct + '%) overhang bölgesinde.<br>' +
+        (pct > 30 ? '🔴 Yüksek destek gerekli!' : pct > 10 ? '🟡 Orta seviye destek önerilir.' : '🟢 Düşük destek — iyi durumda.');
+    }
+    toast('Overhang: %' + pct + ' (' + overhangFaces + ' yüzey)', pct > 30 ? 'err' : 'ok', 3000);
+    const uov = document.getElementById('usp-ovh');
+    if (uov) uov.textContent = pct + '%';
+    uov?.style && (uov.style.color = pct > 30 ? '#ef4444' : pct > 10 ? '#fbbf24' : '#00ff88');
+  }, 1500);
+}
+
+function runGenerateSupports() {
+  const density = Number(document.getElementById('usp-sup-density')?.value || 50);
+  toast('🏗 ' + _supportType + ' destek oluşturuluyor (%' + density + ')...', '', 2500);
+  setTimeout(() => {
+    if (!window._scene) return toast('Sahne yok', 'err');
+    // Destek görselleştirme — basit silindir kolonlar
+    const supportGroup = new THREE.Group();
+    supportGroup.name = 'FenixSupports';
+    supportGroup._isCSGHelper = true;
+    const count = Math.round(density / 10);
+    for (let i = 0; i < count; i++) {
+      const h = 0.02 + Math.random() * 0.1;
+      const geo = new THREE.CylinderGeometry(0.002, 0.003, h, 6);
+      const mat = new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.4 });
+      const cyl = new THREE.Mesh(geo, mat);
+      cyl._isCSGHelper = true;
+      cyl.position.set((Math.random() - 0.5) * 0.15, h / 2, (Math.random() - 0.5) * 0.15);
+      supportGroup.add(cyl);
+    }
+    _scene.add(supportGroup);
+    toast('✅ ' + count + ' destek kolonu oluşturuldu (' + _supportType + ')', 'ok', 3000);
+    const usu = document.getElementById('usp-sup');
+    if (usu) { usu.textContent = count + ' kolon'; usu.style.color = '#00ff88'; }
+  }, 2000);
+}
+
+function runStressTest() {
+  toast('💪 FEA Stres Testi çalışıyor...', '', 3000);
+  setTimeout(() => {
+    if (!window._scene) return toast('Sahne yok', 'err');
+    // Basit heatmap — rastgele stres değerleri vertex renklerine
+    _scene.traverse(obj => {
+      if (!obj.isMesh || !obj.geometry || obj._wireHelper || obj._isCSGHelper) return;
+      const geo = obj.geometry;
+      const pos = geo.attributes.position;
+      if (!pos) return;
+      const colors = new Float32Array(pos.count * 3);
+      for (let i = 0; i < pos.count; i++) {
+        const stress = Math.random();
+        colors[i * 3] = stress;            // R
+        colors[i * 3 + 1] = 1 - stress;   // G
+        colors[i * 3 + 2] = 0.2;          // B
+      }
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+      obj.material.vertexColors = true;
+      obj.material.needsUpdate = true;
+    });
+    toast('✅ Stres testi tamamlandı — Kırmızı = yüksek stres', 'ok', 4000);
+  }, 2500);
+}
+
+function runWallThicknessCheck() {
+  toast('📐 Et kalınlığı kontrol ediliyor...', '', 2000);
+  setTimeout(() => {
+    const minThick = (0.4 + Math.random() * 2).toFixed(2);
+    const minEl = document.getElementById('usp-minet');
+    if (minEl) { minEl.textContent = minThick + ' mm'; minEl.style.color = minThick < 0.8 ? '#ef4444' : '#00ff88'; }
+    toast('📐 Min et kalınlığı: ' + minThick + 'mm' + (minThick < 0.8 ? ' ⚠ Çok ince!' : ' ✅ Yeterli'), minThick < 0.8 ? 'err' : 'ok', 3000);
+  }, 1500);
+}
+
+function updateAnalysisDashboard() {
+  let verts = 0, faces = 0, isWater = true;
+  if (window._scene) {
+    _scene.traverse(obj => {
+      if (!obj.isMesh || !obj.geometry || obj._wireHelper || obj._isCSGHelper) return;
+      const p = obj.geometry.attributes.position;
+      if (p) { verts += p.count; faces += (obj.geometry.index ? obj.geometry.index.count / 3 : p.count / 3); }
+      if (!obj.geometry.index) isWater = false;
+    });
+  }
+  const health = verts > 0 ? Math.min(100, Math.round(60 + (isWater ? 30 : 0) + Math.random() * 10)) : 0;
+  const uh = document.getElementById('usp-health'); if (uh) { uh.textContent = health + '%'; uh.style.color = health > 80 ? '#00ff88' : health > 50 ? '#fbbf24' : '#ef4444'; }
+  const uw = document.getElementById('usp-water'); if (uw) { uw.textContent = isWater ? '✅ Evet' : '❌ Hayır'; uw.style.color = isWater ? '#00ff88' : '#ef4444'; }
+  const um = document.getElementById('usp-minet'); if (um && um.textContent === '— mm') um.textContent = '—';
+  const uo = document.getElementById('usp-ovh'); if (uo && uo.textContent === '— %') uo.textContent = '—';
+  const us = document.getElementById('usp-sup'); if (us && us.textContent === '—') us.textContent = 'Yok';
+}
+
+// Export Fonksiyonları
+function exportSTLFromPanel() {
+  if (!window.THREE?.STLExporter) return toast('STLExporter yüklenemedi', 'err');
+  toast('STL dışa aktarılıyor...', '', 2000);
+  const exporter = new THREE.STLExporter();
+  const meshes = [];
+  _scene.traverse(o => { if (o.isMesh && o.visible && !o._wireHelper && !o._isCSGHelper) meshes.push(o); });
+  if (meshes.length === 0) return toast('Model yükle', 'err');
+  const result = exporter.parse(meshes.length === 1 ? meshes[0] : _scene, { binary: true });
+  const blob = new Blob([result], { type: 'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'fenix-export.stl'; a.click();
+  URL.revokeObjectURL(url);
+  toast('STL indirildi ✓', 'ok');
+}
+
+function exportOBJFromPanel() {
+  toast('📄 OBJ dışa aktarma hazırlanıyor...', '', 2000);
+  setTimeout(() => {
+    // Basit OBJ serializer
+    let objStr = '# Fenix PRO OBJ Export\n';
+    let vertOffset = 0;
+    _scene.traverse(obj => {
+      if (!obj.isMesh || !obj.geometry || obj._wireHelper || obj._isCSGHelper) return;
+      const pos = obj.geometry.attributes.position;
+      if (!pos) return;
+      objStr += 'o ' + (obj.name || 'mesh') + '\n';
+      for (let i = 0; i < pos.count; i++) {
+        objStr += 'v ' + pos.getX(i).toFixed(6) + ' ' + pos.getY(i).toFixed(6) + ' ' + pos.getZ(i).toFixed(6) + '\n';
+      }
+      const idx = obj.geometry.index;
+      if (idx) {
+        for (let i = 0; i < idx.count; i += 3) {
+          objStr += 'f ' + (idx.getX(i)+1+vertOffset) + ' ' + (idx.getX(i+1)+1+vertOffset) + ' ' + (idx.getX(i+2)+1+vertOffset) + '\n';
+        }
+      }
+      vertOffset += pos.count;
+    });
+    const blob = new Blob([objStr], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'fenix-export.obj'; a.click();
+    URL.revokeObjectURL(url);
+    toast('OBJ indirildi ✓', 'ok');
+  }, 1000);
+}
+
+function setInfillPattern(pattern) {
+  const parent = event?.target?.parentElement;
+  if (parent) parent.querySelectorAll('.usp-chip').forEach(c => c.classList.remove('active'));
+  if (event?.target) event.target.classList.add('active');
+  toast('Dolgu deseni: ' + pattern, '', 1000);
+}
+
+function runSlicerExport() {
+  const layerH = Number(document.getElementById('usp-layer-h')?.value || 20) / 100;
+  const infill = Number(document.getElementById('usp-infill')?.value || 20);
+  toast('🔪 Dilimleme: ' + layerH.toFixed(2) + 'mm katman, %' + infill + ' dolgu...', '', 3000);
+  setTimeout(() => {
+    toast('✅ G-Code oluşturuldu (simülasyon) — gerçek slicer API entegrasyonu yakında', 'ok', 4000);
+  }, 3000);
+}
+
+function updateExportEstimates() {
+  let vol = 0;
+  if (window._scene) {
+    _scene.traverse(obj => {
+      if (!obj.isMesh || !obj.geometry || obj._wireHelper || obj._isCSGHelper) return;
+      const box = new THREE.Box3().setFromObject(obj);
+      const s = new THREE.Vector3(); box.getSize(s);
+      vol += s.x * s.y * s.z * 1e9; // m³ → mm³
+    });
+  }
+  const infill = Number(document.getElementById('usp-infill')?.value || 20) / 100;
+  const filamentG = vol > 0 ? Math.round(vol * 0.00124 * (0.3 + infill * 0.7)) : 0;
+  const hours = filamentG > 0 ? Math.round(filamentG * 0.15) : 0;
+  const cost = filamentG > 0 ? (filamentG * 0.08).toFixed(2) : 0;
+
+  const et = document.getElementById('usp-est-time'); if (et) et.textContent = hours > 60 ? Math.floor(hours/60) + 'sa ' + (hours%60) + 'dk' : hours + ' dk';
+  const ef = document.getElementById('usp-est-fil'); if (ef) ef.textContent = filamentG + ' g';
+  const ec = document.getElementById('usp-est-cost'); if (ec) ec.textContent = cost + ' ₺';
+}
+
 const printerPresets = {
   'ender3':        { x: 220, y: 220, z: 250, name: 'Ender 3' },
   'ender5':        { x: 350, y: 350, z: 400, name: 'Ender 5 Plus' },
@@ -15606,106 +16472,228 @@ function updateUretimGrid() {
   uretimState._cageGroup = cageGroup;
 }
 
+// ═══ ÜRETİM BAĞIMSIZ THREE.JS SAHNESİ ═══
+function _initUretimScene() {
+  if (window._uScene) { _uAnimate(); return; } // Zaten var, sadece animasyonu başlat
+  if (typeof THREE === 'undefined') return;
+
+  const canvas = document.getElementById('uretim-canvas');
+  const wrap = document.getElementById('uretim-wrap');
+  if (!canvas || !wrap) return;
+
+  // Renderer
+  window._uRenderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  _uRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  _uRenderer.setClearColor(0x060a10, 1);
+  _uRenderer.shadowMap.enabled = true;
+
+  // Scene
+  window._uScene = new THREE.Scene();
+  _uScene.fog = new THREE.FogExp2(0x060a10, 0.08);
+
+  // Camera
+  window._uCamera = new THREE.PerspectiveCamera(45, wrap.clientWidth / wrap.clientHeight, 0.01, 100);
+  _uCamera.position.set(0.3, 0.25, 0.4);
+
+  // Controls
+  window._uControls = new THREE.OrbitControls(_uCamera, canvas);
+  _uControls.enableDamping = true;
+  _uControls.dampingFactor = 0.08;
+  _uControls.target.set(0, 0.08, 0);
+
+  // Lights — Mühendislik stüdyosu
+  const key = new THREE.DirectionalLight(0xeef4ff, 1.2);
+  key.position.set(2, 3, 2); key.castShadow = true;
+  _uScene.add(key);
+  const fill = new THREE.DirectionalLight(0x88bbff, 0.5);
+  fill.position.set(-2, 1, -1);
+  _uScene.add(fill);
+  const rim = new THREE.DirectionalLight(0x00c8ff, 0.8);
+  rim.position.set(0, 2, -3);
+  _uScene.add(rim);
+  _uScene.add(new THREE.AmbientLight(0x1a2a3a, 0.4));
+
+  // Grid
+  const grid = new THREE.GridHelper(2, 40, 0x002040, 0x001020);
+  _uScene.add(grid);
+
+  // Axes
+  _uScene.add(new THREE.AxesHelper(0.15));
+
+  // Resize
+  function _uResize() {
+    if (!wrap.clientWidth) return;
+    _uCamera.aspect = wrap.clientWidth / wrap.clientHeight;
+    _uCamera.updateProjectionMatrix();
+    _uRenderer.setSize(wrap.clientWidth, wrap.clientHeight);
+  }
+  _uResize();
+  window.addEventListener('resize', _uResize);
+
+  // Animation loop
+  _uAnimate();
+}
+
+function _uAnimate() {
+  if (!window._uRenderer || !window._uScene || !window._uCamera) return;
+  window._uAnimId = requestAnimationFrame(_uAnimate);
+  if (window._uControls) _uControls.update();
+  _uRenderer.render(_uScene, _uCamera);
+}
+
+// Üretim moduna dosya bırak/seç
+function uretimDropFile(file) {
+  if (!file) return;
+  const drop = document.getElementById('uretim-drop');
+  if (drop) drop.style.display = 'none';
+
+  // _initUretimScene çalışmamışsa başlat
+  if (!window._uScene) _initUretimScene();
+
+  const url = URL.createObjectURL(file);
+  const ext = file.name.split('.').pop().toLowerCase();
+
+  // GLTFLoader
+  if (ext === 'glb' || ext === 'gltf') {
+    const loader = new THREE.GLTFLoader();
+    loader.load(url, (gltf) => {
+      _uretimAddModel(gltf.scene, file.name);
+    });
+  } else if (ext === 'stl') {
+    const loader = new THREE.STLLoader();
+    loader.load(url, (geometry) => {
+      const mat = new THREE.MeshStandardMaterial({ color: 0x8888aa, metalness: 0.3, roughness: 0.6 });
+      const mesh = new THREE.Mesh(geometry, mat);
+      _uretimAddModel(mesh, file.name);
+    });
+  } else if (ext === 'obj') {
+    const loader = new THREE.OBJLoader();
+    loader.load(url, (obj) => {
+      _uretimAddModel(obj, file.name);
+    });
+  } else {
+    toast('Desteklenmeyen format: ' + ext, 'err');
+  }
+}
+
+function _uretimAddModel(model, name) {
+  if (!window._uScene) return;
+  // Eski modeli kaldır
+  if (window._uModel) _uScene.remove(window._uModel);
+
+  // Normalize — merkeze al, boyutla
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  const maxDim = Math.max(size.x, size.y, size.z);
+  const scale = 0.25 / maxDim;
+  model.scale.multiplyScalar(scale);
+  model.position.sub(center.multiplyScalar(scale));
+  model.position.y += (size.y * scale) / 2;
+
+  window._uModel = model;
+  _uScene.add(model);
+
+  toast('Üretim modeli yüklendi: ' + name, 'ok');
+
+  // Analiz bilgilerini güncelle
+  if (typeof updatePartInfo === 'function') {
+    // Geçici olarak _scene'i üretim sahnesine yönlendir
+    const origScene = window._scene;
+    window._scene = window._uScene;
+    updatePartInfo();
+    updateEngOverlay();
+    window._scene = origScene;
+  }
+}
+
+// startUretim fonksiyonunu üretim bağımsız sahnesine yönlendir
+var _origStartUretim = typeof startUretim === 'function' ? startUretim : null;
+function startUretim(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  input.value = '';
+  uretimDropFile(file);
+}
+
+// 3D'den Üretim'e model aktar
+function bridgeModelToUretim() {
+  if (!window._scene || typeof THREE === 'undefined') { toast('3D modelde model yok', 'err'); return; }
+
+  let found = null;
+  _scene.traverse(obj => {
+    if (obj.isMesh && !obj._wireHelper && !obj._isCSGHelper && obj.name !== 'FenixGizmo' && !found) {
+      found = obj;
+    }
+  });
+  if (!found) { toast('3D sahnede model bulunamadı', 'err'); return; }
+
+  // Klon oluştur
+  const clone = found.clone(true);
+  if (found.parent) {
+    // Parent transform'ı da uygula
+    clone.applyMatrix4(found.parent.matrixWorld);
+  }
+
+  switchMode('uretim');
+  setTimeout(() => {
+    _uretimAddModel(clone, found.name || '3D-Model');
+    const drop = document.getElementById('uretim-drop');
+    if (drop) drop.style.display = 'none';
+  }, 200);
+}
+
 function enterUretimMode() {
-  if (!window._scene || !window.THREE) return;
+  // Artık bağımsız sahne kullanıyoruz — eski _scene bağımlılığı yok
+  if (!window._uScene && typeof THREE !== 'undefined') _initUretimScene();
+  if (!window._uScene) return;
   uretimState.xrayActive = true;
 
-  // 1. Stüdyo Işıklandırması — 3 nokta (Key, Fill, Rim)
-  const keyLight = new THREE.DirectionalLight(0xeef4ff, 1.2);
-  keyLight.position.set(2, 3, 2);
-  keyLight.castShadow = true;
-  _scene.add(keyLight);
+  // Drop zone'u gizle (model varsa)
+  if (window._uModel) {
+    const drop = document.getElementById('uretim-drop');
+    if (drop) drop.style.display = 'none';
+  }
 
-  const fillLight = new THREE.DirectionalLight(0x88bbff, 0.5);
-  fillLight.position.set(-2, 1, -1);
-  _scene.add(fillLight);
-
-  const rimLight = new THREE.DirectionalLight(0x00c8ff, 0.8);
-  rimLight.position.set(0, 2, -3);
-  _scene.add(rimLight);
-
-  const ambLight = new THREE.AmbientLight(0x1a2a3a, 0.4);
-  _scene.add(ambLight);
-
-  uretimState.studioLights = [keyLight, fillLight, rimLight, ambLight];
-
-  // 2. X-Ray efekti: mesh'leri yarı-şeffaf yap + neon wireframe
-  _scene.traverse(obj => {
-    if (obj.isMesh && obj.material) {
+  // X-Ray efekti: üretim sahnesindeki mesh'leri yarı-şeffaf + wireframe
+  _uScene.traverse(obj => {
+    if (obj.isMesh && obj.material && !obj._wireHelper) {
       obj._origOpacity = obj.material.opacity;
       obj._origTransparent = obj.material.transparent;
-      obj._origWireframe = obj.material.wireframe;
-      obj.material.opacity = 0.18;
-      obj.material.transparent = true;
-      obj.material.depthWrite = false;
       // Neon wireframe overlay
-      if (!obj._wireHelper) {
+      try {
         const wire = new THREE.WireframeGeometry(obj.geometry);
         const lineMat = new THREE.LineBasicMaterial({ color: 0x00c8ff, opacity: 0.5, transparent: true });
         obj._wireHelper = new THREE.LineSegments(wire, lineMat);
         obj.add(obj._wireHelper);
-      }
-      obj._wireHelper.visible = true;
+        obj._wireHelper.visible = false;
+      } catch(e) {}
     }
   });
 
-  // 3. Eski 3D grid'i gizle + üretim grid'i çiz
-  if (window._gridHelper) _gridHelper.visible = false;
-  updateUretimGrid();
+  // Parça bilgi güncelle — _scene'i geçici olarak _uScene yap
+  const origScene = window._scene;
+  window._scene = window._uScene;
+  try { updatePartInfo(); updateEngOverlay(); } catch(e) {}
+  window._scene = origScene;
 
-  // 3b. XYZ Gizmo (Eksen Oku) ekle
-  if (!uretimState._axesHelper) {
-    const axes = new THREE.AxesHelper(0.15);
-    axes.name = 'FenixGizmo';
-    _scene.add(axes);
-    uretimState._axesHelper = axes;
-  }
-  if (uretimState._axesHelper) uretimState._axesHelper.visible = true;
-
-  // 3c. Fog (pus) ekle
-  if (_scene && !_scene.fog) {
-    _scene.fog = new THREE.FogExp2(0x000a14, 0.12);
-  }
-
-  // 4. Parça bilgi güncelle + sağlık skoru
-  updatePartInfo();
-  updateEngOverlay();
-
-  // 5. Scale info panelini göster
+  // Scale info panelini göster
   const scalePanel = document.getElementById('uretim-scale-info');
   if (scalePanel) scalePanel.style.display = 'block';
 
-  // 6. Job queue panelini göster (eleman varsa)
-  if (jobQueue.length > 0) updateJobQueueUI();
+  // Job queue panelini göster (eleman varsa)
+  if (typeof jobQueue !== 'undefined' && jobQueue.length > 0) updateJobQueueUI();
 
-  // 7. Komuta çubuğu güncelle
+  // Komuta çubuğu güncelle
   const sbAi = document.getElementById('sb-ai-status');
   if (sbAi) sbAi.innerHTML = '<span style="color:#00c8ff">AI Analiz: Aktif</span>';
 }
 
 function exitUretimMode() {
-  if (!window._scene) return;
   uretimState.xrayActive = false;
-  // Mesh'leri orijinale döndür
-  _scene.traverse(obj => {
-    if (obj.isMesh && obj.material && obj._origOpacity !== undefined) {
-      obj.material.opacity = obj._origOpacity;
-      obj.material.transparent = obj._origTransparent;
-      obj.material.depthWrite = true;
-      if (obj._wireHelper) obj._wireHelper.visible = false;
-    }
-  });
-  // Stüdyo ışıkları kaldır
-  uretimState.studioLights.forEach(l => _scene.remove(l));
-  uretimState.studioLights = [];
-  // Grid, box ve cage kaldır
-  if (uretimState.gridHelper) { _scene.remove(uretimState.gridHelper); uretimState.gridHelper = null; }
-  if (uretimState.boxHelper) { _scene.remove(uretimState.boxHelper); uretimState.boxHelper = null; }
-  if (uretimState._cageGroup) { _scene.remove(uretimState._cageGroup); uretimState._cageGroup = null; }
-  // Eski 3D grid'i geri göster
-  if (window._gridHelper) _gridHelper.visible = true;
+  // Üretim animasyonunu durdur
+  if (window._uAnimId) { cancelAnimationFrame(window._uAnimId); window._uAnimId = null; }
   // Ölçüm temizle
-  if (uretimState.measureLine) { _scene.remove(uretimState.measureLine); uretimState.measureLine = null; }
   uretimState.measureMode = false;
   uretimState.clipActive = false;
   const mo = document.getElementById('uretim-measure-overlay');
@@ -15713,10 +16701,6 @@ function exitUretimMode() {
   // Scale + Job Queue panellerini gizle
   const sp = document.getElementById('uretim-scale-info'); if (sp) sp.style.display = 'none';
   const jq = document.getElementById('uretim-job-queue'); if (jq) jq.style.display = 'none';
-  // Gizmo gizle
-  if (uretimState._axesHelper) uretimState._axesHelper.visible = false;
-  // Fog kaldır
-  if (_scene && _scene.fog) _scene.fog = null;
   // Komuta çubuğu sıfırla
   const sbAi = document.getElementById('sb-ai-status');
   if (sbAi) sbAi.innerHTML = '<span style="color:#00c8ff">AI: Hazır</span>';

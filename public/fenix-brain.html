@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>FENIX</title>
+<link rel="manifest" href="fenix-brain-manifest.json">
+<link rel="icon" type="image/svg+xml" href="/fenix-brain-icon.svg">
+<meta name="theme-color" content="#0a0418">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#060311;color:#e0d6f0;font-family:'Segoe UI',sans-serif;font-size:13px;touch-action:manipulation;user-select:none}
+button,input,select{font-family:inherit;-webkit-appearance:none;outline:none}
+
+.hdr{height:42px;background:#0a0418;border-bottom:2px solid #7c3aed;display:flex;align-items:center;justify-content:space-between;padding:0 12px;flex-shrink:0}
+.hdr-l{font-size:15px;font-weight:900;letter-spacing:3px;background:linear-gradient(135deg,#c084fc,#f97316);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hdr-r{display:flex;gap:6px;align-items:center}
+.hdr-stat{font-size:7px;color:rgba(255,255,255,.3);display:flex;align-items:center;gap:2px}
+.dot{width:7px;height:7px;border-radius:50%}.dot.on{background:#4ade80;box-shadow:0 0 6px #4ade80}.dot.off{background:#f87171;box-shadow:0 0 4px #f87171}.dot.warn{background:#fbbf24;box-shadow:0 0 4px #fbbf24}
+
+.main{height:calc(100% - 42px);display:flex;flex-direction:column;position:relative}
+.stat-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* TABS — scrollable */
+.tabs{display:flex;border-bottom:1px solid rgba(124,58,237,.12);flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;padding:7px 8px;text-align:center;font-size:7px;font-weight:700;color:rgba(255,255,255,.2);border-bottom:2px solid transparent;cursor:pointer;letter-spacing:.8px;min-height:28px;white-space:nowrap}
+.tab.on{color:#c084fc;border-bottom-color:#7c3aed}
+.tab:active{background:rgba(124,58,237,.05)}
+.pnl{display:none;flex:1;overflow-y:auto;padding:6px;flex-direction:column;gap:5px;-webkit-overflow-scrolling:touch}
+.pnl.on{display:flex}
+
+/* CARDS */
+.c{background:#0d0620;border:1px solid rgba(124,58,237,.1);border-radius:7px;padding:8px;flex-shrink:0}
+.ct{font-size:7px;font-weight:700;letter-spacing:2px;color:#a855f7;text-transform:uppercase;margin-bottom:5px;display:flex;align-items:center;justify-content:space-between}
+.ct .ct-badge{font-size:7px;color:#4ade80;letter-spacing:0}
+.r{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.02)}
+.r:last-child{border:none}
+.rl{font-size:10px;color:rgba(255,255,255,.35)}
+.rv{font-size:10px;font-weight:700;color:#c084fc}
+.rv.g{color:#4ade80}.rv.r{color:#f87171}.rv.o{color:#fbbf24}.rv.b{color:#60a5fa}.rv.p{color:#c084fc}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px}
+.g4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:4px}
+.mn{background:rgba(124,58,237,.04);border:1px solid rgba(124,58,237,.08);border-radius:6px;padding:6px;text-align:center}
+.mn-v{font-size:18px;font-weight:900;color:#c084fc}
+.mn-l{font-size:6px;color:rgba(255,255,255,.2);letter-spacing:1px;text-transform:uppercase;margin-top:1px}
+.mn.fire .mn-v{color:#f97316}.mn.grn .mn-v{color:#4ade80}.mn.red .mn-v{color:#ef4444}.mn.blu .mn-v{color:#60a5fa}.mn.pur .mn-v{color:#c084fc}
+.bar{width:100%;height:4px;background:rgba(255,255,255,.03);border-radius:2px;overflow:hidden;margin-top:3px}
+.bar-f{height:100%;border-radius:2px;background:linear-gradient(90deg,#7c3aed,#c084fc);transition:width .4s}
+.bar-f.g{background:linear-gradient(90deg,#22c55e,#4ade80)}
+.bar-f.r{background:linear-gradient(90deg,#dc2626,#f87171)}
+.bar-f.o{background:linear-gradient(90deg,#ea580c,#fb923c)}
+.sk{display:inline-block;padding:2px 5px;border-radius:3px;font-size:7px;font-weight:700;margin:1px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.1);color:#c084fc}
+.sk.ma{background:rgba(34,197,94,.06);border-color:rgba(34,197,94,.12);color:#4ade80}
+.sk.jo{background:rgba(249,115,22,.06);border-color:rgba(249,115,22,.12);color:#fb923c}
+.btn{border:1px solid rgba(124,58,237,.15);background:rgba(124,58,237,.04);color:#c084fc;font-size:9px;font-weight:700;padding:8px;border-radius:6px;cursor:pointer;text-align:center;min-height:36px}
+.btn:active{background:rgba(124,58,237,.12);transform:scale(.97)}
+.btn.fire{background:linear-gradient(135deg,rgba(249,115,22,.1),rgba(124,58,237,.1));border-color:rgba(249,115,22,.2);color:#fb923c}
+.btn.dng{border-color:rgba(239,68,68,.12);color:#f87171}
+.btn.grn{border-color:rgba(34,197,94,.15);color:#4ade80}
+
+/* LOG items */
+.log-item{font-size:8px;padding:3px 4px;border-bottom:1px solid rgba(255,255,255,.02);font-family:'Consolas','Courier New',monospace;color:rgba(255,255,255,.4);word-break:break-all}
+.log-item.err{color:#f87171;background:rgba(239,68,68,.03)}
+.log-item.warn{color:#fbbf24}
+.log-item.ok{color:#4ade80}
+
+/* Pipeline job */
+.job{padding:5px;border:1px solid rgba(124,58,237,.08);border-radius:5px;margin-bottom:3px}
+.job-h{display:flex;justify-content:space-between;align-items:center}
+.job-t{font-size:8px;font-weight:700;color:#c084fc}
+.job-s{font-size:7px;padding:1px 5px;border-radius:3px;font-weight:700}
+.job-s.queued{background:rgba(251,191,36,.1);color:#fbbf24}
+.job-s.processing{background:rgba(96,165,250,.1);color:#60a5fa}
+.job-s.done{background:rgba(74,222,128,.1);color:#4ade80}
+.job-s.failed{background:rgba(248,113,113,.1);color:#f87171}
+
+/* Settings */
+.setting{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.setting-l{font-size:10px;color:rgba(255,255,255,.4)}
+.setting-v{font-size:10px;color:#c084fc;font-weight:700}
+.toggle{width:36px;height:18px;border-radius:9px;background:rgba(255,255,255,.08);position:relative;cursor:pointer;transition:.3s}
+.toggle.on{background:rgba(124,58,237,.4)}
+.toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff;transition:.3s}
+.toggle.on::after{left:20px}
+
+/* CHAT OVERLAY */
+.chat-toggle{position:fixed;bottom:14px;right:14px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#f97316);border:none;color:#fff;font-size:24px;cursor:pointer;z-index:100;box-shadow:0 4px 20px rgba(124,58,237,.5);display:flex;align-items:center;justify-content:center;transition:transform .2s}
+.chat-toggle:active{transform:scale(.9)}
+.chat-toggle.open{background:linear-gradient(135deg,#ef4444,#f97316)}
+.chat-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:#060311;z-index:90;display:none;flex-direction:column}
+.chat-overlay.open{display:flex}
+.chat-hdr{height:38px;background:#0a0418;border-bottom:2px solid #f97316;display:flex;align-items:center;padding:0 10px;gap:6px;flex-shrink:0}
+.chat-hdr-t{font-size:13px;font-weight:900;color:#f97316;letter-spacing:2px;flex:1}
+.chat-hdr .live{width:5px;height:5px;border-radius:50%;background:#4ade80;animation:p 2s infinite}
+@keyframes p{50%{opacity:.2}}
+.chat-close{background:none;border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.4);font-size:16px;width:32px;height:32px;border-radius:8px;cursor:pointer}
+.chat-close:active{background:rgba(255,255,255,.05)}
+.msgs{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:5px;-webkit-overflow-scrolling:touch}
+.m{padding:7px 10px;border-radius:8px;font-size:12px;line-height:1.5;max-width:85%;word-break:break-word}
+.m.u{background:rgba(168,85,247,.1);border:1px solid rgba(168,85,247,.15);align-self:flex-end}
+.m.a{background:rgba(249,115,22,.06);border:1px solid rgba(249,115,22,.12);align-self:flex-start;color:#fde2c4}
+.m .f{font-size:7px;font-weight:700;letter-spacing:1px;margin-bottom:2px}
+.m.u .f{color:#a855f7}.m.a .f{color:#f97316}
+.m .web{font-size:8px;color:#60a5fa;margin-top:2px}
+.typing{padding:6px 10px;color:rgba(249,115,22,.4);font-size:10px;display:none}
+.typing.on{display:block}
+.qi{display:flex;gap:3px;padding:5px 8px;border-top:1px solid rgba(124,58,237,.06);flex-shrink:0;overflow-x:auto}
+.qi-b{flex-shrink:0;width:38px;height:38px;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(124,58,237,.05);border:1px solid rgba(124,58,237,.1);cursor:pointer;font-size:15px;gap:1px}
+.qi-b span{font-size:5px;color:rgba(255,255,255,.25)}
+.qi-b:active{background:rgba(124,58,237,.15);transform:scale(.95)}
+.inp{display:flex;gap:5px;padding:6px 8px;border-top:1px solid rgba(124,58,237,.1);flex-shrink:0;background:#0a0418}
+.inp input{flex:1;background:rgba(255,255,255,.03);border:1px solid rgba(124,58,237,.15);border-radius:8px;padding:9px 10px;color:#fff;font-size:13px;min-height:38px}
+.inp input:focus{border-color:#a855f7}
+.inp button{background:linear-gradient(135deg,#7c3aed,#f97316);border:none;color:#fff;font-size:16px;padding:9px 14px;border-radius:8px;min-height:38px;min-width:44px;cursor:pointer}
+.inp button:active{transform:scale(.93)}
+
+.toast{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:#7c3aed;color:#fff;padding:5px 12px;border-radius:5px;font-size:9px;font-weight:700;z-index:101;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+::-webkit-scrollbar{width:2px}::-webkit-scrollbar-thumb{background:rgba(124,58,237,.15)}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="hdr-l">FENIX</div>
+  <div class="hdr-r">
+    <div class="hdr-stat"><div class="dot" id="ds"></div> SRV</div>
+    <div class="hdr-stat"><div class="dot" id="db"></div> AI</div>
+    <div class="hdr-stat"><div class="dot" id="dw"></div> WS</div>
+    <div class="hdr-stat" style="margin-left:4px;color:#4ade80;font-weight:700" id="hdr-mem">—</div>
+    <div class="hdr-stat" style="color:#fb923c;font-weight:700" id="hdr-rps">—</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="stat-area">
+    <div class="tabs" id="tabBar">
+      <div class="tab on" onclick="sw(this,'p1')">GENEL</div>
+      <div class="tab" onclick="sw(this,'p2')">BEYİN</div>
+      <div class="tab" onclick="sw(this,'p3')">EĞİTİM</div>
+      <div class="tab" onclick="sw(this,'p4')">TRAFİK</div>
+      <div class="tab" onclick="sw(this,'p5')">DERSLER</div>
+      <div class="tab" onclick="sw(this,'p6')">MALİYET</div>
+      <div class="tab" onclick="sw(this,'p7')">KULLANICI</div>
+      <div class="tab" onclick="sw(this,'p8')">GÜVENLİK</div>
+      <div class="tab" onclick="sw(this,'p9')">PIPELINE</div>
+      <div class="tab" onclick="sw(this,'p10')">LOG</div>
+      <div class="tab" onclick="sw(this,'p11')">AYARLAR</div>
+      <div class="tab" onclick="sw(this,'p12')">KOMUT</div>
+    </div>
+
+    <!-- ═══ P1: GENEL ═══ -->
+    <div class="pnl on" id="p1">
+      <div class="g4">
+        <div class="mn grn"><div class="mn-v" id="v-hp">—</div><div class="mn-l">Sağlık</div></div>
+        <div class="mn fire"><div class="mn-v" id="v-cn">0</div><div class="mn-l">Bağlantı</div></div>
+        <div class="mn blu"><div class="mn-v" id="v-rq">0</div><div class="mn-l">İstek</div></div>
+        <div class="mn pur"><div class="mn-v" id="v-avg">0</div><div class="mn-l">Ort. ms</div></div>
+      </div>
+      <div class="g3">
+        <div class="mn"><div class="mn-v" id="v-les">0</div><div class="mn-l">Ders</div></div>
+        <div class="mn"><div class="mn-v" id="v-sk">0</div><div class="mn-l">Skill</div></div>
+        <div class="mn red"><div class="mn-v" id="v-errtot">0</div><div class="mn-l">Hata</div></div>
+      </div>
+      <div class="c">
+        <div class="ct">SİSTEM<span class="ct-badge" id="v-node"></span></div>
+        <div class="r"><span class="rl">Versiyon</span><span class="rv" id="v-ver">—</span></div>
+        <div class="r"><span class="rl">Uptime</span><span class="rv g" id="v-up">—</span></div>
+        <div class="r"><span class="rl">Zirve Bağlantı</span><span class="rv o" id="v-pk">0</span></div>
+        <div class="r"><span class="rl">5xx / 4xx</span><span class="rv r" id="v-err">0/0</span></div>
+        <div class="r"><span class="rl">RAM (Heap)</span><span class="rv b" id="v-ram">—</span></div>
+        <div class="r"><span class="rl">RSS</span><span class="rv" id="v-rss">—</span></div>
+      </div>
+      <div class="c"><div class="ct">AKTİF API'LER</div>
+        <div class="r"><span class="rl">Gemini</span><span class="rv" id="v-gem">—</span></div>
+        <div class="r"><span class="rl">Claude</span><span class="rv" id="v-cla">—</span></div>
+        <div class="r"><span class="rl">Tripo 3D</span><span class="rv" id="v-tri">—</span></div>
+        <div class="r"><span class="rl">ElevenLabs</span><span class="rv" id="v-el">—</span></div>
+        <div class="r"><span class="rl">Firebase</span><span class="rv" id="v-fb">—</span></div>
+        <div class="r"><span class="rl">fal.ai</span><span class="rv" id="v-fal">—</span></div>
+        <div class="r"><span class="rl">Luma</span><span class="rv" id="v-luma">—</span></div>
+        <div class="r"><span class="rl">Deepgram</span><span class="rv" id="v-dg">—</span></div>
+      </div>
+      <div class="c"><div class="ct">CIRCUIT BREAKER</div><div id="v-cb"><div class="rl">Yükleniyor...</div></div></div>
+      <div class="c"><div class="ct">SAATLİK İSTEK</div><div id="v-hrs" style="display:flex;align-items:flex-end;gap:1px;height:50px"></div></div>
+    </div>
+
+    <!-- ═══ P2: BEYİN ═══ -->
+    <div class="pnl" id="p2">
+      <div class="g3">
+        <div class="mn fire"><div class="mn-v" id="b-sh">0</div><div class="mn-l">Shadow Log</div></div>
+        <div class="mn blu"><div class="mn-v" id="b-pr">0</div><div class="mn-l">İşlenen</div></div>
+        <div class="mn grn"><div class="mn-v" id="b-opt">0</div><div class="mn-l">Optimizasyon</div></div>
+      </div>
+      <div class="c"><div class="ct">ORKESTRASYON — Routing Örnekleri</div>
+        <div class="r"><span class="rl">Basit görev</span><span class="rv g" id="b-rs">—</span></div>
+        <div class="r"><span class="rl">Normal görev</span><span class="rv o" id="b-rn">—</span></div>
+        <div class="r"><span class="rl">Kritik görev</span><span class="rv r" id="b-rc">—</span></div>
+      </div>
+      <div class="c"><div class="ct">BECERİLER (Shadow Learning)</div><div id="b-sk"></div></div>
+      <div class="c"><div class="ct">AKTÖR DAĞILIMI</div><div id="b-actors"></div></div>
+      <div class="c"><div class="ct">SON EYLEMLER</div><div id="b-recent"></div></div>
+      <div class="c"><div class="ct">HAFIZA (Dersler)</div><div id="b-mem"></div></div>
+      <div class="c"><div class="ct">SELF-HEAL GEÇMİŞİ</div>
+        <div class="r"><span class="rl">Toplam Hata</span><span class="rv r" id="b-herr">0</span></div>
+        <div class="r"><span class="rl">Son 1 Saat</span><span class="rv o" id="b-h1h">0</span></div>
+        <div class="r"><span class="rl">Otomatik Çözüm</span><span class="rv g" id="b-heal">0</span></div>
+        <div id="b-errsvc"></div>
+      </div>
+    </div>
+
+    <!-- ═══ P3: EĞİTİM ═══ -->
+    <div class="pnl" id="p3">
+      <div class="g3">
+        <div class="mn fire"><div class="mn-v" id="t-cnt">0</div><div class="mn-l">Ders</div></div>
+        <div class="mn grn"><div class="mn-v" id="t-lvl">—</div><div class="mn-l">Seviye</div></div>
+        <div class="mn blu"><div class="mn-v" id="t-rate">0%</div><div class="mn-l">Başarı</div></div>
+      </div>
+      <div class="c"><div class="ct">EĞİTİM DURUMU</div>
+        <div class="r"><span class="rl">Durum</span><span class="rv g" id="t-st">—</span></div>
+        <div class="r"><span class="rl">Faz</span><span class="rv" id="t-phase">—</span></div>
+        <div class="r"><span class="rl">Bütçe</span><span class="rv o" id="t-bud">—</span></div>
+        <div class="r"><span class="rl">Harcanan</span><span class="rv r" id="t-spent">$0</span></div>
+        <div class="r"><span class="rl">İlerleme</span><span class="rv" id="t-pct">0%</span></div>
+        <div class="bar"><div class="bar-f" id="t-bar"></div></div>
+        <div class="r"><span class="rl">Son Eğitim</span><span class="rv b" id="t-last">—</span></div>
+      </div>
+      <div class="c"><div class="ct">SEVİYELER</div>
+        <div class="r"><span class="rl">🏆 Master</span><span class="rv g" id="t-ma">0</span></div>
+        <div class="r"><span class="rl">⚡ Journeyman</span><span class="rv o" id="t-jo">0</span></div>
+        <div class="r"><span class="rl">📚 Apprentice</span><span class="rv" id="t-ap">0</span></div>
+      </div>
+      <div class="c"><div class="ct">GERİ BİLDİRİM</div>
+        <div class="g2"><div class="mn grn"><div class="mn-v" id="f-lk">0</div><div class="mn-l">👍 Beğeni</div></div><div class="mn red"><div class="mn-v" id="f-dk">0</div><div class="mn-l">👎 Beğenmeme</div></div></div>
+      </div>
+      <div class="g2" style="margin-top:4px">
+        <button class="btn fire" onclick="cmd('/api/fenix/train')">🎓 Eğitim Başlat</button>
+        <button class="btn dng" onclick="cmd('/api/fenix/train/stop')">⏹ Durdur</button>
+      </div>
+    </div>
+
+    <!-- ═══ P4: TRAFİK ═══ -->
+    <div class="pnl" id="p4">
+      <div class="g3">
+        <div class="mn fire"><div class="mn-v" id="tf-t">0</div><div class="mn-l">Toplam</div></div>
+        <div class="mn grn"><div class="mn-v" id="tf-a">0</div><div class="mn-l">Aktif</div></div>
+        <div class="mn blu"><div class="mn-v" id="tf-avg">0ms</div><div class="mn-l">Ort. Yanıt</div></div>
+      </div>
+      <div class="c"><div class="ct">ENDPOINT KULLANIMI (Top 15)</div><div id="tf-ep"></div></div>
+      <div class="c"><div class="ct">YANIT SÜRELERİ (Endpoint Bazlı)</div><div id="tf-perf"></div></div>
+      <div class="c"><div class="ct">EN YAVAŞ İSTEKLER</div><div id="tf-slow"></div></div>
+      <div class="c"><div class="ct">ÜLKE DAĞILIMI</div><div id="tf-co"></div></div>
+    </div>
+
+    <!-- ═══ P5: DERSLER ═══ -->
+    <div class="pnl" id="p5">
+      <div class="c"><div class="ct">KATEGORİLER</div><div id="ls-cats"></div></div>
+      <div class="c"><div class="ct">DERSLER <span id="ls-cnt" style="color:#c084fc;font-size:8px"></span></div><div id="ls-list"></div></div>
+    </div>
+
+    <!-- ═══ P6: MALİYET ═══ -->
+    <div class="pnl" id="p6">
+      <div class="g2">
+        <div class="mn fire"><div class="mn-v" id="co-total">$0</div><div class="mn-l">Toplam Harcama</div></div>
+        <div class="mn grn"><div class="mn-v" id="co-today">$0</div><div class="mn-l">Bugün</div></div>
+      </div>
+      <div class="c"><div class="ct">API BAZLI MALİYET</div><div id="co-byapi"></div></div>
+      <div class="c"><div class="ct">GÜNLÜK MALİYET GRAFİĞİ (Son 30 Gün)</div><div id="co-daily" style="display:flex;align-items:flex-end;gap:2px;height:60px"></div></div>
+      <div class="c"><div class="ct">SON İŞLEMLER</div><div id="co-history"></div></div>
+      <div class="c"><div class="ct">TAHMİNİ AYLIK</div>
+        <div class="r"><span class="rl">Mevcut hız</span><span class="rv o" id="co-est">—</span></div>
+        <div class="r"><span class="rl">Bütçe limiti</span><span class="rv" id="co-limit">$50</span></div>
+        <div class="bar"><div class="bar-f o" id="co-bar"></div></div>
+      </div>
+    </div>
+
+    <!-- ═══ P7: KULLANICI ═══ -->
+    <div class="pnl" id="p7">
+      <div class="g3">
+        <div class="mn fire"><div class="mn-v" id="us-total">0</div><div class="mn-l">Toplam</div></div>
+        <div class="mn grn"><div class="mn-v" id="us-active">0</div><div class="mn-l">Aktif</div></div>
+        <div class="mn blu"><div class="mn-v" id="us-today">0</div><div class="mn-l">Bugün</div></div>
+      </div>
+      <div class="c"><div class="ct">PLAN DAĞILIMI</div><div id="us-plans"></div></div>
+      <div class="c"><div class="ct">KOTA KULLANIMLARI</div><div id="us-quota"></div></div>
+      <div class="c"><div class="ct">SON KAYITLAR</div><div id="us-recent"></div></div>
+    </div>
+
+    <!-- ═══ P8: GÜVENLİK ═══ -->
+    <div class="pnl" id="p8">
+      <div class="g4">
+        <div class="mn red"><div class="mn-v" id="se-fail">0</div><div class="mn-l">Başarısız Giriş</div></div>
+        <div class="mn fire"><div class="mn-v" id="se-rate">0</div><div class="mn-l">Rate Limit</div></div>
+        <div class="mn"><div class="mn-v" id="se-ban">0</div><div class="mn-l">Yasaklı IP</div></div>
+        <div class="mn red"><div class="mn-v" id="se-susp">0</div><div class="mn-l">Şüpheli</div></div>
+      </div>
+      <div class="c"><div class="ct">ALARMLAR</div><div id="se-alarms"><div class="rl">Yükleniyor...</div></div></div>
+      <div class="c"><div class="ct">YASAKLI IP'LER</div><div id="se-ips"><div class="rl">Yükleniyor...</div></div></div>
+      <div class="c"><div class="ct">CİHAZLAR</div><div id="se-devices"><div class="rl">Yükleniyor...</div></div></div>
+      <div class="c"><div class="ct">DENETİM GÜNLÜĞÜ (Son 20)</div><div id="se-audit"><div class="rl">Yükleniyor...</div></div></div>
+    </div>
+
+    <!-- ═══ P9: PIPELINE ═══ -->
+    <div class="pnl" id="p9">
+      <div class="g4">
+        <div class="mn fire"><div class="mn-v" id="pi-total">0</div><div class="mn-l">Toplam İş</div></div>
+        <div class="mn blu"><div class="mn-v" id="pi-queue">0</div><div class="mn-l">Kuyrukta</div></div>
+        <div class="mn grn"><div class="mn-v" id="pi-proc">0</div><div class="mn-l">İşleniyor</div></div>
+        <div class="mn red"><div class="mn-v" id="pi-fail">0</div><div class="mn-l">Başarısız</div></div>
+      </div>
+      <div class="c"><div class="ct">BAŞARI ORANI</div>
+        <div class="r"><span class="rl">Tamamlanan</span><span class="rv g" id="pi-done">0</span></div>
+        <div class="r"><span class="rl">Başarısız</span><span class="rv r" id="pi-failed">0</span></div>
+        <div class="r"><span class="rl">Oran</span><span class="rv" id="pi-rate">—</span></div>
+        <div class="bar"><div class="bar-f g" id="pi-bar"></div></div>
+      </div>
+      <div class="c"><div class="ct">AKTİF İŞLER</div><div id="pi-jobs"><div class="rl">İş yok</div></div></div>
+      <div class="c"><div class="ct">SON TAMAMLANAN</div><div id="pi-recent"></div></div>
+    </div>
+
+    <!-- ═══ P10: LOG ═══ -->
+    <div class="pnl" id="p10">
+      <div style="display:flex;gap:4px;margin-bottom:4px;flex-shrink:0">
+        <button class="btn grn" onclick="refreshLogs()" style="flex:1;padding:5px;font-size:8px">🔄 Yenile</button>
+        <button class="btn" onclick="clearLogs()" style="flex:1;padding:5px;font-size:8px">🗑 Temizle</button>
+        <button class="btn fire" onclick="toggleAutoLog()" id="log-auto-btn" style="flex:1;padding:5px;font-size:8px">▶ Canlı</button>
+      </div>
+      <div class="c" style="flex:1;overflow-y:auto;max-height:calc(100vh - 160px)">
+        <div class="ct">CANLI LOG <span id="log-status" style="color:#4ade80;font-size:7px">●</span></div>
+        <div id="log-area" style="font-family:'Consolas',monospace;font-size:8px"></div>
+      </div>
+    </div>
+
+    <!-- ═══ P11: AYARLAR ═══ -->
+    <div class="pnl" id="p11">
+      <div class="c">
+        <div class="ct">API KEY DURUMU</div>
+        <div id="ay-keys"></div>
+      </div>
+      <div class="c">
+        <div class="ct">RATE LIMIT</div>
+        <div class="setting"><span class="setting-l">Pencere</span><span class="setting-v" id="ay-rlw">—</span></div>
+        <div class="setting"><span class="setting-l">Max İstek</span><span class="setting-v" id="ay-rlm">—</span></div>
+      </div>
+      <div class="c">
+        <div class="ct">EĞİTİM PARAMETRELERİ</div>
+        <div class="setting"><span class="setting-l">Max Bütçe</span><span class="setting-v">$20</span></div>
+        <div class="setting"><span class="setting-l">Model</span><span class="setting-v">Gemini Flash</span></div>
+      </div>
+      <div class="c">
+        <div class="ct">SUNUCU</div>
+        <div class="setting"><span class="setting-l">Ortam</span><span class="setting-v" id="ay-env">—</span></div>
+        <div class="setting"><span class="setting-l">Min Instance</span><span class="setting-v">0</span></div>
+        <div class="setting"><span class="setting-l">Max Instance</span><span class="setting-v">3</span></div>
+        <div class="setting"><span class="setting-l">Memory</span><span class="setting-v">2Gi</span></div>
+        <div class="setting"><span class="setting-l">Region</span><span class="setting-v">europe-west1</span></div>
+      </div>
+      <div class="c">
+        <div class="ct">HIZLI İŞLEMLER</div>
+        <div class="g2" style="margin-top:4px">
+          <button class="btn" onclick="cmd('/api/fenix/optimize')">⚡ Optimize Et</button>
+          <button class="btn fire" onclick="reloadDashboard()">🔄 Dashboard Yenile</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ P12: KOMUT ═══ -->
+    <div class="pnl" id="p12">
+      <div id="cmd-panel">
+        <div class="c"><div class="ct">ÜRETİM KOMUTLARI</div>
+          <div class="g2" style="margin-top:4px">
+            <button class="btn fire" onclick="cmd('/api/fenix/produce')">🔥 Üretim</button>
+            <button class="btn" onclick="cmd('/api/fenix/optimize')">⚡ Optimize</button>
+            <button class="btn" onclick="cmd('/api/fenix/produce/test')">🧪 Test</button>
+            <button class="btn" onclick="cmd('/api/fenix/360')">🌐 360°</button>
+          </div>
+        </div>
+        <div class="c"><div class="ct">EĞİTİM KOMUTLARI</div>
+          <div class="g2" style="margin-top:4px">
+            <button class="btn fire" onclick="cmd('/api/fenix/train')">🎓 Eğitim</button>
+            <button class="btn dng" onclick="cmd('/api/fenix/train/stop')">⏹ Eğitim Dur</button>
+            <button class="btn" onclick="cmd('/api/fenix/shadow')">👥 Shadow</button>
+            <button class="btn dng" onclick="cmd('/api/fenix/rollback')">↩️ Geri Al</button>
+          </div>
+        </div>
+        <div class="c"><div class="ct">GÜVENLİK KOMUTLARI</div>
+          <div class="g2" style="margin-top:4px">
+            <button class="btn" onclick="cmd('/api/code/review')">🔍 Kod İncele</button>
+            <button class="btn dng" onclick="if(confirm('Emin misin?'))cmd('/api/fenix/rollback')">⚠️ Acil Geri Al</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- CHAT TOGGLE BUTTON -->
+<button class="chat-toggle" id="chatBtn" onclick="toggleChat()">💬</button>
+
+<!-- CHAT OVERLAY -->
+<div class="chat-overlay" id="chatOv">
+  <div class="chat-hdr">
+    <div class="live"></div>
+    <div class="chat-hdr-t">FENIX</div>
+    <button class="chat-close" onclick="toggleChat()">✕</button>
+  </div>
+  <div class="msgs" id="msgs">
+    <div class="m a"><div class="f">FENIX</div>Hoş geldin Usta! Seninle konuşmaya hazırım. Ne istersen sor — kod, analiz, strateji, araştırma. 🔥</div>
+  </div>
+  <div class="typing" id="typ">Fenix düşünüyor...</div>
+  <div class="qi">
+    <div class="qi-b" onclick="qs('Durum raporu')">📊<span>DURUM</span></div>
+    <div class="qi-b" onclick="qs('Kaç eğitim yaptın')">🎓<span>EĞİTİM</span></div>
+    <div class="qi-b" onclick="qs('Becerilerin ne')">🧠<span>SKİLL</span></div>
+    <div class="qi-b" onclick="qs('Hataları göster')">🚨<span>HATA</span></div>
+    <div class="qi-b" onclick="qs('Maliyetleri analiz et')">💰<span>MALİYET</span></div>
+    <div class="qi-b" onclick="qs('Rakipleri araştır')">🌐<span>WEB</span></div>
+    <div class="qi-b" onclick="qs('Sen kimsin')">🔥<span>FENİX</span></div>
+  </div>
+  <div class="inp">
+    <input type="text" id="ti" placeholder="Fenix'e yaz..." onkeydown="if(event.key==='Enter')send()">
+    <button onclick="send()">➤</button>
+  </div>
+</div>
+
+<div class="toast" id="tst"></div>
+
+<script>
+var CL=location.origin,chatOpen=false,autoLog=false,logInterval=null;
+
+// AUTH HEADERS
+function authHeaders(){var h={'Content-Type':'application/json'};var tk=localStorage.getItem('fenix_token')||'';if(tk)h['Authorization']='Bearer '+tk;return h}
+
+// TABS
+function sw(el,id){
+  el.parentElement.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on')});
+  el.classList.add('on');
+  document.querySelectorAll('.pnl').forEach(function(p){p.classList.remove('on')});
+  document.getElementById(id).classList.add('on');
+  if(id==='p5'&&!window._ll){window._ll=1;loadLessons()}
+  if(id==='p7'&&!window._ul){window._ul=1;loadUsers()}
+  if(id==='p8'&&!window._sl){window._sl=1;loadSecurity()}
+  if(id==='p10'&&!window._lgl){window._lgl=1;refreshLogs()}
+}
+
+// CHAT
+function toggleChat(){chatOpen=!chatOpen;document.getElementById('chatOv').classList.toggle('open',chatOpen);document.getElementById('chatBtn').classList.toggle('open',chatOpen);document.getElementById('chatBtn').textContent=chatOpen?'✕':'💬';if(chatOpen)document.getElementById('ti').focus()}
+function toast(m){var e=document.getElementById('tst');e.textContent=m;e.classList.add('on');setTimeout(function(){e.classList.remove('on')},1800)}
+function addMsg(t,txt,web){var d=document.createElement('div');d.className='m '+(t==='u'?'u':'a');d.innerHTML='<div class="f">'+(t==='u'?'SEN':'FENIX')+'</div>'+txt+(web?'<div class="web">🌐 İnternetten öğrenildi</div>':'');document.getElementById('msgs').appendChild(d);document.getElementById('msgs').scrollTop=99999}
+function qs(t){document.getElementById('ti').value=t;send()}
+
+async function send(){
+  var i=document.getElementById('ti'),t=i.value.trim();if(!t)return;i.value='';
+  addMsg('u',t);document.getElementById('typ').classList.add('on');
+  try{
+    var r=await fetch(CL+'/api/fenix/chat',{method:'POST',headers:authHeaders(),credentials:'include',body:JSON.stringify({text:t}),signal:AbortSignal.timeout(30000)});
+    var d=await r.json();document.getElementById('typ').classList.remove('on');
+    if(d.ok){var resp=(d.response||'').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');addMsg('a',resp,d.webLearned)}
+    else addMsg('a','❌ '+(d.error||'Hata'))
+  }catch(e){document.getElementById('typ').classList.remove('on');addMsg('a','❌ Bağlantı hatası')}
+}
+
+// API
+async function api(p){try{var r=await fetch(CL+p,{headers:authHeaders(),credentials:'include',signal:AbortSignal.timeout(8000)});if(!r.ok)throw 0;return await r.json()}catch(e){return null}}
+async function cmd(p){toast('Gönderiliyor...');try{var r=await fetch(CL+p,{method:'POST',headers:authHeaders(),credentials:'include',body:'{}',signal:AbortSignal.timeout(10000)});var d=await r.json();toast(d.ok?'✅ Tamam!':(d.error||'Hata'))}catch(e){toast('❌ Bağlantı hatası')}}
+
+function setApi(id,ok){var e=document.getElementById(id);if(!e)return;e.textContent=ok?'✅ Aktif':'❌ Yok';e.className='rv '+(ok?'g':'r')}
+function fmt$(v){return '$'+((v||0).toFixed(4))}
+function fmtMs(v){return Math.round(v||0)+'ms'}
+
+// ═══════════ LESSONS ═══════════
+async function loadLessons(cat){
+  var url='/api/fenix/lessons?limit=50';if(cat)url+='&category='+encodeURIComponent(cat);
+  var d=await api(url);
+  // Fallback: memory endpoint
+  if(!d||!d.ok){d=await api('/api/fenix/memory?limit=50'+(cat?'&category='+encodeURIComponent(cat):''))}
+  if(!d)return;
+  var lessons=d.lessons||[];
+  if(d.categories)document.getElementById('ls-cats').innerHTML=d.categories.map(function(c){return '<div class="r" style="cursor:pointer" onclick="loadLessons(\''+c.name+'\')"><span class="rl">📂 '+c.name+'</span><span class="rv">'+c.count+'</span></div>'}).join('')+'<div class="r" style="cursor:pointer" onclick="loadLessons()"><span class="rl" style="color:#a855f7">🔄 Tümü</span></div>';
+  document.getElementById('ls-cnt').textContent='('+lessons.length+')';
+  document.getElementById('ls-list').innerHTML=lessons.map(function(l){return '<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03)"><div style="font-size:7px;color:#a855f7">'+((l.timestamp||'').substring(0,10))+' · '+(l.category||'')+' · '+(l.actor||'')+'</div><div style="font-size:9px;color:rgba(255,255,255,.45)"><b style="color:#fb923c">Bug:</b> '+(l.bug||'')+'</div><div style="font-size:8px;color:rgba(255,255,255,.35)"><b style="color:#4ade80">Fix:</b> '+(l.fix||'')+'</div></div>'}).join('')||'<div class="rl">Henüz ders yok</div>';
+}
+
+// ═══════════ USERS ═══════════
+async function loadUsers(){
+  var d=await api('/api/customer/stats');
+  var list=await api('/api/customer/list');
+  if(d){
+    document.getElementById('us-total').textContent=d.total||0;
+    document.getElementById('us-active').textContent=d.active||d.total||0;
+    document.getElementById('us-today').textContent=d.today||0;
+    if(d.byPlan){
+      document.getElementById('us-plans').innerHTML=Object.entries(d.byPlan).map(function(e){return '<div class="r"><span class="rl">'+e[0]+'</span><span class="rv">'+e[1]+'</span></div>'}).join('');
+    }
+  }
+  if(list&&list.customers){
+    document.getElementById('us-quota').innerHTML=list.customers.slice(0,10).map(function(c){
+      var pct=c.quotaLimit?Math.round((c.quotaUsed||0)/(c.quotaLimit)*100):0;
+      return '<div class="r"><span class="rl">'+(c.name||c.customerId||'?')+'</span><span class="rv '+(pct>80?'r':pct>50?'o':'g')+'">'+(c.quotaUsed||0)+'/'+(c.quotaLimit||'∞')+'</span></div>'
+    }).join('')||'<div class="rl">Kullanıcı yok</div>';
+    document.getElementById('us-recent').innerHTML=list.customers.slice(-5).reverse().map(function(c){
+      return '<div class="r"><span class="rl">'+(c.name||c.customerId||'?')+'</span><span class="rv b">'+(c.plan||'ücretsiz')+'</span></div>'
+    }).join('');
+  }
+}
+
+// ═══════════ SECURITY ═══════════
+async function loadSecurity(){
+  var alarms=await api('/api/security/alarms');
+  var banned=await api('/api/security/banned-ips');
+  var devices=await api('/api/security/devices');
+  var audit=await api('/api/security/audit-log?limit=20');
+
+  if(alarms&&alarms.alarms){
+    document.getElementById('se-alarms').innerHTML=alarms.alarms.length?alarms.alarms.slice(0,10).map(function(a){
+      return '<div class="r"><span class="rl" style="color:'+(a.severity==='critical'?'#f87171':'#fbbf24')+'">'+(a.type||'?')+'</span><span class="rv r">'+(a.message||'').substring(0,30)+'</span></div>'
+    }).join(''):'<div class="rl" style="color:#4ade80">Alarm yok ✅</div>';
+  }
+  if(banned){
+    var ips=banned.ips||banned.bannedIps||[];
+    document.getElementById('se-ban').textContent=ips.length;
+    document.getElementById('se-ips').innerHTML=ips.length?ips.slice(0,10).map(function(ip){
+      return '<div class="r"><span class="rl">🚫 '+(typeof ip==='string'?ip:ip.ip||'?')+'</span><span class="rv r">'+(ip.reason||'yasaklı')+'</span></div>'
+    }).join(''):'<div class="rl" style="color:#4ade80">Yasaklı IP yok ✅</div>';
+  }
+  if(devices&&devices.devices){
+    document.getElementById('se-devices').innerHTML=devices.devices.length?devices.devices.map(function(d){
+      return '<div class="r"><span class="rl">'+(d.name||d.deviceId||'?')+'</span><span class="rv '+(d.verified?'g':'o')+'">'+(d.verified?'✅ Onaylı':'⏳ Bekliyor')+'</span></div>'
+    }).join(''):'<div class="rl">Kayıtlı cihaz yok</div>';
+  }
+  if(audit&&audit.logs){
+    document.getElementById('se-audit').innerHTML=audit.logs.slice(0,20).map(function(l){
+      var col=l.statusCode>=400?'err':l.statusCode>=200?'ok':'';
+      return '<div class="log-item '+col+'">'+(l.timestamp||'').substring(11,19)+' '+(l.method||'')+' '+(l.path||'').substring(0,25)+' → '+(l.statusCode||'?')+' '+(l.action||'')+'</div>'
+    }).join('')||'<div class="rl">Log yok</div>';
+  }
+}
+
+// ═══════════ LOGS ═══════════
+async function refreshLogs(){
+  var d=await api('/api/terminal/lines');
+  if(d&&d.lines){
+    var area=document.getElementById('log-area');
+    area.innerHTML=d.lines.map(function(l){
+      var cls=l.match(/error|ERR|fail/i)?'err':l.match(/warn|WARN/i)?'warn':l.match(/ok|success|done/i)?'ok':'';
+      return '<div class="log-item '+cls+'">'+l.replace(/</g,'&lt;')+'</div>'
+    }).join('');
+    area.scrollTop=area.scrollHeight;
+  }
+}
+function clearLogs(){document.getElementById('log-area').innerHTML='<div class="rl">Temizlendi</div>'}
+function toggleAutoLog(){
+  autoLog=!autoLog;
+  document.getElementById('log-auto-btn').textContent=autoLog?'⏸ Durdur':'▶ Canlı';
+  document.getElementById('log-status').style.color=autoLog?'#4ade80':'#f87171';
+  if(autoLog){logInterval=setInterval(refreshLogs,3000)}else{clearInterval(logInterval)}
+}
+
+// ═══════════ DASHBOARD ═══════════
+async function refresh(){
+  var d=await api('/api/fenix/dashboard');
+  if(!d||!d.ok){
+    document.getElementById('ds').className='dot off';
+    document.getElementById('v-hp').textContent='KAPALI';
+    document.getElementById('v-hp').className='mn-v';document.getElementById('v-hp').style.color='#f87171';
+    return;
+  }
+
+  // STATUS DOTS
+  document.getElementById('ds').className='dot on';
+  document.getElementById('db').className='dot on';
+
+  var h=d.health||{},t=d.training||{},s=d.skills||{},sk=s.skills||{},keys=Object.keys(sk);
+  var ma=0,jo=0,ap=0;keys.forEach(function(k){var l=(sk[k]||{}).level||'apprentice';if(l==='master')ma++;else if(l==='journeyman')jo++;else ap++});
+
+  // ═══ GENEL ═══
+  document.getElementById('v-hp').textContent='AKTİF';document.getElementById('v-hp').style.color='#4ade80';
+  document.getElementById('v-cn').textContent=h.connections||0;
+  document.getElementById('v-rq').textContent=h.totalRequests||0;
+  document.getElementById('v-avg').textContent=fmtMs((d.performance||{}).avgMs);
+  document.getElementById('v-les').textContent=t.totalLessons||0;
+  document.getElementById('v-sk').textContent=keys.length;
+  document.getElementById('v-errtot').textContent=(h.errors5xx||0)+(h.errors4xx||0);
+  var up=h.uptime||0,um=Math.floor(up/60),uh=Math.floor(um/60),ud=Math.floor(uh/24);
+  document.getElementById('v-up').textContent=(ud>0?ud+'g ':'')+(uh%24)+'s '+(um%60)+'d';
+  document.getElementById('v-pk').textContent=h.peak||0;
+  document.getElementById('v-err').textContent=(h.errors5xx||0)+'/'+(h.errors4xx||0);
+  if(h.memory){
+    document.getElementById('v-ram').textContent=h.memory.heap+'MB / '+h.memory.heapTotal+'MB';
+    document.getElementById('v-rss').textContent=h.memory.rss+'MB';
+    document.getElementById('hdr-mem').textContent=h.memory.heap+'MB';
+  }
+  if(h.nodeVersion)document.getElementById('v-node').textContent=h.nodeVersion;
+  document.getElementById('hdr-rps').textContent=(h.totalRequests||0)+' req';
+
+  // Version
+  var ver=await api('/api/version');if(ver)document.getElementById('v-ver').textContent=ver.version||'—';
+
+  // API durumları
+  var apis=d.apis||{};
+  if(!apis.gemini&&ver&&ver.services){apis=ver.services}
+  setApi('v-gem',apis.gemini);setApi('v-cla',apis.claude);setApi('v-tri',apis.tripo);
+  setApi('v-el',apis.elevenlabs);setApi('v-fb',apis.firebase||apis.firestore);
+  setApi('v-fal',apis.fal);setApi('v-luma',apis.luma);setApi('v-dg',apis.deepgram);
+
+  // Circuit breakers
+  var cbs=d.circuits||[];
+  document.getElementById('v-cb').innerHTML=cbs.length?cbs.map(function(c){
+    var col=c.state==='CLOSED'?'g':c.state==='OPEN'?'r':'o';
+    return '<div class="r"><span class="rl">'+c.name+'</span><span class="rv '+col+'">'+c.state+' ('+c.failures+')</span></div>'
+  }).join(''):'<div class="rl" style="color:#4ade80">Tüm devreler kapalı ✅</div>';
+
+  // Saatlik grafik
+  if(h.byHour){var mx=Math.max.apply(null,h.byHour)||1;document.getElementById('v-hrs').innerHTML=h.byHour.map(function(v,i){return '<div title="'+i+':00 → '+v+'" style="flex:1;background:'+(i===new Date().getHours()?'#f97316':'#7c3aed')+';height:'+Math.max(2,(v/mx)*46)+'px;border-radius:1px;opacity:'+(v>0?.8:.1)+';cursor:pointer"></div>'}).join('')}
+
+  // ═══ BEYİN ═══
+  document.getElementById('b-sh').textContent=s.totalRecords||0;
+  document.getElementById('b-pr').textContent=(d.brain?.optimization?.metrics?.requestsTotal)||0;
+  document.getElementById('b-opt').textContent=(d.brain?.optimization?.metrics?.lastOptimization)?'✓':'—';
+
+  // Routing örnekleri
+  if(d.brain&&d.brain.orchestration&&d.brain.orchestration.routingExample){
+    var rx=d.brain.orchestration.routingExample;
+    document.getElementById('b-rs').textContent=(rx.simple||{}).provider||'—';
+    document.getElementById('b-rn').textContent=(rx.normal||{}).provider||'—';
+    document.getElementById('b-rc').textContent=(rx.critical||{}).provider||'—';
+  }
+
+  // Beceriler
+  document.getElementById('b-sk').innerHTML=keys.length?keys.slice(0,30).map(function(k){var l=(sk[k]||{}).level||'';var sc=(sk[k]||{}).score||0;return '<span class="sk '+(l==='master'?'ma':l==='journeyman'?'jo':'')+'" title="Score: '+sc+'">'+k.replace('eng_','').substring(0,18)+' ('+Math.round(sc)+')</span>'}).join(''):'<div class="rl">Henüz beceri yok</div>';
+
+  // Aktör dağılımı
+  if(s.actorBreakdown){
+    document.getElementById('b-actors').innerHTML=Object.entries(s.actorBreakdown).map(function(e){return '<div class="r"><span class="rl">'+e[0]+'</span><span class="rv b">'+e[1]+'</span></div>'}).join('')||'<div class="rl">—</div>';
+  }
+
+  // Son eylemler
+  if(s.recentActions){
+    document.getElementById('b-recent').innerHTML=s.recentActions.slice(-8).reverse().map(function(a){
+      return '<div class="r"><span class="rl" style="font-size:8px">'+((a.timestamp||'').substring(11,19)||'?')+' '+(a.actor||'?')+'</span><span class="rv" style="font-size:8px">'+(a.taskType||'?')+' → '+(a.outcome||'?')+'</span></div>'
+    }).join('')||'<div class="rl">—</div>';
+  }
+
+  // Hafıza
+  try{var mem=await api('/api/fenix/memory');if(mem&&mem.lessons&&mem.lessons.length>0){document.getElementById('b-mem').innerHTML=mem.lessons.slice(0,10).map(function(l){return '<div class="r"><span class="rl" style="max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(l.category||'?')+': '+(l.bug||'').substring(0,25)+'</span><span class="rv g" style="font-size:8px;max-width:50%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right">'+(l.fix||'').substring(0,35)+'</span></div>'}).join('')}else{document.getElementById('b-mem').innerHTML='<div class="rl">Henüz ders yok</div>'}}catch(e){}
+
+  // Self-heal
+  var err=d.errors||{};
+  document.getElementById('b-herr').textContent=err.totalErrors||0;
+  document.getElementById('b-h1h').textContent=err.lastHour||0;
+  document.getElementById('b-heal').textContent=err.selfHealActions||0;
+  if(err.byService){
+    document.getElementById('b-errsvc').innerHTML=Object.entries(err.byService).map(function(e){return '<div class="r"><span class="rl">'+e[0]+'</span><span class="rv r">'+e[1]+' hata</span></div>'}).join('');
+  }
+
+  // ═══ EĞİTİM ═══
+  document.getElementById('t-cnt').textContent=t.totalLessons||0;
+  document.getElementById('t-lvl').textContent=t.level||'—';
+  document.getElementById('t-rate').textContent=(t.successRate||0)+'%';
+  document.getElementById('t-st').textContent=t.running?'🟢 Aktif':'⏸ Boşta';
+  document.getElementById('t-phase').textContent=t.phase||'—';
+  document.getElementById('t-bud').textContent='$'+(t.budget||0);
+  document.getElementById('t-spent').textContent='$'+(t.totalCost||0).toFixed(2);
+  var pct=t.progress||0;document.getElementById('t-pct').textContent=pct+'%';document.getElementById('t-bar').style.width=pct+'%';
+  document.getElementById('t-last').textContent=t.lastTraining?new Date(t.lastTraining).toLocaleString('tr-TR'):'—';
+  document.getElementById('t-ma').textContent=ma;document.getElementById('t-jo').textContent=jo;document.getElementById('t-ap').textContent=ap;
+  try{var fb=await api('/api/feedback/stats');if(fb){document.getElementById('f-lk').textContent=fb.liked||0;document.getElementById('f-dk').textContent=fb.disliked||0}}catch(e){}
+
+  // ═══ TRAFİK ═══
+  document.getElementById('tf-t').textContent=h.totalRequests||0;
+  document.getElementById('tf-a').textContent=h.connections||0;
+  document.getElementById('tf-avg').textContent=fmtMs((d.performance||{}).avgMs);
+  if(h.byEndpoint){
+    var se=Object.entries(h.byEndpoint).sort(function(a,b){return b[1]-a[1]});
+    document.getElementById('tf-ep').innerHTML=se.slice(0,15).map(function(e){return '<div class="r"><span class="rl" style="font-size:8px">'+e[0]+'</span><span class="rv">'+e[1]+'</span></div>'}).join('')||'<div class="rl">—</div>';
+  }
+  // Endpoint performance
+  var perf=d.performance||{};
+  if(perf.byEndpoint){
+    var pe=Object.entries(perf.byEndpoint).sort(function(a,b){return (b[1].avg||0)-(a[1].avg||0)});
+    document.getElementById('tf-perf').innerHTML=pe.slice(0,10).map(function(e){
+      var col=e[1].avg>1000?'r':e[1].avg>500?'o':'g';
+      return '<div class="r"><span class="rl" style="font-size:8px">'+e[0]+'</span><span class="rv '+col+'">'+e[1].avg+'ms ('+e[1].count+'x)</span></div>'
+    }).join('')||'<div class="rl">—</div>';
+  }
+  // En yavaş
+  if(perf.slowest){
+    document.getElementById('tf-slow').innerHTML=perf.slowest.slice(-5).reverse().map(function(s){
+      return '<div class="r"><span class="rl" style="font-size:8px">'+s.ep+'</span><span class="rv r">'+s.ms+'ms</span></div>'
+    }).join('')||'<div class="rl" style="color:#4ade80">Yavaş istek yok ✅</div>';
+  }
+  if(h.byCountry){
+    var co=Object.entries(h.byCountry).sort(function(a,b){return b[1]-a[1]});
+    document.getElementById('tf-co').innerHTML=co.slice(0,8).map(function(c){return '<div class="r"><span class="rl">'+c[0]+'</span><span class="rv b">'+c[1]+'</span></div>'}).join('')||'<div class="rl">—</div>';
+  }
+
+  // ═══ MALİYET ═══
+  var costs=d.costs||{};
+  document.getElementById('co-total').textContent='$'+(costs.total||0).toFixed(2);
+  var today=new Date().toISOString().slice(0,10);
+  var todayCost=(costs.daily||[]).find(function(d){return d.date===today});
+  document.getElementById('co-today').textContent='$'+((todayCost?todayCost.total:0).toFixed(2));
+  // API bazlı
+  if(costs.byApi){
+    document.getElementById('co-byapi').innerHTML=Object.entries(costs.byApi).sort(function(a,b){return b[1]-a[1]}).map(function(e){
+      return '<div class="r"><span class="rl">'+e[0]+'</span><span class="rv o">$'+e[1].toFixed(4)+'</span></div>'
+    }).join('')||'<div class="rl">Henüz harcama yok</div>';
+  }
+  // Günlük grafik
+  if(costs.daily&&costs.daily.length){
+    var dmx=Math.max.apply(null,costs.daily.map(function(d){return d.total}))||1;
+    document.getElementById('co-daily').innerHTML=costs.daily.map(function(d){
+      return '<div title="'+d.date+': $'+d.total.toFixed(2)+'" style="flex:1;background:#f97316;height:'+Math.max(2,(d.total/dmx)*55)+'px;border-radius:1px;opacity:.7;cursor:pointer"></div>'
+    }).join('');
+  }
+  // Son işlemler
+  if(costs.history){
+    document.getElementById('co-history').innerHTML=costs.history.slice(-10).reverse().map(function(h){
+      return '<div class="r"><span class="rl" style="font-size:8px">'+h.api+' — '+(h.details||'').substring(0,20)+'</span><span class="rv o">$'+h.cost.toFixed(4)+'</span></div>'
+    }).join('')||'<div class="rl">İşlem yok</div>';
+  }
+  // Tahmini aylık
+  var dailyAvg=costs.total/Math.max(1,(costs.daily||[]).length);
+  var estMonthly=dailyAvg*30;
+  document.getElementById('co-est').textContent='$'+estMonthly.toFixed(2)+'/ay';
+  var budgetLimit=50;
+  document.getElementById('co-bar').style.width=Math.min(100,Math.round((estMonthly/budgetLimit)*100))+'%';
+
+  // ═══ GÜVENLİK ═══
+  var sec=d.security||{};
+  document.getElementById('se-fail').textContent=sec.failedLogins||0;
+  document.getElementById('se-rate').textContent=sec.rateLimitHits||0;
+  document.getElementById('se-susp').textContent=sec.suspicious||0;
+
+  // ═══ PIPELINE ═══
+  var q=d.queue||{};
+  document.getElementById('pi-total').textContent=q.total||0;
+  document.getElementById('pi-queue').textContent=q.queued||0;
+  document.getElementById('pi-proc').textContent=q.processing||0;
+  document.getElementById('pi-fail').textContent=q.failed||0;
+  document.getElementById('pi-done').textContent=q.done||0;
+  document.getElementById('pi-failed').textContent=q.failed||0;
+  var piTotal=(q.done||0)+(q.failed||0);
+  var piRate=piTotal?Math.round(((q.done||0)/piTotal)*100):0;
+  document.getElementById('pi-rate').textContent=piRate+'%';
+  document.getElementById('pi-bar').style.width=piRate+'%';
+  // Aktif işler
+  var jobs=q.jobs||[];
+  var active=jobs.filter(function(j){return j.status==='processing'||j.status==='queued'});
+  document.getElementById('pi-jobs').innerHTML=active.length?active.map(function(j){
+    return '<div class="job"><div class="job-h"><span class="job-t">'+(j.type||j.kategori||'?')+'</span><span class="job-s '+j.status+'">'+j.status+'</span></div><div style="font-size:7px;color:rgba(255,255,255,.3);margin-top:2px">'+(j.customerId||'')+(j.cost?' — $'+j.cost:'')+'</div></div>'
+  }).join(''):'<div class="rl">Aktif iş yok</div>';
+  // Son tamamlanan
+  var completed=jobs.filter(function(j){return j.status==='done'||j.status==='failed'}).slice(-5).reverse();
+  document.getElementById('pi-recent').innerHTML=completed.length?completed.map(function(j){
+    return '<div class="job"><div class="job-h"><span class="job-t">'+(j.type||j.kategori||'?')+'</span><span class="job-s '+j.status+'">'+j.status+'</span></div><div style="font-size:7px;color:rgba(255,255,255,.3);margin-top:2px">'+(j.doneAt?new Date(j.doneAt).toLocaleString('tr-TR'):'')+'</div></div>'
+  }).join(''):'<div class="rl">—</div>';
+
+  // ═══ AYARLAR ═══
+  document.getElementById('ay-env').textContent=ver?(ver.name||'fenix-ai'):'—';
+  // API key durumları
+  var apiKeys=[
+    {name:'Gemini',has:apis.gemini},{name:'Claude',has:apis.claude},{name:'Tripo 3D',has:apis.tripo},
+    {name:'ElevenLabs',has:apis.elevenlabs},{name:'Firebase',has:apis.firebase||apis.firestore},
+    {name:'fal.ai',has:apis.fal},{name:'Luma',has:apis.luma},{name:'Deepgram',has:apis.deepgram}
+  ];
+  document.getElementById('ay-keys').innerHTML=apiKeys.map(function(k){
+    return '<div class="setting"><span class="setting-l">'+k.name+'</span><span class="setting-v" style="color:'+(k.has?'#4ade80':'#f87171')+'">'+(k.has?'✅ Aktif':'❌ Yok')+'</span></div>'
+  }).join('');
+}
+
+function reloadDashboard(){toast('Yenileniyor...');refresh().then(function(){toast('✅ Güncellendi')})}
+
+// SOCKET
+function initSocket(){
+  var s=document.createElement('script');s.src=CL+'/socket.io/socket.io.js';
+  s.onload=function(){
+    var sock=io(CL,{transports:['websocket','polling']});
+    sock.on('connect',function(){document.getElementById('dw').className='dot on'});
+    sock.on('disconnect',function(){document.getElementById('dw').className='dot off'});
+    // Canlı log
+    sock.on('terminal_output',function(data){
+      if(!autoLog)return;
+      var area=document.getElementById('log-area');
+      var txt=typeof data==='string'?data:data.text||'';
+      var cls=txt.match(/error|ERR|fail/i)?'err':txt.match(/warn|WARN/i)?'warn':'';
+      var div=document.createElement('div');div.className='log-item '+cls;div.textContent=txt;
+      area.appendChild(div);
+      if(area.children.length>300)area.removeChild(area.firstChild);
+      area.scrollTop=area.scrollHeight;
+    });
+    // Pipeline events
+    sock.on('job_completed',function(){refresh()});
+    sock.on('job_failed',function(){refresh()});
+  };
+  s.onerror=function(){document.getElementById('dw').className='dot off'};
+  document.head.appendChild(s);
+}
+
+// INIT
+document.getElementById('ds').className='dot warn';document.getElementById('db').className='dot warn';document.getElementById('dw').className='dot off';
+initSocket();refresh();setInterval(refresh,12000);
+</script>
+</body>
+</html>

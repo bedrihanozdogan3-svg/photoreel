@@ -1,0 +1,18 @@
+{
+  "name": "Fenix",
+  "short_name": "Fenix",
+  "description": "Fenix AI Admin Kontrol Paneli",
+  "start_url": "/fenix-brain.html",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#060311",
+  "theme_color": "#0a0418",
+  "icons": [
+    {
+      "src": "/fenix-brain-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

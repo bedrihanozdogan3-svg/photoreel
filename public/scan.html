@@ -188,8 +188,73 @@ body{background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Se
     <div style="font-size:11px;color:#888">⏳ Tahmini süre: <b style="color:#F97316">3 — 5 dakika</b></div>
   </div>
 
-  <button onclick="showScreen('s-camera');startCamera()" style="width:100%;height:52px;border-radius:12px;background:linear-gradient(135deg,#F97316,#ea580c);border:none;color:#fff;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:.5px">TARAMAYA BAŞLA 📸</button>
+  <button onclick="showScreen('s-identify');startCamera()" style="width:100%;height:52px;border-radius:12px;background:linear-gradient(135deg,#F97316,#ea580c);border:none;color:#fff;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:.5px">ÜRÜNÜ TANIT 📸</button>
 </div>
+
+<!-- 1.7 ÜRÜN TANITMA EKRANI -->
+<div id="s-identify" class="screen">
+  <video id="identify-video" autoplay playsinline muted style="width:100%;height:100%;object-fit:cover;position:absolute;top:0;left:0"></video>
+  <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:10">
+    <!-- Hedef çerçeve -->
+    <div id="id-frame" style="width:70vw;height:50vh;border:2px dashed rgba(249,115,22,.6);border-radius:16px;position:relative;transition:border-color .3s">
+      <div style="position:absolute;bottom:-32px;left:50%;transform:translateX(-50%);font-size:12px;color:#F97316;text-align:center;white-space:nowrap" id="id-hint">Ürünü çerçevenin içine al ve TANIT'a bas</div>
+    </div>
+
+    <!-- Alt butonlar -->
+    <div style="position:fixed;bottom:0;left:0;right:0;padding:20px;display:flex;justify-content:center;align-items:center;gap:16px;z-index:20">
+      <button onclick="stopIdentify()" style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:18px;cursor:pointer">✕</button>
+      <button id="id-capture-btn" onclick="identifyProduct()" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#F97316,#ea580c);border:3px solid #fff;color:#fff;font-size:14px;font-weight:900;cursor:pointer;letter-spacing:1px">TANIT</button>
+      <button onclick="switchCamera()" style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.15);border:none;color:#fff;font-size:18px;cursor:pointer">↻</button>
+    </div>
+  </div>
+
+  <!-- Analiz overlay -->
+  <div id="id-analyzing" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.85);z-index:30;flex-direction:column;align-items:center;justify-content:center">
+    <div style="width:60px;height:60px;border:3px solid rgba(249,115,22,.3);border-top-color:#F97316;border-radius:50%;animation:spin 1s linear infinite"></div>
+    <div style="font-size:14px;color:#F97316;margin-top:16px;font-weight:700">Gemini ürünü analiz ediyor...</div>
+    <div style="font-size:11px;color:#888;margin-top:4px">Şekil, boyut, malzeme, açı planı hesaplanıyor</div>
+  </div>
+
+  <!-- Sonuç overlay -->
+  <div id="id-result" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.92);z-index:30;overflow-y:auto;padding:24px">
+    <div style="font-size:20px;font-weight:900;color:#22C55E;text-align:center;margin-bottom:4px">✓ ÜRÜN TANINDI</div>
+    <div id="id-product-name" style="font-size:16px;font-weight:800;color:#F97316;text-align:center;margin-bottom:16px"></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+      <div style="background:#1a1a2a;border-radius:10px;padding:10px;border:1px solid rgba(249,115,22,.2)">
+        <div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px">Tip</div>
+        <div id="id-type" style="font-size:13px;color:#F97316;font-weight:700;margin-top:2px"></div>
+      </div>
+      <div style="background:#1a1a2a;border-radius:10px;padding:10px;border:1px solid rgba(249,115,22,.2)">
+        <div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px">Malzeme</div>
+        <div id="id-material" style="font-size:13px;color:#F97316;font-weight:700;margin-top:2px"></div>
+      </div>
+      <div style="background:#1a1a2a;border-radius:10px;padding:10px;border:1px solid rgba(249,115,22,.2)">
+        <div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px">Tahmini Boyut</div>
+        <div id="id-size" style="font-size:13px;color:#F97316;font-weight:700;margin-top:2px"></div>
+      </div>
+      <div style="background:#1a1a2a;border-radius:10px;padding:10px;border:1px solid rgba(249,115,22,.2)">
+        <div style="font-size:9px;color:#888;text-transform:uppercase;letter-spacing:1px">Zorluk</div>
+        <div id="id-difficulty" style="font-size:13px;font-weight:700;margin-top:2px"></div>
+      </div>
+    </div>
+
+    <div style="background:#0a1a0a;border:1px solid rgba(34,197,94,.2);border-radius:10px;padding:12px;margin-bottom:16px">
+      <div style="font-size:11px;color:#22C55E;font-weight:700;margin-bottom:8px">📋 TARAMA PLANI</div>
+      <div id="id-plan-levels" style="font-size:12px;color:#ccc;line-height:1.8"></div>
+      <div style="margin-top:8px;font-size:13px;color:#fff;font-weight:700">Toplam: <span id="id-total-photos" style="color:#F97316"></span> fotoğraf</div>
+    </div>
+
+    <div id="id-warnings" style="display:none;background:#1a0a0a;border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:12px;margin-bottom:16px">
+      <div style="font-size:11px;color:#ef4444;font-weight:700;margin-bottom:4px">⚠️ DİKKAT</div>
+      <div id="id-warnings-text" style="font-size:12px;color:#fca5a5;line-height:1.6"></div>
+    </div>
+
+    <button onclick="startSmartScan()" style="width:100%;height:52px;border-radius:12px;background:linear-gradient(135deg,#22C55E,#16a34a);border:none;color:#fff;font-size:16px;font-weight:800;cursor:pointer;letter-spacing:.5px">TARAMAYA BAŞLA →</button>
+    <button onclick="retryIdentify()" style="width:100%;height:42px;border-radius:10px;background:transparent;border:1px solid rgba(249,115,22,.3);color:#F97316;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px">Tekrar Tanıt</button>
+  </div>
+</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
 
 <!-- 2. KAMERA EKRANI -->
 <div id="s-camera" class="screen">
@@ -286,12 +351,242 @@ let _facingMode = 'environment';
 let _scanId = null;
 let TARGET_PHOTOS = 45;
 
+// Akıllı tarama state
+let _productRef = null;   // Gemini'den gelen ürün bilgisi
+let _frameId = null;       // Backend referans ID
+let _scanPlan = null;      // Ürüne özel açı planı
+let _currentLevel = 0;     // Şu anki seviye (alt/orta/üst)
+let _levelPhotos = 0;      // Bu seviyede çekilen fotoğraf
+let _validationQueue = []; // Doğrulama kuyruğu
+let _skipGeminiValidation = false; // Gemini kota koruması
+
+// ═══════════════════════════════════════════
+//  TELEFON CPU — ÜCRETSİZ ÖN ELEME
+//  Bulanıklık, ışık, hareket, merkez kontrolü
+// ═══════════════════════════════════════════
+
+function clientSideValidate(canvas) {
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+
+  // Merkez bölgeyi al (çerçeve alanı)
+  const cx = Math.floor(w * 0.15);
+  const cy = Math.floor(h * 0.25);
+  const cw = Math.floor(w * 0.70);
+  const ch = Math.floor(h * 0.50);
+  const centerData = ctx.getImageData(cx, cy, cw, ch).data;
+
+  // 1. IŞIK KONTROLÜ — ortalama parlaklık
+  let totalBrightness = 0;
+  let pixelCount = 0;
+  for (let i = 0; i < centerData.length; i += 16) { // Her 4. piksel (hız için)
+    const r = centerData[i], g = centerData[i+1], b = centerData[i+2];
+    totalBrightness += (r * 0.299 + g * 0.587 + b * 0.114);
+    pixelCount++;
+  }
+  const avgBrightness = totalBrightness / pixelCount;
+  const lightOk = avgBrightness > 30 && avgBrightness < 240;
+
+  // 2. BULANIKLIK KONTROLÜ — Laplacian varyansı (kenar tespiti)
+  const grayData = [];
+  for (let i = 0; i < centerData.length; i += 4) {
+    grayData.push(centerData[i] * 0.299 + centerData[i+1] * 0.587 + centerData[i+2] * 0.114);
+  }
+  const grayW = cw;
+  let laplacianSum = 0;
+  let lapCount = 0;
+  for (let y = 1; y < Math.floor(ch) - 1; y += 3) {
+    for (let x = 1; x < grayW - 1; x += 3) {
+      const idx = y * grayW + x;
+      if (idx - grayW < 0 || idx + grayW >= grayData.length) continue;
+      const lap = -4 * grayData[idx] + grayData[idx-1] + grayData[idx+1] + grayData[idx-grayW] + grayData[idx+grayW];
+      laplacianSum += lap * lap;
+      lapCount++;
+    }
+  }
+  const blurScore = lapCount > 0 ? Math.min(100, Math.sqrt(laplacianSum / lapCount) * 0.5) : 0;
+  const sharpOk = blurScore > 15;
+
+  // 3. MERKEZ YOĞUNLUK — çerçeve içinde obje var mı?
+  // Kenar vs merkez parlaklık farkı
+  const edgeData = ctx.getImageData(0, 0, Math.floor(w * 0.1), h).data;
+  let edgeBrightness = 0;
+  let edgeCount = 0;
+  for (let i = 0; i < edgeData.length; i += 16) {
+    edgeBrightness += (edgeData[i] * 0.299 + edgeData[i+1] * 0.587 + edgeData[i+2] * 0.114);
+    edgeCount++;
+  }
+  const avgEdge = edgeCount > 0 ? edgeBrightness / edgeCount : avgBrightness;
+  const contrastDiff = Math.abs(avgBrightness - avgEdge);
+  const objectPresent = contrastDiff > 8; // Merkez ile kenar arasında fark varsa obje var
+
+  // 4. HAREKET KONTROLÜ — önceki kare ile karşılaştır
+  let motionOk = true;
+  if (_lastFrameData && _lastFrameData.length === centerData.length) {
+    let diffSum = 0;
+    for (let i = 0; i < centerData.length; i += 64) {
+      diffSum += Math.abs(centerData[i] - _lastFrameData[i]);
+    }
+    const motionScore = diffSum / (centerData.length / 64);
+    motionOk = motionScore < 40; // Çok fazla hareket = bulanık çekim
+  }
+  _lastFrameData = new Uint8Array(centerData.buffer.slice(0));
+
+  const issues = [];
+  if (!lightOk) issues.push(avgBrightness < 30 ? '🔅 Işık çok düşük' : '☀️ Aşırı parlak');
+  if (!sharpOk) issues.push('📷 Bulanık — telefonu sabit tut');
+  if (!objectPresent) issues.push('🎯 Ürün çerçevede yok');
+  if (!motionOk) issues.push('🤚 Hareket var — bekle');
+
+  return {
+    ok: issues.length === 0,
+    lightOk,
+    sharpOk,
+    objectPresent,
+    motionOk,
+    blurScore: Math.round(blurScore),
+    brightness: Math.round(avgBrightness),
+    issues
+  };
+}
+let _lastFrameData = null;
+
 // Token'ı URL'den al
 const params = new URLSearchParams(location.search);
 _token = params.get('t');
 
 if (!_token) {
   document.getElementById('pw-error').textContent = 'Gecersiz QR kodu';
+}
+
+// ═══════════════════════════════════════════
+//  ÜRÜN TANITMA — Gemini Vision ile tanı
+// ═══════════════════════════════════════════
+
+function stopIdentify() {
+  if (_stream) { _stream.getTracks().forEach(t => t.stop()); _stream = null; }
+  showScreen('s-guide');
+}
+
+function retryIdentify() {
+  document.getElementById('id-result').style.display = 'none';
+  document.getElementById('id-analyzing').style.display = 'none';
+  _productRef = null;
+  _frameId = null;
+  _scanPlan = null;
+  showScreen('s-identify');
+  startCamera();
+}
+
+async function identifyProduct() {
+  const video = document.getElementById('camera-video');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+
+  // Önce telefon CPU ile ön eleme
+  const preCheck = clientSideValidate(canvas);
+  if (!preCheck.ok) {
+    const hint = document.getElementById('id-hint');
+    hint.textContent = '❌ ' + preCheck.issues.join(' · ');
+    hint.style.color = '#ef4444';
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    setTimeout(() => { hint.textContent = 'Ürünü çerçevenin içine al ve TANIT\'a bas'; hint.style.color = '#F97316'; }, 3000);
+    return;
+  }
+
+  // Ön eleme geçti → Gemini'ye gönder
+  document.getElementById('id-analyzing').style.display = 'flex';
+  if (navigator.vibrate) navigator.vibrate(50);
+
+  try {
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85));
+    const fd = new FormData();
+    fd.append('frame', blob, 'identify.jpg');
+
+    const r = await fetch('/api/scan/identify', { method: 'POST', body: fd });
+    const d = await r.json();
+
+    if (!d.ok) throw new Error(d.error);
+
+    _productRef = d;
+    _frameId = d.frameId;
+    _scanPlan = d.scanPlan;
+    TARGET_PHOTOS = d.scanPlan?.totalPhotos || 30;
+    document.getElementById('photo-target').textContent = TARGET_PHOTOS;
+
+    // Sonuç ekranını doldur
+    document.getElementById('id-product-name').textContent = d.productName || 'Bilinmiyor';
+    document.getElementById('id-type').textContent = d.productType || '-';
+    document.getElementById('id-material').textContent = d.material || '-';
+    const sz = d.estimatedSize;
+    document.getElementById('id-size').textContent = sz ? `${sz.width}×${sz.height}×${sz.depth} cm` : '-';
+    const diff = d.difficulty || 'orta';
+    const diffEl = document.getElementById('id-difficulty');
+    diffEl.textContent = diff === 'kolay' ? '🟢 Kolay' : diff === 'zor' ? '🔴 Zor' : '🟡 Orta';
+    diffEl.style.color = diff === 'kolay' ? '#22C55E' : diff === 'zor' ? '#ef4444' : '#F59E0B';
+    document.getElementById('id-total-photos').textContent = TARGET_PHOTOS;
+
+    // Seviye planı
+    const levels = d.scanPlan?.levels || [];
+    document.getElementById('id-plan-levels').innerHTML = levels.map((l, i) =>
+      `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div style="width:20px;height:20px;border-radius:50%;background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.3);display:flex;align-items:center;justify-content:center;font-size:10px;color:#F97316;font-weight:700">${i+1}</div>
+        <span><b style="color:#fff">${l.name}</b> — ${l.photos} fotoğraf (${l.angle}°) · ${l.description || ''}</span>
+      </div>`
+    ).join('');
+
+    // Uyarılar
+    if (d.warnings && d.warnings.length > 0) {
+      document.getElementById('id-warnings').style.display = 'block';
+      document.getElementById('id-warnings-text').innerHTML = d.warnings.map(w => '• ' + w).join('<br>');
+    } else {
+      document.getElementById('id-warnings').style.display = 'none';
+    }
+
+    document.getElementById('id-analyzing').style.display = 'none';
+    document.getElementById('id-result').style.display = 'block';
+
+  } catch(e) {
+    document.getElementById('id-analyzing').style.display = 'none';
+    const hint = document.getElementById('id-hint');
+    hint.textContent = '❌ Tanıma hatası: ' + e.message;
+    hint.style.color = '#ef4444';
+    setTimeout(() => { hint.textContent = 'Ürünü çerçevenin içine al ve TANIT\'a bas'; hint.style.color = '#F97316'; }, 4000);
+  }
+}
+
+// Akıllı taramaya geç (ürün tanındıktan sonra)
+function startSmartScan() {
+  _currentLevel = 0;
+  _levelPhotos = 0;
+  _photos = [];
+  document.getElementById('id-result').style.display = 'none';
+  showScreen('s-camera');
+  startCamera();
+  updateSmartTip();
+}
+
+// Akıllı rehber güncelle (ürüne özel)
+function updateSmartTip() {
+  const tip = document.getElementById('cam-tip');
+  const levels = _scanPlan?.levels || [];
+  const level = levels[_currentLevel];
+
+  if (!level) {
+    tip.textContent = '✅ Tarama tamamlandı!';
+    return;
+  }
+
+  const remaining = level.photos - _levelPhotos;
+  const angleText = level.angle > 0 ? `alttan (${level.angle}°)` : level.angle < 0 ? `üstten (${Math.abs(level.angle)}°)` : 'karşıdan (0°)';
+  tip.innerHTML = `<b style="color:#F97316">${level.name}</b> — ${angleText} bak<br>${remaining} fotoğraf kaldı · ${level.description || ''}`;
+
+  // Açı göstergesini güncelle
+  const angleEl = document.getElementById('cam-angle');
+  angleEl.textContent = `Hedef: ${level.angle}°`;
 }
 
 // ── ŞİFRE DOĞRULAMA ──
@@ -381,26 +676,102 @@ function capturePhoto() {
   canvas.height = video.videoHeight;
   canvas.getContext('2d').drawImage(video, 0, 0);
 
+  // ── TELEFON CPU ÖN ELEME (ücretsiz) ──
+  const check = clientSideValidate(canvas);
+  if (!check.ok) {
+    // Başarısız — kırmızı çerçeve + titreşim + mesaj
+    const frame = document.querySelector('.cam-frame');
+    frame.style.borderColor = '#ef4444';
+    document.getElementById('cam-tip').innerHTML = '❌ <b>' + check.issues.join('</b> · <b>') + '</b>';
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    setTimeout(() => {
+      frame.style.borderColor = 'rgba(249,115,22,.5)';
+      if (_scanPlan) updateSmartTip(); else updateTip(Math.floor(_photos.length / 15));
+    }, 2000);
+    return; // API'ye göndermeden reddet
+  }
+
+  // ── ÖN ELEME GEÇTİ — fotoğrafı kaydet ──
   canvas.toBlob(blob => {
     _photos.push(blob);
+
+    // Akıllı seviye takibi
+    if (_scanPlan) {
+      _levelPhotos++;
+      const levels = _scanPlan.levels || [];
+      const currentLevel = levels[_currentLevel];
+      if (currentLevel && _levelPhotos >= currentLevel.photos) {
+        _currentLevel++;
+        _levelPhotos = 0;
+        // Seviye geçiş bildirimi
+        if (_currentLevel < levels.length) {
+          const next = levels[_currentLevel];
+          document.getElementById('cam-tip').innerHTML = `✅ <b>${currentLevel.name}</b> tamam! Şimdi <b style="color:#F97316">${next.name}</b> — telefonu ${next.angle > 0 ? 'aşağı' : next.angle < 0 ? 'yukarı' : 'karşıya'} tut`;
+          if (navigator.vibrate) navigator.vibrate([50, 100, 50, 100, 50]);
+          // Çerçeveyi yeşil yap kısa süre
+          const frame = document.querySelector('.cam-frame');
+          frame.style.borderColor = '#22C55E';
+          setTimeout(() => { frame.style.borderColor = 'rgba(249,115,22,.5)'; updateSmartTip(); }, 3000);
+        }
+      } else {
+        updateSmartTip();
+      }
+    }
+
     updateUI();
 
-    // Titreşim geri bildirimi
-    if (navigator.vibrate) navigator.vibrate(50);
-
-    // Flash efekti
+    // Yeşil flash + titreşim (başarılı)
+    if (navigator.vibrate) navigator.vibrate(30);
     const flash = document.createElement('div');
-    flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;opacity:.3;z-index:999;pointer-events:none';
+    flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#22C55E;opacity:.15;z-index:999;pointer-events:none';
     document.body.appendChild(flash);
     setTimeout(() => flash.remove(), 100);
 
+    // Her 5 karede bir Gemini doğrulama (kota koruma)
+    if (_frameId && _photos.length % 5 === 0 && !_skipGeminiValidation) {
+      validateWithGemini(blob);
+    }
+
     if (_photos.length >= TARGET_PHOTOS) {
-      updateTip(4); // tamamlandı
-      setTimeout(() => {
-        stopCamera();
-      }, 1500);
+      document.getElementById('cam-tip').innerHTML = '🎉 <b>Tarama tamamlandı!</b> Veriler hazırlanıyor...';
+      if (navigator.vibrate) navigator.vibrate([50, 100, 50, 100, 50, 200]);
+      setTimeout(() => { stopCamera(); }, 1500);
     }
   }, 'image/jpeg', 0.92);
+}
+
+// Gemini ile periyodik doğrulama (her 5 karede 1)
+async function validateWithGemini(blob) {
+  try {
+    const levels = _scanPlan?.levels || [];
+    const level = levels[_currentLevel];
+    const fd = new FormData();
+    fd.append('frame', blob, 'validate.jpg');
+    fd.append('frameId', _frameId);
+    fd.append('stepIndex', String(_photos.length));
+    fd.append('expectedAngle', String(level?.angle || 0));
+
+    const r = await fetch('/api/scan/validate-frame', { method: 'POST', body: fd });
+    const d = await r.json();
+
+    if (d.ok && !d.accept) {
+      // Gemini uyarısı — sonraki karelerde düzeltme öner
+      const tip = document.getElementById('cam-tip');
+      tip.innerHTML = `⚠️ <b>${d.suggestion || 'Açıyı düzelt'}</b>`;
+      tip.style.color = '#F59E0B';
+      const frame = document.querySelector('.cam-frame');
+      frame.style.borderColor = '#F59E0B';
+      setTimeout(() => {
+        tip.style.color = '';
+        frame.style.borderColor = 'rgba(249,115,22,.5)';
+        if (_scanPlan) updateSmartTip();
+      }, 3000);
+    }
+  } catch(e) {
+    // Gemini hatası — sessizce atla, kota koruma
+    console.warn('Gemini validation skipped:', e.message);
+    _skipGeminiValidation = true; // Bir hata olduysa artık Gemini'yi çağırma
+  }
 }
 
 function updateUI() {
@@ -939,7 +1310,9 @@ function _initObjectTracking() {
 function _checkObjectInFrame() {
   if (!_trackingActive) return;
   var video = document.getElementById('camera-video');
-  if (!video || !video.videoWidth) return;
+  if (!video || !video.videoWidth || video.readyState < 2) return;
+  // Kamera henüz stabil değilse atla
+  if (!video.srcObject || video.srcObject.getVideoTracks().length === 0) return;
 
   // Basit hareket/varlık tespiti — merkez bölgenin parlaklığı
   if (!_trackingCanvas) { _trackingCanvas = document.createElement('canvas'); _trackingCanvas.width = 64; _trackingCanvas.height = 48; }
@@ -1205,6 +1578,20 @@ handleOrientation = function(e) {
 var _origStartCamera = startCamera;
 startCamera = async function() {
   await _origStartCamera();
+
+  // Kameranın gerçekten hazır olmasını bekle — kırmızı ekran sorunu çözümü
+  var video = document.getElementById('camera-video');
+  if (video) {
+    await new Promise(function(resolve) {
+      if (video.readyState >= 2 && video.videoWidth > 0) { resolve(); return; }
+      video.onloadeddata = function() { resolve(); };
+      // 5 saniye timeout — kamera hiç açılmazsa devam et
+      setTimeout(resolve, 5000);
+    });
+    // Ek 500ms bekle — ilk karelerin siyah olmaması için
+    await new Promise(function(r) { setTimeout(r, 500); });
+  }
+
   _initObjectTracking();
   _initLightSensor();
   _updateTargetAngle();
