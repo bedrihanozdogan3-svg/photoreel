@@ -16785,11 +16785,26 @@ function bridgeModelToUretim() {
   }, 200);
 }
 
+// ── 3D referanslarını sakla/geri yükle — üretim moduna girince swap, çıkınca restore ──
+var _saved3D = { scene: null, camera: null, renderer: null, raycaster: null, orbitCtrl: null };
+
 function enterUretimMode() {
-  // Artık bağımsız sahne kullanıyoruz — eski _scene bağımlılığı yok
   if (!window._uScene && typeof THREE !== 'undefined') _initUretimScene();
   if (!window._uScene) return;
   uretimState.xrayActive = true;
+
+  // ── 3D referanslarını sakla, üretim sahnesine yönlendir ──
+  _saved3D.scene = window._scene;
+  _saved3D.camera = window._camera;
+  _saved3D.renderer = window._renderer;
+  _saved3D.raycaster = window._raycaster;
+  _saved3D.orbitCtrl = window._orbitCtrl;
+
+  window._scene = window._uScene;
+  window._camera = window._uCamera;
+  window._renderer = window._uRenderer;
+  if (!window._raycaster && typeof THREE !== 'undefined') window._raycaster = new THREE.Raycaster();
+  window._orbitCtrl = window._uControls;
 
   // Drop zone'u gizle (model varsa)
   if (window._uModel) {
@@ -16797,12 +16812,11 @@ function enterUretimMode() {
     if (drop) drop.style.display = 'none';
   }
 
-  // X-Ray efekti: üretim sahnesindeki mesh'leri yarı-şeffaf + wireframe
+  // X-Ray efekti
   _uScene.traverse(obj => {
     if (obj.isMesh && obj.material && !obj._wireHelper) {
       obj._origOpacity = obj.material.opacity;
       obj._origTransparent = obj.material.transparent;
-      // Neon wireframe overlay
       try {
         const wire = new THREE.WireframeGeometry(obj.geometry);
         const lineMat = new THREE.LineBasicMaterial({ color: 0x00c8ff, opacity: 0.5, transparent: true });
@@ -16813,17 +16827,14 @@ function enterUretimMode() {
     }
   });
 
-  // Parça bilgi güncelle — _scene'i geçici olarak _uScene yap
-  const origScene = window._scene;
-  window._scene = window._uScene;
+  // Parça bilgi güncelle
   try { updatePartInfo(); updateEngOverlay(); } catch(e) {}
-  window._scene = origScene;
 
   // Scale info panelini göster
   const scalePanel = document.getElementById('uretim-scale-info');
   if (scalePanel) scalePanel.style.display = 'block';
 
-  // Job queue panelini göster (eleman varsa)
+  // Job queue panelini göster
   if (typeof jobQueue !== 'undefined' && jobQueue.length > 0) updateJobQueueUI();
 
   // Komuta çubuğu güncelle
@@ -16835,6 +16846,14 @@ function exitUretimMode() {
   uretimState.xrayActive = false;
   // Üretim animasyonunu durdur
   if (window._uAnimId) { cancelAnimationFrame(window._uAnimId); window._uAnimId = null; }
+
+  // ── 3D referanslarını geri yükle ──
+  if (_saved3D.scene) window._scene = _saved3D.scene;
+  if (_saved3D.camera) window._camera = _saved3D.camera;
+  if (_saved3D.renderer) window._renderer = _saved3D.renderer;
+  if (_saved3D.raycaster) window._raycaster = _saved3D.raycaster;
+  if (_saved3D.orbitCtrl) window._orbitCtrl = _saved3D.orbitCtrl;
+
   // Ölçüm temizle
   uretimState.measureMode = false;
   uretimState.clipActive = false;

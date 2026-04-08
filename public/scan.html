@@ -622,7 +622,8 @@ function _detectBlur(canvas) {
     }
   }
   const score = lap / ((w-2) * (h-2));
-  return { sharp: score > 50, score: Math.round(score) };
+  // Eşik: 15 — telefon kameralarında normal kare 20-40 arası, 15 altı gerçekten bulanık
+  return { sharp: score > 15, score: Math.round(score) };
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -857,15 +858,13 @@ function _startScanLoop() {
       return;
     }
 
-    // ~2Hz: Object tracking + ışık kontrolü
+    // ~2Hz: Object tracking + ışık kontrolü + referans kontrolü
     if (timestamp - _lastTrackCheck > 500) {
       _lastTrackCheck = timestamp;
       _checkObjectInFrame(video);
       _checkLighting(video);
-      // Referans kontrol (her 5 fotoğrafta)
-      if (_photos.length > 0 && _photos.length % 5 === 0) {
-        _checkReferences(video);
-      }
+      // Referans her 2 saniyede bir kontrol (para/kart tespiti)
+      _checkReferences(video);
     }
 
     // ~20Hz: Radar çizimi (scanning modda)
@@ -949,11 +948,59 @@ function _createOverlayUI() {
 function _onOrientation(e) {
   const beta = Math.round(e.beta || 0);
 
-  // Açı göstergesi
+  // Açı göstergesi (üst bar)
   const angleEl = SM.els.angle || document.getElementById('cam-angle');
   if (angleEl) {
     angleEl.textContent = 'Aci: ' + beta + '°';
     angleEl.className = (beta > 20 && beta < 80) ? 'cam-angle ok' : 'cam-angle bad';
+  }
+
+  // ── AÇI TERAZİSİ / REHBERİ ──
+  // Ghost angle box — hedef açıya ne kadar uzak olduğunu gösterir
+  const ghost = document.getElementById('ghost-angle-box');
+  if (ghost && (SM.state === 'scanning' || SM.state === 'locking')) {
+    const diff = Math.abs(beta - SM.targetAngle);
+    if (diff > SM.angleTolerance) {
+      const dir = beta < SM.targetAngle ? '↑ Yukarı kaldır' : '↓ Aşağı indir';
+      ghost.innerHTML = '<span style="color:#F59E0B">🎯 ' + beta + '° → ' + SM.targetAngle + '° · ' + dir + ' (' + Math.round(diff) + '°)</span>';
+    } else {
+      ghost.innerHTML = '<span style="color:#22C55E">🎯 ' + beta + '° — TAMAM ✓</span>';
+    }
+  }
+
+  // ── AÇI YÖN REHBERİ (üst ortada) ──
+  const ANGLE_LABELS = [
+    { from: 0, to: 20, label: '↑ Alttan çek — telefonu kaldır' },
+    { from: 20, to: 40, label: '↗ Hafif alttan — iyi açı' },
+    { from: 40, to: 65, label: '→ Yandan çek — mükemmel' },
+    { from: 65, to: 80, label: '↘ Yukarıdan — biraz eğil' },
+    { from: 80, to: 180, label: '↓ Tam üstten — tepeden bak' }
+  ];
+  let guideEl = document.getElementById('_angle_guide');
+  if (!guideEl) {
+    guideEl = document.createElement('div');
+    guideEl.id = '_angle_guide';
+    guideEl.style.cssText = 'position:fixed;top:44px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.75);padding:4px 14px;border-radius:12px;font-size:11px;font-weight:700;z-index:100;pointer-events:none;transition:all .3s;';
+    document.body.appendChild(guideEl);
+  }
+  if (SM.state === 'scanning' || SM.state === 'locking') {
+    const guide = ANGLE_LABELS.find(g => beta >= g.from && beta < g.to);
+    if (guide) {
+      guideEl.textContent = guide.label;
+      guideEl.style.display = 'block';
+      guideEl.style.color = (beta >= 20 && beta < 80) ? '#22C55E' : '#F59E0B';
+    }
+    // Eksik açı uyarısı (15+ fotoğraftan sonra)
+    if (_photos.length > 15) {
+      const needed = [0, 15, 30, 45, 60, 75];
+      const missing = needed.filter(a => !SM.capturedAngles.has(a));
+      if (missing.length > 0 && guideEl) {
+        guideEl.textContent = 'Eksik açı: ~' + missing[0] + '° civarından çek';
+        guideEl.style.color = '#ef4444';
+      }
+    }
+  } else {
+    guideEl.style.display = 'none';
   }
 
   // Açı takibi
