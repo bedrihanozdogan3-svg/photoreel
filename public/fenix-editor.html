@@ -2775,7 +2775,7 @@
         <button class="tl-spd" onclick="tlSetSpeed(2)">2×</button>
       </div>
       <div style="flex:1"></div>
-      <button onclick="grabFrameToImage()"
+      <button onclick="bridgeVideoToImage()"
         style="height:22px;padding:0 10px;border-radius:5px;border:1px solid #222;
                background:#111;color:#F97316;font-size:9px;font-weight:700;cursor:pointer;letter-spacing:.3px;">
         📸 Resim Paneline Gönder
@@ -8922,15 +8922,22 @@ function bridgeImageToVideo() {
   // DataURL al
   const dataUrl = merged.toDataURL('image/png');
   const timestamp = new Date().toLocaleTimeString('tr-TR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  const itemName = 'Resim_' + timestamp.replace(/:/g, '-');
 
   // Video moduna geç
   switchMode('video');
+
+  // ── Drop zone'u gizle, preview'ı göster ──
+  const vidDrop = document.getElementById('vid-drop');
+  const vidPreview = document.getElementById('vid-preview');
+  if (vidDrop) vidDrop.style.display = 'none';
+  if (vidPreview) vidPreview.style.display = 'flex';
 
   // Media pool'a ekle
   if (typeof _pushMediaPool === 'function') {
     _pushMediaPool({
       type: 'image',
-      name: 'Resim_' + timestamp.replace(/:/g, '-'),
+      name: itemName,
       url: dataUrl,
       size: Math.round(dataUrl.length / 1024) + 'KB'
     });
@@ -8943,22 +8950,70 @@ function bridgeImageToVideo() {
     clipO.style.left = '0%';
     clipO.style.width = '30%';
     const oName = clipO.querySelector('.tl-clip-name');
-    if (oName) oName.textContent = 'Resim_' + timestamp.replace(/:/g, '-');
+    if (oName) oName.textContent = itemName;
     clipO.dataset.imgSrc = dataUrl;
   }
 
-  // Overlay görselini video preview üzerine koy
+  // ── Overlay görselini video preview üzerine koy ──
   let overlayEl = document.getElementById('bridge-overlay-img');
   if (!overlayEl) {
     overlayEl = document.createElement('img');
     overlayEl.id = 'bridge-overlay-img';
-    overlayEl.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);max-width:80%;max-height:80%;z-index:10;pointer-events:none;border:1px solid rgba(124,58,237,.3);border-radius:4px;opacity:.9;';
-    const preview = document.getElementById('vid-preview');
-    if (preview) preview.appendChild(overlayEl);
+    overlayEl.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);max-width:90%;max-height:90%;z-index:10;border:1px solid rgba(124,58,237,.3);border-radius:4px;opacity:.95;cursor:move;';
+    if (vidPreview) vidPreview.appendChild(overlayEl);
+
+    // Sürüklenebilir yap
+    let dragging = false, ox = 0, oy = 0;
+    overlayEl.addEventListener('mousedown', e => { dragging = true; ox = e.offsetX; oy = e.offsetY; e.preventDefault(); });
+    overlayEl.addEventListener('touchstart', e => { dragging = true; const t = e.touches[0]; const r = overlayEl.getBoundingClientRect(); ox = t.clientX - r.left; oy = t.clientY - r.top; e.preventDefault(); }, {passive:false});
+    const onMove = (cx, cy) => {
+      if (!dragging) return;
+      const pr = vidPreview.getBoundingClientRect();
+      const x = cx - pr.left - ox, y = cy - pr.top - oy;
+      overlayEl.style.position = 'absolute';
+      overlayEl.style.left = x + 'px'; overlayEl.style.top = y + 'px';
+      overlayEl.style.transform = 'none';
+    };
+    document.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+    document.addEventListener('touchmove', e => { if (dragging) onMove(e.touches[0].clientX, e.touches[0].clientY); }, {passive:false});
+    document.addEventListener('mouseup', () => { dragging = false; });
+    document.addEventListener('touchend', () => { dragging = false; });
   }
   overlayEl.src = dataUrl;
+  // Pozisyonu sıfırla (merkeze)
+  overlayEl.style.left = '50%'; overlayEl.style.top = '50%'; overlayEl.style.transform = 'translate(-50%,-50%)';
 
   toast('Resim Video moduna gönderildi ✓', 'ok', 2000);
+}
+
+// ── KÖPRÜ: Video → Resim ──
+function bridgeVideoToImage() {
+  const vid = document.getElementById('vid-el');
+  // Video yoksa bridge-overlay-img'den al (resim köprüsü ile gelen)
+  const bridgeImg = document.getElementById('bridge-overlay-img');
+
+  if (vid && S.vidLoaded && vid.readyState >= 2 && vid.videoWidth > 0) {
+    // Videodan mevcut kareyi al
+    grabFrameToImage();
+  } else if (bridgeImg && bridgeImg.src) {
+    // Bridge overlay resmini image paneline gönder
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.getElementById('img-canvas');
+      const draw = document.getElementById('draw-canvas');
+      canvas.width = img.width; canvas.height = img.height;
+      if (draw) { draw.width = img.width; draw.height = img.height; }
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      S.imgLoaded = true;
+      S._orig = canvas.getContext('2d').getImageData(0, 0, img.width, img.height);
+      if (typeof zoomReset === 'function') zoomReset();
+      switchMode('image');
+      toast('📸 ' + img.width + '×' + img.height + ' — Resim paneline gönderildi ✓', 'ok', 2500);
+    };
+    img.src = bridgeImg.src;
+  } else {
+    toast('Önce video yükleyin veya resim gönderin', 'err');
+  }
 }
 
 // video yüklenince süreyi göster

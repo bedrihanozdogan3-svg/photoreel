@@ -342,7 +342,15 @@ body{background:#000;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Se
 </div>
 
 <script>
-// ── STATE ──
+// ══════════════════════════════════════════════════════════════
+//  FENIXAL TARAMA — TEMİZ STATE MACHINE MİMARİSİ
+//  States: idle → identifying → locking → scanning → uploading → done
+//  Tek RAF döngüsü, sıfır interval sızıntısı
+// ══════════════════════════════════════════════════════════════
+
+'use strict';
+
+// ── GLOBAL STATE ──
 let _token = null;
 let _ustaId = null;
 let _photos = [];
@@ -352,141 +360,396 @@ let _scanId = null;
 let TARGET_PHOTOS = 45;
 
 // Akıllı tarama state
-let _productRef = null;   // Gemini'den gelen ürün bilgisi
-let _frameId = null;       // Backend referans ID
-let _scanPlan = null;      // Ürüne özel açı planı
-let _currentLevel = 0;     // Şu anki seviye (alt/orta/üst)
-let _levelPhotos = 0;      // Bu seviyede çekilen fotoğraf
-let _validationQueue = []; // Doğrulama kuyruğu
-let _skipGeminiValidation = false; // Gemini kota koruması
+let _productRef = null;
+let _frameId = null;
+let _scanPlan = null;
+let _currentLevel = 0;
+let _levelPhotos = 0;
+let _skipGeminiValidation = false;
 
-// ═══════════════════════════════════════════
-//  TELEFON CPU — ÜCRETSİZ ÖN ELEME
-//  Bulanıklık, ışık, hareket, merkez kontrolü
-// ═══════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+//  STATE MACHINE — Tek merkezden yönetilen kamera döngüsü
+//  idle → identifying → locking → scanning → uploading → done
+// ══════════════════════════════════════════════════════════════
+
+const SM = {
+  state: 'idle',
+  rafId: null,           // tek requestAnimationFrame id
+  intervals: [],         // tüm interval'lar — cleanup için
+  lastFrameData: null,   // hareket karşılaştırma
+  lightOk: true,
+  motionStable: true,
+  lastMotion: { x: 0, y: 0, z: 0 },
+  trackingActive: false,
+  trackingLost: false,
+  trackingCanvas: null,
+  lockState: 'searching', // searching | locking | locked
+  lockKeypoints: null,
+  lockBBox: null,
+  shutterLocked: true,
+  targetAngle: 45,
+  angleTolerance: 8,
+  currentBeta: 0,
+  lightLevel: -1,
+  flashForced: false,
+  speechEnabled: true,
+  lastSpoke: 0,
+  objectCategory: 'medium',
+  hasLiDAR: false,
+  markerDetected: false,
+  capturedAngles: new Set(),
+  liveAngles: { alpha: 0, beta: 0, gamma: 0 },
+  baseYaw: null,
+  scanRoute: { nodes: [], currentNode: 0, autoShutter: true },
+  // DOM cache
+  els: {}
+};
+
+// ── DOM CACHE ──
+function _cacheEls() {
+  SM.els = {
+    video: document.getElementById('camera-video'),
+    idVideo: document.getElementById('identify-video'),
+    tip: document.getElementById('cam-tip'),
+    angle: document.getElementById('cam-angle'),
+    counter: document.getElementById('photo-count'),
+    target: document.getElementById('photo-target'),
+    progress: document.getElementById('cam-progress-bar'),
+    frame: document.querySelector('.cam-frame'),
+    ref: document.getElementById('cam-ref'),
+    captureBtn: document.getElementById('cam-capture-btn'),
+  };
+}
+
+// ── STATE GEÇİŞ ──
+function smTransition(newState) {
+  const prev = SM.state;
+  SM.state = newState;
+  console.log(`[SM] ${prev} → ${newState}`);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CLEANUP — Tüm döngüleri temizle
+// ══════════════════════════════════════════════════════════════
+
+function _cleanupAll() {
+  // RAF durdur
+  if (SM.rafId) { cancelAnimationFrame(SM.rafId); SM.rafId = null; }
+  // Tüm interval'ları temizle
+  SM.intervals.forEach(id => clearInterval(id));
+  SM.intervals = [];
+  // Event listener'ları kaldır
+  window.removeEventListener('deviceorientation', _onOrientation);
+  window.removeEventListener('devicemotion', _onMotion);
+  // Tracking sıfırla
+  SM.trackingActive = false;
+  SM.trackingLost = false;
+  SM.lockState = 'searching';
+  SM.shutterLocked = true;
+  SM.baseYaw = null;
+  SM.lightLevel = -1;
+  SM.flashForced = false;
+  SM.lastFrameData = null;
+  SM.scanRoute.nodes = [];
+  SM.capturedAngles.clear();
+  // Dinamik overlay'ları temizle
+  ['tracking-overlay','target-lock-frame','lock-status','ghost-angle-box',
+   'angle-radar','angle-cmd','object-mode-badge','cam-light-badge',
+   'macro-focus-tip','_light_warn','_motion_warn','_angle_guide'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+//  KAMERA YÖNETİCİSİ — Tek giriş noktası
+// ══════════════════════════════════════════════════════════════
+
+async function startCamera(targetVideoId) {
+  const videoId = targetVideoId || 'camera-video';
+  try {
+    _stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: _facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false
+    });
+    const video = document.getElementById(videoId);
+    video.srcObject = _stream;
+
+    // Kamera hazır olana kadar bekle
+    await new Promise(resolve => {
+      if (video.readyState >= 2 && video.videoWidth > 0) { resolve(); return; }
+      video.onloadeddata = () => resolve();
+      setTimeout(resolve, 5000);
+    });
+    // İlk karelerin siyah olmaması için
+    await new Promise(r => setTimeout(r, 400));
+
+    // Odak kilidi dene
+    _tryLockFocus();
+
+  } catch(e) {
+    alert('Kamera izni gerekli');
+  }
+}
+
+function stopCamera() {
+  if (_stream) { _stream.getTracks().forEach(t => t.stop()); _stream = null; }
+  _cleanupAll();
+}
+
+function switchCamera() {
+  _facingMode = _facingMode === 'environment' ? 'user' : 'environment';
+  stopCamera();
+  // State'e göre yeniden başlat
+  if (SM.state === 'identifying') {
+    startCamera('identify-video');
+  } else if (SM.state === 'scanning' || SM.state === 'locking') {
+    startCamera('camera-video').then(() => _startScanLoop());
+  }
+}
+
+function _tryLockFocus() {
+  if (!_stream) return;
+  const track = _stream.getVideoTracks()[0];
+  const caps = track.getCapabilities ? track.getCapabilities() : {};
+  if (caps.focusMode && caps.focusMode.includes('manual')) {
+    track.applyConstraints({ advanced: [{ focusMode: 'manual' }] }).catch(() => {});
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TELEFON CPU ÖN ELEME — Işık, bulanıklık, hareket, merkez
+// ══════════════════════════════════════════════════════════════
 
 function clientSideValidate(canvas) {
   const ctx = canvas.getContext('2d');
-  const w = canvas.width;
-  const h = canvas.height;
-
-  // Merkez bölgeyi al (çerçeve alanı)
-  const cx = Math.floor(w * 0.15);
-  const cy = Math.floor(h * 0.25);
-  const cw = Math.floor(w * 0.70);
-  const ch = Math.floor(h * 0.50);
+  const w = canvas.width, h = canvas.height;
+  const cx = Math.floor(w * 0.15), cy = Math.floor(h * 0.25);
+  const cw = Math.floor(w * 0.70), ch = Math.floor(h * 0.50);
   const centerData = ctx.getImageData(cx, cy, cw, ch).data;
 
-  // 1. IŞIK KONTROLÜ — ortalama parlaklık
-  let totalBrightness = 0;
-  let pixelCount = 0;
-  for (let i = 0; i < centerData.length; i += 16) { // Her 4. piksel (hız için)
-    const r = centerData[i], g = centerData[i+1], b = centerData[i+2];
-    totalBrightness += (r * 0.299 + g * 0.587 + b * 0.114);
-    pixelCount++;
+  // 1. Işık
+  let totalB = 0, pxCount = 0;
+  for (let i = 0; i < centerData.length; i += 16) {
+    totalB += (centerData[i] * 0.299 + centerData[i+1] * 0.587 + centerData[i+2] * 0.114);
+    pxCount++;
   }
-  const avgBrightness = totalBrightness / pixelCount;
-  const lightOk = avgBrightness > 30 && avgBrightness < 240;
+  const avgB = totalB / pxCount;
+  const lightOk = avgB > 30 && avgB < 240;
 
-  // 2. BULANIKLIK KONTROLÜ — Laplacian varyansı (kenar tespiti)
+  // 2. Bulanıklık — Laplacian
   const grayData = [];
   for (let i = 0; i < centerData.length; i += 4) {
     grayData.push(centerData[i] * 0.299 + centerData[i+1] * 0.587 + centerData[i+2] * 0.114);
   }
-  const grayW = cw;
-  let laplacianSum = 0;
-  let lapCount = 0;
+  let lapSum = 0, lapN = 0;
   for (let y = 1; y < Math.floor(ch) - 1; y += 3) {
-    for (let x = 1; x < grayW - 1; x += 3) {
-      const idx = y * grayW + x;
-      if (idx - grayW < 0 || idx + grayW >= grayData.length) continue;
-      const lap = -4 * grayData[idx] + grayData[idx-1] + grayData[idx+1] + grayData[idx-grayW] + grayData[idx+grayW];
-      laplacianSum += lap * lap;
-      lapCount++;
+    for (let x = 1; x < cw - 1; x += 3) {
+      const idx = y * cw + x;
+      if (idx - cw < 0 || idx + cw >= grayData.length) continue;
+      const lap = -4 * grayData[idx] + grayData[idx-1] + grayData[idx+1] + grayData[idx-cw] + grayData[idx+cw];
+      lapSum += lap * lap; lapN++;
     }
   }
-  const blurScore = lapCount > 0 ? Math.min(100, Math.sqrt(laplacianSum / lapCount) * 0.5) : 0;
+  const blurScore = lapN > 0 ? Math.min(100, Math.sqrt(lapSum / lapN) * 0.5) : 0;
   const sharpOk = blurScore > 15;
 
-  // 3. MERKEZ YOĞUNLUK — çerçeve içinde obje var mı?
-  // Kenar vs merkez parlaklık farkı
+  // 3. Merkez yoğunluk
   const edgeData = ctx.getImageData(0, 0, Math.floor(w * 0.1), h).data;
-  let edgeBrightness = 0;
-  let edgeCount = 0;
+  let edgeB = 0, edgeN = 0;
   for (let i = 0; i < edgeData.length; i += 16) {
-    edgeBrightness += (edgeData[i] * 0.299 + edgeData[i+1] * 0.587 + edgeData[i+2] * 0.114);
-    edgeCount++;
+    edgeB += (edgeData[i] * 0.299 + edgeData[i+1] * 0.587 + edgeData[i+2] * 0.114);
+    edgeN++;
   }
-  const avgEdge = edgeCount > 0 ? edgeBrightness / edgeCount : avgBrightness;
-  const contrastDiff = Math.abs(avgBrightness - avgEdge);
-  const objectPresent = contrastDiff > 8; // Merkez ile kenar arasında fark varsa obje var
+  const avgEdge = edgeN > 0 ? edgeB / edgeN : avgB;
+  const objectPresent = Math.abs(avgB - avgEdge) > 8;
 
-  // 4. HAREKET KONTROLÜ — önceki kare ile karşılaştır
+  // 4. Hareket
   let motionOk = true;
-  if (_lastFrameData && _lastFrameData.length === centerData.length) {
+  if (SM.lastFrameData && SM.lastFrameData.length === centerData.length) {
     let diffSum = 0;
     for (let i = 0; i < centerData.length; i += 64) {
-      diffSum += Math.abs(centerData[i] - _lastFrameData[i]);
+      diffSum += Math.abs(centerData[i] - SM.lastFrameData[i]);
     }
-    const motionScore = diffSum / (centerData.length / 64);
-    motionOk = motionScore < 40; // Çok fazla hareket = bulanık çekim
+    motionOk = (diffSum / (centerData.length / 64)) < 40;
   }
-  _lastFrameData = new Uint8Array(centerData.buffer.slice(0));
+  SM.lastFrameData = new Uint8Array(centerData.buffer.slice(0));
 
   const issues = [];
-  if (!lightOk) issues.push(avgBrightness < 30 ? '🔅 Işık çok düşük' : '☀️ Aşırı parlak');
+  if (!lightOk) issues.push(avgB < 30 ? '🔅 Işık çok düşük' : '☀️ Aşırı parlak');
   if (!sharpOk) issues.push('📷 Bulanık — telefonu sabit tut');
   if (!objectPresent) issues.push('🎯 Ürün çerçevede yok');
   if (!motionOk) issues.push('🤚 Hareket var — bekle');
 
-  return {
-    ok: issues.length === 0,
-    lightOk,
-    sharpOk,
-    objectPresent,
-    motionOk,
-    blurScore: Math.round(blurScore),
-    brightness: Math.round(avgBrightness),
-    issues
-  };
+  return { ok: issues.length === 0, lightOk, sharpOk, objectPresent, motionOk,
+           blurScore: Math.round(blurScore), brightness: Math.round(avgB), issues };
 }
-let _lastFrameData = null;
 
-// Token'ı URL'den al
+// ══════════════════════════════════════════════════════════════
+//  NETLIK & BLUR ALGILAMA
+// ══════════════════════════════════════════════════════════════
+
+function _sharpnessScore(canvas) {
+  const w = Math.min(canvas.width, 256), h = Math.min(canvas.height, 256);
+  const small = document.createElement('canvas');
+  small.width = w; small.height = h;
+  small.getContext('2d').drawImage(canvas, 0, 0, w, h);
+  const d = small.getContext('2d').getImageData(0, 0, w, h).data;
+  let score = 0;
+  for (let i = 4; i < d.length - 4; i += 16) {
+    score += Math.abs(d[i] - d[i-4]) + Math.abs(d[i] - d[i+4]);
+  }
+  return score;
+}
+
+function _detectBlur(canvas) {
+  if (!canvas) return { sharp: true, score: 100 };
+  const w = Math.min(canvas.width, 320), h = Math.min(canvas.height, 240);
+  const small = document.createElement('canvas');
+  small.width = w; small.height = h;
+  small.getContext('2d').drawImage(canvas, 0, 0, w, h);
+  const data = small.getContext('2d').getImageData(0, 0, w, h).data;
+  const gray = new Float32Array(w * h);
+  for (let i = 0; i < gray.length; i++) {
+    gray[i] = data[i*4] * 0.299 + data[i*4+1] * 0.587 + data[i*4+2] * 0.114;
+  }
+  let lap = 0;
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const idx = y * w + x;
+      const val = -4 * gray[idx] + gray[idx-1] + gray[idx+1] + gray[idx-w] + gray[idx+w];
+      lap += val * val;
+    }
+  }
+  const score = lap / ((w-2) * (h-2));
+  return { sharp: score > 50, score: Math.round(score) };
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SESLİ REHBERLİK
+// ══════════════════════════════════════════════════════════════
+
+function _speak(text) {
+  if (!SM.speechEnabled || !window.speechSynthesis) return;
+  if (Date.now() - SM.lastSpoke < 3000) return;
+  SM.lastSpoke = Date.now();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'tr-TR'; u.rate = 1.1; u.pitch = 0.9;
+  speechSynthesis.speak(u);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TOKEN & EKRAN GEÇİŞ
+// ══════════════════════════════════════════════════════════════
+
 const params = new URLSearchParams(location.search);
 _token = params.get('t');
+if (!_token) document.getElementById('pw-error').textContent = 'Gecersiz QR kodu';
 
-if (!_token) {
-  document.getElementById('pw-error').textContent = 'Gecersiz QR kodu';
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
 }
 
-// ═══════════════════════════════════════════
-//  ÜRÜN TANITMA — Gemini Vision ile tanı
-// ═══════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+//  ŞİFRE & CİHAZ TESPİTİ
+// ══════════════════════════════════════════════════════════════
+
+async function verifyPassword() {
+  const pw = document.getElementById('pw-input').value.trim();
+  if (!pw) return;
+  try {
+    const r = await fetch('/api/scan/verify', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: _token, password: pw })
+    });
+    const d = await r.json();
+    if (d.ok) { _ustaId = d.ustaId; showScreen('s-guide'); _detectDevice(); }
+    else { document.getElementById('pw-error').textContent = d.error || 'Yanlis sifre'; }
+  } catch(e) { document.getElementById('pw-error').textContent = 'Baglanti hatasi'; }
+}
+
+document.getElementById('pw-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') verifyPassword();
+});
+
+function _detectDevice() {
+  const ua = navigator.userAgent;
+  const el = document.getElementById('guide-device-text');
+  const box = document.getElementById('guide-device');
+  let deviceName = 'Bilinmeyen cihaz';
+  let mode = 'photo';
+
+  if (ua.includes('iPhone')) {
+    if (/(iPhone 1[2-6] Pro|iPhone 16)/.test(ua)) { deviceName = 'iPhone Pro'; mode = 'lidar'; SM.hasLiDAR = true; }
+    else { deviceName = 'iPhone'; }
+  } else if (ua.includes('iPad') && /(Pro|iPad1[34])/.test(ua)) {
+    deviceName = 'iPad Pro'; mode = 'lidar'; SM.hasLiDAR = true;
+  } else if (/SM-S9|SM-S92|SM-S91|SM-S90|SM-G99|SM-G98/.test(ua)) {
+    deviceName = 'Samsung Galaxy S (ToF)'; mode = 'lidar'; SM.hasLiDAR = true;
+  } else if (/Samsung|SM-/.test(ua)) { deviceName = 'Samsung'; }
+  else if (ua.includes('Android')) { deviceName = 'Android'; }
+
+  if (mode === 'lidar') {
+    box.style.borderColor = '#22C55E';
+    el.innerHTML = `<b style="color:#22C55E">${deviceName}</b> — LiDAR/ToF sensör algılandı! 🎯<br><span style="font-size:10px;color:#888">Daha az fotoğraf, daha hassas tarama.</span>`;
+    TARGET_PHOTOS = 20;
+    document.getElementById('photo-target').textContent = '20';
+  } else {
+    box.style.borderColor = '#F59E0B';
+    el.innerHTML = `<b style="color:#F59E0B">${deviceName}</b> — Fotoğraf modu<br><span style="font-size:10px;color:#888">45 fotoğraf ile 3D model oluşturulacak.</span>`;
+  }
+
+  // Depolama
+  if (navigator.storage && navigator.storage.estimate) {
+    navigator.storage.estimate().then(est => {
+      const freeMB = Math.round((est.quota - est.usage) / 1024 / 1024);
+      const s = document.getElementById('guide-storage-val');
+      if (!s) return;
+      if (freeMB > 500) { s.textContent = freeMB + ' MB boş ✓'; s.style.color = '#22C55E'; }
+      else if (freeMB > 100) { s.textContent = freeMB + ' MB — Yeterli'; s.style.color = '#F59E0B'; }
+      else { s.textContent = freeMB + ' MB — Az!'; s.style.color = '#ef4444'; }
+    });
+  }
+  // Şarj
+  if (navigator.getBattery) {
+    navigator.getBattery().then(bat => {
+      const pct = Math.round(bat.level * 100);
+      const b = document.getElementById('guide-battery-val');
+      if (!b) return;
+      if (pct > 20) { b.textContent = '%' + pct + ' ✓'; b.style.color = '#22C55E'; }
+      else { b.textContent = '%' + pct + ' — Şarj et!'; b.style.color = '#ef4444'; }
+    });
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  STATE: IDENTIFYING — Ürün tanıtma
+// ══════════════════════════════════════════════════════════════
 
 function stopIdentify() {
-  if (_stream) { _stream.getTracks().forEach(t => t.stop()); _stream = null; }
+  stopCamera();
+  smTransition('idle');
   showScreen('s-guide');
 }
 
 function retryIdentify() {
   document.getElementById('id-result').style.display = 'none';
   document.getElementById('id-analyzing').style.display = 'none';
-  _productRef = null;
-  _frameId = null;
-  _scanPlan = null;
+  _productRef = null; _frameId = null; _scanPlan = null;
   showScreen('s-identify');
-  startCamera();
+  smTransition('identifying');
+  startCamera('identify-video');
 }
 
 async function identifyProduct() {
-  const video = document.getElementById('camera-video');
+  const video = document.getElementById('identify-video');
+  if (!video || !video.videoWidth) { const v2 = SM.els.video; if (v2 && v2.videoWidth) { /* fallback */ } else return; }
+  const src = video.videoWidth ? video : SM.els.video;
   const canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
+  canvas.width = src.videoWidth; canvas.height = src.videoHeight;
+  canvas.getContext('2d').drawImage(src, 0, 0);
 
-  // Önce telefon CPU ile ön eleme
   const preCheck = clientSideValidate(canvas);
   if (!preCheck.ok) {
     const hint = document.getElementById('id-hint');
@@ -497,7 +760,6 @@ async function identifyProduct() {
     return;
   }
 
-  // Ön eleme geçti → Gemini'ye gönder
   document.getElementById('id-analyzing').style.display = 'flex';
   if (navigator.vibrate) navigator.vibrate(50);
 
@@ -505,15 +767,11 @@ async function identifyProduct() {
     const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.85));
     const fd = new FormData();
     fd.append('frame', blob, 'identify.jpg');
-
     const r = await fetch('/api/scan/identify', { method: 'POST', body: fd });
     const d = await r.json();
-
     if (!d.ok) throw new Error(d.error);
 
-    _productRef = d;
-    _frameId = d.frameId;
-    _scanPlan = d.scanPlan;
+    _productRef = d; _frameId = d.frameId; _scanPlan = d.scanPlan;
     TARGET_PHOTOS = d.scanPlan?.totalPhotos || 30;
     document.getElementById('photo-target').textContent = TARGET_PHOTOS;
 
@@ -529,22 +787,17 @@ async function identifyProduct() {
     diffEl.style.color = diff === 'kolay' ? '#22C55E' : diff === 'zor' ? '#ef4444' : '#F59E0B';
     document.getElementById('id-total-photos').textContent = TARGET_PHOTOS;
 
-    // Seviye planı
     const levels = d.scanPlan?.levels || [];
     document.getElementById('id-plan-levels').innerHTML = levels.map((l, i) =>
       `<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
         <div style="width:20px;height:20px;border-radius:50%;background:rgba(249,115,22,.15);border:1px solid rgba(249,115,22,.3);display:flex;align-items:center;justify-content:center;font-size:10px;color:#F97316;font-weight:700">${i+1}</div>
         <span><b style="color:#fff">${l.name}</b> — ${l.photos} fotoğraf (${l.angle}°) · ${l.description || ''}</span>
-      </div>`
-    ).join('');
+      </div>`).join('');
 
-    // Uyarılar
     if (d.warnings && d.warnings.length > 0) {
       document.getElementById('id-warnings').style.display = 'block';
       document.getElementById('id-warnings-text').innerHTML = d.warnings.map(w => '• ' + w).join('<br>');
-    } else {
-      document.getElementById('id-warnings').style.display = 'none';
-    }
+    } else { document.getElementById('id-warnings').style.display = 'none'; }
 
     document.getElementById('id-analyzing').style.display = 'none';
     document.getElementById('id-result').style.display = 'block';
@@ -558,190 +811,690 @@ async function identifyProduct() {
   }
 }
 
-// Akıllı taramaya geç (ürün tanındıktan sonra)
+// ══════════════════════════════════════════════════════════════
+//  STATE: LOCKING + SCANNING — Ana tarama döngüsü
+// ══════════════════════════════════════════════════════════════
+
 function startSmartScan() {
-  _currentLevel = 0;
-  _levelPhotos = 0;
-  _photos = [];
+  _currentLevel = 0; _levelPhotos = 0; _photos = [];
   document.getElementById('id-result').style.display = 'none';
+  stopCamera(); // Eski kamerayı kapat
   showScreen('s-camera');
-  startCamera();
-  updateSmartTip();
+  smTransition('locking');
+  startCamera('camera-video').then(() => {
+    _cacheEls();
+    _startScanLoop();
+  });
 }
 
-// Akıllı rehber güncelle (ürüne özel)
-function updateSmartTip() {
-  const tip = document.getElementById('cam-tip');
-  const levels = _scanPlan?.levels || [];
-  const level = levels[_currentLevel];
+// ── TEK RAF DÖNGÜSÜ ──
+let _loopFrameCount = 0;
+let _lastLightCheck = 0;
+let _lastTrackCheck = 0;
+let _lastRadarDraw = 0;
 
-  if (!level) {
-    tip.textContent = '✅ Tarama tamamlandı!';
-    return;
-  }
+function _startScanLoop() {
+  // Event listener'ları bağla
+  window.addEventListener('deviceorientation', _onOrientation);
+  window.addEventListener('devicemotion', _onMotion);
 
-  const remaining = level.photos - _levelPhotos;
-  const angleText = level.angle > 0 ? `alttan (${level.angle}°)` : level.angle < 0 ? `üstten (${Math.abs(level.angle)}°)` : 'karşıdan (0°)';
-  tip.innerHTML = `<b style="color:#F97316">${level.name}</b> — ${angleText} bak<br>${remaining} fotoğraf kaldı · ${level.description || ''}`;
+  // Overlay UI'ları oluştur
+  _createOverlayUI();
 
-  // Açı göstergesini güncelle
-  const angleEl = document.getElementById('cam-angle');
-  angleEl.textContent = `Hedef: ${level.angle}°`;
-}
+  // Light sensor başlat
+  _initAmbientLight();
 
-// ── ŞİFRE DOĞRULAMA ──
-async function verifyPassword() {
-  const pw = document.getElementById('pw-input').value.trim();
-  if (!pw) return;
+  _speak('Tarama başlıyor. Parçayı merkeze al.');
 
-  try {
-    const r = await fetch('/api/scan/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: _token, password: pw })
-    });
-    const d = await r.json();
+  // Ana döngü — tek RAF
+  function loop(timestamp) {
+    if (SM.state !== 'locking' && SM.state !== 'scanning') return;
+    _loopFrameCount++;
 
-    if (d.ok) {
-      _ustaId = d.ustaId;
-      showScreen('s-guide');
-      _detectDevice();
-    } else {
-      document.getElementById('pw-error').textContent = d.error || 'Yanlis sifre';
+    const video = SM.els.video;
+    if (!video || !video.videoWidth || video.readyState < 2) {
+      SM.rafId = requestAnimationFrame(loop);
+      return;
     }
-  } catch(e) {
-    document.getElementById('pw-error').textContent = 'Baglanti hatasi';
-  }
-}
 
-// Enter tuşu ile şifre gönder
-document.getElementById('pw-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') verifyPassword();
-});
-
-// ── EKRAN GEÇİŞ ──
-function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
-
-// ── KAMERA ──
-async function startCamera() {
-  try {
-    _stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: _facingMode, width: { ideal: 3840 }, height: { ideal: 2160 } },
-      audio: false
-    });
-    document.getElementById('camera-video').srcObject = _stream;
-    updateTip(0);
-
-    // Gyroscope dinle
-    if (window.DeviceOrientationEvent) {
-      window.addEventListener('deviceorientation', handleOrientation);
-    }
-  } catch(e) {
-    alert('Kamera izni gerekli');
-  }
-}
-
-let _uploadDone = false;
-let _uploadError = null;
-
-function stopCamera() {
-  if (_stream) { _stream.getTracks().forEach(t => t.stop()); _stream = null; }
-  if (_photos.length > 3) {
-    showScreen('s-form');
-    // Fotoğrafları arka planda yükle
-    _uploadDone = false;
-    _uploadError = null;
-    uploadPhotos().then(() => { _uploadDone = true; }).catch(e => { _uploadError = e.message; _uploadDone = true; });
-  } else {
-    showScreen('s-password');
-  }
-}
-
-function switchCamera() {
-  _facingMode = _facingMode === 'environment' ? 'user' : 'environment';
-  if (_stream) _stream.getTracks().forEach(t => t.stop());
-  startCamera();
-}
-
-// ── FOTOĞRAF ÇEK ──
-function capturePhoto() {
-  if (_photos.length >= TARGET_PHOTOS) return;
-
-  const video = document.getElementById('camera-video');
-  const canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-
-  // ── TELEFON CPU ÖN ELEME (ücretsiz) ──
-  const check = clientSideValidate(canvas);
-  if (!check.ok) {
-    // Başarısız — kırmızı çerçeve + titreşim + mesaj
-    const frame = document.querySelector('.cam-frame');
-    frame.style.borderColor = '#ef4444';
-    document.getElementById('cam-tip').innerHTML = '❌ <b>' + check.issues.join('</b> · <b>') + '</b>';
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-    setTimeout(() => {
-      frame.style.borderColor = 'rgba(249,115,22,.5)';
-      if (_scanPlan) updateSmartTip(); else updateTip(Math.floor(_photos.length / 15));
-    }, 2000);
-    return; // API'ye göndermeden reddet
-  }
-
-  // ── ÖN ELEME GEÇTİ — fotoğrafı kaydet ──
-  canvas.toBlob(blob => {
-    _photos.push(blob);
-
-    // Akıllı seviye takibi
-    if (_scanPlan) {
-      _levelPhotos++;
-      const levels = _scanPlan.levels || [];
-      const currentLevel = levels[_currentLevel];
-      if (currentLevel && _levelPhotos >= currentLevel.photos) {
-        _currentLevel++;
-        _levelPhotos = 0;
-        // Seviye geçiş bildirimi
-        if (_currentLevel < levels.length) {
-          const next = levels[_currentLevel];
-          document.getElementById('cam-tip').innerHTML = `✅ <b>${currentLevel.name}</b> tamam! Şimdi <b style="color:#F97316">${next.name}</b> — telefonu ${next.angle > 0 ? 'aşağı' : next.angle < 0 ? 'yukarı' : 'karşıya'} tut`;
-          if (navigator.vibrate) navigator.vibrate([50, 100, 50, 100, 50]);
-          // Çerçeveyi yeşil yap kısa süre
-          const frame = document.querySelector('.cam-frame');
-          frame.style.borderColor = '#22C55E';
-          setTimeout(() => { frame.style.borderColor = 'rgba(249,115,22,.5)'; updateSmartTip(); }, 3000);
-        }
-      } else {
-        updateSmartTip();
+    // ~2Hz: Object tracking + ışık kontrolü
+    if (timestamp - _lastTrackCheck > 500) {
+      _lastTrackCheck = timestamp;
+      _checkObjectInFrame(video);
+      _checkLighting(video);
+      // Referans kontrol (her 5 fotoğrafta)
+      if (_photos.length > 0 && _photos.length % 5 === 0) {
+        _checkReferences(video);
       }
     }
 
-    updateUI();
-
-    // Yeşil flash + titreşim (başarılı)
-    if (navigator.vibrate) navigator.vibrate(30);
-    const flash = document.createElement('div');
-    flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#22C55E;opacity:.15;z-index:999;pointer-events:none';
-    document.body.appendChild(flash);
-    setTimeout(() => flash.remove(), 100);
-
-    // Her 5 karede bir Gemini doğrulama (kota koruma)
-    if (_frameId && _photos.length % 5 === 0 && !_skipGeminiValidation) {
-      validateWithGemini(blob);
+    // ~20Hz: Radar çizimi (scanning modda)
+    if (SM.state === 'scanning' && timestamp - _lastRadarDraw > 50) {
+      _lastRadarDraw = timestamp;
+      _drawRadar();
     }
 
-    if (_photos.length >= TARGET_PHOTOS) {
-      document.getElementById('cam-tip').innerHTML = '🎉 <b>Tarama tamamlandı!</b> Veriler hazırlanıyor...';
-      if (navigator.vibrate) navigator.vibrate([50, 100, 50, 100, 50, 200]);
-      setTimeout(() => { stopCamera(); }, 1500);
+    // Locking modda: hedef arama
+    if (SM.state === 'locking') {
+      if (_loopFrameCount % 10 === 0) { // ~6Hz
+        _scanForTarget(video);
+      }
     }
-  }, 'image/jpeg', 0.92);
+
+    SM.rafId = requestAnimationFrame(loop);
+  }
+  SM.rafId = requestAnimationFrame(loop);
 }
 
-// Gemini ile periyodik doğrulama (her 5 karede 1)
-async function validateWithGemini(blob) {
+// ── OVERLAY UI OLUŞTUR ──
+function _createOverlayUI() {
+  const overlay = document.querySelector('.cam-overlay');
+  if (!overlay) return;
+
+  // Tracking overlay (kırmızı ekran)
+  if (!document.getElementById('tracking-overlay')) {
+    const t = document.createElement('div');
+    t.id = 'tracking-overlay';
+    t.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(239,68,68,.15);z-index:100;pointer-events:none;transition:opacity .3s;';
+    t.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;"><div style="font-size:48px">⚠️</div><div style="font-size:18px;font-weight:900;color:#ef4444;text-shadow:0 0 10px rgba(239,68,68,.5);">PARÇA KAYBEDİLDİ!</div><div style="font-size:13px;color:#fff;margin-top:4px;">Merkeze dön</div></div>';
+    document.body.appendChild(t);
+  }
+
+  // Hedefleme karesi + nişangah
+  if (!document.getElementById('target-lock-frame')) {
+    const f = document.createElement('div');
+    f.id = 'target-lock-frame';
+    f.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:55vw;height:40vh;border:2px solid #F97316;border-radius:12px;z-index:15;pointer-events:none;transition:all .4s;box-shadow:0 0 30px rgba(249,115,22,.2);';
+    f.innerHTML = '<div style="position:absolute;top:-2px;left:-2px;width:16px;height:16px;border-top:3px solid #F97316;border-left:3px solid #F97316;border-radius:3px 0 0 0"></div><div style="position:absolute;top:-2px;right:-2px;width:16px;height:16px;border-top:3px solid #F97316;border-right:3px solid #F97316;border-radius:0 3px 0 0"></div><div style="position:absolute;bottom:-2px;left:-2px;width:16px;height:16px;border-bottom:3px solid #F97316;border-left:3px solid #F97316;border-radius:0 0 0 3px"></div><div style="position:absolute;bottom:-2px;right:-2px;width:16px;height:16px;border-bottom:3px solid #F97316;border-right:3px solid #F97316;border-radius:0 0 3px 0"></div><div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:24px;height:24px;"><div style="position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(249,115,22,.4)"></div><div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(249,115,22,.4)"></div></div>';
+    overlay.appendChild(f);
+  }
+
+  // Lock status badge
+  if (!document.getElementById('lock-status')) {
+    const s = document.createElement('div');
+    s.id = 'lock-status';
+    s.style.cssText = 'position:absolute;top:38px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);border:1px solid #F97316;border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;z-index:20;pointer-events:none;transition:all .4s;color:#F97316;';
+    s.textContent = '🔍 Parçayı kutuya sok...';
+    overlay.appendChild(s);
+  }
+
+  // Light badge
+  if (!document.getElementById('cam-light-badge')) {
+    const l = document.createElement('div');
+    l.id = 'cam-light-badge';
+    l.style.cssText = 'position:absolute;top:56px;right:12px;background:rgba(0,0,0,.7);padding:4px 10px;border-radius:12px;font-size:10px;z-index:20;pointer-events:none;';
+    overlay.appendChild(l);
+  }
+
+  // Ghost angle box
+  if (!document.getElementById('ghost-angle-box')) {
+    const g = document.createElement('div');
+    g.id = 'ghost-angle-box';
+    g.style.cssText = 'position:absolute;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);border:2px solid rgba(0,200,255,.3);border-radius:8px;padding:4px 12px;font-size:11px;z-index:20;pointer-events:none;font-family:monospace;text-align:center;';
+    overlay.appendChild(g);
+  }
+
+  // Neon çerçeve
+  const frame = document.querySelector('.cam-frame');
+  if (frame) {
+    frame.style.border = '2px solid rgba(0,255,136,.6)';
+    frame.style.boxShadow = '0 0 20px rgba(0,255,136,.2), inset 0 0 20px rgba(0,255,136,.05)';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SENSÖR HANDLER'LARI — Tek kayıt, cleanup ile
+// ══════════════════════════════════════════════════════════════
+
+function _onOrientation(e) {
+  const beta = Math.round(e.beta || 0);
+
+  // Açı göstergesi
+  const angleEl = SM.els.angle || document.getElementById('cam-angle');
+  if (angleEl) {
+    angleEl.textContent = 'Aci: ' + beta + '°';
+    angleEl.className = (beta > 20 && beta < 80) ? 'cam-angle ok' : 'cam-angle bad';
+  }
+
+  // Açı takibi
+  SM.capturedAngles.add(Math.floor(beta / 15) * 15);
+
+  // Live angles
+  SM.liveAngles.alpha = e.alpha || 0;
+  SM.liveAngles.beta = e.beta || 0;
+  SM.liveAngles.gamma = e.gamma || 0;
+
+  // Base yaw kaydet (ilk lock anında)
+  if (SM.baseYaw === null && SM.lockState === 'locked') {
+    SM.baseYaw = SM.liveAngles.alpha;
+  }
+
+  // Scanning modda → açı hedef kontrolü + shutter lock
+  if (SM.state === 'scanning' && SM.lockState === 'locked') {
+    _checkAngleTarget();
+  } else if (SM.state === 'locking' || SM.state === 'scanning') {
+    _updateShutterLock(beta);
+  }
+}
+
+function _onMotion(e) {
+  const a = e.accelerationIncludingGravity || {};
+  const dx = Math.abs((a.x||0) - SM.lastMotion.x);
+  const dy = Math.abs((a.y||0) - SM.lastMotion.y);
+  const dz = Math.abs((a.z||0) - SM.lastMotion.z);
+  SM.lastMotion = { x: a.x||0, y: a.y||0, z: a.z||0 };
+
+  const shake = dx + dy + dz;
+  const warn = document.getElementById('_motion_warn');
+  if (shake > 8) {
+    SM.motionStable = false;
+    if (!warn) {
+      const d = document.createElement('div');
+      d.id = '_motion_warn';
+      d.style.cssText = 'position:fixed;top:90px;left:50%;transform:translateX(-50%);background:rgba(249,115,22,.9);color:#000;font-size:11px;font-weight:700;padding:6px 16px;border-radius:8px;z-index:999;';
+      d.textContent = '📳 Sabit tut — telefon çok sallanıyor';
+      document.body.appendChild(d);
+    }
+  } else {
+    SM.motionStable = true;
+    if (warn) warn.remove();
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  OBJECT TRACKING — Merkez varyans analizi
+// ══════════════════════════════════════════════════════════════
+
+function _checkObjectInFrame(video) {
+  if (!video || !video.videoWidth || video.readyState < 2) return;
+  if (!video.srcObject || video.srcObject.getVideoTracks().length === 0) return;
+
+  if (!SM.trackingCanvas) { SM.trackingCanvas = document.createElement('canvas'); SM.trackingCanvas.width = 64; SM.trackingCanvas.height = 48; }
+  const ctx = SM.trackingCanvas.getContext('2d');
+  const cx = video.videoWidth * 0.25, cy = video.videoHeight * 0.2;
+  const cw = video.videoWidth * 0.5, ch = video.videoHeight * 0.6;
+  ctx.drawImage(video, cx, cy, cw, ch, 0, 0, 64, 48);
+  const data = ctx.getImageData(0, 0, 64, 48).data;
+
+  let sum = 0, sq = 0;
+  const n = data.length / 4;
+  for (let i = 0; i < data.length; i += 4) {
+    const gray = data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
+    sum += gray; sq += gray * gray;
+  }
+  const variance = (sq / n) - (sum / n) * (sum / n);
+
+  const overlay = document.getElementById('tracking-overlay');
+  if (variance < 200) {
+    if (!SM.trackingLost) {
+      SM.trackingLost = true;
+      if (overlay) overlay.style.display = 'block';
+      _speak('Parça kaybedildi! Merkeze dön.');
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    }
+  } else {
+    if (SM.trackingLost) {
+      SM.trackingLost = false;
+      if (overlay) overlay.style.display = 'none';
+    }
+  }
+
+  // Lock tracking (scanning modda)
+  if (SM.state === 'scanning' && SM.lockState === 'locked') {
+    _updateLockVisuals();
+  }
+}
+
+function _updateLockVisuals() {
+  const lockFrame = document.getElementById('target-lock-frame');
+  const lockStatus = document.getElementById('lock-status');
+  if (!lockFrame || !lockStatus) return;
+
+  if (SM.trackingLost) {
+    lockFrame.style.borderColor = '#ef4444';
+    lockFrame.style.boxShadow = '0 0 40px rgba(239,68,68,.3)';
+    lockStatus.textContent = '⚠ KİLİT KIRILDI — Parçayı geri getir!';
+    lockStatus.style.color = '#ef4444'; lockStatus.style.borderColor = '#ef4444';
+    SM.shutterLocked = true;
+    _updateCaptureBtn(true);
+  } else if (lockFrame.style.borderColor !== 'rgb(0, 255, 136)') {
+    lockFrame.style.borderColor = '#00ff88';
+    lockFrame.style.boxShadow = '0 0 40px rgba(0,255,136,.4)';
+    lockStatus.innerHTML = '🎯 HEDEF MÜHÜRLENDİ';
+    lockStatus.style.color = '#00ff88'; lockStatus.style.borderColor = '#00ff88';
+    SM.shutterLocked = false;
+    _updateCaptureBtn(false);
+    _speak('Hedef tekrar kilitlendi.');
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  IŞIK & FLAŞ
+// ══════════════════════════════════════════════════════════════
+
+function _checkLighting(video) {
+  if (!video || !video.videoWidth) return;
+  const c = document.createElement('canvas');
+  c.width = 32; c.height = 24;
+  c.getContext('2d').drawImage(video, 0, 0, 32, 24);
+  const data = c.getContext('2d').getImageData(0, 0, 32, 24).data;
+  let total = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    total += data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
+  }
+  const avg = total / (32 * 24);
+
+  SM.lightOk = avg > 40;
+
+  // Light badge
+  const badge = document.getElementById('cam-light-badge');
+  if (badge) {
+    if (avg < 50) {
+      badge.innerHTML = '<span style="color:#ef4444">☀ Işık Düşük!</span>';
+      if (!SM.flashForced) { SM.flashForced = true; _enableFlash(); _speak('Işık yetersiz, flaş açıldı.'); }
+    } else if (avg < 100) {
+      badge.innerHTML = '<span style="color:#F59E0B">☀ Işık Orta</span>';
+    } else {
+      badge.innerHTML = '<span style="color:#22C55E">☀ Işık İyi</span>';
+      SM.flashForced = false;
+    }
+  }
+
+  // Uyarı banner
+  const warn = document.getElementById('_light_warn');
+  if (avg < 40 && !warn) {
+    const d = document.createElement('div');
+    d.id = '_light_warn';
+    d.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);background:rgba(239,68,68,.9);color:#fff;font-size:11px;font-weight:700;padding:6px 16px;border-radius:8px;z-index:999;';
+    d.textContent = '⚠ Işık yetersiz — ortamı aydınlat';
+    document.body.appendChild(d);
+  } else if (avg >= 40 && warn) { warn.remove(); }
+}
+
+function _initAmbientLight() {
+  if ('AmbientLightSensor' in window) {
+    try {
+      const sensor = new AmbientLightSensor();
+      sensor.addEventListener('reading', () => { SM.lightLevel = sensor.illuminance; });
+      sensor.start();
+    } catch(e) {}
+  }
+}
+
+function _enableFlash() {
+  if (!_stream) return;
+  const track = _stream.getVideoTracks()[0];
+  if (track && track.getCapabilities && track.getCapabilities().torch) {
+    track.applyConstraints({ advanced: [{ torch: true }] }).catch(() => {});
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  REFERANS TESPİTİ — Para & Marker
+// ══════════════════════════════════════════════════════════════
+
+function _checkReferences(video) {
+  if (!video || !video.videoWidth) return;
+  const c = document.createElement('canvas');
+  c.width = video.videoWidth; c.height = video.videoHeight;
+  c.getContext('2d').drawImage(video, 0, 0);
+
+  // Marker check
+  const refArea = c.getContext('2d').getImageData(c.width * 0.7, c.height * 0.7, c.width * 0.25, c.height * 0.2);
+  const d = refArea.data;
+  let blackN = 0, whiteN = 0, metalN = 0;
+  const total = d.length / 4;
+  for (let i = 0; i < d.length; i += 4) {
+    const gray = (d[i] + d[i+1] + d[i+2]) / 3;
+    if (gray < 60) blackN++;
+    else if (gray > 200) whiteN++;
+    if (d[i] > 150 && d[i+1] > 130 && d[i+2] < 120 && Math.abs(d[i]-d[i+1]) < 40) metalN++;
+  }
+
+  const ref = SM.els.ref || document.getElementById('cam-ref');
+  if (blackN/total > 0.25 && whiteN/total > 0.25) {
+    SM.markerDetected = true;
+    if (ref) { ref.textContent = '✅ Marker algılandı!'; ref.classList.add('found'); }
+  } else if (metalN/total > 0.05 && !SM.markerDetected) {
+    if (ref) { ref.textContent = '✅ Para algılandı!'; ref.classList.add('found'); }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TARGET ACQUISITION — Hedef arama & kilitleme
+// ══════════════════════════════════════════════════════════════
+
+function _scanForTarget(video) {
+  if (SM.lockState === 'locked') return;
+  if (!video || !video.videoWidth) return;
+
+  const c = document.createElement('canvas');
+  const vw = video.videoWidth, vh = video.videoHeight;
+  c.width = 128; c.height = 96;
+  c.getContext('2d').drawImage(video, vw*0.2, vh*0.2, vw*0.6, vh*0.6, 0, 0, 128, 96);
+  const data = c.getContext('2d').getImageData(0, 0, 128, 96).data;
+
+  // Kenar yoğunluğu
+  const gray = new Uint8Array(128 * 96);
+  for (let i = 0; i < gray.length; i++) {
+    gray[i] = Math.round(data[i*4] * 0.299 + data[i*4+1] * 0.587 + data[i*4+2] * 0.114);
+  }
+  let edgeCount = 0;
+  for (let y = 1; y < 95; y++) {
+    for (let x = 1; x < 127; x++) {
+      const idx = y * 128 + x;
+      if (Math.abs(gray[idx+1] - gray[idx-1]) + Math.abs(gray[idx+128] - gray[idx-128]) > 30) edgeCount++;
+    }
+  }
+  const edgeDensity = edgeCount / (126 * 94);
+
+  // Renk varyansı
+  let rS=0,gS=0,bS=0;
+  const n = data.length/4;
+  for (let i=0;i<data.length;i+=4){rS+=data[i];gS+=data[i+1];bS+=data[i+2];}
+  const rM=rS/n,gM=gS/n,bM=bS/n;
+  let rV=0,gV=0,bV=0;
+  for (let i=0;i<data.length;i+=4){rV+=(data[i]-rM)**2;gV+=(data[i+1]-gM)**2;bV+=(data[i+2]-bM)**2;}
+  const colorVar = (rV+gV+bV)/(3*n);
+
+  const detected = edgeDensity > 0.05 && colorVar > 200;
+  const lockFrame = document.getElementById('target-lock-frame');
+  const lockStatus = document.getElementById('lock-status');
+
+  if (SM.lockState === 'searching' && detected) {
+    SM.lockState = 'locking';
+    if (lockFrame) { lockFrame.style.borderColor = '#F59E0B'; lockFrame.style.boxShadow = '0 0 30px rgba(245,158,11,.3)'; }
+    if (lockStatus) { lockStatus.textContent = '⏳ Kilitleniyor...'; lockStatus.style.color = '#F59E0B'; lockStatus.style.borderColor = '#F59E0B'; }
+
+    setTimeout(() => {
+      if (SM.lockState !== 'locking') return;
+      _performLockOn(c, edgeDensity, colorVar);
+    }, 1000);
+
+  } else if (SM.lockState === 'locking' && !detected) {
+    SM.lockState = 'searching';
+    if (lockFrame) { lockFrame.style.borderColor = '#F97316'; lockFrame.style.boxShadow = '0 0 30px rgba(249,115,22,.2)'; }
+    if (lockStatus) { lockStatus.textContent = '🔍 Parçayı kutuya sok...'; lockStatus.style.color = '#F97316'; lockStatus.style.borderColor = '#F97316'; }
+  }
+}
+
+function _performLockOn(canvas, edgeDensity, colorVar) {
+  SM.lockState = 'locked';
+  smTransition('scanning');
+
+  // Keypoints
+  const data = canvas.getContext('2d').getImageData(0, 0, 128, 96).data;
+  const gray = new Uint8Array(128 * 96);
+  for (let i = 0; i < gray.length; i++) {
+    gray[i] = Math.round(data[i*4] * 0.299 + data[i*4+1] * 0.587 + data[i*4+2] * 0.114);
+  }
+  SM.lockKeypoints = [];
+  for (let y = 2; y < 94; y += 4) {
+    for (let x = 2; x < 126; x += 4) {
+      const idx = y * 128 + x;
+      const corner = Math.abs(gray[idx+1] - gray[idx-1]) + Math.abs(gray[idx+128] - gray[idx-128]);
+      if (corner > 40) SM.lockKeypoints.push({ x, y, strength: corner });
+    }
+  }
+  SM.lockKeypoints.sort((a,b) => b.strength - a.strength);
+  SM.lockKeypoints = SM.lockKeypoints.slice(0, 50);
+
+  // Visuals
+  const lockFrame = document.getElementById('target-lock-frame');
+  const lockStatus = document.getElementById('lock-status');
+  if (lockFrame) {
+    lockFrame.style.borderColor = '#00ff88';
+    lockFrame.style.boxShadow = '0 0 40px rgba(0,255,136,.4), inset 0 0 30px rgba(0,255,136,.05)';
+    lockFrame.querySelectorAll('div').forEach(d => {
+      ['borderTop','borderBottom','borderLeft','borderRight'].forEach(prop => {
+        if (d.style[prop]) d.style[prop + 'Color'] = '#00ff88';
+      });
+    });
+  }
+  if (lockStatus) {
+    lockStatus.innerHTML = '🎯 HEDEF MÜHÜRLENDİ — <span style="font-size:9px;opacity:.7">' + SM.lockKeypoints.length + ' nokta</span>';
+    lockStatus.style.color = '#00ff88'; lockStatus.style.borderColor = '#00ff88'; lockStatus.style.background = 'rgba(0,20,10,.9)';
+  }
+
+  // Keypoint flash
+  _showKeypointFlash();
+
+  if (navigator.vibrate) navigator.vibrate([50, 30, 100]);
+  _speak('Hedef mühürlendi Kaptan. Operasyona hazırım!');
+
+  SM.shutterLocked = false;
+  _updateCaptureBtn(false);
+
+  // Nesne boyut analizi + radar
+  _analyzeObjectScale();
+  _initGoniometricRadar();
+  _updateSmartTip();
+}
+
+function _showKeypointFlash() {
+  if (!SM.lockKeypoints || !SM.lockKeypoints.length) return;
+  const overlay = document.querySelector('.cam-overlay');
+  if (!overlay) return;
+  const kpC = document.createElement('div');
+  kpC.style.cssText = 'position:absolute;top:20%;left:20%;width:60%;height:60%;pointer-events:none;z-index:16;';
+  SM.lockKeypoints.forEach(kp => {
+    const dot = document.createElement('div');
+    dot.style.cssText = `position:absolute;width:4px;height:4px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px #00ff88;opacity:0;left:${(kp.x/128)*100}%;top:${(kp.y/96)*100}%;`;
+    dot.animate([{opacity:0,transform:'scale(0)'},{opacity:1,transform:'scale(1.5)'},{opacity:0,transform:'scale(0.5)'}],{duration:1500,delay:Math.random()*300});
+    kpC.appendChild(dot);
+  });
+  overlay.appendChild(kpC);
+  setTimeout(() => kpC.remove(), 2000);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SHUTTER LOCK & CAPTURE BUTTON
+// ══════════════════════════════════════════════════════════════
+
+function _updateCaptureBtn(locked) {
+  const btn = SM.els.captureBtn || document.getElementById('cam-capture-btn');
+  if (!btn) return;
+  btn.style.opacity = locked ? '0.3' : '1';
+  btn.style.border = locked ? '4px solid #ef4444' : '4px solid #22C55E';
+  btn.style.pointerEvents = locked ? 'none' : 'auto';
+}
+
+function _updateShutterLock(beta) {
+  SM.currentBeta = beta;
+  const diff = Math.abs(beta - SM.targetAngle);
+  const wasLocked = SM.shutterLocked;
+  SM.shutterLocked = diff > SM.angleTolerance;
+
+  _updateCaptureBtn(SM.shutterLocked);
+
+  if (!SM.shutterLocked && wasLocked) {
+    _speak('Kilitlendi! Çek.');
+    if (navigator.vibrate) navigator.vibrate(100);
+  }
+
+  // Ghost box
+  const ghost = document.getElementById('ghost-angle-box');
+  if (ghost) {
+    ghost.innerHTML = SM.shutterLocked
+      ? '<span style="color:#ef4444">🎯 ' + Math.round(beta) + '° → ' + SM.targetAngle + '° gerekli</span>'
+      : '<span style="color:#22C55E">🎯 ' + Math.round(beta) + '° — KİLİTLENDİ ✓</span>';
+  }
+}
+
+function _updateTargetAngle() {
+  const c = _photos.length;
+  if (c < 15) SM.targetAngle = 30 + (c * 2);
+  else if (c < 30) SM.targetAngle = 60 + ((c - 15) * 2);
+  else SM.targetAngle = 45;
+  SM.angleTolerance = 8;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  FOTOĞRAF ÇEKİM — Tek fonksiyon, sarmalama yok
+// ══════════════════════════════════════════════════════════════
+
+function capturePhoto() {
+  if (SM.state !== 'scanning') return;
+  if (_photos.length >= TARGET_PHOTOS) return;
+
+  // Shutter lock
+  if (SM.shutterLocked) {
+    _speak(SM.targetAngle + ' dereceye gel.');
+    if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+    return;
+  }
+  // Tracking
+  if (SM.trackingLost) {
+    _speak('Parçayı merkeze getir.');
+    return;
+  }
+  // Işık & hareket
+  if (!SM.lightOk) { if (navigator.vibrate) navigator.vibrate([100,50,100]); return; }
+  if (!SM.motionStable) { if (navigator.vibrate) navigator.vibrate([100,50,100]); return; }
+
+  const video = SM.els.video || document.getElementById('camera-video');
+  if (!video || !video.videoWidth) return;
+
+  // Çift çekim — iki kare al, en net olanı seç
+  const c1 = document.createElement('canvas');
+  c1.width = video.videoWidth; c1.height = video.videoHeight;
+  c1.getContext('2d').drawImage(video, 0, 0);
+
+  setTimeout(() => {
+    const c2 = document.createElement('canvas');
+    c2.width = video.videoWidth; c2.height = video.videoHeight;
+    c2.getContext('2d').drawImage(video, 0, 0);
+
+    const s1 = _sharpnessScore(c1), s2 = _sharpnessScore(c2);
+    const best = s1 >= s2 ? c1 : c2;
+
+    // Blur detection
+    const blur = _detectBlur(best);
+    if (!blur.sharp) {
+      _speak('Bulanık! Tekrar odakla.');
+      const flash = document.createElement('div');
+      flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(239,68,68,.2);z-index:999;pointer-events:none';
+      document.body.appendChild(flash);
+      setTimeout(() => flash.remove(), 300);
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      return;
+    }
+
+    // Ön eleme
+    const check = clientSideValidate(best);
+    if (!check.ok) {
+      const frame = document.querySelector('.cam-frame');
+      if (frame) frame.style.borderColor = '#ef4444';
+      const tip = SM.els.tip || document.getElementById('cam-tip');
+      if (tip) tip.innerHTML = '❌ <b>' + check.issues.join('</b> · <b>') + '</b>';
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      setTimeout(() => {
+        if (frame) frame.style.borderColor = 'rgba(0,255,136,.6)';
+        _updateSmartTip();
+      }, 2000);
+      return;
+    }
+
+    // GEÇTI — kaydet
+    best.toBlob(blob => {
+      _photos.push(blob);
+      _updateTargetAngle();
+
+      // Akıllı seviye takibi
+      if (_scanPlan) {
+        _levelPhotos++;
+        const levels = _scanPlan.levels || [];
+        const level = levels[_currentLevel];
+        if (level && _levelPhotos >= level.photos) {
+          _currentLevel++;
+          _levelPhotos = 0;
+          if (_currentLevel < levels.length) {
+            const next = levels[_currentLevel];
+            const tip = SM.els.tip || document.getElementById('cam-tip');
+            if (tip) tip.innerHTML = `✅ <b>${level.name}</b> tamam! Şimdi <b style="color:#F97316">${next.name}</b>`;
+            if (navigator.vibrate) navigator.vibrate([50, 100, 50, 100, 50]);
+            setTimeout(() => _updateSmartTip(), 3000);
+          }
+        } else { _updateSmartTip(); }
+      }
+
+      _updateUI();
+
+      // Yeşil flash
+      if (navigator.vibrate) navigator.vibrate(30);
+      const flash = document.createElement('div');
+      flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#22C55E;opacity:.15;z-index:999;pointer-events:none';
+      document.body.appendChild(flash);
+      setTimeout(() => flash.remove(), 100);
+
+      // Gemini doğrulama (her 5 karede)
+      if (_frameId && _photos.length % 5 === 0 && !_skipGeminiValidation) {
+        _validateWithGemini(blob);
+      }
+
+      // Sesli onay
+      const remaining = TARGET_PHOTOS - _photos.length;
+      if (remaining > 0 && remaining % 5 === 0) _speak(remaining + ' kare kaldı.');
+
+      // Bitti mi?
+      if (_photos.length >= TARGET_PHOTOS) {
+        const tip = SM.els.tip || document.getElementById('cam-tip');
+        if (tip) tip.innerHTML = '🎉 <b>Tarama tamamlandı!</b> Veriler hazırlanıyor...';
+        if (navigator.vibrate) navigator.vibrate([50, 100, 50, 100, 50, 200]);
+        _speak('Tarama tamamlandı!');
+        setTimeout(() => _finishScan(), 1500);
+      }
+    }, 'image/jpeg', 0.92);
+  }, 80);
+}
+
+// ── Auto-capture (radar hedefine gelince) ──
+function _autoCaptureFromRadar() {
+  if (SM.state !== 'scanning' || SM.shutterLocked || SM.trackingLost) return;
+  capturePhoto();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  UI GÜNCELLEMELERİ
+// ══════════════════════════════════════════════════════════════
+
+function _updateUI() {
+  const counter = SM.els.counter || document.getElementById('photo-count');
+  const progress = SM.els.progress || document.getElementById('cam-progress-bar');
+  if (counter) counter.textContent = _photos.length;
+  if (progress) progress.style.width = ((_photos.length / TARGET_PHOTOS) * 100) + '%';
+}
+
+const TIPS = [
+  'Ustam, once parcanin yanina bir madeni para koy ki boyunu bilelim.',
+  'Simdi parcanin etrafinda yavasca donmeye basla. Asagidan cek.',
+  'Biraz daha yukaridan bak... tam karsidan cek.',
+  'Son tur! Yukaridan bakarak etrafinda don.',
+  'Supersin! Tarama tamamlandi. Veriler hazirlaniyor...'
+];
+
+function _updateSmartTip() {
+  const tip = SM.els.tip || document.getElementById('cam-tip');
+  if (!tip) return;
+
+  if (_scanPlan) {
+    const levels = _scanPlan.levels || [];
+    const level = levels[_currentLevel];
+    if (!level) { tip.textContent = '✅ Tarama tamamlandı!'; return; }
+    const remaining = level.photos - _levelPhotos;
+    const angleText = level.angle > 0 ? `alttan (${level.angle}°)` : level.angle < 0 ? `üstten (${Math.abs(level.angle)}°)` : 'karşıdan (0°)';
+    tip.innerHTML = `<b style="color:#F97316">${level.name}</b> — ${angleText} bak<br>${remaining} fotoğraf kaldı · ${level.description || ''}`;
+  } else {
+    const idx = _photos.length <= 15 ? 1 : _photos.length <= 30 ? 2 : 3;
+    tip.textContent = TIPS[idx] || '';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  GEMINİ DOĞRULAMA
+// ══════════════════════════════════════════════════════════════
+
+async function _validateWithGemini(blob) {
   try {
     const levels = _scanPlan?.levels || [];
     const level = levels[_currentLevel];
@@ -755,185 +1508,292 @@ async function validateWithGemini(blob) {
     const d = await r.json();
 
     if (d.ok && !d.accept) {
-      // Gemini uyarısı — sonraki karelerde düzeltme öner
-      const tip = document.getElementById('cam-tip');
-      tip.innerHTML = `⚠️ <b>${d.suggestion || 'Açıyı düzelt'}</b>`;
-      tip.style.color = '#F59E0B';
+      const tip = SM.els.tip || document.getElementById('cam-tip');
+      if (tip) { tip.innerHTML = `⚠️ <b>${d.suggestion || 'Açıyı düzelt'}</b>`; tip.style.color = '#F59E0B'; }
       const frame = document.querySelector('.cam-frame');
-      frame.style.borderColor = '#F59E0B';
+      if (frame) frame.style.borderColor = '#F59E0B';
       setTimeout(() => {
-        tip.style.color = '';
-        frame.style.borderColor = 'rgba(249,115,22,.5)';
-        if (_scanPlan) updateSmartTip();
+        if (tip) tip.style.color = '';
+        if (frame) frame.style.borderColor = 'rgba(0,255,136,.6)';
+        _updateSmartTip();
       }, 3000);
     }
   } catch(e) {
-    // Gemini hatası — sessizce atla, kota koruma
     console.warn('Gemini validation skipped:', e.message);
-    _skipGeminiValidation = true; // Bir hata olduysa artık Gemini'yi çağırma
+    _skipGeminiValidation = true;
   }
 }
 
-function updateUI() {
-  document.getElementById('photo-count').textContent = _photos.length;
-  const pct = (_photos.length / TARGET_PHOTOS) * 100;
-  document.getElementById('cam-progress-bar').style.width = pct + '%';
+// ══════════════════════════════════════════════════════════════
+//  DİNAMİK KARE & NESNE BOYUTU
+// ══════════════════════════════════════════════════════════════
 
-  // Rehber güncelle
-  if (_photos.length <= 15) updateTip(1);
-  else if (_photos.length <= 30) updateTip(2);
-  else if (_photos.length < TARGET_PHOTOS) updateTip(3);
+function _analyzeObjectScale() {
+  const video = SM.els.video;
+  if (!video || !video.videoWidth) return;
+
+  const c = document.createElement('canvas');
+  c.width = 128; c.height = 96;
+  c.getContext('2d').drawImage(video, 0, 0, 128, 96);
+  const data = c.getContext('2d').getImageData(0, 0, 128, 96).data;
+
+  let centerPixels = 0, totalCenter = 0;
+  for (let y = 0; y < 96; y++) {
+    for (let x = 0; x < 128; x++) {
+      const idx = (y * 128 + x) * 4;
+      const gray = data[idx] * 0.299 + data[idx+1] * 0.587 + data[idx+2] * 0.114;
+      if (x > 20 && x < 108 && y > 15 && y < 81) {
+        totalCenter++;
+        if (x > 1 && x < 127 && y > 1 && y < 95) {
+          const left = data[((y)*128+(x-1))*4];
+          if (Math.abs(gray - (left * 0.299 + data[((y)*128+(x-1))*4+1] * 0.587 + data[((y)*128+(x-1))*4+2] * 0.114)) > 15) centerPixels++;
+        }
+      }
+    }
+  }
+
+  const fillRatio = centerPixels / totalCenter;
+  if (fillRatio < 0.08) { SM.objectCategory = 'micro'; TARGET_PHOTOS = 18; }
+  else if (fillRatio < 0.2) { SM.objectCategory = 'medium'; TARGET_PHOTOS = 35; }
+  else { SM.objectCategory = 'large'; TARGET_PHOTOS = 70; }
+
+  if (SM.hasLiDAR) TARGET_PHOTOS = Math.max(12, Math.round(TARGET_PHOTOS * 0.5));
+
+  // Scan plan varsa onun değerini kullan
+  if (_scanPlan?.totalPhotos) TARGET_PHOTOS = _scanPlan.totalPhotos;
+
+  const targetEl = SM.els.target || document.getElementById('photo-target');
+  if (targetEl) targetEl.textContent = TARGET_PHOTOS;
+
+  _showObjectModeBadge();
+  _updateGuideForCategory();
 }
 
-// ── REHBER BALONLARI ──
-const TIPS = [
-  'Ustam, once parcanin yanina bir madeni para koy ki boyunu bilelim.',
-  'Simdi parcanin etrafinda yavasca donmeye basla. Asagidan cek.',
-  'Biraz daha yukaridan bak... tam karsidan cek.',
-  'Son tur! Yukaridan bakarak etrafinda don.',
-  'Supersin! Tarama tamamlandi. Veriler hazirlaniyor...'
-];
+function _showObjectModeBadge() {
+  const overlay = document.querySelector('.cam-overlay');
+  if (!overlay) return;
+  let badge = document.getElementById('object-mode-badge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = 'object-mode-badge';
+    badge.style.cssText = 'position:absolute;top:56px;left:12px;background:rgba(0,0,0,.8);border-radius:20px;padding:4px 12px;font-size:10px;font-weight:700;z-index:20;pointer-events:none;';
+    overlay.appendChild(badge);
+  }
+  const labels = {
+    micro: { text: '🔬 MİKRO: ' + TARGET_PHOTOS + ' Kare', color: '#A855F7', tip: 'Küçük nesne — makro odak aktif' },
+    medium: { text: '📦 ORTA: ' + TARGET_PHOTOS + ' Kare', color: '#00c8ff', tip: 'Standart tarama — iki tur çek' },
+    large: { text: '🏗 BÜYÜK: ' + TARGET_PHOTOS + ' Kare', color: '#F59E0B', tip: 'Kompleks nesne — üç tur + derinlik' }
+  };
+  const l = labels[SM.objectCategory];
+  badge.textContent = l.text; badge.style.color = l.color; badge.style.border = '1px solid ' + l.color;
+  _speak(l.tip);
 
-function updateTip(index) {
-  document.getElementById('cam-tip').textContent = TIPS[index] || '';
+  // Macro tip for micro
+  if (SM.objectCategory === 'micro' && !document.getElementById('macro-focus-tip')) {
+    const tip = document.createElement('div');
+    tip.id = 'macro-focus-tip';
+    tip.style.cssText = 'position:absolute;bottom:140px;left:50%;transform:translateX(-50%);background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.4);border-radius:8px;padding:6px 14px;font-size:11px;color:#A855F7;font-weight:700;z-index:20;pointer-events:none;text-align:center;';
+    tip.textContent = '🔬 MAKRO ODAK — Telefonu parçaya 10-15cm yaklaştır';
+    overlay.appendChild(tip);
+  }
 }
 
-// ── GYROSCOPE ──
-function handleOrientation(e) {
-  const beta = Math.round(e.beta || 0); // yukarı/aşağı
-  const el = document.getElementById('cam-angle');
-  el.textContent = 'Aci: ' + beta + '°';
+function _updateGuideForCategory() {
+  if (SM.objectCategory === 'micro') {
+    TIPS[0] = 'Küçük nesne algılandı. Yakından, makro modda çek.';
+    TIPS[1] = 'Yavaşça etrafında dön. Tek tur yeterli.'; TIPS[2] = 'Şimdi hafif yukarıdan bak.';
+    TIPS[3] = 'Son birkaç kare! Detaylara odaklan.'; TIPS[4] = 'Mükemmel! Mikro tarama tamamlandı.';
+  } else if (SM.objectCategory === 'large') {
+    TIPS[0] = 'Büyük nesne! Önce alt seviyeden tam tur at.';
+    TIPS[1] = 'Alt tur tamam. Şimdi göz hizasından çek.'; TIPS[2] = 'Üst açıdan tam tur at.';
+    TIPS[3] = 'İç bükey alanları ve detayları çek.'; TIPS[4] = 'Harika! Büyük nesne taraması tamamlandı.';
+  }
+}
 
-  // İdeal açı aralığı
-  if (beta > 20 && beta < 80) {
-    el.className = 'cam-angle ok';
+// ══════════════════════════════════════════════════════════════
+//  GONİOMETRİK RADAR — Açı haritası + auto-shutter
+// ══════════════════════════════════════════════════════════════
+
+function _initGoniometricRadar() {
+  const overlay = document.querySelector('.cam-overlay');
+  if (!overlay) return;
+
+  // Radar
+  if (!document.getElementById('angle-radar')) {
+    const radar = document.createElement('div');
+    radar.id = 'angle-radar';
+    radar.style.cssText = 'position:absolute;top:50%;right:12px;transform:translateY(-50%);width:80px;height:80px;border-radius:50%;background:rgba(0,0,0,.8);border:2px solid rgba(0,200,255,.3);z-index:20;pointer-events:none;';
+    radar.innerHTML = '<canvas id="radar-canvas" width="80" height="80" style="position:absolute;top:0;left:0;"></canvas><div id="radar-degree" style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:9px;color:#00c8ff;font-family:monospace;white-space:nowrap;font-weight:700;"></div>';
+    overlay.appendChild(radar);
+  }
+
+  // Açı komut paneli
+  if (!document.getElementById('angle-cmd')) {
+    const cmd = document.createElement('div');
+    cmd.id = 'angle-cmd';
+    cmd.style.cssText = 'position:absolute;top:56px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);border:1px solid rgba(0,200,255,.2);border-radius:20px;padding:3px 14px;font-size:10px;font-weight:700;z-index:20;pointer-events:none;font-family:monospace;color:#00c8ff;white-space:nowrap;';
+    overlay.appendChild(cmd);
+  }
+
+  _buildScanRoute();
+}
+
+function _buildScanRoute() {
+  SM.scanRoute.nodes = []; SM.scanRoute.currentNode = 0;
+  let yawStep, pitchLevels;
+  if (SM.objectCategory === 'micro') { pitchLevels = [15, 45]; yawStep = 36; }
+  else if (SM.objectCategory === 'large') { pitchLevels = [15, 45, 85]; yawStep = 15; }
+  else { pitchLevels = [20, 50]; yawStep = 20; }
+
+  const names = ['Alt Tur', 'Orta Tur', 'Üst Tur'];
+  pitchLevels.forEach((pitch, ti) => {
+    for (let yaw = 0; yaw < 360; yaw += yawStep) {
+      SM.scanRoute.nodes.push({ pitch, yaw, label: names[ti] + ' ' + yaw + '°', taken: false });
+    }
+  });
+}
+
+function _checkAngleTarget() {
+  if (SM.lockState !== 'locked' || SM.scanRoute.nodes.length === 0) return;
+
+  let node = SM.scanRoute.nodes[SM.scanRoute.currentNode];
+  if (!node || node.taken) {
+    for (let i = 0; i < SM.scanRoute.nodes.length; i++) {
+      if (!SM.scanRoute.nodes[i].taken) { SM.scanRoute.currentNode = i; node = SM.scanRoute.nodes[i]; break; }
+    }
+    if (!node || node.taken) return;
+  }
+
+  const relYaw = (SM.liveAngles.alpha - (SM.baseYaw || 0) + 360) % 360;
+  const pitch = Math.abs(SM.liveAngles.beta);
+  let yawDiff = Math.abs(relYaw - node.yaw);
+  if (yawDiff > 180) yawDiff = 360 - yawDiff;
+  const pitchDiff = Math.abs(pitch - node.pitch);
+  const yawOK = yawDiff < 5, pitchOK = pitchDiff < 4;
+
+  // Komut paneli
+  const cmdEl = document.getElementById('angle-cmd');
+  if (cmdEl) {
+    if (yawOK && pitchOK) {
+      cmdEl.innerHTML = '<span style="color:#00ff88">🎯 ' + Math.round(pitch) + '° / ' + Math.round(relYaw) + '° — KİLİTLENDİ</span>';
+    } else {
+      const hints = [];
+      if (!pitchOK) hints.push(pitch < node.pitch ? '↑ ' + Math.round(node.pitch-pitch) + '° yukarı' : '↓ ' + Math.round(pitch-node.pitch) + '° aşağı');
+      if (!yawOK) { const dir = ((node.yaw - relYaw + 360) % 360) < 180 ? 'sağa' : 'sola'; hints.push('↻ ' + Math.round(yawDiff) + '° ' + dir); }
+      cmdEl.innerHTML = '<span style="color:#F59E0B">' + hints.join(' · ') + '</span>';
+    }
+  }
+
+  // Shutter lock
+  SM.shutterLocked = !(yawOK && pitchOK);
+  _updateCaptureBtn(SM.shutterLocked);
+
+  // Auto-shutter
+  if (yawOK && pitchOK && SM.scanRoute.autoShutter) {
+    node.taken = true;
+    SM.scanRoute.currentNode++;
+    SM.shutterLocked = true;
+    if (navigator.vibrate) navigator.vibrate(80);
+    setTimeout(() => _autoCaptureFromRadar(), 100);
+  }
+
+  // Sesli rehberlik
+  if (SM.shutterLocked && Date.now() - SM.lastSpoke > 4000) {
+    if (!pitchOK) { _speak(Math.round(Math.abs(pitch - node.pitch)) + ' derece ' + (pitch < node.pitch ? 'yukarı kalk' : 'aşağı in')); }
+    else if (!yawOK) { _speak(Math.round(yawDiff) + ' derece ' + (((node.yaw - relYaw + 360) % 360) < 180 ? 'sağa dön' : 'sola dön')); }
+  }
+}
+
+function _drawRadar() {
+  const canvas = document.getElementById('radar-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const cx = 40, cy = 40, r = 32;
+  ctx.clearRect(0, 0, 80, 80);
+
+  // Halkalar
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2); ctx.strokeStyle = 'rgba(0,200,255,.2)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.beginPath(); ctx.arc(cx, cy, r*0.5, 0, Math.PI*2); ctx.strokeStyle = 'rgba(0,200,255,.1)'; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, cy-r); ctx.lineTo(cx, cy+r); ctx.moveTo(cx-r, cy); ctx.lineTo(cx+r, cy); ctx.strokeStyle = 'rgba(0,200,255,.1)'; ctx.stroke();
+
+  // Hedefler
+  SM.scanRoute.nodes.forEach((node, i) => {
+    const ang = (node.yaw - 90) * Math.PI / 180;
+    const dist = (node.pitch / 90) * r;
+    const nx = cx + Math.cos(ang) * dist, ny = cy + Math.sin(ang) * dist;
+    ctx.beginPath(); ctx.arc(nx, ny, node.taken ? 2 : 3, 0, Math.PI*2);
+    if (node.taken) { ctx.fillStyle = '#22C55E'; }
+    else if (i === SM.scanRoute.currentNode) {
+      ctx.fillStyle = '#F97316'; ctx.fill();
+      ctx.beginPath(); ctx.arc(nx, ny, 6, 0, Math.PI*2);
+      ctx.strokeStyle = 'rgba(249,115,22,.5)'; ctx.lineWidth = 1; ctx.stroke(); return;
+    } else { ctx.fillStyle = 'rgba(0,200,255,.3)'; }
+    ctx.fill();
+  });
+
+  // Kullanıcı pozisyonu
+  const relYaw = ((SM.liveAngles.alpha - (SM.baseYaw || 0) + 360) % 360);
+  const uAng = (relYaw - 90) * Math.PI / 180;
+  const uDist = (Math.abs(SM.liveAngles.beta) / 90) * r;
+  const ux = cx + Math.cos(uAng) * uDist, uy = cy + Math.sin(uAng) * uDist;
+  ctx.beginPath(); ctx.arc(ux, uy, 4, 0, Math.PI*2); ctx.fillStyle = '#ff4444'; ctx.fill();
+  ctx.beginPath(); ctx.arc(ux, uy, 7, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255,68,68,.4)'; ctx.lineWidth = 1; ctx.stroke();
+
+  const degEl = document.getElementById('radar-degree');
+  if (degEl) {
+    const taken = SM.scanRoute.nodes.filter(n => n.taken).length;
+    degEl.textContent = Math.round(Math.abs(SM.liveAngles.beta)) + '° / ' + Math.round(relYaw) + '° [' + taken + '/' + SM.scanRoute.nodes.length + ']';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TARAMA BİTİŞ → UPLOADING → DONE
+// ══════════════════════════════════════════════════════════════
+
+let _uploadDone = false;
+let _uploadError = null;
+
+function _finishScan() {
+  stopCamera();
+  smTransition('uploading');
+
+  if (_photos.length > 3) {
+    showScreen('s-form');
+    _uploadDone = false; _uploadError = null;
+    _uploadPhotos().then(() => { _uploadDone = true; }).catch(e => { _uploadError = e.message; _uploadDone = true; });
   } else {
-    el.className = 'cam-angle bad';
+    smTransition('idle');
+    showScreen('s-password');
   }
 }
 
-// ── FOTOĞRAFLARI YÜKLE ──
-async function uploadPhotos() {
+async function _uploadPhotos() {
   if (_photos.length === 0) return;
-
   try {
-    // Tarama oluştur
     const createR = await fetch('/api/scans/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        userId: _ustaId,
-        name: 'Musteri Taramasi ' + new Date().toLocaleDateString('tr-TR'),
-        photoCount: _photos.length,
-        quality: 'high'
-      })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: _ustaId, name: 'Musteri Taramasi ' + new Date().toLocaleDateString('tr-TR'), photoCount: _photos.length, quality: 'high' })
     });
     const createD = await createR.json();
     if (!createD.ok) throw new Error(createD.error);
     _scanId = createD.scan.scanId;
 
-    // Fotoğrafları paralel yükle (5'li batch)
     const BATCH = 5;
-    let uploaded = 0;
     for (let b = 0; b < _photos.length; b += BATCH) {
       const batch = _photos.slice(b, b + BATCH);
-      const results = await Promise.allSettled(batch.map((photo, j) => {
+      await Promise.allSettled(batch.map((photo, j) => {
         const fd = new FormData();
         fd.append('photo', photo, `photo_${String(b + j).padStart(3,'0')}.jpg`);
         return fetch(`/api/scans/${_scanId}/photo`, { method: 'POST', body: fd });
       }));
-      const failed = results.filter(r => r.status === 'rejected').length;
-      uploaded += batch.length - failed;
-      if (failed > 0) console.warn(`Batch ${Math.floor(b/BATCH)+1}: ${failed} fotoğraf yüklenemedi`);
     }
 
-    // Reconstruction başlat
     await fetch(`/api/scans/${_scanId}/reconstruct`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({})
     });
-
-  } catch(e) {
-    console.error('Upload hatasi:', e);
-  }
+  } catch(e) { console.error('Upload hatasi:', e); }
 }
 
-// ── CİHAZ TESPİTİ ──
-let _hasLiDAR = false;
-
-function _detectDevice() {
-  const ua = navigator.userAgent;
-  const el = document.getElementById('guide-device-text');
-  const box = document.getElementById('guide-device');
-  let deviceName = 'Bilinmeyen cihaz';
-  let mode = 'photo'; // photo veya lidar
-
-  // iPhone Pro/Pro Max tespiti (LiDAR var)
-  const iphoneMatch = ua.match(/iPhone(\d+),(\d+)/);
-  if (ua.includes('iPhone')) {
-    if (ua.includes('iPhone 12 Pro') || ua.includes('iPhone 13 Pro') || ua.includes('iPhone 14 Pro') || ua.includes('iPhone 15 Pro') || ua.includes('iPhone 16')) {
-      deviceName = 'iPhone Pro'; mode = 'lidar'; _hasLiDAR = true;
-    } else { deviceName = 'iPhone'; }
-  }
-  // iPad Pro (LiDAR var)
-  else if (ua.includes('iPad') && (ua.includes('Pro') || ua.includes('iPad14') || ua.includes('iPad13'))) {
-    deviceName = 'iPad Pro'; mode = 'lidar'; _hasLiDAR = true;
-  }
-  // Samsung Galaxy S20+/S21+/S22+/S23+/S24 (ToF sensor)
-  else if (ua.includes('SM-S9') || ua.includes('SM-S92') || ua.includes('SM-S91') || ua.includes('SM-S90') || ua.includes('SM-G99') || ua.includes('SM-G98')) {
-    deviceName = 'Samsung Galaxy S (ToF)'; mode = 'lidar'; _hasLiDAR = true;
-  }
-  // Samsung genel
-  else if (ua.includes('Samsung') || ua.includes('SM-')) { deviceName = 'Samsung'; }
-  // Diğer Android
-  else if (ua.includes('Android')) { deviceName = 'Android'; }
-
-  if (mode === 'lidar') {
-    box.style.borderColor = '#22C55E';
-    el.innerHTML = `<b style="color:#22C55E">${deviceName}</b> — LiDAR/ToF sensör algılandı! 🎯<br><span style="font-size:10px;color:#888">Daha az fotoğraf, daha hassas tarama yapılacak.</span>`;
-    // LiDAR modda daha az fotoğraf yeterli
-    TARGET_PHOTOS = 20;
-    document.getElementById('photo-target').textContent = '20';
-  } else {
-    box.style.borderColor = '#F59E0B';
-    el.innerHTML = `<b style="color:#F59E0B">${deviceName}</b> — Fotoğraf modu<br><span style="font-size:10px;color:#888">45 fotoğraf çekilerek 3D model oluşturulacak.</span>`;
-  }
-
-  // Depolama kontrolü
-  if (navigator.storage && navigator.storage.estimate) {
-    navigator.storage.estimate().then(function(est) {
-      var free = est.quota - est.usage;
-      var freeMB = Math.round(free / 1024 / 1024);
-      var storEl = document.getElementById('guide-storage-val');
-      if (storEl) {
-        if (freeMB > 500) { storEl.textContent = freeMB + ' MB boş ✓'; storEl.style.color = '#22C55E'; }
-        else if (freeMB > 100) { storEl.textContent = freeMB + ' MB — Yeterli'; storEl.style.color = '#F59E0B'; }
-        else { storEl.textContent = freeMB + ' MB — Az!'; storEl.style.color = '#ef4444'; }
-      }
-    });
-  } else {
-    var storEl = document.getElementById('guide-storage-val');
-    if (storEl) { storEl.textContent = 'Kontrol edilemedi'; storEl.style.color = '#888'; }
-  }
-
-  // Şarj kontrolü
-  if (navigator.getBattery) {
-    navigator.getBattery().then(function(bat) {
-      var pct = Math.round(bat.level * 100);
-      var batEl = document.getElementById('guide-battery-val');
-      if (batEl) {
-        if (pct > 20) { batEl.textContent = '%' + pct + ' ✓'; batEl.style.color = '#22C55E'; }
-        else { batEl.textContent = '%' + pct + ' — Şarj et!'; batEl.style.color = '#ef4444'; }
-      }
-    });
-  } else {
-    var batEl = document.getElementById('guide-battery-val');
-    if (batEl) { batEl.textContent = 'Kontrol edilemedi'; batEl.style.color = '#888'; }
-  }
-}
-
-// ── SİPARİŞ GÖNDER ──
 async function submitOrder() {
   const name = document.getElementById('f-name').value.trim();
   const phone = document.getElementById('f-phone').value.trim();
@@ -950,1281 +1810,43 @@ async function submitOrder() {
   document.getElementById('f-submit').disabled = true;
   errEl.textContent = 'Fotoğraflar yükleniyor...';
 
-  // Fotoğraf yükleme tamamlanmasını bekle
-  while (!_uploadDone) {
-    await new Promise(r => setTimeout(r, 500));
-  }
-  if (_uploadError) {
-    errEl.textContent = 'Fotoğraf yükleme hatası: ' + _uploadError;
-    document.getElementById('f-submit').disabled = false;
-    return;
-  }
-  errEl.textContent = 'Sipariş gönderiliyor...';
+  while (!_uploadDone) { await new Promise(r => setTimeout(r, 500)); }
+  if (_uploadError) { errEl.textContent = 'Yükleme hatası: ' + _uploadError; document.getElementById('f-submit').disabled = false; return; }
 
+  errEl.textContent = 'Sipariş gönderiliyor...';
   try {
     const r = await fetch('/api/scan/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        token: _token,
-        customer: { name, phone, address, description: desc, format, material },
-        scanId: _scanId
-      })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: _token, customer: { name, phone, address, description: desc, format, material }, scanId: _scanId })
     });
     const d = await r.json();
-
-    if (d.ok) {
-      showScreen('s-success');
-    } else {
-      errEl.textContent = d.error || 'Gonderme hatasi';
-      document.getElementById('f-submit').disabled = false;
-    }
-  } catch(e) {
-    errEl.textContent = 'Baglanti hatasi';
-    document.getElementById('f-submit').disabled = false;
-  }
-}
-// ═══════════════════════════════════════════════════
-//  SCAN KALİTE İYİLEŞTİRMELERİ (13 Madde)
-// ═══════════════════════════════════════════════════
-
-// ── 1. IŞIK ANALİZİ ──
-let _lightOk = true;
-function _checkLighting() {
-  const video = document.getElementById('camera-video');
-  if (!video || !video.videoWidth) return;
-  const c = document.createElement('canvas');
-  c.width = 64; c.height = 64;
-  const ctx = c.getContext('2d');
-  ctx.drawImage(video, 0, 0, 64, 64);
-  const data = ctx.getImageData(0, 0, 64, 64).data;
-  let totalBrightness = 0;
-  for (let i = 0; i < data.length; i += 16) {
-    totalBrightness += (data[i] + data[i+1] + data[i+2]) / 3;
-  }
-  const avg = totalBrightness / (data.length / 16);
-  const warn = document.getElementById('_light_warn');
-  if (avg < 40) {
-    _lightOk = false;
-    if (!warn) {
-      const d = document.createElement('div');
-      d.id = '_light_warn';
-      d.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);background:rgba(239,68,68,.9);color:#fff;font-size:11px;font-weight:700;padding:6px 16px;border-radius:8px;z-index:999;';
-      d.textContent = '⚠ Işık yetersiz — ortamı aydınlat';
-      document.body.appendChild(d);
-    }
-  } else {
-    _lightOk = true;
-    if (warn) warn.remove();
-  }
+    if (d.ok) { smTransition('done'); showScreen('s-success'); }
+    else { errEl.textContent = d.error || 'Gonderme hatasi'; document.getElementById('f-submit').disabled = false; }
+  } catch(e) { errEl.textContent = 'Baglanti hatasi'; document.getElementById('f-submit').disabled = false; }
 }
 
-// ── 2. ODAK KİLİDİ ──
-// Kamera stream'ine focusMode:'manual' constraint eklenir (destekleyen cihazlarda)
-async function _lockFocus() {
-  if (!_stream) return;
-  const track = _stream.getVideoTracks()[0];
-  const caps = track.getCapabilities ? track.getCapabilities() : {};
-  if (caps.focusMode && caps.focusMode.includes('manual')) {
-    try {
-      await track.applyConstraints({ advanced: [{ focusMode: 'manual' }] });
-    } catch(e) {}
-  }
-}
-
-// ── 3. HAREKET ALGILAMA ──
-let _lastMotion = { x: 0, y: 0, z: 0 };
-let _motionStable = true;
-function _handleMotion(e) {
-  const a = e.accelerationIncludingGravity || {};
-  const dx = Math.abs((a.x||0) - _lastMotion.x);
-  const dy = Math.abs((a.y||0) - _lastMotion.y);
-  const dz = Math.abs((a.z||0) - _lastMotion.z);
-  const shake = dx + dy + dz;
-  _lastMotion = { x: a.x||0, y: a.y||0, z: a.z||0 };
-
-  const warn = document.getElementById('_motion_warn');
-  if (shake > 8) {
-    _motionStable = false;
-    if (!warn) {
-      const d = document.createElement('div');
-      d.id = '_motion_warn';
-      d.style.cssText = 'position:fixed;top:90px;left:50%;transform:translateX(-50%);background:rgba(249,115,22,.9);color:#000;font-size:11px;font-weight:700;padding:6px 16px;border-radius:8px;z-index:999;';
-      d.textContent = '📳 Sabit tut — telefon çok sallanıyor';
-      document.body.appendChild(d);
-    }
-  } else {
-    _motionStable = true;
-    if (warn) warn.remove();
-  }
-}
-
-// ── 4. ÇİFT ÇEKİM + NETLİK SEÇME ──
-const _origCapturePhoto = capturePhoto;
-capturePhoto = function() {
-  if (!_lightOk) { if (navigator.vibrate) navigator.vibrate([100,50,100]); return; }
-  if (!_motionStable) { if (navigator.vibrate) navigator.vibrate([100,50,100]); return; }
-  // İki kare çek, en net olanı seç
-  const video = document.getElementById('camera-video');
-  const c1 = document.createElement('canvas');
-  c1.width = video.videoWidth; c1.height = video.videoHeight;
-  c1.getContext('2d').drawImage(video, 0, 0);
-
-  setTimeout(() => {
-    const c2 = document.createElement('canvas');
-    c2.width = video.videoWidth; c2.height = video.videoHeight;
-    c2.getContext('2d').drawImage(video, 0, 0);
-
-    const s1 = _sharpnessScore(c1);
-    const s2 = _sharpnessScore(c2);
-    const best = s1 >= s2 ? c1 : c2;
-
-    best.toBlob(blob => {
-      _photos.push(blob);
-      updateUI();
-      if (navigator.vibrate) navigator.vibrate(50);
-      // Flash
-      const flash = document.createElement('div');
-      flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;opacity:.3;z-index:999;pointer-events:none';
-      document.body.appendChild(flash);
-      setTimeout(() => flash.remove(), 100);
-      if (_photos.length >= TARGET_PHOTOS) {
-        updateTip(4);
-        setTimeout(stopCamera, 1500);
-      }
-    }, 'image/jpeg', 0.92);
-  }, 80); // 80ms sonra ikinci kare
-};
-
-function _sharpnessScore(canvas) {
-  const ctx = canvas.getContext('2d');
-  const w = Math.min(canvas.width, 256);
-  const h = Math.min(canvas.height, 256);
-  const small = document.createElement('canvas');
-  small.width = w; small.height = h;
-  small.getContext('2d').drawImage(canvas, 0, 0, w, h);
-  const d = small.getContext('2d').getImageData(0, 0, w, h).data;
-  let score = 0;
-  for (let i = 4; i < d.length - 4; i += 16) {
-    score += Math.abs(d[i] - d[i-4]) + Math.abs(d[i] - d[i+4]);
-  }
-  return score;
-}
-
-// ── 5. AÇI REHBERİ — hangi açıdan çekileceğini göster ──
-const ANGLE_GUIDE = [
-  { from: 0, to: 15, label: 'Alttan çek ↑', ideal: 20 },
-  { from: 15, to: 30, label: 'Hafif alttan çek ↗', ideal: 25 },
-  { from: 30, to: 60, label: 'Yandan çek →', ideal: 45 },
-  { from: 60, to: 75, label: 'Hafif yukarıdan çek ↘', ideal: 65 },
-  { from: 75, to: 90, label: 'Üstten çek ↓', ideal: 80 }
-];
-
-function _updateAngleGuide(beta) {
-  const guide = ANGLE_GUIDE.find(g => beta >= g.from && beta < g.to);
-  const el = document.getElementById('_angle_guide');
-  if (el && guide) {
-    el.textContent = guide.label;
-    el.style.display = 'block';
-  } else if (el) {
-    el.style.display = 'none';
-  }
-}
-
-// ── 6. EKSİK AÇI TESPİTİ ──
-const _capturedAngles = new Set();
-function _trackAngle(beta) {
-  const bucket = Math.floor(beta / 15) * 15; // 15 derecelik gruplar
-  _capturedAngles.add(bucket);
-}
-
-function _getMissingAngles() {
-  const needed = [0, 15, 30, 45, 60, 75];
-  return needed.filter(a => !_capturedAngles.has(a));
-}
-
-// ── 7. OTOMATİK KIRPMA (arka plan temizleme) ──
-// Fotoğraf çekildikten sonra arka planı siler (edge detection)
-// Bu server-side yapılacak — burada sadece flag
-
-// ── 8. QR MARKER DESTEĞİ ──
-// ArUco marker algılama — müşteriye marker PDF gönderilir
-// Madeni para her zaman fallback
-let _markerDetected = false;
-
-function _checkForMarker(canvas) {
-  // Basit siyah-beyaz kare pattern arama (gerçek ArUco ileride OpenCV ile)
-  const ctx = canvas.getContext('2d');
-  const refArea = ctx.getImageData(canvas.width * 0.7, canvas.height * 0.7, canvas.width * 0.25, canvas.height * 0.2);
-  const d = refArea.data;
-  let blackCount = 0, whiteCount = 0;
-  for (let i = 0; i < d.length; i += 4) {
-    const gray = (d[i] + d[i+1] + d[i+2]) / 3;
-    if (gray < 60) blackCount++;
-    else if (gray > 200) whiteCount++;
-  }
-  const total = d.length / 4;
-  // ArUco: %30-50 siyah, %30-50 beyaz → pattern mevcut
-  if (blackCount/total > 0.25 && whiteCount/total > 0.25) {
-    _markerDetected = true;
-    const ref = document.getElementById('cam-ref');
-    if (ref) { ref.textContent = '✅ Marker algılandı!'; ref.classList.add('found'); }
-  }
-}
-
-// ── 9. ÇOKLU REFERANS ──
-// İki farklı noktaya referans → çapraz doğrulama (server-side hesap)
-
-// ── 10. OTOMATİK PARA TESPİTİ ──
-function _checkForCoin(canvas) {
-  // Dairesel nesne arama (basit Hough yaklaşımı)
-  const ctx = canvas.getContext('2d');
-  const refArea = ctx.getImageData(canvas.width * 0.7, canvas.height * 0.7, canvas.width * 0.25, canvas.height * 0.2);
-  const d = refArea.data;
-  // Metalik renk tespiti (sarı-gri tonlar)
-  let metalCount = 0;
-  for (let i = 0; i < d.length; i += 4) {
-    const r = d[i], g = d[i+1], b = d[i+2];
-    if (r > 150 && g > 130 && b < 120 && Math.abs(r-g) < 40) metalCount++;
-  }
-  if (metalCount / (d.length/4) > 0.05) {
-    const ref = document.getElementById('cam-ref');
-    if (ref && !_markerDetected) { ref.textContent = '✅ Para algılandı!'; ref.classList.add('found'); }
-    return true;
-  }
-  return false;
-}
-
-// ── 12. KALİTE SKORU ──
-function _getFrameQuality(canvas) {
-  const sharpness = _sharpnessScore(canvas);
-  const brightness = _getAvgBrightness(canvas);
-  let score = 50;
-  // Netlik
-  if (sharpness > 50000) score += 20;
-  else if (sharpness > 20000) score += 10;
-  // Işık
-  if (brightness > 60 && brightness < 200) score += 20;
-  else if (brightness > 40) score += 10;
-  // Stabilite
-  if (_motionStable) score += 10;
-  return Math.min(100, score);
-}
-
-function _getAvgBrightness(canvas) {
-  const ctx = canvas.getContext('2d');
-  const d = ctx.getImageData(0, 0, Math.min(canvas.width, 64), Math.min(canvas.height, 64)).data;
-  let total = 0;
-  for (let i = 0; i < d.length; i += 16) total += (d[i] + d[i+1] + d[i+2]) / 3;
-  return total / (d.length / 16);
-}
-
-// ── BAŞLATMA ──
-// Işık kontrol döngüsü
-setInterval(_checkLighting, 2000);
-
-// Hareket algılama
-if (window.DeviceMotionEvent) {
-  window.addEventListener('devicemotion', _handleMotion);
-}
-
-// Açı rehberi elementi oluştur
-(function() {
-  const d = document.createElement('div');
-  d.id = '_angle_guide';
-  d.style.cssText = 'position:fixed;top:44px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#22C55E;font-size:11px;font-weight:700;padding:4px 12px;border-radius:12px;z-index:100;display:none;';
-  document.body.appendChild(d);
-})();
-
-// Gyroscope handler'a açı rehberi + takip ekle
-const _origHandleOrientation = handleOrientation;
-handleOrientation = function(e) {
-  _origHandleOrientation(e);
-  const beta = Math.round(e.beta || 0);
-  _updateAngleGuide(beta);
-  _trackAngle(beta);
-
-  // Eksik açı uyarısı (30 fotoğraftan sonra)
-  if (_photos.length > 30) {
-    const missing = _getMissingAngles();
-    if (missing.length > 0) {
-      const guide = document.getElementById('_angle_guide');
-      if (guide) {
-        guide.textContent = `Eksik açı: ~${missing[0]}° civarından çek`;
-        guide.style.display = 'block';
-        guide.style.color = '#F59E0B';
-      }
-    }
-  }
-};
-
-// Her fotoğrafta referans kontrol
-const _origUpdateUI = updateUI;
-updateUI = function() {
-  _origUpdateUI();
-  // Her 5 fotoğrafta referans ve marker kontrol
-  if (_photos.length % 5 === 0 && _photos.length > 0) {
-    const video = document.getElementById('camera-video');
-    if (video && video.videoWidth) {
-      const c = document.createElement('canvas');
-      c.width = video.videoWidth; c.height = video.videoHeight;
-      c.getContext('2d').drawImage(video, 0, 0);
-      _checkForMarker(c);
-      _checkForCoin(c);
-    }
-  }
-};
-
-// ════════════════════════════════════════════════════════════
-//  AKILLI DENETÇİ SİSTEMİ — Object Tracking, Blur Detection,
-//  Light Sensor, Shutter Lock, Sesli Rehberlik
-// ════════════════════════════════════════════════════════════
-
-// ── 1. Object Tracking — Parça kadraj kontrolü ──
-var _trackingActive = false;
-var _trackingLost = false;
-var _trackingCanvas = null;
-var _prevFrame = null;
-
-function _initObjectTracking() {
-  _trackingActive = true;
-  _trackingLost = false;
-  // Tracking overlay
-  var overlay = document.getElementById('tracking-overlay');
-  if (!overlay) {
-    overlay = document.createElement('div');
-    overlay.id = 'tracking-overlay';
-    overlay.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(239,68,68,.15);z-index:100;pointer-events:none;transition:opacity .3s;';
-    overlay.innerHTML = '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;"><div style="font-size:48px">⚠️</div><div style="font-size:18px;font-weight:900;color:#ef4444;text-shadow:0 0 10px rgba(239,68,68,.5);">PARÇA KAYBEDİLDİ!</div><div style="font-size:13px;color:#fff;margin-top:4px;">Merkeze dön</div></div>';
-    document.body.appendChild(overlay);
-  }
-
-  // Neon çerçeve
-  var frame = document.querySelector('.cam-frame');
-  if (frame) {
-    frame.style.border = '2px solid rgba(0,255,136,.6)';
-    frame.style.boxShadow = '0 0 20px rgba(0,255,136,.2), inset 0 0 20px rgba(0,255,136,.05)';
-  }
-}
-
-function _checkObjectInFrame() {
-  if (!_trackingActive) return;
-  var video = document.getElementById('camera-video');
-  if (!video || !video.videoWidth || video.readyState < 2) return;
-  // Kamera henüz stabil değilse atla
-  if (!video.srcObject || video.srcObject.getVideoTracks().length === 0) return;
-
-  // Basit hareket/varlık tespiti — merkez bölgenin parlaklığı
-  if (!_trackingCanvas) { _trackingCanvas = document.createElement('canvas'); _trackingCanvas.width = 64; _trackingCanvas.height = 48; }
-  var ctx = _trackingCanvas.getContext('2d');
-  var cx = video.videoWidth * 0.25, cy = video.videoHeight * 0.2;
-  var cw = video.videoWidth * 0.5, ch = video.videoHeight * 0.6;
-  ctx.drawImage(video, cx, cy, cw, ch, 0, 0, 64, 48);
-  var data = ctx.getImageData(0, 0, 64, 48).data;
-
-  // Merkez bölge varyansı hesapla
-  var sum = 0, sq = 0, n = data.length / 4;
-  for (var i = 0; i < data.length; i += 4) {
-    var gray = data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
-    sum += gray; sq += gray * gray;
-  }
-  var mean = sum / n;
-  var variance = (sq / n) - (mean * mean);
-
-  // Düşük varyans = boş/düz alan = parça yok
-  var overlay = document.getElementById('tracking-overlay');
-  if (variance < 200) {
-    if (!_trackingLost) {
-      _trackingLost = true;
-      if (overlay) overlay.style.display = 'block';
-      _speak('Parça kaybedildi! Merkeze dön.');
-      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-    }
-  } else {
-    if (_trackingLost) {
-      _trackingLost = false;
-      if (overlay) overlay.style.display = 'none';
-    }
-  }
-}
-
-// ── 2. Blur Detection — Netlik testi ──
-function _detectBlur(canvas) {
-  if (!canvas) return { sharp: true, score: 100 };
-  var ctx = canvas.getContext('2d');
-  var w = Math.min(canvas.width, 320);
-  var h = Math.min(canvas.height, 240);
-
-  // Küçült
-  var small = document.createElement('canvas');
-  small.width = w; small.height = h;
-  small.getContext('2d').drawImage(canvas, 0, 0, w, h);
-  var data = small.getContext('2d').getImageData(0, 0, w, h).data;
-
-  // Laplacian varyansı — kenar keskinliği
-  var gray = new Float32Array(w * h);
-  for (var i = 0; i < gray.length; i++) {
-    gray[i] = data[i*4] * 0.299 + data[i*4+1] * 0.587 + data[i*4+2] * 0.114;
-  }
-
-  var lap = 0;
-  for (var y = 1; y < h - 1; y++) {
-    for (var x = 1; x < w - 1; x++) {
-      var idx = y * w + x;
-      var val = -4 * gray[idx] + gray[idx-1] + gray[idx+1] + gray[idx-w] + gray[idx+w];
-      lap += val * val;
-    }
-  }
-  var score = lap / ((w-2) * (h-2));
-  var sharp = score > 50; // eşik değer
-
-  return { sharp: sharp, score: Math.round(score) };
-}
-
-// ── 3. Light Sensor — Işık ölçümü ──
-var _lightLevel = -1;
-var _flashForced = false;
-
-function _initLightSensor() {
-  // Ambient Light Sensor API
-  if ('AmbientLightSensor' in window) {
-    try {
-      var sensor = new AmbientLightSensor();
-      sensor.addEventListener('reading', function() {
-        _lightLevel = sensor.illuminance;
-        _checkLight();
-      });
-      sensor.start();
-    } catch(e) { /* izin yok */ }
-  }
-  // Fallback: video frame'den parlaklık ölç
-  setInterval(_measureLightFromVideo, 2000);
-}
-
-function _measureLightFromVideo() {
-  var video = document.getElementById('camera-video');
-  if (!video || !video.videoWidth || _lightLevel >= 0) return;
-  var c = document.createElement('canvas');
-  c.width = 32; c.height = 24;
-  c.getContext('2d').drawImage(video, 0, 0, 32, 24);
-  var data = c.getContext('2d').getImageData(0, 0, 32, 24).data;
-  var sum = 0;
-  for (var i = 0; i < data.length; i += 4) {
-    sum += data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114;
-  }
-  _lightLevel = sum / (32 * 24); // 0-255 arası
-  _checkLight();
-}
-
-function _checkLight() {
-  var lightInfo = document.getElementById('cam-light-badge');
-  if (!lightInfo) {
-    lightInfo = document.createElement('div');
-    lightInfo.id = 'cam-light-badge';
-    lightInfo.style.cssText = 'position:absolute;top:56px;right:12px;background:rgba(0,0,0,.7);padding:4px 10px;border-radius:12px;font-size:10px;z-index:20;pointer-events:none;';
-    var overlay = document.querySelector('.cam-overlay');
-    if (overlay) overlay.appendChild(lightInfo);
-  }
-
-  var lux = _lightLevel;
-  if (lux < 50) {
-    lightInfo.innerHTML = '<span style="color:#ef4444">☀ Işık Düşük!</span>';
-    // Flaş önerisi
-    if (!_flashForced) {
-      _flashForced = true;
-      _enableFlash();
-      _speak('Işık yetersiz, flaş açıldı.');
-    }
-  } else if (lux < 100) {
-    lightInfo.innerHTML = '<span style="color:#F59E0B">☀ Işık Orta</span>';
-  } else {
-    lightInfo.innerHTML = '<span style="color:#22C55E">☀ Işık İyi</span>';
-    _flashForced = false;
-  }
-}
-
-function _enableFlash() {
-  if (!_stream) return;
-  var track = _stream.getVideoTracks()[0];
-  if (track && track.getCapabilities && track.getCapabilities().torch) {
-    track.applyConstraints({ advanced: [{ torch: true }] }).catch(function(){});
-  }
-}
-
-// ── 4. Shutter Lock — Açı kilit sistemi ──
-var _shutterLocked = true;
-var _targetAngle = 45;
-var _angleTolerance = 8;
-var _currentBeta = 0;
-
-function _updateShutterLock(beta) {
-  _currentBeta = beta;
-  var diff = Math.abs(beta - _targetAngle);
-  var wasLocked = _shutterLocked;
-  _shutterLocked = diff > _angleTolerance;
-
-  var btn = document.getElementById('cam-capture-btn');
-  if (!btn) return;
-
-  if (_shutterLocked) {
-    btn.style.opacity = '0.3';
-    btn.style.border = '4px solid #ef4444';
-    btn.style.pointerEvents = 'none';
-  } else {
-    btn.style.opacity = '1';
-    btn.style.border = '4px solid #22C55E';
-    btn.style.pointerEvents = 'auto';
-    if (wasLocked) {
-      _speak('Kilitlendi! Çek.');
-      if (navigator.vibrate) navigator.vibrate(100);
-    }
-  }
-
-  // Ghost box — hedef açı göstergesi
-  var ghost = document.getElementById('ghost-angle-box');
-  if (!ghost) {
-    ghost = document.createElement('div');
-    ghost.id = 'ghost-angle-box';
-    ghost.style.cssText = 'position:absolute;bottom:100px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);border:2px solid rgba(0,200,255,.3);border-radius:8px;padding:4px 12px;font-size:11px;z-index:20;pointer-events:none;font-family:monospace;text-align:center;';
-    var overlay = document.querySelector('.cam-overlay');
-    if (overlay) overlay.appendChild(ghost);
-  }
-  ghost.innerHTML = _shutterLocked
-    ? '<span style="color:#ef4444">🎯 ' + Math.round(beta) + '° → ' + _targetAngle + '° gerekli</span>'
-    : '<span style="color:#22C55E">🎯 ' + Math.round(beta) + '° — KİLİTLENDİ ✓</span>';
-}
-
-// Açı hedefini fotoğraf sayısına göre güncelle
-function _updateTargetAngle() {
-  var count = _photos.length;
-  if (count < 15) _targetAngle = 30 + (count * 2); // Alt tur: 30-60°
-  else if (count < 30) _targetAngle = 60 + ((count - 15) * 2); // Üst tur: 60-90°
-  else _targetAngle = 45; // Son tur: orta
-  _angleTolerance = 8;
-}
-
-// ── 5. Sesli Rehberlik ──
-var _speechEnabled = true;
-var _lastSpoke = 0;
-
-function _speak(text) {
-  if (!_speechEnabled || !window.speechSynthesis) return;
-  if (Date.now() - _lastSpoke < 3000) return; // 3 sn spam engeli
-  _lastSpoke = Date.now();
-  var u = new SpeechSynthesisUtterance(text);
-  u.lang = 'tr-TR';
-  u.rate = 1.1;
-  u.pitch = 0.9;
-  speechSynthesis.speak(u);
-}
-
-// ── 6. capturePhoto'yu akıllı denetçi ile sar ──
-var _origCapture = capturePhoto;
-capturePhoto = function() {
-  // Shutter lock kontrolü
-  if (_shutterLocked) {
-    _speak(_targetAngle + ' dereceye gel.');
-    if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-    return;
-  }
-
-  // Tracking kontrolü
-  if (_trackingLost) {
-    _speak('Parçayı merkeze getir.');
-    return;
-  }
-
-  // Fotoğrafı çek
-  var video = document.getElementById('camera-video');
-  var canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext('2d').drawImage(video, 0, 0);
-
-  // Blur detection
-  var blur = _detectBlur(canvas);
-  if (!blur.sharp) {
-    _speak('Bulanık! Tekrar odakla.');
-    // Kırmızı flash
-    var flash = document.createElement('div');
-    flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(239,68,68,.2);z-index:999;pointer-events:none';
-    document.body.appendChild(flash);
-    setTimeout(function() { flash.remove(); }, 300);
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-    return; // Fotoğrafı KAYDETME
-  }
-
-  // Geçti — orijinal fonksiyonu çağır
-  _updateTargetAngle();
-  _origCapture();
-
-  // Sesli onay
-  var remaining = TARGET_PHOTOS - _photos.length;
-  if (remaining > 0 && remaining % 5 === 0) {
-    _speak(remaining + ' kare kaldı.');
-  } else if (remaining === 0) {
-    _speak('Tarama tamamlandı!');
-  }
-};
-
-// ── 7. Gyroscope'u shutter lock'a bağla ──
-var _origOrientation = handleOrientation;
-handleOrientation = function(e) {
-  _origOrientation(e);
-  _updateShutterLock(Math.round(e.beta || 0));
-};
-
-// ── 8. Tracking loop başlat ──
-var _origStartCamera = startCamera;
-startCamera = async function() {
-  await _origStartCamera();
-
-  // Kameranın gerçekten hazır olmasını bekle — kırmızı ekran sorunu çözümü
-  var video = document.getElementById('camera-video');
-  if (video) {
-    await new Promise(function(resolve) {
-      if (video.readyState >= 2 && video.videoWidth > 0) { resolve(); return; }
-      video.onloadeddata = function() { resolve(); };
-      // 5 saniye timeout — kamera hiç açılmazsa devam et
-      setTimeout(resolve, 5000);
-    });
-    // Ek 500ms bekle — ilk karelerin siyah olmaması için
-    await new Promise(function(r) { setTimeout(r, 500); });
-  }
-
-  _initObjectTracking();
-  _initLightSensor();
-  _updateTargetAngle();
-  _speak('Tarama başlıyor. Parçayı merkeze al.');
-  // Tracking loop
-  setInterval(_checkObjectInFrame, 500);
-  // İlk karede kilitlenme başlat
-  _initTargetAcquisition();
-};
-
-// ════════════════════════════════════════════════════════════
-//  İLK KAREDE KİLİTLENME — Target Acquisition + Segmentation
-//  + Keypoints + Lock-on
-// ════════════════════════════════════════════════════════════
-
-var _lockState = 'searching'; // searching | locking | locked
-var _lockKeypoints = null;
-var _lockBBox = null;
-var _lockFrameEl = null;
-var _lockStatusEl = null;
-
-function _initTargetAcquisition() {
-  _lockState = 'searching';
-  _lockKeypoints = null;
-
-  // Hedefleme karesi oluştur
-  if (!_lockFrameEl) {
-    _lockFrameEl = document.createElement('div');
-    _lockFrameEl.id = 'target-lock-frame';
-    _lockFrameEl.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:55vw;height:40vh;border:2px solid #F97316;border-radius:12px;z-index:15;pointer-events:none;transition:all .4s;box-shadow:0 0 30px rgba(249,115,22,.2);';
-    // Köşe nişangahları
-    _lockFrameEl.innerHTML = '<div style="position:absolute;top:-2px;left:-2px;width:16px;height:16px;border-top:3px solid #F97316;border-left:3px solid #F97316;border-radius:3px 0 0 0"></div><div style="position:absolute;top:-2px;right:-2px;width:16px;height:16px;border-top:3px solid #F97316;border-right:3px solid #F97316;border-radius:0 3px 0 0"></div><div style="position:absolute;bottom:-2px;left:-2px;width:16px;height:16px;border-bottom:3px solid #F97316;border-left:3px solid #F97316;border-radius:0 0 0 3px"></div><div style="position:absolute;bottom:-2px;right:-2px;width:16px;height:16px;border-bottom:3px solid #F97316;border-right:3px solid #F97316;border-radius:0 0 3px 0"></div><div id="lock-crosshair" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:24px;height:24px;"><div style="position:absolute;top:50%;left:0;right:0;height:1px;background:rgba(249,115,22,.4)"></div><div style="position:absolute;left:50%;top:0;bottom:0;width:1px;background:rgba(249,115,22,.4)"></div></div>';
-    var overlay = document.querySelector('.cam-overlay');
-    if (overlay) overlay.appendChild(_lockFrameEl);
-  }
-
-  // Durum badge
-  if (!_lockStatusEl) {
-    _lockStatusEl = document.createElement('div');
-    _lockStatusEl.id = 'lock-status';
-    _lockStatusEl.style.cssText = 'position:absolute;top:38px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);border:1px solid #F97316;border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;z-index:20;pointer-events:none;transition:all .4s;';
-    _lockStatusEl.textContent = '🔍 Parçayı kutuya sok...';
-    _lockStatusEl.style.color = '#F97316';
-    var overlay = document.querySelector('.cam-overlay');
-    if (overlay) overlay.appendChild(_lockStatusEl);
-  }
-
-  // Arama döngüsü
-  _lockScanInterval = setInterval(_scanForTarget, 300);
-}
-
-var _lockScanInterval = null;
-
-function _scanForTarget() {
-  if (_lockState === 'locked') return;
-
-  var video = document.getElementById('camera-video');
-  if (!video || !video.videoWidth) return;
-
-  // Merkez bölgeyi analiz et
-  var c = document.createElement('canvas');
-  var vw = video.videoWidth, vh = video.videoHeight;
-  var cx = vw * 0.2, cy = vh * 0.2, cw = vw * 0.6, ch = vh * 0.6;
-  c.width = 128; c.height = 96;
-  c.getContext('2d').drawImage(video, cx, cy, cw, ch, 0, 0, 128, 96);
-  var data = c.getContext('2d').getImageData(0, 0, 128, 96).data;
-
-  // Kenar yoğunluğu hesapla (Sobel basitleştirilmiş)
-  var edgeCount = 0;
-  var gray = new Uint8Array(128 * 96);
-  for (var i = 0; i < gray.length; i++) {
-    gray[i] = Math.round(data[i*4] * 0.299 + data[i*4+1] * 0.587 + data[i*4+2] * 0.114);
-  }
-  for (var y = 1; y < 95; y++) {
-    for (var x = 1; x < 127; x++) {
-      var idx = y * 128 + x;
-      var gx = Math.abs(gray[idx+1] - gray[idx-1]);
-      var gy = Math.abs(gray[idx+128] - gray[idx-128]);
-      if (gx + gy > 30) edgeCount++;
-    }
-  }
-
-  var edgeDensity = edgeCount / (126 * 94);
-
-  // Renk varyansı
-  var rSum=0,gSum=0,bSum=0,n=data.length/4;
-  for (var i=0;i<data.length;i+=4){rSum+=data[i];gSum+=data[i+1];bSum+=data[i+2];}
-  var rMean=rSum/n,gMean=gSum/n,bMean=bSum/n;
-  var rVar=0,gVar=0,bVar=0;
-  for (var i=0;i<data.length;i+=4){rVar+=Math.pow(data[i]-rMean,2);gVar+=Math.pow(data[i+1]-gMean,2);bVar+=Math.pow(data[i+2]-bMean,2);}
-  var colorVariance = (rVar+gVar+bVar)/(3*n);
-
-  // Parça tespit edildi mi?
-  var detected = edgeDensity > 0.05 && colorVariance > 200;
-
-  if (_lockState === 'searching' && detected) {
-    _lockState = 'locking';
-    _lockFrameEl.style.borderColor = '#F59E0B';
-    _lockFrameEl.style.boxShadow = '0 0 30px rgba(245,158,11,.3)';
-    _lockStatusEl.textContent = '⏳ Kilitleniyor...';
-    _lockStatusEl.style.color = '#F59E0B';
-    _lockStatusEl.style.borderColor = '#F59E0B';
-
-    // 1 saniye sabit kalırsa kilitle
-    setTimeout(function() {
-      if (_lockState !== 'locking') return;
-      _performLockOn(c, edgeDensity, colorVariance);
-    }, 1000);
-
-  } else if (_lockState === 'locking' && !detected) {
-    // Parça çıktı, aramaya dön
-    _lockState = 'searching';
-    _lockFrameEl.style.borderColor = '#F97316';
-    _lockFrameEl.style.boxShadow = '0 0 30px rgba(249,115,22,.2)';
-    _lockStatusEl.textContent = '🔍 Parçayı kutuya sok...';
-    _lockStatusEl.style.color = '#F97316';
-    _lockStatusEl.style.borderColor = '#F97316';
-  }
-}
-
-function _performLockOn(canvas, edgeDensity, colorVariance) {
-  _lockState = 'locked';
-
-  // Keypoints oluştur (ORB benzeri — köşe noktaları)
-  var data = canvas.getContext('2d').getImageData(0, 0, 128, 96).data;
-  var gray = new Uint8Array(128 * 96);
-  for (var i = 0; i < gray.length; i++) {
-    gray[i] = Math.round(data[i*4] * 0.299 + data[i*4+1] * 0.587 + data[i*4+2] * 0.114);
-  }
-
-  // Harris corner detection (basitleştirilmiş)
-  _lockKeypoints = [];
-  for (var y = 2; y < 94; y += 4) {
-    for (var x = 2; x < 126; x += 4) {
-      var idx = y * 128 + x;
-      var dx = gray[idx+1] - gray[idx-1];
-      var dy = gray[idx+128] - gray[idx-128];
-      var corner = Math.abs(dx) + Math.abs(dy);
-      if (corner > 40) {
-        _lockKeypoints.push({ x: x, y: y, strength: corner });
-      }
-    }
-  }
-  _lockKeypoints.sort(function(a,b) { return b.strength - a.strength; });
-  _lockKeypoints = _lockKeypoints.slice(0, 50); // En güçlü 50 nokta
-
-  // Parmak izi kaydet
-  _lockBBox = { edgeDensity: edgeDensity, colorVariance: colorVariance, keypointCount: _lockKeypoints.length };
-
-  // Görsel efekt — YEŞİL kilitlenme
-  _lockFrameEl.style.borderColor = '#00ff88';
-  _lockFrameEl.style.boxShadow = '0 0 40px rgba(0,255,136,.4), inset 0 0 30px rgba(0,255,136,.05)';
-  _lockFrameEl.style.transition = 'all .2s';
-
-  // Köşe nişangahları yeşile
-  _lockFrameEl.querySelectorAll('div').forEach(function(d) {
-    if (d.style.borderTop) d.style.borderTopColor = '#00ff88';
-    if (d.style.borderBottom) d.style.borderBottomColor = '#00ff88';
-    if (d.style.borderLeft) d.style.borderLeftColor = '#00ff88';
-    if (d.style.borderRight) d.style.borderRightColor = '#00ff88';
-  });
-
-  // Durum
-  _lockStatusEl.innerHTML = '🎯 HEDEF MÜHÜRLENDİ — <span style="font-size:9px;opacity:.7">' + _lockKeypoints.length + ' nokta</span>';
-  _lockStatusEl.style.color = '#00ff88';
-  _lockStatusEl.style.borderColor = '#00ff88';
-  _lockStatusEl.style.background = 'rgba(0,20,10,.9)';
-
-  // Keypoint noktalarını göster (kısa süreliğine)
-  _showKeypointFlash();
-
-  // Haptic + ses
-  if (navigator.vibrate) navigator.vibrate([50, 30, 100]);
-  _speak('Hedef mühürlendi Kaptan. Operasyona hazırım!');
-
-  // Scan interval'ı tracking'e çevir
-  clearInterval(_lockScanInterval);
-  setInterval(_trackLockedTarget, 500);
-
-  // Shutter lock'ı aç
-  _shutterLocked = false;
-  var btn = document.getElementById('cam-capture-btn');
-  if (btn) { btn.style.opacity = '1'; btn.style.border = '4px solid #22C55E'; btn.style.pointerEvents = 'auto'; }
-
-  // Dinamik kare analizi — nesne boyutuna göre
-  _analyzeObjectScale();
-}
-
-function _showKeypointFlash() {
-  if (!_lockKeypoints || !_lockKeypoints.length) return;
-  var overlay = document.querySelector('.cam-overlay');
-  if (!overlay) return;
-
-  var kpContainer = document.createElement('div');
-  kpContainer.style.cssText = 'position:absolute;top:20%;left:20%;width:60%;height:60%;pointer-events:none;z-index:16;';
-
-  _lockKeypoints.forEach(function(kp) {
-    var dot = document.createElement('div');
-    var px = (kp.x / 128) * 100;
-    var py = (kp.y / 96) * 100;
-    dot.style.cssText = 'position:absolute;width:4px;height:4px;border-radius:50%;background:#00ff88;box-shadow:0 0 6px #00ff88;opacity:0;left:'+px+'%;top:'+py+'%;';
-    dot.animate([{opacity:0,transform:'scale(0)'},{opacity:1,transform:'scale(1.5)'},{opacity:0,transform:'scale(0.5)'}],{duration:1500,delay:Math.random()*300});
-    kpContainer.appendChild(dot);
-  });
-
-  overlay.appendChild(kpContainer);
-  setTimeout(function() { kpContainer.remove(); }, 2000);
-}
-
-function _trackLockedTarget() {
-  if (_lockState !== 'locked') return;
-  // Parça hala merkezdeyse tracking devam
-  _checkObjectInFrame();
-
-  // Kaybedilirse kilit kırılır
-  if (_trackingLost) {
-    _lockFrameEl.style.borderColor = '#ef4444';
-    _lockFrameEl.style.boxShadow = '0 0 40px rgba(239,68,68,.3)';
-    _lockStatusEl.textContent = '⚠ KİLİT KIRILDI — Parçayı geri getir!';
-    _lockStatusEl.style.color = '#ef4444';
-    _lockStatusEl.style.borderColor = '#ef4444';
-
-    // Shutter lock'ı kapat
-    _shutterLocked = true;
-    var btn = document.getElementById('cam-capture-btn');
-    if (btn) { btn.style.opacity = '0.3'; btn.style.border = '4px solid #ef4444'; btn.style.pointerEvents = 'none'; }
-  } else if (_lockFrameEl.style.borderColor !== 'rgb(0, 255, 136)') {
-    // Tekrar bulundu
-    _lockFrameEl.style.borderColor = '#00ff88';
-    _lockFrameEl.style.boxShadow = '0 0 40px rgba(0,255,136,.4)';
-    _lockStatusEl.innerHTML = '🎯 HEDEF MÜHÜRLENDİ';
-    _lockStatusEl.style.color = '#00ff88';
-    _lockStatusEl.style.borderColor = '#00ff88';
-    _shutterLocked = false;
-    var btn = document.getElementById('cam-capture-btn');
-    if (btn) { btn.style.opacity = '1'; btn.style.border = '4px solid #22C55E'; btn.style.pointerEvents = 'auto'; }
-    _speak('Hedef tekrar kilitlendi.');
-  }
-}
-
-// ════════════════════════════════════════════════════════════
-//  DİNAMİK KARE SİSTEMİ — Nesne boyutuna göre kare sayısı
-// ════════════════════════════════════════════════════════════
-
-var _objectCategory = 'medium'; // micro | medium | large
-var _objectModeBadge = null;
-
-function _analyzeObjectScale() {
-  var video = document.getElementById('camera-video');
-  if (!video || !video.videoWidth) return;
-
-  // Parçanın ekrandaki kapladığı alanı hesapla
-  var c = document.createElement('canvas');
-  c.width = 128; c.height = 96;
-  var ctx = c.getContext('2d');
-  ctx.drawImage(video, 0, 0, 128, 96);
-  var data = ctx.getImageData(0, 0, 128, 96).data;
-
-  // Merkez bölge (parça alanı) vs kenar (arka plan) karşılaştır
-  var centerPixels = 0, totalCenter = 0;
-  var edgePixels = 0, totalEdge = 0;
-
-  for (var y = 0; y < 96; y++) {
-    for (var x = 0; x < 128; x++) {
-      var idx = (y * 128 + x) * 4;
-      var gray = data[idx] * 0.299 + data[idx+1] * 0.587 + data[idx+2] * 0.114;
-      var inCenter = (x > 20 && x < 108 && y > 15 && y < 81);
-
-      if (inCenter) {
-        totalCenter++;
-        // Kenar tespiti — komşu piksellerle fark
-        if (x > 1 && x < 127 && y > 1 && y < 95) {
-          var left = data[((y)*128+(x-1))*4];
-          var diff = Math.abs(gray - (left * 0.299 + data[((y)*128+(x-1))*4+1] * 0.587 + data[((y)*128+(x-1))*4+2] * 0.114));
-          if (diff > 15) centerPixels++;
-        }
-      } else {
-        totalEdge++;
-        edgePixels++;
-      }
-    }
-  }
-
-  // Parçanın ekran yüzdesi
-  var fillRatio = centerPixels / totalCenter;
-
-  // Kategori belirle
-  if (fillRatio < 0.08) {
-    // Parça çok küçük — mikro mod
-    _objectCategory = 'micro';
-    TARGET_PHOTOS = 18;
-  } else if (fillRatio < 0.2) {
-    // Orta segment
-    _objectCategory = 'medium';
-    TARGET_PHOTOS = 35;
-  } else {
-    // Büyük/kompleks
-    _objectCategory = 'large';
-    TARGET_PHOTOS = 70;
-  }
-
-  // LiDAR varsa kare sayısını düşür
-  if (_hasLiDAR) {
-    TARGET_PHOTOS = Math.max(12, Math.round(TARGET_PHOTOS * 0.5));
-  }
-
-  // UI güncelle
-  document.getElementById('photo-target').textContent = TARGET_PHOTOS;
-
-  // Mod badge göster
-  _showObjectModeBadge();
-
-  // Rehber noktalarını yeniden ayarla
-  _updateGuideForCategory();
-}
-
-function _showObjectModeBadge() {
-  if (!_objectModeBadge) {
-    _objectModeBadge = document.createElement('div');
-    _objectModeBadge.id = 'object-mode-badge';
-    _objectModeBadge.style.cssText = 'position:absolute;top:56px;left:12px;background:rgba(0,0,0,.8);border-radius:20px;padding:4px 12px;font-size:10px;font-weight:700;z-index:20;pointer-events:none;transition:all .3s;';
-    var overlay = document.querySelector('.cam-overlay');
-    if (overlay) overlay.appendChild(_objectModeBadge);
-  }
-
-  var labels = {
-    micro: { text: '🔬 MİKRO MOD: ' + TARGET_PHOTOS + ' Kare', color: '#A855F7', border: '#A855F7', tip: 'Küçük nesne — makro odak aktif' },
-    medium: { text: '📦 ORTA MOD: ' + TARGET_PHOTOS + ' Kare', color: '#00c8ff', border: '#00c8ff', tip: 'Standart tarama — iki tur çek' },
-    large: { text: '🏗 BÜYÜK MOD: ' + TARGET_PHOTOS + ' Kare', color: '#F59E0B', border: '#F59E0B', tip: 'Kompleks nesne — üç tur + derinlik' }
+// ══════════════════════════════════════════════════════════════
+//  BAŞLANGIÇ — Kılavuzdan kameraya geçiş bağlantıları
+// ══════════════════════════════════════════════════════════════
+
+// "ÜRÜNÜ TANIT" butonundan → identifying state
+// (HTML'de: onclick="showScreen('s-identify');startCamera()")
+// Bunu override ediyoruz — identify-video'ya bağlansın
+const _guideStartBtn = document.querySelector('#s-guide button[onclick*="startCamera"]');
+if (_guideStartBtn) {
+  _guideStartBtn.onclick = function() {
+    showScreen('s-identify');
+    smTransition('identifying');
+    startCamera('identify-video');
   };
-
-  var l = labels[_objectCategory];
-  _objectModeBadge.textContent = l.text;
-  _objectModeBadge.style.color = l.color;
-  _objectModeBadge.style.border = '1px solid ' + l.border;
-
-  _speak(l.tip);
 }
 
-function _updateGuideForCategory() {
-  // Rehber balonlarını kategoriye göre güncelle
-  if (_objectCategory === 'micro') {
-    TIPS[0] = 'Küçük nesne algılandı. Yakından, makro modda çek.';
-    TIPS[1] = 'Yavaşça etrafında dön. Tek tur yeterli.';
-    TIPS[2] = 'Şimdi hafif yukarıdan bak.';
-    TIPS[3] = 'Son birkaç kare! Detaylara odaklan.';
-    TIPS[4] = 'Mükemmel! Mikro tarama tamamlandı.';
-  } else if (_objectCategory === 'large') {
-    TIPS[0] = 'Büyük nesne! Önce alt seviyeden tam tur at.';
-    TIPS[1] = 'Alt tur tamam. Şimdi göz hizasından çek.';
-    TIPS[2] = 'Üst açıdan tam tur at.';
-    TIPS[3] = 'İç bükey alanları ve detayları çek.';
-    TIPS[4] = 'Harika! Büyük nesne taraması tamamlandı.';
-  }
-  // medium varsayılan rehber kullanır
+// stopCamera butonları (HTML'deki onclick="stopCamera()")
+// artık state machine'e uyumlu
 
-  // Macro focus uyarısı (mikro mod)
-  if (_objectCategory === 'micro') {
-    var macroTip = document.getElementById('macro-focus-tip');
-    if (!macroTip) {
-      macroTip = document.createElement('div');
-      macroTip.id = 'macro-focus-tip';
-      macroTip.style.cssText = 'position:absolute;bottom:140px;left:50%;transform:translateX(-50%);background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.4);border-radius:8px;padding:6px 14px;font-size:11px;color:#A855F7;font-weight:700;z-index:20;pointer-events:none;text-align:center;';
-      macroTip.innerHTML = '🔬 MAKRO ODAK — Telefonu parçaya 10-15cm yaklaştır';
-      var overlay = document.querySelector('.cam-overlay');
-      if (overlay) overlay.appendChild(macroTip);
-    }
-  }
-}
-
-// ════════════════════════════════════════════════════════════
-//  GONİOMETRİK RADAR — Açı Mühendisi + Auto-Shutter
-// ════════════════════════════════════════════════════════════
-
-// Üretim rotası — tur bazlı hedef açılar
-var _scanRoute = {
-  nodes: [], // {pitch, yaw, label} dizisi
-  currentNode: 0,
-  autoShutter: true
-};
-
-// Canlı açı verileri (60Hz)
-var _liveAngles = { alpha: 0, beta: 0, gamma: 0 }; // yaw, pitch, roll
-var _baseYaw = null; // İlk kilitlenme yaw'ı
-
-function _initGoniometricRadar() {
-  // Açı radarı UI oluştur
-  var radar = document.getElementById('angle-radar');
-  if (!radar) {
-    radar = document.createElement('div');
-    radar.id = 'angle-radar';
-    radar.style.cssText = 'position:absolute;top:50%;right:12px;transform:translateY(-50%);width:80px;height:80px;border-radius:50%;background:rgba(0,0,0,.8);border:2px solid rgba(0,200,255,.3);z-index:20;pointer-events:none;';
-    radar.innerHTML = '<canvas id="radar-canvas" width="80" height="80" style="position:absolute;top:0;left:0;"></canvas><div id="radar-degree" style="position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:9px;color:#00c8ff;font-family:monospace;white-space:nowrap;font-weight:700;"></div>';
-    var overlay = document.querySelector('.cam-overlay');
-    if (overlay) overlay.appendChild(radar);
-  }
-
-  // Açı komut paneli
-  var cmdPanel = document.getElementById('angle-cmd');
-  if (!cmdPanel) {
-    cmdPanel = document.createElement('div');
-    cmdPanel.id = 'angle-cmd';
-    cmdPanel.style.cssText = 'position:absolute;top:56px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);border:1px solid rgba(0,200,255,.2);border-radius:20px;padding:3px 14px;font-size:10px;font-weight:700;z-index:20;pointer-events:none;font-family:monospace;color:#00c8ff;white-space:nowrap;';
-    var overlay = document.querySelector('.cam-overlay');
-    if (overlay) overlay.appendChild(cmdPanel);
-  }
-
-  // Rota oluştur (kategoriye göre)
-  _buildScanRoute();
-
-  // 60Hz gyroscope dinle
-  if (window.DeviceOrientationEvent) {
-    window.addEventListener('deviceorientation', _onGyro60Hz);
-  }
-
-  // Radar çizim döngüsü
-  setInterval(_drawRadar, 50);
-}
-
-function _buildScanRoute() {
-  _scanRoute.nodes = [];
-  _scanRoute.currentNode = 0;
-
-  var yawStep, pitchLevels;
-
-  if (_objectCategory === 'micro') {
-    // Tek tur: 15° pitch, 20° yaw adımla
-    pitchLevels = [15, 45];
-    yawStep = 36; // 360/10 = 36° aralık
-  } else if (_objectCategory === 'large') {
-    // Üç tur
-    pitchLevels = [15, 45, 85];
-    yawStep = 15; // 360/24 = 15° aralık
-  } else {
-    // İki tur
-    pitchLevels = [20, 50];
-    yawStep = 20; // 360/18 = 20° aralık
-  }
-
-  var turNames = ['Alt Tur', 'Orta Tur', 'Üst Tur'];
-  pitchLevels.forEach(function(pitch, turIdx) {
-    for (var yaw = 0; yaw < 360; yaw += yawStep) {
-      _scanRoute.nodes.push({
-        pitch: pitch,
-        yaw: yaw,
-        label: turNames[turIdx] + ' ' + yaw + '°',
-        taken: false
-      });
-    }
-  });
-}
-
-function _onGyro60Hz(e) {
-  _liveAngles.alpha = e.alpha || 0; // yaw (0-360)
-  _liveAngles.beta = e.beta || 0;   // pitch (-180 ~ 180)
-  _liveAngles.gamma = e.gamma || 0; // roll (-90 ~ 90)
-
-  // İlk kilitlenme anında base yaw kaydet
-  if (_baseYaw === null && _lockState === 'locked') {
-    _baseYaw = _liveAngles.alpha;
-  }
-
-  // Hedef açı kontrolü
-  _checkAngleTarget();
-}
-
-function _checkAngleTarget() {
-  if (_lockState !== 'locked' || _scanRoute.nodes.length === 0) return;
-
-  var node = _scanRoute.nodes[_scanRoute.currentNode];
-  if (!node || node.taken) {
-    // Sonraki çekilmemiş node'u bul
-    for (var i = 0; i < _scanRoute.nodes.length; i++) {
-      if (!_scanRoute.nodes[i].taken) { _scanRoute.currentNode = i; node = _scanRoute.nodes[i]; break; }
-    }
-    if (!node || node.taken) return; // Hepsi çekilmiş
-  }
-
-  // Relative yaw hesapla
-  var relYaw = (_liveAngles.alpha - (_baseYaw || 0) + 360) % 360;
-  var pitch = Math.abs(_liveAngles.beta);
-
-  // Hedefle fark
-  var yawDiff = Math.abs(relYaw - node.yaw);
-  if (yawDiff > 180) yawDiff = 360 - yawDiff;
-  var pitchDiff = Math.abs(pitch - node.pitch);
-
-  var yawOK = yawDiff < 5;
-  var pitchOK = pitchDiff < 4;
-
-  // Açı komut paneli güncelle
-  var cmdEl = document.getElementById('angle-cmd');
-  if (cmdEl) {
-    if (yawOK && pitchOK) {
-      cmdEl.innerHTML = '<span style="color:#00ff88">🎯 ' + Math.round(pitch) + '° / ' + Math.round(relYaw) + '° — KİLİTLENDİ</span>';
-    } else {
-      var hints = [];
-      if (!pitchOK) {
-        hints.push(pitch < node.pitch ? '↑ ' + Math.round(node.pitch - pitch) + '° yukarı' : '↓ ' + Math.round(pitch - node.pitch) + '° aşağı');
-      }
-      if (!yawOK) {
-        var yawDir = ((node.yaw - relYaw + 360) % 360) < 180 ? 'sağa' : 'sola';
-        hints.push('↻ ' + Math.round(yawDiff) + '° ' + yawDir);
-      }
-      cmdEl.innerHTML = '<span style="color:#F59E0B">' + hints.join(' · ') + '</span>';
-    }
-  }
-
-  // Shutter lock güncelle
-  _shutterLocked = !(yawOK && pitchOK);
-  var btn = document.getElementById('cam-capture-btn');
-  if (btn) {
-    btn.style.opacity = _shutterLocked ? '0.3' : '1';
-    btn.style.border = _shutterLocked ? '4px solid #ef4444' : '4px solid #22C55E';
-    btn.style.pointerEvents = _shutterLocked ? 'none' : 'auto';
-  }
-
-  // Auto-shutter — tam açıya gelince otomatik çek
-  if (yawOK && pitchOK && _scanRoute.autoShutter && !_shutterLocked) {
-    node.taken = true;
-    _scanRoute.currentNode++;
-    _shutterLocked = true; // Çift çekim engeli
-
-    // Sesli onay
-    if (navigator.vibrate) navigator.vibrate(80);
-
-    // Fotoğrafı çek (blur kontrolü dahil)
-    setTimeout(function() {
-      var video = document.getElementById('camera-video');
-      var canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-      canvas.getContext('2d').drawImage(video, 0, 0);
-
-      var blur = _detectBlur(canvas);
-      if (!blur.sharp) {
-        node.taken = false; // Geri al
-        _scanRoute.currentNode--;
-        _speak('Bulanık! Tekrar.');
-        return;
-      }
-
-      // Orijinal capture
-      _origCapture();
-
-      var remaining = _scanRoute.nodes.filter(function(n) { return !n.taken; }).length;
-      if (remaining > 0) {
-        var next = _scanRoute.nodes[_scanRoute.currentNode];
-        if (next) _speak(Math.round(next.pitch) + ' derece, ' + Math.round(next.yaw) + ' derece ' + (next.yaw > relYaw ? 'sağa' : 'sola'));
-      } else {
-        _speak('Tüm açılar tamamlandı! Mükemmel tarama.');
-      }
-    }, 100);
-  }
-
-  // Sesli rehberlik (3 saniyede bir)
-  if (_shutterLocked && Date.now() - _lastSpoke > 4000) {
-    if (!pitchOK) {
-      var dir = pitch < node.pitch ? 'yukarı kalk' : 'aşağı in';
-      _speak(Math.round(Math.abs(pitch - node.pitch)) + ' derece ' + dir);
-    } else if (!yawOK) {
-      var yDir = ((node.yaw - relYaw + 360) % 360) < 180 ? 'sağa dön' : 'sola dön';
-      _speak(Math.round(yawDiff) + ' derece ' + yDir);
-    }
-  }
-}
-
-function _drawRadar() {
-  var canvas = document.getElementById('radar-canvas');
-  if (!canvas) return;
-  var ctx = canvas.getContext('2d');
-  var w = 80, h = 80, cx = 40, cy = 40, r = 32;
-
-  ctx.clearRect(0, 0, w, h);
-
-  // Dış halka
-  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(0,200,255,.2)'; ctx.lineWidth = 1; ctx.stroke();
-
-  // İç halka
-  ctx.beginPath(); ctx.arc(cx, cy, r * 0.5, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(0,200,255,.1)'; ctx.stroke();
-
-  // Çapraz çizgiler
-  ctx.beginPath(); ctx.moveTo(cx, cy - r); ctx.lineTo(cx, cy + r);
-  ctx.moveTo(cx - r, cy); ctx.lineTo(cx + r, cy);
-  ctx.strokeStyle = 'rgba(0,200,255,.1)'; ctx.stroke();
-
-  // Hedef noktaları çiz (çekilmişler yeşil, çekilmemişler turuncu)
-  _scanRoute.nodes.forEach(function(node, i) {
-    var angle = (node.yaw - 90) * Math.PI / 180;
-    var dist = (node.pitch / 90) * r;
-    var nx = cx + Math.cos(angle) * dist;
-    var ny = cy + Math.sin(angle) * dist;
-
-    ctx.beginPath(); ctx.arc(nx, ny, node.taken ? 2 : 3, 0, Math.PI * 2);
-    if (node.taken) {
-      ctx.fillStyle = '#22C55E'; ctx.fill();
-    } else if (i === _scanRoute.currentNode) {
-      ctx.fillStyle = '#F97316'; ctx.fill();
-      // Aktif hedef — parlayan halka
-      ctx.beginPath(); ctx.arc(nx, ny, 6, 0, Math.PI * 2);
-      ctx.strokeStyle = 'rgba(249,115,22,.5)'; ctx.lineWidth = 1; ctx.stroke();
-    } else {
-      ctx.fillStyle = 'rgba(0,200,255,.3)'; ctx.fill();
-    }
-  });
-
-  // Kullanıcının mevcut konumu (kırmızı nokta)
-  var relYaw = ((_liveAngles.alpha - (_baseYaw || 0) + 360) % 360);
-  var userAngle = (relYaw - 90) * Math.PI / 180;
-  var userDist = (Math.abs(_liveAngles.beta) / 90) * r;
-  var ux = cx + Math.cos(userAngle) * userDist;
-  var uy = cy + Math.sin(userAngle) * userDist;
-
-  ctx.beginPath(); ctx.arc(ux, uy, 4, 0, Math.PI * 2);
-  ctx.fillStyle = '#ff4444'; ctx.fill();
-  ctx.beginPath(); ctx.arc(ux, uy, 7, 0, Math.PI * 2);
-  ctx.strokeStyle = 'rgba(255,68,68,.4)'; ctx.lineWidth = 1; ctx.stroke();
-
-  // Derece etiketi
-  var degEl = document.getElementById('radar-degree');
-  if (degEl) {
-    var taken = _scanRoute.nodes.filter(function(n) { return n.taken; }).length;
-    degEl.textContent = Math.round(Math.abs(_liveAngles.beta)) + '° / ' + Math.round(relYaw) + '° [' + taken + '/' + _scanRoute.nodes.length + ']';
-  }
-}
-
-// Goniometrik radarı kamera başladığında aktif et
-var _origStartCamera2 = startCamera;
-startCamera = async function() {
-  await _origStartCamera2();
-  _initGoniometricRadar();
-};
+// DOM cache başlangıçta
+document.addEventListener('DOMContentLoaded', _cacheEls);
+if (document.readyState !== 'loading') _cacheEls();
 
 </script>
 </body>
