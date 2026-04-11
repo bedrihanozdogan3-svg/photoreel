@@ -25103,13 +25103,14 @@ setUretimTool = function(tool) {
 
 function _cleanupUretimTools() {
   // Önceki aracın kalıntılarını temizle
-  _showHassasPanel(false);
-  if (window._scene) {
+  try { _showHassasPanel(false); } catch(e) {}
+  var activeScene = window._uScene || window._scene;
+  if (activeScene) {
     var toRemove = [];
-    _scene.traverse(function(c) {
+    activeScene.traverse(function(c) {
       if (c.name && (c.name.startsWith('_tool_') || c.name.startsWith('_pin_') || c.name.startsWith('_support_'))) toRemove.push(c);
     });
-    toRemove.forEach(function(c) { _scene.remove(c); if(c.geometry)c.geometry.dispose(); if(c.material)c.material.dispose(); });
+    toRemove.forEach(function(c) { activeScene.remove(c); if(c.geometry)c.geometry.dispose(); if(c.material)c.material.dispose(); });
   }
   // Clip plane kapat
   if (uretimState.clipActive) {
