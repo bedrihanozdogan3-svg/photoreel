@@ -2591,6 +2591,66 @@ let _360 = {
   animId: null
 };
 
+// ── Dual-Fisheye → Equirectangular GPU Shader ──
+// Insta360 kameralar dual-fisheye (yan yana iki daire) formatında kaydeder.
+// Bu shader her iki balık gözü görüntüyü GPU'da equirectangular'a dönüştürür.
+const _dualFisheyeVertShader = `
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+}`;
+
+const _dualFisheyeFragShader = `
+uniform sampler2D videoTex;
+varying vec2 vUv;
+
+#define PI 3.14159265359
+
+void main() {
+  // UV → küresel koordinat
+  float lon = vUv.x * 2.0 * PI - PI; // -PI..PI
+  float lat = vUv.y * PI - PI * 0.5;  // -PI/2..PI/2
+
+  // Küresel → 3D yön vektörü
+  vec3 dir = vec3(
+    cos(lat) * sin(lon),
+    sin(lat),
+    cos(lat) * cos(lon)
+  );
+
+  // Hangi lens? Ön lens (z > 0) sol yarı, arka lens (z < 0) sağ yarı
+  vec2 fishCenter;
+  float fishRadius = 0.24; // Video içindeki her bir fisheye dairesinin yarıçapı (normalize)
+  vec3 localDir;
+
+  if (dir.z >= 0.0) {
+    // Ön lens — sol yarı
+    fishCenter = vec2(0.25, 0.5);
+    localDir = dir;
+  } else {
+    // Arka lens — sağ yarı (ayna)
+    fishCenter = vec2(0.75, 0.5);
+    localDir = vec3(-dir.x, dir.y, -dir.z);
+  }
+
+  // 3D yön → fisheye 2D projeksiyon (equisolid)
+  float theta = atan(length(localDir.xy), localDir.z);
+  float phi = atan(localDir.y, localDir.x);
+
+  // Fisheye daire içindeki pozisyon
+  float r = theta / PI; // 0..1 normalize
+  vec2 fishUV = fishCenter + fishRadius * r * vec2(cos(phi), sin(phi));
+
+  // Sınır kontrolü
+  if (fishUV.x < 0.0 || fishUV.x > 1.0 || fishUV.y < 0.0 || fishUV.y > 1.0) {
+    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+    return;
+  }
+
+  gl_FragColor = texture2D(videoTex, fishUV);
+}`;
+
 function init360Viewer(videoEl) {
   const container = document.getElementById('threeSixtyContainer');
   if (!container) return;
@@ -2598,81 +2658,99 @@ function init360Viewer(videoEl) {
   // Eski viewer varsa temizle
   if (_360.active) destroy360Viewer();
 
-  // Önce container'ı göster (boyut alabilmesi için)
   container.style.display = 'block';
 
-  // Matrix rain'i tamamen durdur — GPU tasarrufu
+  // Matrix rain kapat — GPU tasarrufu
   const rain = document.getElementById('matrixRain');
   if (rain) { rain.style.display = 'none'; }
+
+  // ── Dual-fisheye algılama ──
+  // Aspect ratio ~2:1 = equirectangular, ~1:1 = dual-fisheye
+  const vw = videoEl.videoWidth || 1920;
+  const vh = videoEl.videoHeight || 960;
+  const ratio = vw / vh;
+  const isDualFisheye = ratio < 1.5; // 1:1 veya 4:3 = dual-fisheye
+  _360.isDualFisheye = isDualFisheye;
+
+  if (isDualFisheye) {
+    showToast('🔄 Dual-fisheye algılandı — GPU stitching yapılıyor...');
+    showStatusMsg('Dual-fisheye → Equirectangular dönüşüm (GPU shader)');
+  } else {
+    showStatusMsg('Equirectangular 360° video algılandı');
+  }
 
   // Sahne
   _360.scene = new THREE.Scene();
 
-  // Boyut — container görünür olduktan sonra al
   const canvasArea = document.getElementById('canvasArea');
   const w = container.clientWidth || canvasArea?.clientWidth || 800;
   const h = container.clientHeight || canvasArea?.clientHeight || 600;
 
-  // Kamera — kürenin merkezinde
+  // Kamera
   _360.camera = new THREE.PerspectiveCamera(75, w / h, 0.1, 1200);
   _360.camera.position.set(0, 0, 0.1);
 
-  // Renderer — GPU hafif ayarlar
+  // Renderer
   _360.renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: 'high-performance' });
   _360.renderer.setSize(w, h);
-  _360.renderer.setPixelRatio(1); // Sabit 1x — kasma önlenir
+  _360.renderer.setPixelRatio(1);
   container.innerHTML = '';
   container.appendChild(_360.renderer.domElement);
-  _360.renderer.domElement.style.display = 'block';
-  _360.renderer.domElement.style.width = '100%';
-  _360.renderer.domElement.style.height = '100%';
-  _360.renderer.domElement.style.cursor = 'grab';
+  _360.renderer.domElement.style.cssText = 'display:block;width:100%;height:100%;cursor:grab;';
 
   // Video texture
   _360.videoTexture = new THREE.VideoTexture(videoEl);
   _360.videoTexture.minFilter = THREE.LinearFilter;
   _360.videoTexture.magFilter = THREE.LinearFilter;
   _360.videoTexture.format = THREE.RGBFormat;
-  _360.videoTexture.generateMipmaps = false; // Performans
+  _360.videoTexture.generateMipmaps = false;
 
-  // Küre (equirectangular projeksiyon — içten bakılır)
-  const geometry = new THREE.SphereGeometry(500, 64, 32);
-  geometry.scale(-1, 1, 1); // İçe bakan yüzeyler
-  const material = new THREE.MeshBasicMaterial({ map: _360.videoTexture });
+  // ── Küre malzemesi — dual-fisheye ise shader, değilse düz texture ──
+  var material;
+  if (isDualFisheye) {
+    // Dual-fisheye → equirectangular GPU dönüşüm shader'ı
+    material = new THREE.ShaderMaterial({
+      uniforms: { videoTex: { value: _360.videoTexture } },
+      vertexShader: _dualFisheyeVertShader,
+      fragmentShader: _dualFisheyeFragShader,
+      side: THREE.BackSide
+    });
+  } else {
+    // Normal equirectangular — düz texture
+    material = new THREE.MeshBasicMaterial({ map: _360.videoTexture, side: THREE.BackSide });
+  }
+
+  // Küre — equirectangular projeksiyon (içten bakılır)
+  var geometry = new THREE.SphereGeometry(500, 64, 32);
+  geometry.scale(-1, 1, 1);
   _360.sphere = new THREE.Mesh(geometry, material);
   _360.scene.add(_360.sphere);
 
-  // OrbitControls — mouse/touch ile sürükle
+  // OrbitControls
   _360.controls = new THREE.OrbitControls(_360.camera, _360.renderer.domElement);
   _360.controls.target.set(0, 0, 0);
-  _360.controls.enableZoom = true;
-  _360.controls.zoomSpeed = 0.8;
-  _360.controls.minFov = 30;
-  _360.controls.maxFov = 110;
   _360.controls.enablePan = false;
   _360.controls.enableDamping = true;
   _360.controls.dampingFactor = 0.15;
-  _360.controls.rotateSpeed = -0.5; // Doğal his, biraz daha hızlı
-  // Zoom = FOV değişimi olmalı, mesafe değil
-  _360.controls.enableZoom = false; // Mesafe zoom'u kapat
+  _360.controls.rotateSpeed = -0.5;
+  _360.controls.enableZoom = false; // FOV zoom kullanılacak
   _360.controls.update();
 
-  // Scroll ile FOV zoom
+  // Scroll → FOV zoom
   _360.renderer.domElement.addEventListener('wheel', function(e) {
     e.preventDefault();
     _360.camera.fov = Math.max(30, Math.min(110, _360.camera.fov + e.deltaY * 0.05));
     _360.camera.updateProjectionMatrix();
-    // FOV slider senkron
-    const fovSlider = document.getElementById('slider360Fov');
-    if (fovSlider) { fovSlider.value = Math.round(_360.camera.fov); }
+    var fovSlider = document.getElementById('slider360Fov');
+    if (fovSlider) fovSlider.value = Math.round(_360.camera.fov);
   }, { passive: false });
 
   // Grab cursor
   _360.renderer.domElement.addEventListener('mousedown', function() { this.style.cursor = 'grabbing'; });
   _360.renderer.domElement.addEventListener('mouseup', function() { this.style.cursor = 'grab'; });
 
-  // Slider → kamera bağlantısı (throttle)
-  let _syncTimer = null;
+  // Slider sync (throttled)
+  var _syncTimer = null;
   _360.controls.addEventListener('change', function() {
     if (_syncTimer) return;
     _syncTimer = setTimeout(function() { _syncTimer = null; sync360SlidersFromCamera(); }, 150);
@@ -2680,29 +2758,23 @@ function init360Viewer(videoEl) {
 
   _360.active = true;
 
-  // Render döngüsü — optimize edilmiş
-  let _lastRenderTime = 0;
-  function animate360(now) {
+  // Render loop
+  function animate360() {
     if (!_360.active) return;
     _360.animId = requestAnimationFrame(animate360);
-
     _360.controls.update();
-
-    // Video texture güncelle — her frame (duraklatılmışken de görüntü lazım)
-    if (_360.videoTexture) {
-      _360.videoTexture.needsUpdate = true;
-    }
-
+    if (_360.videoTexture) _360.videoTexture.needsUpdate = true;
     _360.renderer.render(_360.scene, _360.camera);
   }
-  animate360(0);
+  animate360();
 
   // Resize
   window.removeEventListener('resize', resize360Viewer);
   window.addEventListener('resize', resize360Viewer);
 
-  showToast('🌐 360° görüntüleyici aktif — sürükleyerek çevirin');
-  showStatusMsg('Three.js küre projeksiyon başlatıldı');
+  var modeLabel = isDualFisheye ? 'Dual-Fisheye GPU Stitching' : 'Equirectangular';
+  showToast('🌐 360° aktif (' + modeLabel + ') — sürükleyerek çevirin');
+  showStatusMsg(modeLabel + ' projeksiyon başlatıldı · ' + vw + '×' + vh);
 }
 
 function resize360Viewer() {
