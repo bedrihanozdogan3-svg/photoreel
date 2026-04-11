@@ -22567,6 +22567,7 @@ _meshSelect = function(id, el) {
 };
 
 // _3dPick'in parça seçiminde paint hedefini de aktif et
+if (typeof _3dPick === 'function') {
 const _orig3dPick = _3dPick;
 _3dPick = function(e) {
   _orig3dPick(e);
@@ -22587,6 +22588,7 @@ _3dPick = function(e) {
   else if (Math.abs(relX) > 0.55 && relY > 0.3) partId = 'fabric';
   _partPaintSetActive(partId);
 };
+} // end if _3dPick
 
 // Paint modundayken parça üzerine boyama: _screenToUV'yu parça bölgesine sınırla
 const _origScreenToUV = _screenToUV;
