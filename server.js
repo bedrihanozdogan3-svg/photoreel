@@ -148,6 +148,31 @@ app.get('/fenix', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'fenix.html'));
 });
 
+// CSP nonce — fenix-editor.html için dinamik nonce inject
+app.get('/fenix-editor.html', (req, res) => {
+  const crypto = require('crypto');
+  const nonce = crypto.randomBytes(16).toString('base64');
+  const fs = require('fs');
+  const filePath = path.join(__dirname, 'public', 'fenix-editor.html');
+  let html = fs.readFileSync(filePath, 'utf8');
+  // <script> etiketlerine nonce ekle
+  html = html.replace(/<script>/g, `<script nonce="${nonce}">`);
+  // CSP header
+  res.setHeader('Content-Security-Policy',
+    `default-src 'self' https: data: blob:; ` +
+    `script-src 'nonce-${nonce}' 'self' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com https://www.gstatic.com https://ajax.googleapis.com 'unsafe-eval'; ` +
+    `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; ` +
+    `font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; ` +
+    `img-src 'self' data: blob: https:; ` +
+    `connect-src 'self' https: wss:; ` +
+    `frame-src 'self' https:; ` +
+    `media-src 'self' blob: https:;`
+  );
+  res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(html);
+});
+
 // Static dosyalar — cache headers ile
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: config.isProd ? '1d' : 0,
@@ -291,7 +316,15 @@ app.use('/api', ipBanCheck);
 
 // Güvenlik admin API
 const securityRoutes = require('./routes/api-security');
+const { validateCSRF } = securityRoutes;
 app.use('/api/security', securityRoutes);
+
+// CSRF koruması — yazma endpoint'lerinde aktif
+if (config.env === 'production') {
+  app.use('/api/pro', validateCSRF);
+  app.use('/api/agent', validateCSRF);
+  app.use('/api/approval', validateCSRF);
+}
 
 // Müşteri kayıt & quota API
 const customerRoutes = require('./routes/api-customer');

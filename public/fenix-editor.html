@@ -23256,9 +23256,9 @@ function _openLayersPanel() {
   _initLayers();
   const panel = document.getElementById('slide-panel');
   if (!panel) return;
-  const title = panel.querySelector('.sp-title');
+  const title = document.getElementById('sp-title');
   if (title) title.textContent = '📚 Katmanlar';
-  const body = panel.querySelector('.sp-body');
+  const body = document.getElementById('sp-body');
   if (body) {
     body.id = 'layers-panel-body';
     body.innerHTML = '';
@@ -23270,6 +23270,7 @@ function _openLayersPanel() {
       <button onclick="_addLayer('Metin','text')" style="flex:1;padding:4px;border-radius:4px;border:1px solid rgba(0,200,255,.3);background:rgba(0,200,255,.08);color:#00c8ff;font-size:8px;font-weight:700;cursor:pointer;">T Metin</button>
     `;
     body.appendChild(topBar);
+    // Body id'yi geri koy çünkü _renderLayersPanel 'layers-panel-body' arıyor
   }
   _renderLayersPanel();
   panel.classList.add('open');
@@ -23280,7 +23281,7 @@ function _openLayersPanel() {
 // ════════════════════════════════════════════════════════════
 var _csrfToken = null;
 function _fetchCSRFToken() {
-  fetch('/api/csrf-token', { credentials: 'same-origin' })
+  fetch('/api/security/csrf-token', { credentials: 'same-origin' })
     .then(r => r.json())
     .then(d => { _csrfToken = d.token; })
     .catch(() => { _csrfToken = 'csrf_' + Date.now(); }); // Fallback: yerel token
@@ -23326,6 +23327,15 @@ function _initFingerprint() {
 // Init — sayfa yüklenince
 _fetchCSRFToken();
 _initFingerprint();
+
+// Session flush — sayfa kapanırken tracking verilerini backend'e gönder
+window.addEventListener('beforeunload', function() {
+  const summary = _getTrackingSummary();
+  summary.deviceFP = _deviceFingerprint;
+  try {
+    navigator.sendBeacon('/api/security/track', new Blob([JSON.stringify(summary)], { type: 'application/json' }));
+  } catch(e) {}
+});
 
 </script>
 <!-- Tool cursor: body'nin direkt çocuğu — transform'lu atadan ETKİLENMEZ, position:fixed doğru çalışır -->
