@@ -148,19 +148,13 @@ app.get('/fenix', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'fenix.html'));
 });
 
-// CSP nonce — fenix-editor.html için dinamik nonce inject
-app.get('/fenix-editor.html', (req, res) => {
-  const crypto = require('crypto');
-  const nonce = crypto.randomBytes(16).toString('base64');
-  const fs = require('fs');
-  const filePath = path.join(__dirname, 'public', 'fenix-editor.html');
-  let html = fs.readFileSync(filePath, 'utf8');
-  // <script> etiketlerine nonce ekle
-  html = html.replace(/<script>/g, `<script nonce="${nonce}">`);
-  // CSP header
+// CSP header — fenix-editor.html için güvenlik katmanı
+// Not: nonce + unsafe-inline birlikte kullanılamaz (tarayıcı nonce varken unsafe-inline'ı yoksayar)
+// Binlerce inline handler (onclick vb.) olduğu için unsafe-inline zorunlu
+app.get('/fenix-editor.html', (req, res, next) => {
   res.setHeader('Content-Security-Policy',
     `default-src 'self' https: data: blob:; ` +
-    `script-src 'nonce-${nonce}' 'unsafe-inline' 'self' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com https://www.gstatic.com https://ajax.googleapis.com 'unsafe-eval'; ` +
+    `script-src 'unsafe-inline' 'unsafe-eval' 'self' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com https://www.gstatic.com https://ajax.googleapis.com; ` +
     `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; ` +
     `font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; ` +
     `img-src 'self' data: blob: https:; ` +
@@ -168,9 +162,7 @@ app.get('/fenix-editor.html', (req, res) => {
     `frame-src 'self' https:; ` +
     `media-src 'self' blob: https:;`
   );
-  res.setHeader('Cache-Control', 'no-cache, must-revalidate');
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.send(html);
+  next(); // static middleware'e devam et
 });
 
 // Static dosyalar — cache headers ile
