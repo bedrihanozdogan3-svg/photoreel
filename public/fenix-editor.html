@@ -838,8 +838,22 @@
     border: 1px solid rgba(0,200,255,.12) !important;
   }
 
-  /* ── NEFES ALAN GLOW — Aktif Araç İkonu ── */
+  /* ── ÜRETİM ARAÇ ÇUBUĞU — sidebar içinde, butonlar kompakt ── */
+  .sb-tools[data-for="uretim"] .sb-btn {
+    min-height: 26px; max-height: 36px;
+    color: #00c8ff;
+  }
+  .sb-tools[data-for="uretim"] .sb-btn .sb-lbl {
+    color: rgba(0,200,255,.6);
+  }
+  .sb-tools[data-for="uretim"] .sb-btn:hover {
+    background: rgba(0,200,255,.1);
+    border-left-color: rgba(0,200,255,.3);
+  }
   .sb-tools[data-for="uretim"] .sb-btn.active {
+    background: rgba(0,200,255,.12);
+    color: #00c8ff;
+    border-left-color: #00c8ff;
     animation: uretimToolGlow 2s ease-in-out infinite;
     box-shadow: 0 0 12px rgba(0,200,255,.3);
   }
@@ -884,14 +898,13 @@
 
   /* ── ÜRETİM SLIDE PANEL — Soldan kayan detay paneli ── */
   #uretim-slide-panel {
-    position: absolute; left: 0; top: 0; bottom: 0; width: 240px; z-index: 65;
+    position: absolute; left: 0; top: 0; bottom: 0; width: 240px; z-index: 100;
     background: rgba(2,8,16,0.96);
     backdrop-filter: blur(24px) saturate(1.2);
     -webkit-backdrop-filter: blur(24px) saturate(1.2);
     border-right: 1px solid rgba(0,200,255,0.15);
     box-shadow: 6px 0 40px rgba(0,0,0,.9), 0 0 60px rgba(0,200,255,.04);
     transform: translateX(-100%);
-    transition: transform .26s cubic-bezier(.35,0,.15,1);
     pointer-events: none;
     display: flex; flex-direction: column; overflow: hidden;
   }
@@ -2117,7 +2130,7 @@
       </button>
     </div>
 
-  </div>
+  </div><!-- /sidebar -->
 
   <!-- CENTER COLUMN: canvas + timeline -->
   <div id="center-col">
@@ -2590,6 +2603,15 @@
         <div style="font-size:8px;color:#0a1520;margin-top:12px;">veya 3D panelinden model aktarın</div>
       </div>
 
+      <!-- ═══ ÜRETİM SLIDE PANEL — mod-uretim doğrudan çocuğu (z-index stacking fix) ═══ -->
+      <div id="uretim-slide-panel">
+        <div class="usp-head">
+          <span id="usp-title">Panel</span>
+          <span class="usp-head-close" onclick="closeUretimSlide()">×</span>
+        </div>
+        <div class="usp-body" id="usp-body"></div>
+      </div>
+
       <div id="uretim-wrap" style="position:relative;flex:1;display:flex;overflow:hidden;background:#060a10;">
         <canvas id="uretim-canvas" style="width:100%;height:100%;display:block;"></canvas>
 
@@ -2696,15 +2718,6 @@
           <div style="font-size:8px;color:rgba(0,200,255,.5);letter-spacing:2px;text-transform:uppercase;text-align:center;">ÖLÇÜM</div>
           <div id="uretim-measure-val" style="font-size:22px;color:#00c8ff;font-weight:800;font-family:'JetBrains Mono',monospace;text-align:center;margin-top:4px;">0.00 mm</div>
           <div style="font-size:7px;color:rgba(0,200,255,.3);text-align:center;margin-top:2px;">İki noktaya tıklayın</div>
-        </div>
-
-        <!-- ═══ ÜRETİM SLIDE PANEL ═══ -->
-        <div id="uretim-slide-panel">
-          <div class="usp-head">
-            <span id="usp-title">Panel</span>
-            <span class="usp-head-close" onclick="closeUretimSlide()">×</span>
-          </div>
-          <div class="usp-body" id="usp-body"></div>
         </div>
 
         <!-- ═══ LAZER TARAMA ÇİZGİSİ (Scanline) ═══ -->
@@ -7020,11 +7033,11 @@ const SP = {
             <div style="margin-top:6px">
               <label style="font-size:9px;color:#666">Şifre değişim aralığı:</label>
               <select id="usta-qr-interval" onchange="_ustaSetInterval(this.value)" style="width:100%;height:26px;border-radius:4px;background:#0a0a15;border:1px solid #333;color:#fff;font-size:10px;margin-top:2px">
-                <option value="2">2 dakika</option>
                 <option value="5" selected>5 dakika</option>
                 <option value="10">10 dakika</option>
-                <option value="30">30 dakika</option>
                 <option value="60">1 saat</option>
+                <option value="120">2 saat</option>
+                <option value="1440">24 saat</option>
               </select>
             </div>
           </div>
@@ -7412,7 +7425,10 @@ async function _ustaActivate() {
 }
 
 var _qrRefreshTimer = null;
+var _qrCountdownTimer = null;
+var _qrNextRefresh = 0;
 var _qrToken = null;
+function _qrIntervalLabel(m) { m = parseInt(m); return m >= 1440 ? '24 saatte bir' : m >= 60 ? (m/60) + ' saatte bir' : m + ' dk\'da bir'; }
 async function _ustaGenerateQR() {
   try {
     const interval = document.getElementById('usta-qr-interval')?.value || 5;
@@ -7433,7 +7449,7 @@ async function _ustaGenerateQR() {
         <div style="font-size:10px;color:#F97316;margin-top:6px;font-weight:700">Şifre: <span id="usta-pw-display">${d.password}</span></div>
         <div id="usta-pw-timer" style="font-size:8px;color:#666;margin-top:2px"></div>
         <div style="font-size:9px;color:#555;margin-top:2px;word-break:break-all">${fullUrl}</div>
-        <div style="font-size:8px;color:#22C55E;margin-top:4px">QR sabit · Şifre ${interval} dk'da bir değişir</div>
+        <div style="font-size:8px;color:#22C55E;margin-top:4px">QR sabit · Şifre <span id="usta-interval-label">${_qrIntervalLabel(interval)}</span> otomatik değişir</div>
         <div style="display:flex;gap:4px;margin-top:6px">
           <button onclick="navigator.clipboard.writeText('${fullUrl}');toast('Kopyalandı','ok',1500)" style="flex:1;height:26px;border-radius:4px;background:#1a1a2e;border:1px solid #333;color:#ccc;font-size:10px;cursor:pointer">Kopyala</button>
           <button onclick="navigator.share?.({url:'${fullUrl}',title:'Fenixal Tarama'})" style="flex:1;height:26px;border-radius:4px;background:#1a1a2e;border:1px solid #333;color:#ccc;font-size:10px;cursor:pointer">Paylaş</button>
@@ -7444,9 +7460,9 @@ async function _ustaGenerateQR() {
       new QRCode(document.getElementById('usta-qr-canvas'), { text: fullUrl, width: 160, height: 160, colorDark: '#F97316', colorLight: '#0a0a15' });
     }
 
-    // Otomatik şifre yenileme
+    // Otomatik şifre yenileme — bizim tarafımızdan otomatik değişir
     if (_qrRefreshTimer) clearInterval(_qrRefreshTimer);
-    var nextRefresh = Date.now() + interval * 60000;
+    _qrNextRefresh = Date.now() + interval * 60000;
     _qrRefreshTimer = setInterval(async function() {
       try {
         var rr = await fetch('/api/usta/qr/refresh', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({userId:_driveUserId()}) });
@@ -7454,20 +7470,26 @@ async function _ustaGenerateQR() {
         if (dd.ok) {
           var pwEl = document.getElementById('usta-pw-display');
           if (pwEl) { pwEl.textContent = dd.password; pwEl.style.animation = 'none'; pwEl.offsetHeight; pwEl.style.animation = ''; }
-          nextRefresh = Date.now() + interval * 60000;
-          toast('Şifre yenilendi: ' + dd.password, 'ok', 2000);
+          _qrNextRefresh = Date.now() + interval * 60000;
+          toast('Şifre otomatik yenilendi: ' + dd.password, 'ok', 2000);
         }
       } catch(e) {}
     }, interval * 60000);
 
-    // Geri sayım göster
-    setInterval(function() {
-      var remaining = Math.max(0, Math.ceil((nextRefresh - Date.now()) / 1000));
+    // Geri sayım göster — saat:dakika:saniye formatında
+    if (_qrCountdownTimer) clearInterval(_qrCountdownTimer);
+    _qrCountdownTimer = setInterval(function() {
+      var remaining = Math.max(0, Math.ceil((_qrNextRefresh - Date.now()) / 1000));
       var timerEl = document.getElementById('usta-pw-timer');
-      if (timerEl) timerEl.textContent = 'Yeni şifre: ' + Math.floor(remaining/60) + ':' + String(remaining%60).padStart(2,'0');
+      if (!timerEl) return;
+      var h = Math.floor(remaining / 3600);
+      var m = Math.floor((remaining % 3600) / 60);
+      var s = remaining % 60;
+      if (h > 0) timerEl.textContent = 'Yeni şifre: ' + h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+      else timerEl.textContent = 'Yeni şifre: ' + m + ':' + String(s).padStart(2,'0');
     }, 1000);
 
-    toast('QR oluşturuldu — şifre ' + interval + ' dk\'da bir yenilenir', 'ok', 3000);
+    toast('QR oluşturuldu — şifre ' + _qrIntervalLabel(interval) + ' otomatik değişir', 'ok', 3000);
   } catch(e) { toast('QR hatası: '+e.message, 'err'); }
 }
 
@@ -7852,12 +7874,32 @@ function _fitModelToView(obj) {
 
 async function _ustaSetInterval(minutes) {
   try {
+    const m = parseInt(minutes);
     await fetch('/api/usta/qr/interval', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: _driveUserId(), minutes: parseInt(minutes) })
+      body: JSON.stringify({ userId: _driveUserId(), minutes: m })
     });
-    toast(`Şifre her ${minutes} dk değişecek`, 'ok', 2000);
+    const label = m >= 1440 ? '24 saat' : m >= 60 ? (m/60) + ' saat' : m + ' dk';
+    toast(`Şifre her ${label} otomatik değişecek`, 'ok', 2000);
+
+    // Aktif QR varsa zamanlayıcıyı yeniden başlat
+    if (_qrRefreshTimer) {
+      clearInterval(_qrRefreshTimer);
+      _qrRefreshTimer = setInterval(async function() {
+        try {
+          var rr = await fetch('/api/usta/qr/refresh', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({userId:_driveUserId()}) });
+          var dd = await rr.json();
+          if (dd.ok) {
+            var pwEl = document.getElementById('usta-pw-display');
+            if (pwEl) { pwEl.textContent = dd.password; pwEl.style.animation='none'; pwEl.offsetHeight; pwEl.style.animation=''; }
+            _qrNextRefresh = Date.now() + m * 60000;
+            toast('Şifre yenilendi: ' + dd.password, 'ok', 2000);
+          }
+        } catch(e) {}
+      }, m * 60000);
+      _qrNextRefresh = Date.now() + m * 60000;
+    }
   } catch(e) {}
 }
 
@@ -15669,13 +15711,15 @@ const uretimState = {
 
 function setUretimTool(tool) {
   uretimState.tool = tool;
+  // Cleanup — güvenli, scene yoksa atla
+  try { if (typeof _cleanupUretimTools === 'function') _cleanupUretimTools(); } catch(e) {}
   document.querySelectorAll('.sb-tools[data-for="uretim"] .sb-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.tool === 'uretim-' + tool);
   });
   const toolNames = {
     select: 'Seç', clip: 'Kesim Bıçağı', pin: 'Pimleyici', repair: 'Otomatik Onarım',
     hole: 'Delik Kapatma', thickness: 'Et Kalınlığı', support: 'Destek Analizi',
-    measure: 'Ölçüm', scale: 'Ölçekle'
+    measure: 'Ölçüm', scale: 'Ölçekle', qr: 'QR Kod', export: 'Dışa Aktar'
   };
   toast((toolNames[tool] || tool) + ' aktif', '', 1000);
 }
@@ -15714,14 +15758,20 @@ function openUretimSlide(panel) {
 
   title.textContent = titles[panel] || panel;
   body.innerHTML = '';
-  if (builders[panel]) builders[panel](body);
+  try { if (builders[panel]) builders[panel](body); } catch(e) { console.warn('Panel build err:', e); body.innerHTML = '<div style="padding:12px;color:#666;font-size:10px;">Model yüklendikten sonra bu panel kullanılabilir.</div>'; }
   el.classList.add('open');
+  // Drop zone slide panel'i engellemesin
+  const drop = document.getElementById('uretim-drop');
+  if (drop) drop.style.pointerEvents = 'none';
 }
 
 function closeUretimSlide() {
   const el = document.getElementById('uretim-slide-panel');
   if (el) el.classList.remove('open');
   _uretimSlideOpen = '';
+  // Drop zone'u geri aç (model yoksa)
+  const drop = document.getElementById('uretim-drop');
+  if (drop && drop.style.display !== 'none') drop.style.pointerEvents = '';
 }
 
 // ── PANEL 1: MESH ONARIM ──
@@ -23573,7 +23623,7 @@ window._toggleAutoDimension=_toggleAutoDimension;
 var _origSetUretimTool = setUretimTool;
 setUretimTool = function(tool) {
   _origSetUretimTool(tool);
-  _cleanupUretimTools();
+  try { _cleanupUretimTools(); } catch(e) { console.warn('cleanup err:', e); }
 
   var model = window._currentModel || (window._tfCtrl && _tfCtrl.object);
   if (!model && tool !== 'select') {
