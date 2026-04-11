@@ -133,6 +133,33 @@ app.post('/api/waitlist', async (req, res) => {
   res.json({ ok: true });
 });
 
+// QR kart doğrulama — telefon taradığında bu endpoint'e gelir
+app.get('/api/card/:token', (req, res) => {
+  const { token } = req.params;
+  if (!token || token.length < 8) {
+    return res.status(400).json({ error: 'Geçersiz token' });
+  }
+  // Token'dan plan bilgisi çöz (base64 decode)
+  try {
+    const decoded = Buffer.from(token, 'base64').toString('utf-8');
+    // format: email-slug-timestamp
+    const parts = decoded.split('-');
+    const slug = parts.length >= 2 ? parts[parts.length - 2] : 'free';
+    const validPlans = ['pro', '360', 'dublaj', 'eticaret', 'otonom', 'free', 'master'];
+    const plan = validPlans.includes(slug) ? slug : 'free';
+    const credits = plan === 'master' || plan === 'otonom' ? 30 : 15;
+    res.json({
+      plan,
+      credits,
+      email: parts.slice(0, -2).join('-') || `kart-${token.slice(0,6)}@fenix.ai`,
+      token,
+      activatedAt: new Date().toISOString(),
+    });
+  } catch {
+    res.status(400).json({ error: 'Token çözülemedi' });
+  }
+});
+
 // Dashboard (admin)
 app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
