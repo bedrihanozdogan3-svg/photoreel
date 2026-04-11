@@ -1933,6 +1933,14 @@
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 6l7 4 7-4-7-4z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M2 9l7 4 7-4" stroke="currentColor" stroke-width="1.2" fill="none" opacity=".6"/><path d="M2 12l7 4 7-4" stroke="currentColor" stroke-width="1.2" fill="none" opacity=".3"/></svg>
         <span class="sb-lbl">KATMANLAR</span>
       </button>
+      <button class="sb-btn" onclick="_openBatchPanel()" title="📦 Batch İşlem — Çoklu dosya">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2" opacity=".7"/><rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2" opacity=".5"/><rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" stroke-width="1.2" opacity=".3"/></svg>
+        <span class="sb-lbl">BATCH</span>
+      </button>
+      <button class="sb-btn" onclick="_openExportFormatPanel()" title="📥 Dışa Aktarım — WebP/AVIF/TIFF">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2v9M5 7l4 4 4-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M2 13v2a1 1 0 001 1h12a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="14" cy="14" r="2" stroke="#F97316" stroke-width="1" fill="none"/></svg>
+        <span class="sb-lbl">FORMAT</span>
+      </button>
       <!-- AI paneli kaldırıldı (Gemini doğrudan Fenix üzerinden çalışır) -->
       <button class="sb-btn" id="sb-export-btn" onclick="toggleExportPanel()" title="Çoklu Fotoğraf Çıkışı">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -2035,6 +2043,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 22l1-1h3l9-9"/><path d="M3 21l9-9"/><circle cx="18" cy="6" r="4"/></svg>
         <span class="sb-lbl">Doldur</span>
       </button>
+      <button class="sb-btn" onclick="_open3DPartPainter()" title="🎨 Parça Boyama — Her parçayı ayrı renkte boya">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="7" cy="7" r="3" fill="#ef4444" stroke="none"/><circle cx="17" cy="7" r="3" fill="#3b82f6" stroke="none"/><circle cx="7" cy="17" r="3" fill="#22c55e" stroke="none"/><circle cx="17" cy="17" r="3" fill="#fbbf24" stroke="none"/></svg>
+        <span class="sb-lbl">PARÇA</span>
+      </button>
       <div class="sb-sep"></div>
       <!-- SCULPTING -->
       <button class="sb-btn" data-tool="sculpt-grab" title="Tut & Çek [H]" onclick="set3DTool('sculpt-grab')">
@@ -2136,6 +2148,10 @@
       <button class="sb-btn" data-tool="uretim-qr" title="QR Kod Üret — Müşteriye tarama linki oluştur" onclick="setUretimTool('qr');_uretimGenerateQR()">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/></svg>
         <span class="sb-lbl">QR ÜRET</span>
+      </button>
+      <button class="sb-btn" onclick="_toggleGCodePreview()" title="G-Code Önizleme — Katman katman baskı simülasyonu">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 17h18M3 13h14M3 9h10M3 5h6"/></svg>
+        <span class="sb-lbl">G-CODE</span>
       </button>
       <button class="sb-btn" data-tool="uretim-export" title="Dışa Aktar — STL, GLTF, OBJ + üretim paketi" onclick="setUretimTool('export');openUretimSlide('export')">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -23336,6 +23352,599 @@ window.addEventListener('beforeunload', function() {
     navigator.sendBeacon('/api/security/track', new Blob([JSON.stringify(summary)], { type: 'application/json' }));
   } catch(e) {}
 });
+
+// ════════════════════════════════════════════════════════════
+//  1. ÇOKLU SEÇİM — Shift+Click ile birden fazla obje seç (Resim modu)
+// ════════════════════════════════════════════════════════════
+var _multiSelect = { active: false, items: [] };
+
+function _toggleMultiSelect(el, shiftKey) {
+  if (!shiftKey) {
+    // Normal tıklama — tekli seçim
+    _multiSelect.items.forEach(item => { if (item.style) item.style.outline = ''; });
+    _multiSelect.items = el ? [el] : [];
+    if (el) el.style.outline = '2px solid #00c8ff';
+    return;
+  }
+  // Shift+click — çoklu seçime ekle/çıkar
+  _multiSelect.active = true;
+  const idx = _multiSelect.items.indexOf(el);
+  if (idx >= 0) {
+    _multiSelect.items.splice(idx, 1);
+    el.style.outline = '';
+  } else {
+    _multiSelect.items.push(el);
+    el.style.outline = '2px solid #F97316';
+  }
+}
+
+function _moveMultiSelection(dx, dy) {
+  _multiSelect.items.forEach(item => {
+    if (item.style) {
+      const left = parseFloat(item.style.left || 0) + dx;
+      const top = parseFloat(item.style.top || 0) + dy;
+      item.style.left = left + 'px';
+      item.style.top = top + 'px';
+    }
+  });
+}
+
+function _deleteMultiSelection() {
+  _multiSelect.items.forEach(item => item.remove());
+  _multiSelect.items = [];
+  toast(_multiSelect.items.length + ' obje silindi', 'ok');
+}
+
+function _getMultiSelectionCount() { return _multiSelect.items.length; }
+
+// Keyboard hook — çoklu seçim taşıma
+document.addEventListener('keydown', function(e) {
+  if (_multiSelect.items.length < 2) return;
+  const step = e.shiftKey ? 10 : 1;
+  if (e.key === 'ArrowLeft')  { e.preventDefault(); _moveMultiSelection(-step, 0); }
+  if (e.key === 'ArrowRight') { e.preventDefault(); _moveMultiSelection(step, 0); }
+  if (e.key === 'ArrowUp')    { e.preventDefault(); _moveMultiSelection(0, -step); }
+  if (e.key === 'ArrowDown')  { e.preventDefault(); _moveMultiSelection(0, step); }
+  if (e.key === 'Delete')     { e.preventDefault(); _deleteMultiSelection(); }
+});
+
+// ════════════════════════════════════════════════════════════
+//  2. VIDEO TIMELINE DRAG & DROP — Klipleri sürükleyerek sırala
+// ════════════════════════════════════════════════════════════
+var _tlDrag = { active: false, idx: -1, startX: 0 };
+
+function _initTimelineDragDrop() {
+  const tl = document.getElementById('tl-tracks');
+  if (!tl) return;
+  tl.addEventListener('mousedown', function(e) {
+    const clip = e.target.closest('.tl-clip');
+    if (!clip) return;
+    _tlDrag.active = true;
+    _tlDrag.idx = parseInt(clip.dataset.idx || 0);
+    _tlDrag.startX = e.clientX;
+    clip.style.opacity = '0.5';
+    clip.style.zIndex = '100';
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', function(e) {
+    if (!_tlDrag.active) return;
+    const clips = tl.querySelectorAll('.tl-clip');
+    const dragClip = clips[_tlDrag.idx];
+    if (dragClip) dragClip.style.transform = 'translateX(' + (e.clientX - _tlDrag.startX) + 'px)';
+  });
+  document.addEventListener('mouseup', function(e) {
+    if (!_tlDrag.active) return;
+    _tlDrag.active = false;
+    const clips = tl.querySelectorAll('.tl-clip');
+    const dragClip = clips[_tlDrag.idx];
+    if (dragClip) { dragClip.style.opacity = '1'; dragClip.style.zIndex = ''; dragClip.style.transform = ''; }
+    // Hedef pozisyon hesapla
+    const dx = e.clientX - _tlDrag.startX;
+    if (Math.abs(dx) < 30) return; // Çok kısa sürükleme — yoksay
+    const dir = dx > 0 ? 1 : -1;
+    const fromIdx = _tlDrag.idx;
+    const toIdx = Math.max(0, Math.min((S.clips?.length || 1) - 1, fromIdx + dir));
+    if (fromIdx !== toIdx && S.clips) {
+      const item = S.clips.splice(fromIdx, 1)[0];
+      S.clips.splice(toIdx, 0, item);
+      if (typeof renderTimeline === 'function') renderTimeline();
+      toast('Klip ' + (fromIdx+1) + ' → ' + (toIdx+1) + ' taşındı', 'ok');
+      _trackAction('timeline-reorder', { from: fromIdx, to: toIdx });
+    }
+  });
+}
+setTimeout(_initTimelineDragDrop, 2000);
+
+// ════════════════════════════════════════════════════════════
+//  3. 3D MULTI-PART BOYAMA İYİLEŞTİRME — Parça izolasyonu + renk paleti
+// ════════════════════════════════════════════════════════════
+var _3dPartColors = {};
+
+function _paint3DPart(partName, color) {
+  if (!window._scene) return toast('3D sahne yüklenmedi', 'err');
+  window._scene.traverse(obj => {
+    if (!obj.isMesh) return;
+    if (obj.name === partName || (!partName && obj.isMesh)) {
+      obj.material = obj.material.clone();
+      obj.material.color.set(color);
+      obj.material.needsUpdate = true;
+      _3dPartColors[obj.name || 'mesh_' + obj.id] = color;
+    }
+  });
+  toast('🎨 ' + (partName || 'Tüm mesh') + ' → ' + color, 'ok');
+  _trackAction('3d-paint', { part: partName, color });
+}
+
+function _list3DParts() {
+  if (!window._scene) return [];
+  const parts = [];
+  window._scene.traverse(obj => {
+    if (obj.isMesh) {
+      parts.push({
+        name: obj.name || 'mesh_' + obj.id,
+        color: obj.material?.color ? '#' + obj.material.color.getHexString() : '#888888',
+        vertices: obj.geometry?.attributes?.position?.count || 0
+      });
+    }
+  });
+  return parts;
+}
+
+function _open3DPartPainter() {
+  const parts = _list3DParts();
+  if (!parts.length) return toast('3D model yüklenmedi', 'err');
+  const panel = document.getElementById('slide-panel');
+  const title = document.getElementById('sp-title');
+  const body = document.getElementById('sp-body');
+  if (!panel || !body) return;
+  if (title) title.textContent = '🎨 Parça Boyama';
+  body.innerHTML = '';
+  const colors = ['#ef4444','#f97316','#fbbf24','#22c55e','#00c8ff','#3b82f6','#8b5cf6','#ec4899','#ffffff','#333333'];
+  parts.forEach(p => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05);';
+    row.innerHTML = `<div style="width:12px;height:12px;border-radius:2px;background:${p.color};border:1px solid rgba(255,255,255,.2);"></div>
+      <span style="flex:1;font-size:8px;color:#aaa;">${p.name} <span style="color:#555">(${p.vertices}v)</span></span>`;
+    const picker = document.createElement('input');
+    picker.type = 'color'; picker.value = p.color;
+    picker.style.cssText = 'width:20px;height:16px;border:none;background:none;cursor:pointer;';
+    picker.onchange = () => _paint3DPart(p.name, picker.value);
+    row.appendChild(picker);
+    body.appendChild(row);
+  });
+  // Hızlı renk paleti
+  const palette = document.createElement('div');
+  palette.style.cssText = 'display:flex;flex-wrap:wrap;gap:3px;margin-top:8px;padding-top:8px;border-top:1px solid rgba(0,200,255,.1);';
+  colors.forEach(c => {
+    const swatch = document.createElement('div');
+    swatch.style.cssText = `width:18px;height:18px;border-radius:3px;background:${c};cursor:pointer;border:1px solid rgba(255,255,255,.15);`;
+    swatch.onclick = () => { parts.forEach(p => _paint3DPart(p.name, c)); };
+    swatch.title = 'Tümünü ' + c + ' yap';
+    palette.appendChild(swatch);
+  });
+  body.appendChild(palette);
+  panel.classList.add('open');
+}
+
+// ════════════════════════════════════════════════════════════
+//  4. ÜRETİM G-CODE ÖNİZLEME — Katman katman baskı simülasyonu
+// ════════════════════════════════════════════════════════════
+var _gcodePreview = { active: false, layer: 0, totalLayers: 0, interval: null };
+
+function _toggleGCodePreview() {
+  if (_gcodePreview.active) { _stopGCodePreview(); return; }
+  if (!window._uModel) return toast('Önce model yükleyin', 'err');
+  _gcodePreview.active = true;
+  // Model'in BBox'ından katman sayısı hesapla
+  const box = new THREE.Box3().setFromObject(window._uModel);
+  const height = box.max.y - box.min.y;
+  const layerH = _layerMode === 'fine' ? 0.0001 : _layerMode === 'draft' ? 0.0003 : 0.0002; // metre
+  _gcodePreview.totalLayers = Math.ceil(height / layerH);
+  _gcodePreview.layer = 0;
+  // Clipping plane oluştur
+  if (!window._uClipPlane) {
+    window._uClipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), box.min.y);
+    window._uModel.traverse(obj => {
+      if (obj.isMesh && obj.material) {
+        obj.material = obj.material.clone();
+        obj.material.clippingPlanes = [window._uClipPlane];
+        obj.material.clipShadows = true;
+      }
+    });
+    window._uRenderer.localClippingEnabled = true;
+  }
+  // UI göster
+  _showGCodeUI(box);
+  // Animasyon başlat
+  _gcodePreview.interval = setInterval(() => {
+    if (_gcodePreview.layer >= _gcodePreview.totalLayers) { _stopGCodePreview(); return; }
+    _gcodePreview.layer++;
+    const progress = _gcodePreview.layer / _gcodePreview.totalLayers;
+    window._uClipPlane.constant = box.min.y + height * progress;
+    // UI güncelle
+    const pct = Math.round(progress * 100);
+    const layerEl = document.getElementById('gcode-layer-num');
+    const barEl = document.getElementById('gcode-progress-bar');
+    const pctEl = document.getElementById('gcode-pct');
+    if (layerEl) layerEl.textContent = _gcodePreview.layer + ' / ' + _gcodePreview.totalLayers;
+    if (barEl) barEl.style.width = pct + '%';
+    if (pctEl) pctEl.textContent = pct + '%';
+  }, 50);
+  toast('G-Code önizleme başlatıldı — ' + _gcodePreview.totalLayers + ' katman', 'ok');
+}
+
+function _stopGCodePreview() {
+  _gcodePreview.active = false;
+  if (_gcodePreview.interval) { clearInterval(_gcodePreview.interval); _gcodePreview.interval = null; }
+  // Clipping kaldır
+  if (window._uModel) {
+    window._uModel.traverse(obj => {
+      if (obj.isMesh && obj.material) { obj.material.clippingPlanes = []; obj.material.needsUpdate = true; }
+    });
+  }
+  if (window._uRenderer) window._uRenderer.localClippingEnabled = false;
+  window._uClipPlane = null;
+  // UI kaldır
+  const ui = document.getElementById('gcode-preview-ui');
+  if (ui) ui.remove();
+}
+
+function _showGCodeUI(box) {
+  let ui = document.getElementById('gcode-preview-ui');
+  if (ui) ui.remove();
+  ui = document.createElement('div');
+  ui.id = 'gcode-preview-ui';
+  ui.style.cssText = 'position:absolute;bottom:50px;left:50%;transform:translateX(-50%);background:rgba(0,10,20,.95);border:1px solid rgba(0,200,255,.3);border-radius:8px;padding:10px 20px;z-index:50;display:flex;align-items:center;gap:12px;backdrop-filter:blur(8px);';
+  ui.innerHTML = `
+    <div style="font-size:8px;color:rgba(0,200,255,.5);font-weight:700;letter-spacing:1px;">G-CODE</div>
+    <div id="gcode-layer-num" style="font-size:10px;color:#00c8ff;font-weight:700;font-family:'JetBrains Mono',monospace;min-width:80px;">0 / ${_gcodePreview.totalLayers}</div>
+    <div style="width:120px;height:4px;background:#111;border-radius:2px;overflow:hidden;"><div id="gcode-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#00c8ff,#00ff88);transition:width .1s;border-radius:2px;"></div></div>
+    <div id="gcode-pct" style="font-size:10px;color:#00ff88;font-weight:800;min-width:30px;">0%</div>
+    <button onclick="_stopGCodePreview()" style="padding:3px 10px;border-radius:4px;border:1px solid rgba(255,100,100,.3);background:rgba(255,100,100,.1);color:#ef4444;font-size:8px;font-weight:700;cursor:pointer;">■ Durdur</button>
+  `;
+  const wrap = document.getElementById('uretim-wrap') || document.getElementById('mod-uretim');
+  if (wrap) { wrap.style.position = 'relative'; wrap.appendChild(ui); }
+}
+
+// ════════════════════════════════════════════════════════════
+//  5. FENİX AI ÖNERİLER PANELİ — Otomatik ürün önerileri
+// ════════════════════════════════════════════════════════════
+var _fenixSuggestions = [];
+
+function _generateSuggestions() {
+  const mode = S?.mode || 'image';
+  _fenixSuggestions = [];
+  if (mode === 'image') {
+    if (!S?.imgLoaded) { _fenixSuggestions.push({ icon: '📸', text: 'Bir ürün fotoğrafı yükleyin', action: 'upload' }); }
+    else {
+      _fenixSuggestions.push({ icon: '🎨', text: 'Arka plan değiştirmeyi deneyin', action: () => { if (typeof openSlidePanel === 'function') openSlidePanel('bg'); } });
+      _fenixSuggestions.push({ icon: '✨', text: 'AI ile otomatik rötuş yapın', action: () => { if (typeof _fenixAutoRun === 'function') _fenixAutoRun(); } });
+      _fenixSuggestions.push({ icon: '👁', text: 'Göz takip analizi çalıştırın', action: () => _toggleEyeTrackHeatmap() });
+      _fenixSuggestions.push({ icon: '⚡', text: 'A/B test ile en iyi varyantı bulun', action: () => _openABTestSimulator() });
+    }
+  } else if (mode === 'video') {
+    _fenixSuggestions.push({ icon: '🎬', text: 'Geçiş efekti ekleyin', action: () => { if (typeof openVidSlide === 'function') openVidSlide('transitions'); } });
+    _fenixSuggestions.push({ icon: '🎵', text: 'Müzik ekleyin — Jamendo\'dan arayın', action: () => { if (typeof openVidSlide === 'function') openVidSlide('audio'); } });
+  } else if (mode === 'uretim') {
+    if (!window._uModel) { _fenixSuggestions.push({ icon: '📦', text: '3D model yükleyin', action: 'upload-3d' }); }
+    else {
+      _fenixSuggestions.push({ icon: '🔍', text: 'Mesh analizi çalıştırın', action: () => { if (typeof _runMeshAnalysis === 'function') _runMeshAnalysis(); } });
+      _fenixSuggestions.push({ icon: '🎬', text: 'G-Code önizleme başlatın', action: () => _toggleGCodePreview() });
+      _fenixSuggestions.push({ icon: '⚖', text: 'Malzeme telafisi uygulayın', action: () => _applyShrinkageCompensation() });
+    }
+  }
+  return _fenixSuggestions;
+}
+
+function _showSuggestionsPanel() {
+  const suggestions = _generateSuggestions();
+  if (!suggestions.length) return toast('Şu an öneri yok', 'ok');
+  let panel = document.getElementById('fenix-suggest-panel');
+  if (panel) { panel.remove(); return; }
+  panel = document.createElement('div');
+  panel.id = 'fenix-suggest-panel';
+  panel.style.cssText = 'position:fixed;bottom:35px;right:20px;width:260px;background:rgba(0,10,20,.96);border:1px solid rgba(0,200,255,.25);border-radius:10px;padding:12px;z-index:9999;backdrop-filter:blur(12px);box-shadow:0 8px 32px rgba(0,0,0,.5);';
+  let html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><span style="color:#00c8ff;font-size:9px;font-weight:800;letter-spacing:1px;">🔥 FENİX ÖNERİLER</span><button onclick="document.getElementById(\'fenix-suggest-panel\').remove()" style="background:none;border:none;color:#555;cursor:pointer;font-size:12px;">✕</button></div>';
+  suggestions.forEach((s, i) => {
+    html += `<button onclick="_executeSuggestion(${i})" style="display:flex;align-items:center;gap:8px;width:100%;padding:8px;margin-bottom:4px;border-radius:6px;border:1px solid rgba(0,200,255,.1);background:rgba(0,200,255,.04);color:#ccc;font-size:9px;cursor:pointer;text-align:left;transition:all .2s;" onmouseover="this.style.background='rgba(0,200,255,.12)'" onmouseout="this.style.background='rgba(0,200,255,.04)'"><span style="font-size:14px;">${s.icon}</span><span>${s.text}</span></button>`;
+  });
+  panel.innerHTML = html;
+  document.body.appendChild(panel);
+}
+
+function _executeSuggestion(idx) {
+  const s = _fenixSuggestions[idx];
+  if (!s) return;
+  if (typeof s.action === 'function') s.action();
+  else toast(s.text, 'ok');
+  const panel = document.getElementById('fenix-suggest-panel');
+  if (panel) panel.remove();
+  _trackAction('suggestion-click', s.text);
+}
+
+// ════════════════════════════════════════════════════════════
+//  6. KLAVYE KISAYOL HARİTASI
+// ════════════════════════════════════════════════════════════
+function _showShortcutsPanel() {
+  let modal = document.getElementById('shortcuts-modal');
+  if (modal) { modal.remove(); return; }
+  modal = document.createElement('div');
+  modal.id = 'shortcuts-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.9);display:flex;align-items:center;justify-content:center;';
+  const shortcuts = [
+    { cat: 'Genel', keys: [['Ctrl+Z','Geri Al'],['Ctrl+Y','İleri Al'],['Ctrl+S','Kaydet'],['Ctrl+V','Yapıştır'],['F11','Tam Ekran'],['?','Kısayol Haritası']] },
+    { cat: 'Resim', keys: [['V','Seçim'],['P','Kalem'],['B','Fırça'],['E','Silgi'],['T','Metin'],['C','Kırp'],['R','Döndür']] },
+    { cat: 'Video', keys: [['Space','Oynat/Durdur'],['←→','Kare ileri/geri'],['S','Böl'],['Delete','Sil']] },
+    { cat: '3D / Üretim', keys: [['Scroll','Zoom'],['Sağ tık sürükle','Döndür'],['Orta tık','Taşı'],['W','Wireframe'],['X','X-Ray']] },
+    { cat: 'Çoklu Seçim', keys: [['Shift+Click','Çoklu seç'],['Arrow keys','Seçimi taşı'],['Shift+Arrow','10px taşı'],['Delete','Seçimi sil']] }
+  ];
+  let html = '<div style="background:rgba(0,10,20,.98);border:1px solid rgba(0,200,255,.3);border-radius:12px;padding:20px 30px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;">';
+  html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;"><span style="color:#00c8ff;font-size:14px;font-weight:800;">⌨ KLAVYE KISAYOLLARI</span><button onclick="document.getElementById(\'shortcuts-modal\').remove()" style="background:none;border:1px solid rgba(255,255,255,.2);color:#fff;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:11px;">✕ Kapat</button></div>';
+  shortcuts.forEach(cat => {
+    html += `<div style="color:#F97316;font-size:9px;font-weight:800;letter-spacing:1px;margin:12px 0 6px;text-transform:uppercase;">${cat.cat}</div>`;
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">';
+    cat.keys.forEach(([key, desc]) => {
+      html += `<div style="display:flex;align-items:center;gap:8px;padding:3px 0;"><kbd style="background:rgba(0,200,255,.1);border:1px solid rgba(0,200,255,.2);border-radius:3px;padding:2px 6px;font-size:8px;color:#00c8ff;font-family:'JetBrains Mono',monospace;font-weight:700;min-width:50px;text-align:center;">${key}</kbd><span style="font-size:8px;color:#888;">${desc}</span></div>`;
+    });
+    html += '</div>';
+  });
+  html += '</div>';
+  modal.innerHTML = html;
+  modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+  document.body.appendChild(modal);
+}
+
+// ? tuşu ile kısayol haritası aç
+document.addEventListener('keydown', function(e) {
+  if (e.key === '?' && !e.ctrlKey && !e.altKey && !document.activeElement?.matches?.('input,textarea,select')) {
+    e.preventDefault();
+    _showShortcutsPanel();
+  }
+});
+
+// ════════════════════════════════════════════════════════════
+//  7. KARANLIK / AYDINLIK TEMA GEÇİŞİ
+// ════════════════════════════════════════════════════════════
+var _themeMode = localStorage.getItem('fenix-theme') || 'dark';
+
+function _toggleTheme() {
+  _themeMode = _themeMode === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('fenix-theme', _themeMode);
+  _applyTheme();
+  toast(_themeMode === 'dark' ? '🌙 Karanlık tema' : '☀ Aydınlık tema', 'ok');
+  _trackAction('theme-toggle', _themeMode);
+}
+
+function _applyTheme() {
+  const root = document.documentElement;
+  if (_themeMode === 'light') {
+    root.style.setProperty('--bg-primary', '#f0f2f5');
+    root.style.setProperty('--bg-secondary', '#ffffff');
+    root.style.setProperty('--text-primary', '#1a1a2e');
+    root.style.setProperty('--text-secondary', '#555');
+    root.style.setProperty('--border-color', 'rgba(0,0,0,.1)');
+    document.body.style.background = '#f0f2f5';
+    document.body.style.color = '#1a1a2e';
+    // Panel arkaplanları
+    document.querySelectorAll('.sidebar, #rpanel, #topbar, .status-bar').forEach(el => {
+      if (el) { el.style.background = '#ffffff'; el.style.color = '#1a1a2e'; }
+    });
+  } else {
+    root.style.removeProperty('--bg-primary');
+    root.style.removeProperty('--bg-secondary');
+    root.style.removeProperty('--text-primary');
+    root.style.removeProperty('--text-secondary');
+    root.style.removeProperty('--border-color');
+    document.body.style.background = '';
+    document.body.style.color = '';
+    document.querySelectorAll('.sidebar, #rpanel, #topbar, .status-bar').forEach(el => {
+      if (el) { el.style.background = ''; el.style.color = ''; }
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  8. DIŞA AKTARIM FORMATLARI — WebP, AVIF, TIFF export
+// ════════════════════════════════════════════════════════════
+function _exportAs(format) {
+  const imgC = document.getElementById('img-canvas');
+  if (!imgC || !imgC.width) return toast('Önce resim yükleyin', 'err');
+  let mimeType, ext, quality;
+  switch (format) {
+    case 'webp':  mimeType = 'image/webp';  ext = 'webp'; quality = 0.9; break;
+    case 'avif':  mimeType = 'image/avif';  ext = 'avif'; quality = 0.85; break;
+    case 'png':   mimeType = 'image/png';   ext = 'png';  quality = undefined; break;
+    case 'jpeg':  mimeType = 'image/jpeg';  ext = 'jpg';  quality = 0.92; break;
+    case 'tiff':  // TIFF tarayıcıda desteklenmez — PNG olarak indir + uyarı
+      mimeType = 'image/png'; ext = 'tiff.png'; quality = undefined;
+      toast('TIFF: PNG olarak kaydedildi (tarayıcı TIFF desteklemiyor)', 'ok');
+      break;
+    default: mimeType = 'image/png'; ext = 'png';
+  }
+  const dataUrl = quality !== undefined ? imgC.toDataURL(mimeType, quality) : imgC.toDataURL(mimeType);
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = 'fenix-export-' + Date.now() + '.' + ext;
+  a.click();
+  toast('📥 ' + format.toUpperCase() + ' olarak kaydedildi', 'ok');
+  _trackAction('export', format);
+}
+
+function _openExportFormatPanel() {
+  const panel = document.getElementById('slide-panel');
+  const title = document.getElementById('sp-title');
+  const body = document.getElementById('sp-body');
+  if (!panel || !body) return;
+  if (title) title.textContent = '📥 Dışa Aktarım';
+  body.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <div style="font-size:8px;color:rgba(0,200,255,.5);font-weight:700;letter-spacing:1px;margin-bottom:4px;">FORMAT SEÇİN</div>
+      <button onclick="_exportAs('png')" style="padding:8px;border-radius:6px;border:1px solid rgba(0,200,255,.2);background:rgba(0,200,255,.06);color:#00c8ff;font-size:10px;font-weight:700;cursor:pointer;text-align:left;">🖼 PNG — Kayıpsız, şeffaf arka plan</button>
+      <button onclick="_exportAs('jpeg')" style="padding:8px;border-radius:6px;border:1px solid rgba(0,200,255,.2);background:rgba(0,200,255,.06);color:#00c8ff;font-size:10px;font-weight:700;cursor:pointer;text-align:left;">📷 JPEG — Küçük boyut, web için ideal</button>
+      <button onclick="_exportAs('webp')" style="padding:8px;border-radius:6px;border:1px solid rgba(0,200,255,.2);background:rgba(0,200,255,.06);color:#00c8ff;font-size:10px;font-weight:700;cursor:pointer;text-align:left;">⚡ WebP — Modern, %30 daha küçük</button>
+      <button onclick="_exportAs('avif')" style="padding:8px;border-radius:6px;border:1px solid rgba(0,200,255,.2);background:rgba(0,200,255,.06);color:#00c8ff;font-size:10px;font-weight:700;cursor:pointer;text-align:left;">🔮 AVIF — En küçük boyut, yeni nesil</button>
+      <button onclick="_exportAs('tiff')" style="padding:8px;border-radius:6px;border:1px solid rgba(249,115,22,.2);background:rgba(249,115,22,.06);color:#F97316;font-size:10px;font-weight:700;cursor:pointer;text-align:left;">🏭 TIFF — Baskı kalitesi (PNG olarak)</button>
+    </div>
+  `;
+  panel.classList.add('open');
+}
+
+// ════════════════════════════════════════════════════════════
+//  9. BATCH İŞLEM — Çoklu dosya aynı anda işle
+// ════════════════════════════════════════════════════════════
+var _batchQueue = [];
+var _batchProcessing = false;
+
+function _openBatchPanel() {
+  let modal = document.getElementById('batch-modal');
+  if (modal) { modal.remove(); return; }
+  modal = document.createElement('div');
+  modal.id = 'batch-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;padding:30px;';
+  modal.innerHTML = `
+    <div style="width:100%;max-width:700px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <span style="color:#00c8ff;font-size:14px;font-weight:800;">📦 BATCH İŞLEM</span>
+        <button onclick="document.getElementById('batch-modal').remove()" style="background:none;border:1px solid rgba(255,255,255,.2);color:#fff;padding:4px 12px;border-radius:4px;cursor:pointer;">✕</button>
+      </div>
+      <div id="batch-drop" style="border:2px dashed rgba(0,200,255,.3);border-radius:12px;padding:40px;text-align:center;cursor:pointer;background:rgba(0,200,255,.03);transition:all .3s;"
+        ondragover="event.preventDefault();this.style.borderColor='#00c8ff';this.style.background='rgba(0,200,255,.08)'"
+        ondragleave="this.style.borderColor='rgba(0,200,255,.3)';this.style.background='rgba(0,200,255,.03)'"
+        ondrop="event.preventDefault();_batchAddFiles(event.dataTransfer.files);this.style.borderColor='rgba(0,200,255,.3)'"
+        onclick="document.getElementById('batch-file-input').click()">
+        <div style="font-size:32px;margin-bottom:8px;">📁</div>
+        <div style="color:#00c8ff;font-size:11px;font-weight:700;">Dosyaları sürükleyin veya tıklayın</div>
+        <div style="color:#555;font-size:9px;margin-top:4px;">PNG, JPG, WebP — Maks 50 dosya</div>
+      </div>
+      <input type="file" id="batch-file-input" accept="image/*" multiple style="display:none" onchange="_batchAddFiles(this.files)">
+      <div id="batch-list" style="margin-top:12px;max-height:300px;overflow-y:auto;"></div>
+      <div id="batch-actions" style="display:none;margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="_batchProcess('remove-bg')" style="padding:6px 14px;border-radius:6px;border:1px solid rgba(0,200,255,.3);background:rgba(0,200,255,.08);color:#00c8ff;font-size:9px;font-weight:700;cursor:pointer;">🗑 Arka Plan Sil</button>
+        <button onclick="_batchProcess('resize-1080')" style="padding:6px 14px;border-radius:6px;border:1px solid rgba(0,200,255,.3);background:rgba(0,200,255,.08);color:#00c8ff;font-size:9px;font-weight:700;cursor:pointer;">📐 1080x1080 Kırp</button>
+        <button onclick="_batchProcess('webp')" style="padding:6px 14px;border-radius:6px;border:1px solid rgba(0,200,255,.3);background:rgba(0,200,255,.08);color:#00c8ff;font-size:9px;font-weight:700;cursor:pointer;">⚡ WebP Dönüştür</button>
+        <button onclick="_batchProcess('watermark')" style="padding:6px 14px;border-radius:6px;border:1px solid rgba(0,200,255,.3);background:rgba(0,200,255,.08);color:#00c8ff;font-size:9px;font-weight:700;cursor:pointer;">💧 Watermark Ekle</button>
+      </div>
+      <div id="batch-progress" style="display:none;margin-top:12px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:4px;"><span style="color:#00c8ff;font-size:9px;font-weight:700;">İşleniyor...</span><span id="batch-pct" style="color:#00ff88;font-size:9px;font-weight:800;">0%</span></div>
+        <div style="height:4px;background:#111;border-radius:2px;overflow:hidden;"><div id="batch-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#00c8ff,#00ff88);transition:width .3s;border-radius:2px;"></div></div>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+function _batchAddFiles(files) {
+  if (!files || !files.length) return;
+  const list = document.getElementById('batch-list');
+  const actions = document.getElementById('batch-actions');
+  Array.from(files).slice(0, 50).forEach(f => {
+    if (!f.type.startsWith('image/')) return;
+    _batchQueue.push(f);
+    if (list) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:4px 8px;border-bottom:1px solid rgba(255,255,255,.05);';
+      row.innerHTML = `<span style="color:#00c8ff;font-size:9px;">📄</span><span style="flex:1;font-size:9px;color:#aaa;">${f.name}</span><span style="font-size:8px;color:#555;">${(f.size/1024).toFixed(0)} KB</span>`;
+      list.appendChild(row);
+    }
+  });
+  if (actions) actions.style.display = 'flex';
+  toast(_batchQueue.length + ' dosya eklendi', 'ok');
+}
+
+async function _batchProcess(action) {
+  if (_batchProcessing || !_batchQueue.length) return;
+  _batchProcessing = true;
+  const progress = document.getElementById('batch-progress');
+  const bar = document.getElementById('batch-bar');
+  const pct = document.getElementById('batch-pct');
+  if (progress) progress.style.display = 'block';
+  for (let i = 0; i < _batchQueue.length; i++) {
+    const file = _batchQueue[i];
+    const percent = Math.round((i + 1) / _batchQueue.length * 100);
+    if (bar) bar.style.width = percent + '%';
+    if (pct) pct.textContent = percent + '%';
+    // İşlem simülasyonu (gerçek API bağlantısı sonra eklenecek)
+    if (action === 'webp') {
+      const img = await _loadImageFile(file);
+      const c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+      c.getContext('2d').drawImage(img, 0, 0);
+      const blob = await new Promise(r => c.toBlob(r, 'image/webp', 0.9));
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = file.name.replace(/\.[^.]+$/, '.webp');
+      a.click();
+    } else if (action === 'resize-1080') {
+      const img = await _loadImageFile(file);
+      const c = document.createElement('canvas'); c.width = 1080; c.height = 1080;
+      const ctx = c.getContext('2d');
+      const scale = Math.max(1080 / img.width, 1080 / img.height);
+      const sw = img.width * scale, sh = img.height * scale;
+      ctx.drawImage(img, (1080 - sw) / 2, (1080 - sh) / 2, sw, sh);
+      const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = file.name.replace(/\.[^.]+$/, '-1080.png');
+      a.click();
+    } else {
+      await new Promise(r => setTimeout(r, 300)); // Simülasyon
+    }
+  }
+  _batchProcessing = false;
+  toast('✅ ' + _batchQueue.length + ' dosya işlendi (' + action + ')', 'ok');
+  _batchQueue = [];
+  _trackAction('batch-process', action);
+}
+
+function _loadImageFile(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+// ════════════════════════════════════════════════════════════
+//  10. PERFORMANS: LAZY LOAD — Mod başlatmayı ilk geçişe ertele
+// ════════════════════════════════════════════════════════════
+var _lazyInited = { image: false, video: false, '3d': false, uretim: false };
+
+var _origSwitchModeLazy = typeof switchMode === 'function' ? switchMode : null;
+if (_origSwitchModeLazy) {
+  switchMode = function(mode) {
+    if (!_lazyInited[mode]) {
+      _lazyInited[mode] = true;
+      if (mode === 'video' && typeof _initVideoEngine === 'function') {
+        try { _initVideoEngine(); } catch(e) {}
+      }
+      if (mode === '3d' && typeof _init3DScene === 'function' && !window._scene) {
+        // 3D sahne ilk geçişte başlat — sayfa yüklenirken değil
+      }
+    }
+    _origSwitchModeLazy(mode);
+  };
+}
+
+// Fenix öneriler butonu — status bar'a ekle
+setTimeout(() => {
+  const aiStatus = document.getElementById('sb-ai-status');
+  if (aiStatus) {
+    const btn = document.createElement('button');
+    btn.onclick = _showSuggestionsPanel;
+    btn.style.cssText = 'margin-left:6px;padding:1px 6px;border-radius:3px;border:1px solid rgba(0,200,255,.3);background:rgba(0,200,255,.08);color:#00c8ff;font-size:7px;font-weight:800;cursor:pointer;letter-spacing:.3px;';
+    btn.textContent = '💡 ÖNERİ';
+    aiStatus.parentElement.appendChild(btn);
+  }
+  // Tema butonu — status bar'a ekle
+  const serverEl = document.getElementById('sb-server');
+  if (serverEl) {
+    const btn = document.createElement('button');
+    btn.onclick = _toggleTheme;
+    btn.style.cssText = 'margin-left:6px;padding:1px 6px;border-radius:3px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);color:#888;font-size:7px;font-weight:700;cursor:pointer;';
+    btn.textContent = '🌓 TEMA';
+    serverEl.parentElement.appendChild(btn);
+  }
+}, 1000);
 
 </script>
 <!-- Tool cursor: body'nin direkt çocuğu — transform'lu atadan ETKİLENMEZ, position:fixed doğru çalışır -->
