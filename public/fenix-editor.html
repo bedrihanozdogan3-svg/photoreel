@@ -16666,8 +16666,22 @@ function updateUretimGrid() {
 }
 
 // ═══ ÜRETİM BAĞIMSIZ THREE.JS SAHNESİ ═══
+function _forceUretimResize() {
+  const wrap = document.getElementById('uretim-wrap');
+  if (!wrap || !window._uCamera || !window._uRenderer) return;
+  if (!wrap.clientWidth || !wrap.clientHeight) return;
+  _uCamera.aspect = wrap.clientWidth / wrap.clientHeight;
+  _uCamera.updateProjectionMatrix();
+  _uRenderer.setSize(wrap.clientWidth, wrap.clientHeight);
+}
+
 function _initUretimScene() {
-  if (window._uScene) { _uAnimate(); return; } // Zaten var, sadece animasyonu başlat
+  if (window._uScene) {
+    _uAnimate();
+    // Her girişte resize zorla (display:none→flex geçişinden sonra boyut değişmiş olabilir)
+    requestAnimationFrame(() => requestAnimationFrame(_forceUretimResize));
+    return;
+  }
   if (typeof THREE === 'undefined') return;
 
   const canvas = document.getElementById('uretim-canvas');
@@ -16715,13 +16729,15 @@ function _initUretimScene() {
 
   // Resize
   function _uResize() {
-    if (!wrap.clientWidth) return;
+    if (!wrap.clientWidth || !wrap.clientHeight) return;
     _uCamera.aspect = wrap.clientWidth / wrap.clientHeight;
     _uCamera.updateProjectionMatrix();
     _uRenderer.setSize(wrap.clientWidth, wrap.clientHeight);
   }
   _uResize();
   window.addEventListener('resize', _uResize);
+  // Display:none→flex geçişinde boyut 0 olabilir, 2 frame sonra tekrar dene
+  requestAnimationFrame(() => requestAnimationFrame(_uResize));
 
   // Animation loop
   _uAnimate();
@@ -16890,6 +16906,9 @@ function enterUretimMode() {
 
   // Job queue panelini göster
   if (typeof jobQueue !== 'undefined' && jobQueue.length > 0) updateJobQueueUI();
+
+  // Canvas boyutunu zorla (display geçişinden sonra)
+  requestAnimationFrame(() => requestAnimationFrame(_forceUretimResize));
 
   // Komuta çubuğu güncelle
   const sbAi = document.getElementById('sb-ai-status');
