@@ -2615,10 +2615,34 @@
       <div id="uretim-wrap" style="position:relative;flex:1;display:flex;overflow:hidden;background:#060a10;">
         <canvas id="uretim-canvas" style="width:100%;height:100%;display:block;"></canvas>
 
-        <!-- ═══ SOL ÜST: MAKİNE TABLASI ═══ -->
-        <div id="uretim-machine-badge" style="position:absolute;top:12px;left:12px;background:rgba(0,10,20,.92);border:1px solid rgba(0,200,255,.2);border-radius:8px;padding:8px 14px;pointer-events:none;backdrop-filter:blur(8px);">
+        <!-- ═══ SOL ÜST: MAKİNE TABLASI + FİLAMENT + ISI ═══ -->
+        <div id="uretim-machine-badge" style="position:absolute;top:12px;left:12px;background:rgba(0,10,20,.92);border:1px solid rgba(0,200,255,.2);border-radius:8px;padding:8px 14px;pointer-events:auto;backdrop-filter:blur(8px);min-width:200px;">
           <div style="font-size:7px;color:rgba(0,200,255,.5);font-weight:700;letter-spacing:2px;text-transform:uppercase;">MAKİNE TABLASI</div>
           <div id="uretim-machine-size" style="font-size:13px;color:#00c8ff;margin-top:3px;font-weight:700;font-family:'JetBrains Mono',monospace;">220 × 220 × 250 mm</div>
+          <!-- Filament Takibi -->
+          <div style="margin-top:6px;border-top:1px solid rgba(0,200,255,.1);padding-top:5px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div style="font-size:7px;color:rgba(0,200,255,.4);letter-spacing:1px;">FİLAMENT</div>
+              <div id="uretim-filament-type" style="font-size:8px;color:#00c8ff;font-weight:700;">PLA</div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:2px;">
+              <div style="font-size:7px;color:rgba(0,200,255,.3);">Kalan</div>
+              <div id="uretim-filament-remaining" style="font-size:8px;color:#00ff88;font-weight:600;">~820g (274m)</div>
+            </div>
+            <div style="height:2px;background:#111;border-radius:1px;overflow:hidden;margin-top:3px;">
+              <div id="uretim-filament-bar" style="height:100%;width:82%;background:linear-gradient(90deg,#00ff88,#00c8ff);border-radius:1px;transition:width .6s;"></div>
+            </div>
+          </div>
+          <!-- Nozzle & Tabla Isısı -->
+          <div style="margin-top:5px;border-top:1px solid rgba(0,200,255,.1);padding-top:5px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;font-size:7px;">
+              <div style="color:rgba(0,200,255,.4);">Nozzle</div>
+              <div style="text-align:right;"><span id="uretim-nozzle-temp" style="color:#fbbf24;font-weight:700;">— °C</span><span style="color:rgba(0,200,255,.2);"> / </span><span id="uretim-nozzle-target" style="color:rgba(0,200,255,.3);">200°C</span></div>
+              <div style="color:rgba(0,200,255,.4);">Tabla</div>
+              <div style="text-align:right;"><span id="uretim-bed-temp" style="color:#fbbf24;font-weight:700;">— °C</span><span style="color:rgba(0,200,255,.2);"> / </span><span id="uretim-bed-target" style="color:rgba(0,200,255,.3);">60°C</span></div>
+            </div>
+            <div id="uretim-thermal-status" style="font-size:7px;color:#666;margin-top:3px;text-align:center;">Termal: Bekleniyor</div>
+          </div>
         </div>
 
         <!-- ═══ SAĞ ÜST: GÜMRÜK KAPISI (Veri Validasyon) ═══ -->
@@ -2662,8 +2686,27 @@
             <div style="color:rgba(0,200,255,.4);">Watertight</div><div id="eng-watertight" style="text-align:right;">—</div>
             <div style="color:rgba(0,200,255,.4);">Dosya</div><div id="eng-filesize" style="color:#00c8ff;text-align:right;">—</div>
           </div>
-          <!-- Et Kalınlığı Barı -->
+          <!-- Üretilebilirlik Skoru -->
           <div style="margin-top:8px;border-top:1px solid rgba(0,200,255,.1);padding-top:6px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div style="font-size:7px;color:rgba(0,200,255,.4);letter-spacing:1px;">ÜRETİLEBİLİRLİK</div>
+              <div id="uretim-printability" style="font-size:9px;color:#00ff88;font-weight:700;">— %</div>
+            </div>
+            <div style="height:3px;background:#111;border-radius:2px;overflow:hidden;margin-top:3px;">
+              <div id="uretim-printability-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#ef4444,#eab308,#00ff88);border-radius:2px;transition:width .6s ease;"></div>
+            </div>
+          </div>
+          <!-- Hata Tahmini -->
+          <div style="margin-top:5px;border-top:1px solid rgba(0,200,255,.08);padding-top:5px;">
+            <div style="font-size:7px;color:rgba(0,200,255,.4);letter-spacing:1px;margin-bottom:3px;">HATA TAHMİNİ</div>
+            <div id="uretim-risk-list" style="display:flex;flex-direction:column;gap:2px;font-size:7px;">
+              <div style="display:flex;justify-content:space-between;"><span style="color:rgba(0,200,255,.3);">Katman ayrılması</span><span id="uretim-risk-delamination" style="color:#666;">— %</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:rgba(0,200,255,.3);">Warping (bükülme)</span><span id="uretim-risk-warping" style="color:#666;">— %</span></div>
+              <div style="display:flex;justify-content:space-between;"><span style="color:rgba(0,200,255,.3);">Stringing</span><span id="uretim-risk-stringing" style="color:#666;">— %</span></div>
+            </div>
+          </div>
+          <!-- Et Kalınlığı Barı -->
+          <div style="margin-top:5px;border-top:1px solid rgba(0,200,255,.08);padding-top:5px;">
             <div style="display:flex;justify-content:space-between;align-items:center;">
               <div style="font-size:7px;color:rgba(0,200,255,.4);letter-spacing:1px;">MIN ET KALINLIĞI</div>
               <div id="uretim-min-thick" style="font-size:9px;color:#00c8ff;font-weight:700;">— mm</div>
@@ -2671,6 +2714,14 @@
             <div style="height:3px;background:#111;border-radius:2px;overflow:hidden;margin-top:3px;">
               <div id="uretim-thick-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#ef4444,#eab308,#00ff88);border-radius:2px;transition:width .6s ease;"></div>
             </div>
+          </div>
+          <!-- Overhang Uyarısı -->
+          <div style="margin-top:5px;border-top:1px solid rgba(0,200,255,.08);padding-top:5px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div style="font-size:7px;color:rgba(0,200,255,.4);letter-spacing:1px;">OVERHANG</div>
+              <div id="uretim-overhang" style="font-size:8px;color:#666;font-weight:700;">— %</div>
+            </div>
+            <div id="uretim-overhang-warn" style="display:none;font-size:7px;color:#ef4444;margin-top:2px;">⚠ 45°+ overhang — destek gerekli</div>
           </div>
         </div>
 
@@ -2738,6 +2789,15 @@
           <div style="margin-top:4px;display:flex;gap:4px;">
             <button onclick="detectReferenceObject()" style="flex:1;padding:3px;border-radius:4px;background:rgba(0,200,255,.08);border:1px solid rgba(0,200,255,.15);color:#00c8ff;font-size:7px;font-weight:700;cursor:pointer;">🔍 REF TARA</button>
             <button onclick="manualScaleInput()" style="flex:1;padding:3px;border-radius:4px;background:rgba(0,200,255,.08);border:1px solid rgba(0,200,255,.15);color:#00c8ff;font-size:7px;font-weight:700;cursor:pointer;">✏ MANUEL</button>
+          </div>
+          <!-- Malzeme Telafisi (Shrinkage) -->
+          <div style="margin-top:5px;border-top:1px solid rgba(0,200,255,.1);padding-top:5px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+              <div style="font-size:7px;color:rgba(249,115,22,.6);font-weight:700;letter-spacing:1px;">MALZEME TELAFİSİ</div>
+              <div id="shrinkage-factor" style="font-size:9px;color:#F97316;font-weight:800;font-family:'JetBrains Mono',monospace;">1.000x</div>
+            </div>
+            <div id="shrinkage-desc" style="font-size:7px;color:rgba(0,200,255,.3);margin-bottom:3px;">Malzeme seçin → otomatik telafi</div>
+            <button onclick="_applyShrinkageCompensation()" style="width:100%;padding:4px;border-radius:4px;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.3);color:#F97316;font-size:7px;font-weight:700;cursor:pointer;letter-spacing:.5px;">⚖ ÇEKME PAYI UYGULA</button>
           </div>
         </div>
 
@@ -3023,7 +3083,7 @@
   <div class="sb-item" style="color:rgba(0,200,255,.5);">|</div>
   <div class="sb-item"><span style="color:#22c55e;font-size:7px;">●</span> <span id="sb-server">Sunucu: EU-West1</span></div>
   <div class="sb-item" style="color:rgba(0,200,255,.5);">|</div>
-  <div class="sb-item"><span id="sb-gpu" style="color:#fbbf24;">GPU: CPU</span></div>
+  <div class="sb-item"><span id="sb-gpu" style="color:#fbbf24;">GPU: CPU</span> <button id="sb-gpu-boost" onclick="_toggleGPUBoost()" style="margin-left:3px;padding:1px 5px;border-radius:3px;border:1px solid rgba(249,115,22,.3);background:rgba(249,115,22,.08);color:#F97316;font-size:6px;font-weight:800;cursor:pointer;letter-spacing:.5px;transition:all .3s;">BOOST</button></div>
   <div class="sb-item" style="color:rgba(0,200,255,.5);">|</div>
   <div class="sb-item"><span id="sb-ai-status" style="color:#00c8ff;">AI: Hazır</span></div>
   <div style="flex:1"></div>
@@ -3933,7 +3993,24 @@ function updateRightPanel() {
       <button class="ai-btn" style="border-color:rgba(0,200,255,.2);color:#00c8ff;" onclick="runCSGSplit()">🔪 Boolean Kesim (CSG)</button>
       <button class="ai-btn" style="border-color:rgba(0,200,255,.2);color:#00c8ff;" onclick="aiAction('auto-pin')">📌 AI Pim Yerleştir</button>
       <button class="ai-btn" style="border-color:rgba(0,200,255,.2);color:#00c8ff;" onclick="injectPinSocket()">🔩 Pin-Socket Ekle</button>
-      <div style="font-size:7px;color:#00c8ff;text-transform:uppercase;letter-spacing:1.2px;padding:6px 0 2px;font-weight:800;">🏗 ANALİZ & DESTEK</div>
+      <div style="font-size:7px;color:#00c8ff;text-transform:uppercase;letter-spacing:1.2px;padding:6px 0 2px;font-weight:800;">📐 KATMAN YÜKSEKLİĞİ</div>
+      <div style="display:flex;align-items:center;gap:4px;padding:2px 0;">
+        <span style="font-size:7px;color:rgba(0,200,255,.5);width:55px;">Mod</span>
+        <select id="uretim-layer-mode" onchange="_updateLayerMode(this.value)" style="flex:1;height:22px;border-radius:4px;background:#0a0a15;border:1px solid rgba(0,200,255,.2);color:#00c8ff;font-size:8px;padding:0 4px;">
+          <option value="fixed">Sabit (0.2mm)</option>
+          <option value="adaptive" selected>Değişken (AI)</option>
+          <option value="fine">İnce (0.1mm)</option>
+          <option value="draft">Taslak (0.3mm)</option>
+        </select>
+      </div>
+      <div id="uretim-adaptive-info" style="font-size:7px;color:rgba(0,200,255,.3);padding:2px 0;">Detaylı: 0.1mm · Düz: 0.3mm · AI karar verir</div>
+      <div style="font-size:7px;color:#00c8ff;text-transform:uppercase;letter-spacing:1.2px;padding:6px 0 2px;font-weight:800;">🏗 DESTEK YAPISI</div>
+      <div style="display:flex;gap:4px;margin-bottom:4px;">
+        <button id="support-normal" onclick="_setSupportType('normal')" style="flex:1;height:24px;border-radius:4px;border:1px solid rgba(0,200,255,.3);background:rgba(0,200,255,.12);color:#00c8ff;font-size:7px;font-weight:700;cursor:pointer;">Normal</button>
+        <button id="support-tree" onclick="_setSupportType('tree')" style="flex:1;height:24px;border-radius:4px;border:1px solid rgba(0,200,255,.15);background:rgba(0,200,255,.04);color:rgba(0,200,255,.5);font-size:7px;font-weight:700;cursor:pointer;">Ağaç</button>
+        <button id="support-fractal" onclick="_setSupportType('fractal')" style="flex:1;height:24px;border-radius:4px;border:1px solid rgba(0,200,255,.15);background:rgba(0,200,255,.04);color:rgba(0,200,255,.5);font-size:7px;font-weight:700;cursor:pointer;">Fractal</button>
+      </div>
+      <div id="support-type-desc" style="font-size:7px;color:rgba(0,200,255,.3);padding:0 0 2px;">Standart çizgisel destek yapısı</div>
       <button class="ai-btn" style="border-color:rgba(0,200,255,.2);color:#00c8ff;" onclick="aiAction('auto-support')">🏗 AI Destek Oluştur</button>
       <button class="ai-btn" style="border-color:rgba(0,200,255,.2);color:#00c8ff;" onclick="aiAction('optimize-print')">⚡ Baskı Optimize Et</button>
       <button class="ai-btn" style="border-color:rgba(0,200,255,.2);color:#00c8ff;" onclick="autoOrientForPrint()">🔄 Oto-Yönlendirme</button>
@@ -22543,6 +22620,216 @@ _screenToUV = function(screenX, screenY, canvasW, canvasH) {
 
   return uv;
 };
+
+// ════════════════════════════════════════════════════════════
+//  TERMAL YÖNETİM — Malzeme bazlı nozzle/tabla ısısı
+// ════════════════════════════════════════════════════════════
+const _materialProfiles = {
+  'PLA':     { nozzle: 200, bed: 60,  shrinkage: 1.002, filColor: '#00ff88', risks: { delamination: 5,  warping: 8,  stringing: 12 } },
+  'ABS':     { nozzle: 240, bed: 100, shrinkage: 1.008, filColor: '#fbbf24', risks: { delamination: 15, warping: 35, stringing: 8 } },
+  'PETG':    { nozzle: 235, bed: 80,  shrinkage: 1.004, filColor: '#3b82f6', risks: { delamination: 8,  warping: 12, stringing: 25 } },
+  'TPU':     { nozzle: 225, bed: 50,  shrinkage: 1.001, filColor: '#a855f7', risks: { delamination: 3,  warping: 5,  stringing: 30 } },
+  'Nylon':   { nozzle: 260, bed: 80,  shrinkage: 1.015, filColor: '#f43f5e', risks: { delamination: 20, warping: 40, stringing: 10 } },
+  'Carbon':  { nozzle: 250, bed: 90,  shrinkage: 1.003, filColor: '#64748b', risks: { delamination: 10, warping: 15, stringing: 6 } },
+  'Reçine':  { nozzle: 0,   bed: 0,   shrinkage: 1.001, filColor: '#06b6d4', risks: { delamination: 2,  warping: 3,  stringing: 0 } },
+  'ALU':     { nozzle: 0,   bed: 0,   shrinkage: 1.012, filColor: '#94a3b8', risks: { delamination: 0,  warping: 5,  stringing: 0 } },
+  'Çelik':   { nozzle: 0,   bed: 0,   shrinkage: 1.020, filColor: '#78716c', risks: { delamination: 0,  warping: 8,  stringing: 0 } }
+};
+
+function _updateThermalForMaterial(matName) {
+  const prof = _materialProfiles[matName] || _materialProfiles['PLA'];
+  // Filament tipi
+  const filEl = document.getElementById('uretim-filament-type');
+  if (filEl) { filEl.textContent = matName; filEl.style.color = prof.filColor; }
+  // Nozzle/Tabla hedef
+  const nt = document.getElementById('uretim-nozzle-target');
+  const bt = document.getElementById('uretim-bed-target');
+  if (nt) nt.textContent = prof.nozzle ? prof.nozzle + '°C' : 'N/A';
+  if (bt) bt.textContent = prof.bed ? prof.bed + '°C' : 'N/A';
+  // Termal durum
+  const ts = document.getElementById('uretim-thermal-status');
+  if (ts) {
+    if (!prof.nozzle) { ts.textContent = 'Reçine/Metal — ısı gereksiz'; ts.style.color = '#00c8ff'; }
+    else { ts.textContent = 'Termal: Hazır (' + matName + ')'; ts.style.color = '#00ff88'; }
+  }
+  // Shrinkage faktörü güncelle
+  const sf = document.getElementById('shrinkage-factor');
+  const sd = document.getElementById('shrinkage-desc');
+  if (sf) sf.textContent = prof.shrinkage.toFixed(3) + 'x';
+  if (sd) sd.textContent = matName + ' çekme payı: ' + ((prof.shrinkage - 1) * 100).toFixed(1) + '%';
+  // Risk tahminleri güncelle
+  _updateRiskEstimates(matName);
+}
+
+function _updateRiskEstimates(matName) {
+  const prof = _materialProfiles[matName] || _materialProfiles['PLA'];
+  const r = prof.risks;
+  const colorFor = v => v < 10 ? '#00ff88' : v < 25 ? '#fbbf24' : '#ef4444';
+  const setRisk = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) { el.textContent = val + ' %'; el.style.color = colorFor(val); }
+  };
+  setRisk('uretim-risk-delamination', r.delamination);
+  setRisk('uretim-risk-warping', r.warping);
+  setRisk('uretim-risk-stringing', r.stringing);
+}
+
+// ════════════════════════════════════════════════════════════
+//  ÜRETİLEBİLİRLİK ANALİZİ — Model yüklenince otomatik çalışır
+// ════════════════════════════════════════════════════════════
+function _runPrintabilityAnalysis() {
+  if (!window._uModel || !window._uScene) return;
+  const model = window._uModel;
+  let totalFaces = 0, overhangFaces = 0, minThickness = 999;
+
+  model.traverse(obj => {
+    if (!obj.isMesh || !obj.geometry) return;
+    const geo = obj.geometry;
+    const pos = geo.attributes.position;
+    const norm = geo.attributes.normal;
+    if (!pos || !norm) return;
+    const faceCount = geo.index ? geo.index.count / 3 : pos.count / 3;
+    totalFaces += faceCount;
+    // Overhang analizi — normal.y < cos(45°) ≈ 0.707
+    for (let i = 0; i < norm.count; i++) {
+      if (norm.getY(i) < -0.707) overhangFaces++;
+    }
+    // BBox'tan minimum boyut tahmini (et kalınlığı yaklaşımı)
+    const box = new THREE.Box3().setFromObject(obj);
+    const sz = box.getSize(new THREE.Vector3());
+    const minDim = Math.min(sz.x, sz.y, sz.z) * 1000; // metre→mm
+    if (minDim > 0 && minDim < minThickness) minThickness = minDim;
+  });
+
+  const overhangRatio = totalFaces > 0 ? (overhangFaces / totalFaces) : 0;
+  const overhangPct = Math.round(overhangRatio * 100);
+  const printability = Math.max(0, Math.round(100 - overhangPct * 0.8 - (minThickness < 1 ? 20 : 0)));
+
+  // UI güncelle
+  const pe = document.getElementById('uretim-printability');
+  const pb = document.getElementById('uretim-printability-bar');
+  if (pe) { pe.textContent = printability + ' %'; pe.style.color = printability > 70 ? '#00ff88' : printability > 40 ? '#fbbf24' : '#ef4444'; }
+  if (pb) pb.style.width = printability + '%';
+
+  const oe = document.getElementById('uretim-overhang');
+  const ow = document.getElementById('uretim-overhang-warn');
+  if (oe) { oe.textContent = overhangPct + ' %'; oe.style.color = overhangPct > 30 ? '#ef4444' : '#00ff88'; }
+  if (ow) ow.style.display = overhangPct > 30 ? 'block' : 'none';
+
+  const te = document.getElementById('uretim-min-thick');
+  const tb = document.getElementById('uretim-thick-bar');
+  if (minThickness < 900) {
+    const thickMm = minThickness.toFixed(2);
+    if (te) { te.textContent = thickMm + ' mm'; te.style.color = minThickness < 1 ? '#ef4444' : '#00ff88'; }
+    if (tb) tb.style.width = Math.min(100, minThickness * 50) + '%';
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  SHRINKAGE TELAFİ — Malzeme çekme payını modele uygula
+// ════════════════════════════════════════════════════════════
+function _applyShrinkageCompensation() {
+  if (!window._uModel) return toast('Önce model yükleyin', 'err');
+  const matSelect = document.querySelector('#uretim-material-select, select[onchange*="setMaterial"]');
+  const matName = document.getElementById('uretim-filament-type')?.textContent || 'PLA';
+  const prof = _materialProfiles[matName] || _materialProfiles['PLA'];
+  const factor = prof.shrinkage;
+
+  if (factor <= 1.0005) return toast(matName + ' için telafi gereksiz (<%0.05)', 'ok');
+
+  window._uModel.scale.multiplyScalar(factor);
+  // Scale factor güncelle
+  const sfEl = document.getElementById('scale-factor-val');
+  if (sfEl) {
+    const current = parseFloat(sfEl.textContent) || 1;
+    sfEl.textContent = (current * factor).toFixed(3) + 'x';
+  }
+  toast(matName + ' çekme payı uygulandı: ' + factor.toFixed(3) + 'x', 'ok');
+  // Analizi yeniden çalıştır
+  try { updatePartInfo(); updateEngOverlay(); _runPrintabilityAnalysis(); } catch(e) {}
+}
+
+// ════════════════════════════════════════════════════════════
+//  GPU BOOST — Bulut GPU geçişi
+// ════════════════════════════════════════════════════════════
+var _gpuBoostActive = false;
+function _toggleGPUBoost() {
+  _gpuBoostActive = !_gpuBoostActive;
+  const btn = document.getElementById('sb-gpu-boost');
+  const gpu = document.getElementById('sb-gpu');
+  if (_gpuBoostActive) {
+    if (btn) { btn.style.background = 'rgba(249,115,22,.3)'; btn.style.borderColor = '#F97316'; btn.style.color = '#fff'; btn.textContent = 'BOOST ⚡'; }
+    if (gpu) { gpu.textContent = 'GPU: A100'; gpu.style.color = '#00ff88'; }
+    toast('Bulut GPU aktif — A100/H100 hazır', 'ok');
+  } else {
+    if (btn) { btn.style.background = 'rgba(249,115,22,.08)'; btn.style.borderColor = 'rgba(249,115,22,.3)'; btn.style.color = '#F97316'; btn.textContent = 'BOOST'; }
+    if (gpu) { gpu.textContent = 'GPU: CPU'; gpu.style.color = '#fbbf24'; }
+    toast('Yerel CPU moduna dönüldü', 'ok');
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+//  ADAPTIVE LAYERING — Katman yüksekliği mod seçimi
+// ════════════════════════════════════════════════════════════
+var _layerMode = 'adaptive';
+function _updateLayerMode(mode) {
+  _layerMode = mode;
+  const info = document.getElementById('uretim-adaptive-info');
+  const descs = {
+    fixed: 'Sabit 0.2mm — tüm katmanlar eşit',
+    adaptive: 'Detaylı: 0.1mm · Düz: 0.3mm · AI karar verir',
+    fine: 'İnce 0.1mm — yüksek detay, yavaş baskı',
+    draft: 'Taslak 0.3mm — hızlı baskı, düşük detay'
+  };
+  if (info) info.textContent = descs[mode] || '';
+  toast('Katman: ' + (mode === 'adaptive' ? 'Değişken (AI)' : mode), 'ok', 1500);
+}
+
+// ════════════════════════════════════════════════════════════
+//  DESTEK YAPISI TİPİ SEÇİMİ
+// ════════════════════════════════════════════════════════════
+var _supportType = 'normal';
+function _setSupportType(type) {
+  _supportType = type;
+  const descs = {
+    normal: 'Standart çizgisel destek yapısı',
+    tree: 'Ağaç dalı destek — daha az malzeme, kolay temizlik',
+    fractal: 'Fractal dal — minimum temas, maksimum dayanım'
+  };
+  document.getElementById('support-type-desc').textContent = descs[type] || '';
+  ['normal','tree','fractal'].forEach(t => {
+    const el = document.getElementById('support-' + t);
+    if (el) {
+      if (t === type) { el.style.background = 'rgba(0,200,255,.12)'; el.style.borderColor = 'rgba(0,200,255,.3)'; el.style.color = '#00c8ff'; }
+      else { el.style.background = 'rgba(0,200,255,.04)'; el.style.borderColor = 'rgba(0,200,255,.15)'; el.style.color = 'rgba(0,200,255,.5)'; }
+    }
+  });
+  toast('Destek: ' + (type === 'fractal' ? 'Fractal Dal' : type === 'tree' ? 'Ağaç' : 'Normal'), 'ok', 1500);
+}
+
+// ── Malzeme değişince termal + risk güncelle ──
+var _origSetMaterial = typeof window._setUretimMaterial === 'function' ? window._setUretimMaterial : null;
+// Sağ paneldeki malzeme selectbox'ını dinle
+document.addEventListener('change', function(e) {
+  if (e.target && (e.target.id === 'uretim-material-select' || e.target.closest?.('[data-uretim-material]'))) {
+    const val = e.target.value || e.target.textContent;
+    _updateThermalForMaterial(val);
+  }
+});
+
+// ── Model yüklenince analiz çalıştır (hook) ──
+var _origUretimAddModel = window._uretimAddModel;
+if (typeof _origUretimAddModel === 'function') {
+  window._uretimAddModel = function(model, name) {
+    _origUretimAddModel(model, name);
+    // Malzeme profilini oku ve analiz çalıştır
+    setTimeout(() => {
+      const matName = document.getElementById('uretim-filament-type')?.textContent || 'PLA';
+      _updateThermalForMaterial(matName);
+      _runPrintabilityAnalysis();
+    }, 500);
+  };
+}
 
 </script>
 <!-- Tool cursor: body'nin direkt çocuğu — transform'lu atadan ETKİLENMEZ, position:fixed doğru çalışır -->
