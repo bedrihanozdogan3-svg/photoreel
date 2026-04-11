@@ -3302,6 +3302,7 @@ function switchMode(mode) {
   document.getElementById('slide-panel')?.classList.remove('open');       // resim sol panel
   document.getElementById('vid-slide-panel')?.classList.remove('open');   // video sol panel
   document.getElementById('vid-right-slide')?.classList.remove('open');   // video sağ panel
+  try { if (typeof closeUretimSlide === 'function') closeUretimSlide(); } catch(e) {}  // üretim slide panel
   _removeStampDragPreview();
   document.body.classList.remove('stamp-panel-open');
   _spActive = null;
@@ -16843,6 +16844,9 @@ function enterUretimMode() {
   if (!window._uScene) return;
   uretimState.xrayActive = true;
 
+  // ── 3D animasyonunu TAMAMEN durdur (kasma önlemi) ──
+  if (S.threeAnimId) { cancelAnimationFrame(S.threeAnimId); S.threeAnimId = null; }
+
   // ── 3D referanslarını sakla, üretim sahnesine yönlendir ──
   _saved3D.scene = window._scene;
   _saved3D.camera = window._camera;
@@ -16894,7 +16898,7 @@ function enterUretimMode() {
 
 function exitUretimMode() {
   uretimState.xrayActive = false;
-  // Üretim animasyonunu durdur
+  // Üretim animasyonunu TAMAMEN durdur
   if (window._uAnimId) { cancelAnimationFrame(window._uAnimId); window._uAnimId = null; }
 
   // ── 3D referanslarını geri yükle ──
@@ -16903,6 +16907,11 @@ function exitUretimMode() {
   if (_saved3D.renderer) window._renderer = _saved3D.renderer;
   if (_saved3D.raycaster) window._raycaster = _saved3D.raycaster;
   if (_saved3D.orbitCtrl) window._orbitCtrl = _saved3D.orbitCtrl;
+
+  // ── 3D animasyonunu yeniden başlat (sadece 3D moduna dönüyorsa) ──
+  if (S.mode === '3d' && typeof animate3D === 'function' && !S.threeAnimId) {
+    try { S.threeAnimId = requestAnimationFrame(animate3D); } catch(e) {}
+  }
 
   // Ölçüm temizle
   uretimState.measureMode = false;
