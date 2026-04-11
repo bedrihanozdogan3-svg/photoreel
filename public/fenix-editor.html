@@ -11972,19 +11972,20 @@ function _updateEngInfo(obj) {
 let _outlineMesh = null;
 const _gltfLoader = typeof THREE !== 'undefined' && THREE.GLTFLoader ? new THREE.GLTFLoader() : null;
 
-// Gerçek .GLB model URL'leri (ücretsiz, açık kaynak)
+// Gerçek .GLB model URL'leri — jsdelivr.net üzerinden (CORS destekli)
+const _GH = 'https://cdn.jsdelivr.net/gh/KhronosGroup/glTF-Sample-Assets@main/Models';
 const _modelURLs = {
-  sneaker: 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb',
-  hanya:   'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DamagedHelmet/glTF-Binary/DamagedHelmet.glb',
-  watch:   'https://modelviewer.dev/shared-assets/models/Astronaut.glb',
-  chess:   'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/ABeautifulGame/glTF-Binary/ABeautifulGame.glb',
-  camera:  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/AntiqueCamera/glTF-Binary/AntiqueCamera.glb',
-  lamp:    'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/IridescenceLamp/glTF-Binary/IridescenceLamp.glb',
-  sofa:    'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/GlamVelvetSofa/glTF-Binary/GlamVelvetSofa.glb',
-  chair:   'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/SheenChair/glTF-Binary/SheenChair.glb',
-  corset:  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Corset/glTF-Binary/Corset.glb',
-  fox:     'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Fox/glTF-Binary/Fox.glb',
-  dragon:  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/DragonAttenuation/glTF-Binary/DragonAttenuation.glb',
+  sneaker: `${_GH}/MaterialsVariantsShoe/glTF-Binary/MaterialsVariantsShoe.glb`,
+  hanya:   `${_GH}/DamagedHelmet/glTF-Binary/DamagedHelmet.glb`,
+  watch:   `${_GH}/RiggedFigure/glTF-Binary/RiggedFigure.glb`,
+  chess:   `${_GH}/ABeautifulGame/glTF-Binary/ABeautifulGame.glb`,
+  camera:  `${_GH}/AntiqueCamera/glTF-Binary/AntiqueCamera.glb`,
+  lamp:    `${_GH}/IridescenceLamp/glTF-Binary/IridescenceLamp.glb`,
+  sofa:    `${_GH}/GlamVelvetSofa/glTF-Binary/GlamVelvetSofa.glb`,
+  chair:   `${_GH}/SheenChair/glTF-Binary/SheenChair.glb`,
+  corset:  `${_GH}/Corset/glTF-Binary/Corset.glb`,
+  fox:     `${_GH}/Fox/glTF-Binary/Fox.glb`,
+  dragon:  `${_GH}/DragonAttenuation/glTF-Binary/DragonAttenuation.glb`,
 };
 const _modelNames = {
   default:'Fenix Küre', hanya:'Hasar Kask', cube:'Küp', sphere:'Küre',
@@ -15093,61 +15094,106 @@ function _meshToggleLock(id, el) {
 //  3D HIZLI KÜTÜPHANE — Primitives
 // ════════════════════════════════════════
 function _3dAddPrimitive(type) {
-  const names = {
+  var names = {
     'cube': 'Küp', 'sphere': 'Küre', 'cylinder': 'Silindir',
     'watch-stand': 'Saat Standı', 'shoe-rack': 'Ayakkabı Rafı', 'pedestal': 'Platform'
   };
-  // Demo: canvas üzerine basit şekil çiz + mesh listesine ekle
-  const canvas = document.getElementById('three-canvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  const cx = canvas.width / 2, cy = canvas.height / 2;
 
-  ctx.save();
-  ctx.strokeStyle = '#F97316';
-  ctx.lineWidth = 2;
-  ctx.fillStyle = 'rgba(249,115,22,0.1)';
+  var targetScene = window._uScene || window._scene;
+  if (!targetScene || !window.THREE) {
+    toast('3D sahne hazır değil', 'err');
+    return;
+  }
+
+  var geometry, mesh, group;
+  var mat = new THREE.MeshStandardMaterial({ color: 0xF97316, metalness: 0.3, roughness: 0.6 });
 
   if (type === 'cube') {
-    ctx.strokeRect(cx - 40, cy - 40, 80, 80);
-    ctx.fillRect(cx - 40, cy - 40, 80, 80);
-    // 3D perspective lines
-    ctx.beginPath();
-    ctx.moveTo(cx - 40, cy - 40); ctx.lineTo(cx - 20, cy - 60);
-    ctx.moveTo(cx + 40, cy - 40); ctx.lineTo(cx + 60, cy - 60);
-    ctx.moveTo(cx + 40, cy + 40); ctx.lineTo(cx + 60, cy + 20);
-    ctx.lineTo(cx + 60, cy - 60); ctx.lineTo(cx - 20, cy - 60);
-    ctx.stroke();
+    geometry = new THREE.BoxGeometry(1, 1, 1);
+    mesh = new THREE.Mesh(geometry, mat);
+    mesh.position.set(0, 0.5, 0);
   } else if (type === 'sphere') {
-    ctx.beginPath(); ctx.arc(cx, cy, 50, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(cx, cy, 50, 18, 0, 0, Math.PI * 2); ctx.stroke();
+    geometry = new THREE.SphereGeometry(0.5, 32, 32);
+    mesh = new THREE.Mesh(geometry, mat);
+    mesh.position.set(0, 0.5, 0);
   } else if (type === 'cylinder') {
-    ctx.beginPath(); ctx.ellipse(cx, cy - 40, 40, 14, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.strokeRect(cx - 40, cy - 40, 80, 80);
-    ctx.beginPath(); ctx.ellipse(cx, cy + 40, 40, 14, 0, 0, Math.PI * 2); ctx.stroke();
-  } else {
-    // Şablon: basit platform
-    ctx.fillRect(cx - 60, cy + 10, 120, 20);
-    ctx.strokeRect(cx - 60, cy + 10, 120, 20);
-    ctx.fillRect(cx - 30, cy - 30, 60, 40);
-    ctx.strokeRect(cx - 30, cy - 30, 60, 40);
+    geometry = new THREE.CylinderGeometry(0.4, 0.4, 1.2, 32);
+    mesh = new THREE.Mesh(geometry, mat);
+    mesh.position.set(0, 0.6, 0);
+  } else if (type === 'watch-stand') {
+    group = new THREE.Group();
+    // Base
+    var base = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.9, 0.1, 32), new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.8, roughness: 0.2 }));
+    base.position.y = 0.05;
+    group.add(base);
+    // Pillar
+    var pillar = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.2, 16), new THREE.MeshStandardMaterial({ color: 0x333333, metalness: 0.9, roughness: 0.1 }));
+    pillar.position.y = 0.7;
+    group.add(pillar);
+    // Watch holder (T-bar)
+    var bar = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.06, 0.06), new THREE.MeshStandardMaterial({ color: 0x444444, metalness: 0.9, roughness: 0.1 }));
+    bar.position.y = 1.3;
+    group.add(bar);
+    mesh = group;
+  } else if (type === 'shoe-rack') {
+    group = new THREE.Group();
+    var rackMat = new THREE.MeshStandardMaterial({ color: 0x8B4513, metalness: 0.1, roughness: 0.8 });
+    // 3 shelves
+    for (var i = 0; i < 3; i++) {
+      var shelf = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.05, 0.5), rackMat);
+      shelf.position.y = i * 0.4 + 0.05;
+      group.add(shelf);
+    }
+    // 4 legs
+    var legPositions = [[-0.65,0,-0.22],[0.65,0,-0.22],[-0.65,0,0.22],[0.65,0,0.22]];
+    legPositions.forEach(function(p) {
+      var leg = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.85, 8), rackMat);
+      leg.position.set(p[0], 0.425, p[2]);
+      group.add(leg);
+    });
+    mesh = group;
+  } else if (type === 'pedestal') {
+    group = new THREE.Group();
+    var pedMat = new THREE.MeshStandardMaterial({ color: 0xeeeeee, metalness: 0.05, roughness: 0.4 });
+    // Base cylinder
+    var pedBase = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.7, 0.08, 32), pedMat);
+    pedBase.position.y = 0.04;
+    group.add(pedBase);
+    // Top platform
+    var pedTop = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.6, 32), pedMat);
+    pedTop.position.y = 0.38;
+    group.add(pedTop);
+    mesh = group;
   }
-  ctx.restore();
+
+  if (!mesh) return;
+
+  // Set shadows
+  if (mesh.isMesh) {
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+  } else if (mesh.isGroup) {
+    mesh.traverse(function(c) { if (c.isMesh) { c.castShadow = true; c.receiveShadow = true; } });
+  }
+
+  mesh.name = names[type] || type;
+  mesh.userData._primitiveType = type;
+  targetScene.add(mesh);
 
   // Mesh listesine ekle
-  const container = document.getElementById('rp-layers');
+  var container = document.getElementById('rp-layers');
   if (container) {
-    const meshId = type + '-' + Date.now();
-    const item = document.createElement('div');
+    var meshId = type + '-' + Date.now();
+    mesh.userData._meshId = meshId;
+    var item = document.createElement('div');
     item.className = 'layer-item';
     item.onclick = function() { _meshSelect(meshId, item); };
-    item.innerHTML = `<div class="layer-thumb" style="background:#1a1a0e">📦</div><div class="layer-name" style="flex:1">${names[type] || type}</div><div style="display:flex;gap:3px;align-items:center;"><span class="lyr-eye" onclick="event.stopPropagation();_meshToggleVis('${meshId}',this)">👁</span><span style="cursor:pointer;font-size:11px;color:#444;" onclick="event.stopPropagation();_meshToggleLock('${meshId}',this)">🔓</span></div>`;
-    // Ürün grubunun altına ekle
-    const firstGroup = container.querySelector('[style*="IŞIKLAR"], [style*="Işıklar"]');
+    item.innerHTML = '<div class="layer-thumb" style="background:#1a1a0e">📦</div><div class="layer-name" style="flex:1">' + (names[type] || type) + '</div><div style="display:flex;gap:3px;align-items:center;"><span class="lyr-eye" onclick="event.stopPropagation();_meshToggleVis(\'' + meshId + '\',this)">👁</span><span style="cursor:pointer;font-size:11px;color:#444;" onclick="event.stopPropagation();_meshToggleLock(\'' + meshId + '\',this)">🔓</span></div>';
+    var firstGroup = container.querySelector('[style*="IŞIKLAR"], [style*="Işıklar"]');
     if (firstGroup) container.insertBefore(item, firstGroup);
     else container.appendChild(item);
   }
-  toast(`${names[type] || type} eklendi ✓`, 'ok', 1000);
+  toast((names[type] || type) + ' sahneye eklendi ✓', 'ok', 1000);
 }
 
 // ── 3D PAINT STATE — Texture Projection Engine ──
@@ -17989,9 +18035,35 @@ function autoOrientForPrint() {
 }
 
 function exportOBJ() {
-  toast('OBJ dışa aktarma henüz hazırlanıyor...', '', 1500);
-  // İleride OBJExporter entegrasyonu
-  setTimeout(() => toast('OBJ export yakında aktif olacak', '', 1500), 1500);
+  if (typeof exportOBJFromPanel === 'function') { exportOBJFromPanel(); return; }
+  toast('OBJ dışa aktarma hazırlanıyor...', '', 2000);
+  setTimeout(() => {
+    var objStr = '# Fenix PRO OBJ Export\n';
+    var vertOffset = 0;
+    var targetScene = window._uScene || window._scene;
+    if (!targetScene) { toast('Sahne bulunamadı', 'err'); return; }
+    targetScene.traverse(function(obj) {
+      if (!obj.isMesh || !obj.geometry || obj._wireHelper || obj._isCSGHelper) return;
+      var pos = obj.geometry.attributes.position;
+      if (!pos) return;
+      objStr += 'o ' + (obj.name || 'mesh') + '\n';
+      for (var i = 0; i < pos.count; i++) {
+        objStr += 'v ' + pos.getX(i).toFixed(6) + ' ' + pos.getY(i).toFixed(6) + ' ' + pos.getZ(i).toFixed(6) + '\n';
+      }
+      var idx = obj.geometry.index;
+      if (idx) {
+        for (var i = 0; i < idx.count; i += 3) {
+          objStr += 'f ' + (idx.getX(i)+1+vertOffset) + ' ' + (idx.getX(i+1)+1+vertOffset) + ' ' + (idx.getX(i+2)+1+vertOffset) + '\n';
+        }
+      }
+      vertOffset += pos.count;
+    });
+    var blob = new Blob([objStr], { type: 'text/plain' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = 'fenix-export.obj'; a.click();
+    URL.revokeObjectURL(url);
+    toast('OBJ indirildi ✓', 'ok');
+  }, 500);
 }
 
 function exportGLTF() {

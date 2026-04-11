@@ -158,8 +158,10 @@ app.get('/fenix-editor.html', (req, res, next) => {
     `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; ` +
     `font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; ` +
     `img-src 'self' data: blob: https:; ` +
-    `connect-src 'self' https: wss:; ` +
+    `connect-src 'self' https: wss: blob:; ` +
     `frame-src 'self' https:; ` +
+    `frame-ancestors 'self' https://*.lovable.app https://*.lovableproject.com https://localhost:* http://localhost:*; ` +
+    `worker-src 'self' blob:; ` +
     `media-src 'self' blob: https:;`
   );
   next(); // static middleware'e devam et
@@ -196,6 +198,47 @@ app.post('/api/fenix/chat', async (req, res) => {
     const response = await manager.sendToGemini(text);
     res.json({ ok: true, response });
   } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// AI Bridge Proxy — frontend'den API key sızmasını önler
+app.post('/api/ai/claude', async (req, res) => {
+  try {
+    const { prompt, system, model, max_tokens } = req.body;
+    if (!prompt) return res.status(400).json({ ok: false, error: 'prompt gerekli' });
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const msg = await client.messages.create({
+      model: model || 'claude-sonnet-4-20250514',
+      max_tokens: max_tokens || 1024,
+      system: system || 'Sen Fenix AI asistanısın. Türkçe cevap ver.',
+      messages: [{ role: 'user', content: prompt }]
+    });
+    res.json({ ok: true, text: msg.content[0].text });
+  } catch (err) {
+    logger.error('AI Claude proxy hatası:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+app.post('/api/ai/gemini', async (req, res) => {
+  try {
+    const { prompt, image, model } = req.body;
+    if (!prompt) return res.status(400).json({ ok: false, error: 'prompt gerekli' });
+    const geminiModel = model || 'gemini-2.5-flash';
+    const parts = [{ text: prompt }];
+    if (image) parts.push({ inline_data: { mime_type: 'image/jpeg', data: image } });
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts }] }) }
+    );
+    if (!resp.ok) throw new Error('Gemini API ' + resp.status);
+    const data = await resp.json();
+    res.json({ ok: true, text: data.candidates[0].content.parts[0].text });
+  } catch (err) {
+    logger.error('AI Gemini proxy hatası:', err.message);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
@@ -443,6 +486,18 @@ app.use('/api/approval', approvalRoutes);
 const authRoutes = require('./routes/api-auth');
 app.use('/api/auth', authRoutes);
 
+// Dublaj API (ElevenLabs / HeyGen / LatentSync)
+const dubbingRoutes = require('./routes/api-dubbing');
+app.use('/api/dubbing', dubbingRoutes);
+
+// Gelir Takip API
+const gelirRoutes = require('./routes/api-gelir');
+app.use('/api/gelir', requireAdmin, gelirRoutes);
+
+// Job Queue API
+const queueModule = require('./routes/api-queue');
+app.use('/api/queue', queueModule.router);
+
 // Terminal output API (bilgisayardan tablete canlı kod akışı)
 const { validate, schemas } = require('./middlewares/validate');
 const { sanitizeTerminalOutput, maskSensitive } = require('./utils/sanitize');
@@ -465,32 +520,19 @@ app.get('/api/terminal/lines', (req, res) => {
   res.json({ lines: newLines, total: terminalBuffer.length });
 });
 
-// Kuyruk API
+// Kuyruk API — api-queue.js router + socket.io bildirimleri
 const queue = require('./services/queue-service');
-app.post('/api/queue/enqueue', validate(schemas.queueEnqueue), (req, res) => {
-  const { type, payload, userId } = req.body;
-  const result = queue.enqueue(type, payload, userId);
-  result.then(r => res.json({ ok: true, ...r }));
-});
-app.get('/api/queue/job/:jobId', (req, res) => {
-  const job = queue.getJob(req.params.jobId);
-  if (!job) return res.status(404).json({ ok: false, error: 'Görev bulunamadı' });
-  res.json({ ok: true, job });
-});
-app.get('/api/queue/stats', (req, res) => {
-  res.json({ ok: true, stats: queue.getStats() });
-});
-
-// Socket.io ile kuyruk bildirimleri
-queue.on('job:completed', (job) => {
-  if (global.io) global.io.emit('job_completed', { jobId: job.id, type: job.type, userId: job.userId });
-});
-queue.on('job:failed', (job) => {
-  if (global.io) global.io.emit('job_failed', { jobId: job.id, type: job.type, error: job.error });
-});
-queue.on('job:progress', (job) => {
-  if (global.io) global.io.emit('job_progress', { jobId: job.id, progress: job.progress });
-});
+if (queue.on) {
+  queue.on('job:completed', (job) => {
+    if (global.io) global.io.emit('job_completed', { jobId: job.id, type: job.type, userId: job.userId });
+  });
+  queue.on('job:failed', (job) => {
+    if (global.io) global.io.emit('job_failed', { jobId: job.id, type: job.type, error: job.error });
+  });
+  queue.on('job:progress', (job) => {
+    if (global.io) global.io.emit('job_progress', { jobId: job.id, progress: job.progress });
+  });
+}
 
 // === FAZA 1: ÇEKIRDEK MOTOR ===
 
@@ -1328,6 +1370,559 @@ app.post('/api/trim-upload', _trimUpload.single('file'), async (req, res) => {
   } finally {
     if (uploadedPath) { try { fs.unlinkSync(uploadedPath); } catch(e) {} }
   }
+});
+
+// ══════════════════════════════════════
+//  CHUNK UPLOAD — Büyük dosyalar için parça parça yükleme
+// ══════════════════════════════════════
+const _chunkUpload = multer({
+  dest: path.join(__dirname, 'uploads', 'chunks'),
+  limits: { fileSize: 30 * 1024 * 1024 } // 30MB per chunk
+});
+try { require('fs').mkdirSync(path.join(__dirname, 'uploads', 'chunks'), { recursive: true }); } catch(e) {}
+
+// POST /api/upload/chunk — tek parça yükle
+app.post('/api/upload/chunk', _chunkUpload.single('chunk'), (req, res) => {
+  const fs = require('fs');
+  if (!req.file) return res.status(400).json({ ok: false, error: 'Chunk gerekli' });
+  const { uploadId, chunkIndex, totalChunks, fileName } = req.body;
+  if (!uploadId || chunkIndex === undefined || !totalChunks) {
+    return res.status(400).json({ ok: false, error: 'uploadId, chunkIndex, totalChunks gerekli' });
+  }
+
+  // Chunk'ı uploadId klasörüne taşı
+  const chunkDir = path.join(__dirname, 'uploads', 'chunks', uploadId);
+  try { fs.mkdirSync(chunkDir, { recursive: true }); } catch(e) {}
+  const chunkPath = path.join(chunkDir, `chunk_${String(chunkIndex).padStart(4, '0')}`);
+  fs.renameSync(req.file.path, chunkPath);
+
+  logger.info(`Chunk ${parseInt(chunkIndex)+1}/${totalChunks} yüklendi`, { uploadId, fileName, size: req.file.size });
+  res.json({ ok: true, chunkIndex: parseInt(chunkIndex), received: true });
+});
+
+// POST /api/upload/complete — tüm parçaları birleştir ve işleme başla
+app.post('/api/upload/complete', express.json(), (req, res) => {
+  const fs = require('fs');
+  const { uploadId, totalChunks, fileName, tool } = req.body;
+  if (!uploadId || !totalChunks) return res.status(400).json({ ok: false, error: 'uploadId, totalChunks gerekli' });
+
+  const chunkDir = path.join(__dirname, 'uploads', 'chunks', uploadId);
+  const mergedPath = path.join(__dirname, 'uploads', '360-convert', uploadId + '_' + (fileName || 'video.mp4'));
+
+  try {
+    // Chunk'ları sırayla birleştir
+    const writeStream = fs.createWriteStream(mergedPath);
+    for (let i = 0; i < parseInt(totalChunks); i++) {
+      const cp = path.join(chunkDir, `chunk_${String(i).padStart(4, '0')}`);
+      if (!fs.existsSync(cp)) {
+        writeStream.end();
+        return res.status(400).json({ ok: false, error: `Chunk ${i} eksik` });
+      }
+      writeStream.write(fs.readFileSync(cp));
+    }
+    writeStream.end();
+
+    // Chunk klasörünü temizle
+    writeStream.on('finish', () => {
+      try { fs.rmSync(chunkDir, { recursive: true, force: true }); } catch(e) {}
+      const fileSize = fs.statSync(mergedPath).size;
+      logger.info('Chunk birleştirme tamamlandı', { uploadId, fileName, fileSize, tool });
+
+      // İşlem bilgisini global'e kaydet — process endpoint'i kullanacak
+      if (!global._chunkUploads) global._chunkUploads = {};
+      global._chunkUploads[uploadId] = { path: mergedPath, fileName, tool, size: fileSize };
+
+      res.json({ ok: true, uploadId, fileSize, message: 'Dosya birleştirildi, işleme hazır' });
+    });
+  } catch (err) {
+    logger.error('Chunk birleştirme hatası:', err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /api/360/process-chunked — birleştirilmiş dosyayı işle (SSE)
+app.post('/api/360/process-chunked', express.json(), async (req, res) => {
+  const fs = require('fs');
+  const { uploadId, tool, yaw, pitch, fov, currentTime, duration, speed, codec, resolution } = req.body;
+
+  const upload = global._chunkUploads?.[uploadId];
+  if (!upload || !fs.existsSync(upload.path)) {
+    return res.status(404).json({ ok: false, error: 'Upload bulunamadı — tekrar yükle' });
+  }
+
+  const inputPath = upload.path;
+  const toolName = tool || upload.tool || 'stabilize';
+  logger.info('360/process-chunked başlıyor', { uploadId, tool: toolName, fileSize: upload.size });
+
+  // req.body'yi req.body olarak process handler'a iletelim — aynı mantık
+  req.file = { path: inputPath, originalname: upload.fileName, size: upload.size };
+  req.body = { ...req.body, tool: toolName };
+
+  // Aynı process logic'i kullan — ama multer yerine direkt dosya yolunu kullanarak
+  // SSE stream
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  const send = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch(e) {} };
+  send({ status: 'processing', progress: 0, message: toolName + ' başlatılıyor...' });
+
+  // FFmpeg filter builder (aynı switch/case)
+  const _yaw = parseFloat(yaw) || 180;
+  const _pitch = parseFloat(pitch) || 0;
+  const _fov = parseFloat(fov) || 75;
+  const _currentTime = parseFloat(currentTime) || 0;
+  const _duration = parseFloat(duration) || 0;
+  const _speed = parseInt(speed) || 100;
+  const outputPath = inputPath + '_processed.mp4';
+  let ffArgs = ['-y'];
+  let isDownload = false;
+
+  switch (toolName) {
+    case 'stabilize': ffArgs.push('-i', inputPath, '-vf', 'deshake=rx=32:ry=32:edge=1:blocksize=8'); break;
+    case 'tinyplanet': ffArgs.push('-i', inputPath, '-vf', `v360=equirect:stereographic:ih_fov=360:iv_fov=180:h_fov=160:v_fov=160:yaw=${_yaw-180}:pitch=${90-_pitch}`); break;
+    case 'reframe': ffArgs.push('-i', inputPath, '-vf', `v360=equirect:flat:yaw=${_yaw-180}:pitch=${-_pitch}:h_fov=${_fov}:v_fov=${Math.round(_fov*9/16)}:w=1080:h=1920`); break;
+    case 'cut': ffArgs.push('-ss', String(_currentTime), '-i', inputPath); break;
+    case 'split': ffArgs.push('-i', inputPath, '-t', String(_currentTime)); break;
+    case 'wind': ffArgs.push('-i', inputPath, '-af', 'highpass=f=200,lowpass=f=3000,afftdn=nf=-25'); break;
+    case 'denoise': ffArgs.push('-i', inputPath, '-af', 'afftdn=nf=-20:nr=10:nt=w'); break;
+    case 'audiofocus': ffArgs.push('-i', inputPath, '-af', 'dynaudnorm=g=5:f=150:r=0.9,equalizer=f=1000:t=h:width=2000:g=3'); break;
+    case 'blur': ffArgs.push('-i', inputPath, '-vf', 'boxblur=10:5'); break;
+    case 'glitch': ffArgs.push('-i', inputPath, '-vf', 'noise=alls=30:allf=t+u,rgbashift=rh=-3:bh=3:gv=2,eq=contrast=1.3'); break;
+    case 'zoom': ffArgs.push('-i', inputPath, '-vf', "zoompan=z='min(zoom+0.001,1.3)':d=1:s=1920x1080:fps=30"); break;
+    case 'shake': ffArgs.push('-i', inputPath, '-vf', "crop=iw-20:ih-20:10+5*sin(n/3):10+5*cos(n/5)"); break;
+    case 'fadein': ffArgs.push('-i', inputPath, '-vf', 'fade=t=in:st=0:d=1.5', '-af', 'afade=t=in:st=0:d=1.5'); break;
+    case 'fadeout': { const fs2 = Math.max(0, _duration-1.5); ffArgs.push('-i', inputPath, '-vf', `fade=t=out:st=${fs2}:d=1.5`, '-af', `afade=t=out:st=${fs2}:d=1.5`); break; }
+    case 'reverse': ffArgs.push('-i', inputPath, '-vf', 'reverse', '-af', 'areverse'); break;
+    case 'freeze': ffArgs.push('-i', inputPath, '-vf', `trim=start=${_currentTime}:end=${_currentTime+0.04},loop=90:1:0,setpts=N/30/TB`, '-an'); break;
+    case 'speed': { const f=_speed/100; const pts=(1/f).toFixed(4); const at=f>=0.5&&f<=2?`atempo=${f}`:f<0.5?`atempo=0.5,atempo=${f/0.5}`:`atempo=2.0,atempo=${f/2}`; ffArgs.push('-i',inputPath,'-vf',`setpts=${pts}*PTS`,'-af',at); break; }
+    case 'crop_1_1': ffArgs.push('-i', inputPath, '-vf', 'crop=min(iw\\,ih):min(iw\\,ih),scale=1080:1080'); break;
+    case 'crop_9_16': ffArgs.push('-i', inputPath, '-vf', 'crop=ih*9/16:ih,scale=1080:1920'); break;
+    case 'crop_16_9': ffArgs.push('-i', inputPath, '-vf', 'crop=iw:iw*9/16,scale=1920:1080'); break;
+    case 'crop_4_5': ffArgs.push('-i', inputPath, '-vf', 'crop=ih*4/5:ih,scale=1080:1350'); break;
+    case 'crop_21_9': ffArgs.push('-i', inputPath, '-vf', 'crop=iw:iw*9/21,scale=2520:1080'); break;
+    case 'instagram': ffArgs.push('-i', inputPath, '-vf', 'crop=ih*9/16:ih,scale=1080:1920', '-b:v', '5M'); isDownload=true; break;
+    case 'tiktok': ffArgs.push('-i', inputPath, '-vf', 'crop=ih*9/16:ih,scale=1080:1920', '-b:v', '6M'); isDownload=true; break;
+    case 'youtube': ffArgs.push('-i', inputPath, '-vf', 'crop=iw:iw*9/16,scale=1920:1080', '-b:v', '12M'); isDownload=true; break;
+    case 'render_hq': ffArgs.push('-i', inputPath, '-vf', 'scale=3840:2160:flags=lanczos', '-preset', 'slow', '-crf', '15'); isDownload=true; break;
+    case 'subtitle': ffArgs.push('-i', inputPath, '-vf', "drawtext=text='Fenix AI':fontsize=36:fontcolor=white:borderw=2:bordercolor=black:x=(w-text_w)/2:y=h-60"); break;
+    case 'convert_insv': ffArgs.push('-i', inputPath, '-vf', 'v360=dfisheye:equirect:ih_fov=190:iv_fov=190'); break;
+    case 'convert_h264': ffArgs.push('-i', inputPath); break;
+    default: ffArgs.push('-i', inputPath, '-vf', 'null');
+  }
+
+  if (toolName !== 'freeze' && toolName !== 'render_hq') {
+    ffArgs.push('-c:v', 'libx264', '-preset', 'fast', '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '128k');
+  } else if (toolName === 'freeze') {
+    ffArgs.push('-c:v', 'libx264', '-preset', 'fast', '-crf', '18', '-pix_fmt', 'yuv420p', '-movflags', '+faststart');
+  }
+  ffArgs.push(outputPath);
+
+  // Süre
+  const ffprobe = require('child_process').spawn('ffprobe', ['-v','error','-show_entries','format=duration','-of','csv=p=0',inputPath]);
+  let durSec = 0;
+  ffprobe.stdout.on('data', d => { durSec = parseFloat(d.toString().trim()) || 0; });
+  await new Promise(r => ffprobe.on('close', r));
+
+  const proc = require('child_process').spawn('ffmpeg', ffArgs);
+  let lastProgress = 0;
+  proc.stderr.on('data', chunk => {
+    const m = chunk.toString().match(/time=(\d+):(\d+):(\d+\.\d+)/);
+    if (m && durSec > 0) {
+      const sec = parseInt(m[1])*3600 + parseInt(m[2])*60 + parseFloat(m[3]);
+      const pct = Math.min(99, Math.round((sec/durSec)*100));
+      if (pct > lastProgress) { lastProgress=pct; send({ status:'processing', progress:pct, message:`${toolName}... %${pct}` }); }
+    }
+  });
+
+  proc.on('close', code => {
+    try { fs.unlinkSync(inputPath); } catch(e) {}
+    delete global._chunkUploads?.[uploadId];
+    if (code !== 0) {
+      try { fs.unlinkSync(outputPath); } catch(e) {}
+      send({ status:'error', message:'İşlem hatası (kod: '+code+')' });
+      return res.end();
+    }
+    const outName = `fenix_${toolName}_${Date.now()}.mp4`;
+    const publicDir = path.join(__dirname, 'public', 'converted');
+    try { fs.mkdirSync(publicDir, { recursive: true }); } catch(e) {}
+    const publicPath = path.join(publicDir, outName);
+    fs.renameSync(outputPath, publicPath);
+    const result = { status:'done', progress:100, url:`/converted/${outName}`, message:'Tamamlandı!' };
+    if (isDownload) { result.download=true; result.filename=`fenix_${toolName}.mp4`; }
+    send(result);
+    res.end();
+    setTimeout(() => { try { fs.unlinkSync(publicPath); } catch(e) {} }, 3600000);
+  });
+
+  proc.on('error', err => {
+    try { fs.unlinkSync(inputPath); } catch(e) {}
+    send({ status:'error', message:'FFmpeg başlatılamadı: '+err.message });
+    res.end();
+  });
+});
+
+// ══════════════════════════════════════
+//  360° VIDEO CONVERT — INSV/H.265 → H.264 Equirectangular MP4
+// ══════════════════════════════════════
+const _360Upload = multer({
+  dest: path.join(__dirname, 'uploads', '360-convert'),
+  limits: { fileSize: 2 * 1024 * 1024 * 1024 } // 2 GB
+});
+
+// Klasör oluştur
+try { require('fs').mkdirSync(path.join(__dirname, 'uploads', '360-convert'), { recursive: true }); } catch(e) {}
+
+app.post('/api/360/convert', _360Upload.single('video'), async (req, res) => {
+  const fs = require('fs');
+  const { execFile } = require('child_process');
+  const inputPath = req.file?.path;
+  if (!inputPath) return res.status(400).json({ ok: false, error: 'Video dosyası gerekli' });
+
+  const originalName = req.file.originalname || 'video.mp4';
+  const isDualFisheye = req.body.dualFisheye === 'true' || /\.(insv|insp)$/i.test(originalName);
+  const outputPath = inputPath + '_converted.mp4';
+
+  // FFmpeg args: dual-fisheye → equirect VEYA sadece H.264 re-encode
+  const ffArgs = ['-y', '-i', inputPath];
+  if (isDualFisheye) {
+    // Dual-fisheye → equirectangular projection dönüşümü
+    ffArgs.push('-vf', 'v360=dfisheye:equirect:ih_fov=190:iv_fov=190');
+  }
+  // H.264 çıkış (tarayıcı uyumlu), hızlı preset
+  ffArgs.push(
+    '-c:v', 'libx264',
+    '-preset', 'fast',
+    '-crf', '20',
+    '-pix_fmt', 'yuv420p',
+    '-movflags', '+faststart',
+    '-c:a', 'aac',
+    '-b:a', '128k',
+    outputPath
+  );
+
+  // SSE stream ile progress bildir
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const send = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch(e) {} };
+  send({ status: 'processing', message: 'FFmpeg dönüşüm başladı...', progress: 0 });
+
+  // Video süresini öğren (progress hesabı için)
+  const ffprobe = require('child_process').spawn('ffprobe', [
+    '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', inputPath
+  ]);
+  let durationSec = 0;
+  ffprobe.stdout.on('data', d => { durationSec = parseFloat(d.toString().trim()) || 0; });
+  await new Promise(r => ffprobe.on('close', r));
+
+  // FFmpeg çalıştır
+  const proc = require('child_process').spawn('ffmpeg', ffArgs);
+  let lastProgress = 0;
+
+  proc.stderr.on('data', (chunk) => {
+    const line = chunk.toString();
+    // "time=00:01:23.45" formatından saniye çıkar
+    const m = line.match(/time=(\d+):(\d+):(\d+\.\d+)/);
+    if (m && durationSec > 0) {
+      const sec = parseInt(m[1]) * 3600 + parseInt(m[2]) * 60 + parseFloat(m[3]);
+      const pct = Math.min(99, Math.round((sec / durationSec) * 100));
+      if (pct > lastProgress) {
+        lastProgress = pct;
+        send({ status: 'processing', progress: pct, message: `Dönüştürülüyor... %${pct}` });
+      }
+    }
+  });
+
+  proc.on('close', (code) => {
+    // Girdi dosyasını temizle
+    try { fs.unlinkSync(inputPath); } catch(e) {}
+
+    if (code !== 0) {
+      try { fs.unlinkSync(outputPath); } catch(e) {}
+      send({ status: 'error', message: 'FFmpeg dönüşüm hatası (kod: ' + code + ')' });
+      return res.end();
+    }
+
+    // Çıktı dosyasını unique isimle public'e taşı
+    const outName = `360_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.mp4`;
+    const publicPath = path.join(__dirname, 'public', 'converted', outName);
+    try { fs.mkdirSync(path.join(__dirname, 'public', 'converted'), { recursive: true }); } catch(e) {}
+    fs.renameSync(outputPath, publicPath);
+
+    send({ status: 'done', progress: 100, url: `/converted/${outName}`, message: 'Dönüşüm tamamlandı!' });
+    res.end();
+
+    // 1 saat sonra dosyayı otomatik sil
+    setTimeout(() => { try { fs.unlinkSync(publicPath); } catch(e) {} }, 60 * 60 * 1000);
+  });
+
+  proc.on('error', (err) => {
+    try { fs.unlinkSync(inputPath); } catch(e) {}
+    send({ status: 'error', message: 'FFmpeg başlatılamadı: ' + err.message });
+    res.end();
+  });
+});
+
+// ══════════════════════════════════════
+//  VIDEO PROCESS — Tüm FFmpeg araçları (kes, efekt, format, ses, 360°)
+// ══════════════════════════════════════
+app.post('/api/360/process', (req, res, next) => {
+  logger.info('360/process isteği geldi', { contentLength: req.headers['content-length'], contentType: req.headers['content-type'] });
+  _360Upload.single('video')(req, res, (err) => {
+    if (err) {
+      logger.error('360/process multer hatası:', err.message);
+      return res.status(413).json({ ok: false, error: 'Dosya yükleme hatası: ' + err.message });
+    }
+    next();
+  });
+}, async (req, res) => {
+  const fs = require('fs');
+  const inputPath = req.file?.path;
+  if (!inputPath) {
+    logger.error('360/process: dosya yok', { body: Object.keys(req.body || {}) });
+    return res.status(400).json({ ok: false, error: 'Video gerekli' });
+  }
+  logger.info('360/process başlıyor', { tool: req.body.tool, fileSize: req.file.size, fileName: req.file.originalname });
+
+  const tool = req.body.tool || 'stabilize';
+  const yaw = parseFloat(req.body.yaw) || 180;
+  const pitch = parseFloat(req.body.pitch) || 0;
+  const fov = parseFloat(req.body.fov) || 75;
+  const currentTime = parseFloat(req.body.currentTime) || 0;
+  const duration = parseFloat(req.body.duration) || 0;
+  const speed = parseInt(req.body.speed) || 100;
+  const codec = req.body.codec || 'h264';
+  const resolution = req.body.resolution || '1080p';
+  const outputPath = inputPath + '_processed.mp4';
+
+  // FFmpeg args builder — araç tipine göre
+  let ffArgs = ['-y'];
+  let isDownload = false;
+
+  switch (tool) {
+    // ── 360° Araçları ──
+    case 'stabilize':
+      ffArgs.push('-i', inputPath, '-vf', 'deshake=rx=32:ry=32:edge=1:blocksize=8');
+      break;
+    case 'tinyplanet':
+      ffArgs.push('-i', inputPath, '-vf', `v360=equirect:stereographic:ih_fov=360:iv_fov=180:h_fov=160:v_fov=160:yaw=${yaw-180}:pitch=${90-pitch}`);
+      break;
+    case 'reframe':
+      ffArgs.push('-i', inputPath, '-vf', `v360=equirect:flat:yaw=${yaw-180}:pitch=${-pitch}:h_fov=${fov}:v_fov=${Math.round(fov*9/16)}:w=1080:h=1920`);
+      break;
+    case 'equirect2cube':
+      ffArgs.push('-i', inputPath, '-vf', 'v360=equirect:cubemap:w=2048:h=1536');
+      break;
+    case 'cube2equirect':
+      ffArgs.push('-i', inputPath, '-vf', 'v360=cubemap:equirect:w=3840:h=1920');
+      break;
+
+    // ── Kesme / Bölme ──
+    case 'cut':
+      // Playhead'den sona kadar kes (playhead öncesini kaldır)
+      ffArgs.push('-ss', String(currentTime), '-i', inputPath);
+      break;
+    case 'split':
+      // Playhead'den böl — ilk parçayı döndür
+      ffArgs.push('-i', inputPath, '-t', String(currentTime));
+      break;
+
+    // ── Ses İşleme ──
+    case 'wind':
+      ffArgs.push('-i', inputPath, '-af', 'highpass=f=200,lowpass=f=3000,afftdn=nf=-25');
+      break;
+    case 'denoise':
+      ffArgs.push('-i', inputPath, '-af', 'afftdn=nf=-20:nr=10:nt=w');
+      break;
+    case 'audiofocus':
+      ffArgs.push('-i', inputPath, '-af', 'dynaudnorm=g=5:f=150:r=0.9,equalizer=f=1000:t=h:width=2000:g=3');
+      break;
+
+    // ── Video Efektleri ──
+    case 'blur':
+      ffArgs.push('-i', inputPath, '-vf', 'boxblur=10:5');
+      break;
+    case 'glitch':
+      ffArgs.push('-i', inputPath, '-vf', 'noise=alls=30:allf=t+u,rgbashift=rh=-3:bh=3:gv=2,eq=contrast=1.3');
+      break;
+    case 'zoom':
+      ffArgs.push('-i', inputPath, '-vf', "zoompan=z='min(zoom+0.001,1.3)':d=1:s=1920x1080:fps=30");
+      break;
+    case 'shake':
+      ffArgs.push('-i', inputPath, '-vf', "crop=iw-20:ih-20:10+5*sin(n/3):10+5*cos(n/5)");
+      break;
+    case 'fadein':
+      ffArgs.push('-i', inputPath, '-vf', 'fade=t=in:st=0:d=1.5', '-af', 'afade=t=in:st=0:d=1.5');
+      break;
+    case 'fadeout': {
+      const fadeStart = Math.max(0, duration - 1.5);
+      ffArgs.push('-i', inputPath, '-vf', `fade=t=out:st=${fadeStart}:d=1.5`, '-af', `afade=t=out:st=${fadeStart}:d=1.5`);
+      break;
+    }
+    case 'dissolve':
+      ffArgs.push('-i', inputPath, '-vf', 'fade=t=in:st=0:d=1,fade=t=out:st=' + Math.max(0, duration-1) + ':d=1');
+      break;
+
+    // ── Hız / Ters ──
+    case 'reverse':
+      ffArgs.push('-i', inputPath, '-vf', 'reverse', '-af', 'areverse');
+      break;
+    case 'freeze': {
+      // Playhead pozisyonunda 3 saniyelik freeze frame
+      const freezeAt = currentTime || 0;
+      ffArgs.push('-i', inputPath, '-vf', `trim=start=${freezeAt}:end=${freezeAt+0.04},loop=90:1:0,setpts=N/30/TB`);
+      ffArgs.push('-an'); // freeze frame'de ses yok
+      break;
+    }
+    case 'speed': {
+      const factor = speed / 100;
+      const pts = (1 / factor).toFixed(4);
+      const atempo = factor >= 0.5 && factor <= 2 ? `atempo=${factor}` : factor < 0.5 ? `atempo=0.5,atempo=${factor/0.5}` : `atempo=2.0,atempo=${factor/2}`;
+      ffArgs.push('-i', inputPath, '-vf', `setpts=${pts}*PTS`, '-af', atempo);
+      break;
+    }
+
+    // ── Format / Crop ──
+    case 'crop_1_1':
+      ffArgs.push('-i', inputPath, '-vf', 'crop=min(iw\\,ih):min(iw\\,ih),scale=1080:1080');
+      break;
+    case 'crop_9_16':
+      ffArgs.push('-i', inputPath, '-vf', 'crop=ih*9/16:ih,scale=1080:1920');
+      break;
+    case 'crop_16_9':
+      ffArgs.push('-i', inputPath, '-vf', 'crop=iw:iw*9/16,scale=1920:1080');
+      break;
+    case 'crop_4_5':
+      ffArgs.push('-i', inputPath, '-vf', 'crop=ih*4/5:ih,scale=1080:1350');
+      break;
+    case 'crop_21_9':
+      ffArgs.push('-i', inputPath, '-vf', 'crop=iw:iw*9/21,scale=2520:1080');
+      break;
+
+    // ── Platform Render ──
+    case 'instagram':
+      ffArgs.push('-i', inputPath, '-vf', 'crop=ih*9/16:ih,scale=1080:1920', '-b:v', '5M', '-maxrate', '5M');
+      isDownload = true;
+      break;
+    case 'tiktok':
+      ffArgs.push('-i', inputPath, '-vf', 'crop=ih*9/16:ih,scale=1080:1920', '-b:v', '6M', '-maxrate', '6M');
+      isDownload = true;
+      break;
+    case 'youtube':
+      ffArgs.push('-i', inputPath, '-vf', 'crop=iw:iw*9/16,scale=1920:1080', '-b:v', '12M', '-maxrate', '12M');
+      isDownload = true;
+      break;
+    case 'render_hq':
+      ffArgs.push('-i', inputPath, '-vf', 'scale=3840:2160:flags=lanczos');
+      ffArgs.push('-preset', 'slow', '-crf', '15');
+      isDownload = true;
+      break;
+
+    // ── Export ──
+    case 'export': {
+      const resMap = { '720p': '1280:720', '1080p': '1920:1080', '2k': '2560:1440', '4k': '3840:2160' };
+      ffArgs.push('-i', inputPath, '-vf', `scale=${resMap[resolution] || '1920:1080'}:flags=lanczos`);
+      if (codec === 'h265') ffArgs.push('-c:v', 'libx265');
+      isDownload = true;
+      break;
+    }
+
+    // ── AI Altyazı (placeholder — FFmpeg drawtext) ──
+    case 'subtitle':
+      ffArgs.push('-i', inputPath, '-vf', "drawtext=text='Fenix AI Altyazi':fontsize=36:fontcolor=white:borderw=2:bordercolor=black:x=(w-text_w)/2:y=h-60");
+      break;
+
+    // ── INSV/H.265 Dönüşüm ──
+    case 'convert_insv':
+      ffArgs.push('-i', inputPath, '-vf', 'v360=dfisheye:equirect:ih_fov=190:iv_fov=190');
+      break;
+    case 'convert_h264':
+      ffArgs.push('-i', inputPath);
+      break;
+
+    // ── Segmentasyon (blur-bg) ──
+    default:
+      if (tool.startsWith('segment_')) {
+        // Basit blur-bg segmentasyon (gerçek AI segmentasyon ayrı endpoint)
+        ffArgs.push('-i', inputPath, '-vf', 'boxblur=20:10');
+      } else {
+        ffArgs.push('-i', inputPath, '-vf', 'null');
+      }
+  }
+
+  // Ortak çıkış parametreleri (freeze hariç — zaten -an var)
+  if (tool !== 'freeze' && tool !== 'export') {
+    ffArgs.push('-c:v', 'libx264', '-preset', 'fast', '-crf', '20',
+      '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
+      '-c:a', 'aac', '-b:a', '128k');
+  } else if (tool === 'freeze') {
+    ffArgs.push('-c:v', 'libx264', '-preset', 'fast', '-crf', '18',
+      '-pix_fmt', 'yuv420p', '-movflags', '+faststart');
+  } else if (tool === 'export') {
+    if (codec !== 'h265') ffArgs.push('-c:v', 'libx264');
+    ffArgs.push('-preset', 'slow', '-crf', '18', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-c:a', 'aac', '-b:a', '192k');
+  }
+  ffArgs.push(outputPath);
+
+  // SSE stream
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+  const send = (data) => { try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch(e) {} };
+
+  send({ status: 'processing', progress: 0, message: tool + ' başlatılıyor...' });
+
+  // Süre öğren
+  const ffprobe = require('child_process').spawn('ffprobe', [
+    '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', inputPath
+  ]);
+  let durSec = 0;
+  ffprobe.stdout.on('data', d => { durSec = parseFloat(d.toString().trim()) || 0; });
+  await new Promise(r => ffprobe.on('close', r));
+
+  const proc = require('child_process').spawn('ffmpeg', ffArgs);
+  let lastProgress = 0;
+
+  proc.stderr.on('data', chunk => {
+    const m = chunk.toString().match(/time=(\d+):(\d+):(\d+\.\d+)/);
+    if (m && durSec > 0) {
+      const sec = parseInt(m[1]) * 3600 + parseInt(m[2]) * 60 + parseFloat(m[3]);
+      const pct = Math.min(99, Math.round((sec / durSec) * 100));
+      if (pct > lastProgress) {
+        lastProgress = pct;
+        send({ status: 'processing', progress: pct, message: `${toolLabels[tool] || tool}... %${pct}` });
+      }
+    }
+  });
+
+  proc.on('close', code => {
+    try { fs.unlinkSync(inputPath); } catch(e) {}
+    if (code !== 0) {
+      try { fs.unlinkSync(outputPath); } catch(e) {}
+      send({ status: 'error', message: 'İşlem hatası (kod: ' + code + ')' });
+      return res.end();
+    }
+    const outName = `360_${tool}_${Date.now()}.mp4`;
+    const publicDir = path.join(__dirname, 'public', 'converted');
+    try { fs.mkdirSync(publicDir, { recursive: true }); } catch(e) {}
+    const publicPath = path.join(publicDir, outName);
+    fs.renameSync(outputPath, publicPath);
+    const result = { status: 'done', progress: 100, url: `/converted/${outName}`, message: 'Tamamlandı!' };
+    if (isDownload) { result.download = true; result.filename = `fenix_${tool}_${Date.now()}.mp4`; }
+    send(result);
+    res.end();
+    setTimeout(() => { try { fs.unlinkSync(publicPath); } catch(e) {} }, 3600000);
+  });
+
+  proc.on('error', err => {
+    try { fs.unlinkSync(inputPath); } catch(e) {}
+    send({ status: 'error', message: 'FFmpeg başlatılamadı: ' + err.message });
+    res.end();
+  });
 });
 
 // ══════════════════════════════════════
