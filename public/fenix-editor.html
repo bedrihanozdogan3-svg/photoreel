@@ -1920,6 +1920,19 @@
         </svg>
         <span class="sb-lbl">Damga</span>
       </button>
+      <div class="sb-sep"></div>
+      <button class="sb-btn" onclick="_toggleEyeTrackHeatmap()" title="👁 Göz Takip Heatmap — Odak analizi">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="3" stroke="currentColor" stroke-width="1.4"/><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1" opacity=".4"/><path d="M9 2v3M9 13v3M2 9h3M13 9h3" stroke="currentColor" stroke-width="1" opacity=".3"/></svg>
+        <span class="sb-lbl">GÖZ TAKİP</span>
+      </button>
+      <button class="sb-btn" onclick="_openABTestSimulator()" title="⚡ A/B Test — Varyant karşılaştırma">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="3" width="7" height="12" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="10" y="3" width="7" height="12" rx="1" stroke="currentColor" stroke-width="1.2"/><text x="4.5" y="11" text-anchor="middle" fill="currentColor" font-size="6" font-weight="bold">A</text><text x="13.5" y="11" text-anchor="middle" fill="currentColor" font-size="6" font-weight="bold">B</text></svg>
+        <span class="sb-lbl">A/B TEST</span>
+      </button>
+      <button class="sb-btn" onclick="_openLayersPanel()" title="📚 Katmanlar — Layer sistemi">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 6l7 4 7-4-7-4z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M2 9l7 4 7-4" stroke="currentColor" stroke-width="1.2" fill="none" opacity=".6"/><path d="M2 12l7 4 7-4" stroke="currentColor" stroke-width="1.2" fill="none" opacity=".3"/></svg>
+        <span class="sb-lbl">KATMANLAR</span>
+      </button>
       <!-- AI paneli kaldırıldı (Gemini doğrudan Fenix üzerinden çalışır) -->
       <button class="sb-btn" id="sb-export-btn" onclick="toggleExportPanel()" title="Çoklu Fotoğraf Çıkışı">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
@@ -5555,6 +5568,28 @@ function _takeSnap(mode) {
     });
     return { type: '3d', meshes: meshSnaps, state: JSON.stringify(S['3d'] || {}) };
   }
+  // Üretim — model transform + materyal durumu
+  if (mode === 'uretim') {
+    const snap = { type: 'uretim' };
+    if (window._uModel) {
+      snap.pos = window._uModel.position.toArray();
+      snap.rot = window._uModel.rotation.toArray();
+      snap.scl = window._uModel.scale.toArray();
+      snap.matStates = [];
+      window._uModel.traverse(obj => {
+        if (obj.isMesh && obj.material) {
+          snap.matStates.push({
+            name: obj.name,
+            color: obj.material.color ? '#' + obj.material.color.getHexString() : null,
+            opacity: obj.material.opacity,
+            wireframe: obj.material.wireframe
+          });
+        }
+      });
+    }
+    if (window._uCamera) snap.cam = { pos: window._uCamera.position.toArray(), target: window._uControls?.target?.toArray() };
+    return snap;
+  }
   // 360 / figur — JSON state
   return { type: mode, state: JSON.stringify(S[mode] || {}) };
 }
@@ -5623,6 +5658,31 @@ function _applySnap(mode, snap) {
       }
     });
     try { S['3d'] = JSON.parse(snap.state || '{}'); } catch(e){}
+    return;
+  }
+
+  // Üretim — model transform + materyal geri yükle
+  if (mode === 'uretim' && window._uModel) {
+    if (snap.pos) window._uModel.position.fromArray(snap.pos);
+    if (snap.rot) { const r = snap.rot; window._uModel.rotation.set(r[0],r[1],r[2]); }
+    if (snap.scl) window._uModel.scale.fromArray(snap.scl);
+    if (snap.matStates) {
+      let i = 0;
+      window._uModel.traverse(obj => {
+        if (obj.isMesh && obj.material && snap.matStates[i]) {
+          const ms = snap.matStates[i];
+          if (ms.color) obj.material.color.set(ms.color);
+          if (ms.opacity !== undefined) { obj.material.opacity = ms.opacity; obj.material.transparent = ms.opacity < 1; }
+          if (ms.wireframe !== undefined) obj.material.wireframe = ms.wireframe;
+          obj.material.needsUpdate = true;
+          i++;
+        }
+      });
+    }
+    if (snap.cam && window._uCamera) {
+      window._uCamera.position.fromArray(snap.cam.pos);
+      if (snap.cam.target && window._uControls) window._uControls.target.fromArray(snap.cam.target);
+    }
     return;
   }
 
@@ -22831,6 +22891,441 @@ if (typeof _origUretimAddModel === 'function') {
     }, 500);
   };
 }
+
+// ════════════════════════════════════════════════════════════
+//  5.3 — GÖZ TAKİP SİMÜLASYONU (Eye-Tracking Heatmap)
+// ════════════════════════════════════════════════════════════
+var _eyeTrackOverlay = null;
+function _toggleEyeTrackHeatmap() {
+  if (_eyeTrackOverlay) { _eyeTrackOverlay.remove(); _eyeTrackOverlay = null; toast('Göz takip kapatıldı', 'ok'); return; }
+  const imgC = document.getElementById('img-canvas');
+  if (!imgC || !imgC.width) return toast('Önce resim yükleyin', 'err');
+  const ctx = imgC.getContext('2d');
+  const imgData = ctx.getImageData(0, 0, imgC.width, imgC.height);
+  const w = imgC.width, h = imgC.height;
+  // Saliency hesapla — parlaklık + kontrast + merkez ağırlığı
+  const blockSize = 16;
+  const cols = Math.ceil(w / blockSize), rows = Math.ceil(h / blockSize);
+  const saliency = new Float32Array(cols * rows);
+  let maxSal = 0;
+  for (let by = 0; by < rows; by++) {
+    for (let bx = 0; bx < cols; bx++) {
+      let sumBright = 0, sumContrast = 0, count = 0;
+      for (let py = by * blockSize; py < Math.min((by+1)*blockSize, h); py++) {
+        for (let px = bx * blockSize; px < Math.min((bx+1)*blockSize, w); px++) {
+          const i = (py * w + px) * 4;
+          const bright = (imgData.data[i] * 0.299 + imgData.data[i+1] * 0.587 + imgData.data[i+2] * 0.114) / 255;
+          sumBright += bright;
+          // Kontrast: komşu piksellerle fark
+          if (px > 0) { const j = (py * w + px - 1) * 4; sumContrast += Math.abs(imgData.data[i] - imgData.data[j]) / 255; }
+          if (py > 0) { const j = ((py-1) * w + px) * 4; sumContrast += Math.abs(imgData.data[i] - imgData.data[j]) / 255; }
+          count++;
+        }
+      }
+      const avgBright = sumBright / count;
+      const avgContrast = sumContrast / count;
+      // Merkez ağırlığı — %30 bonus (göz doğal olarak merkeze bakar)
+      const cx = (bx + 0.5) / cols, cy = (by + 0.5) / rows;
+      const centerWeight = 1 - Math.sqrt((cx-0.5)**2 + (cy-0.5)**2) * 0.6;
+      // Üst 1/3 bonus — göz yukarıdan başlar (Gutenberg diyagramı)
+      const topBonus = cy < 0.33 ? 1.2 : 1;
+      const sal = (avgContrast * 0.6 + avgBright * 0.2 + 0.2) * centerWeight * topBonus;
+      saliency[by * cols + bx] = sal;
+      if (sal > maxSal) maxSal = sal;
+    }
+  }
+  // Heatmap canvas oluştur
+  const heatC = document.createElement('canvas');
+  heatC.width = w; heatC.height = h;
+  const hCtx = heatC.getContext('2d');
+  hCtx.clearRect(0, 0, w, h);
+  for (let by = 0; by < rows; by++) {
+    for (let bx = 0; bx < cols; bx++) {
+      const val = saliency[by * cols + bx] / maxSal;
+      const x = bx * blockSize, y = by * blockSize;
+      const r = blockSize * 1.5;
+      const grad = hCtx.createRadialGradient(x + blockSize/2, y + blockSize/2, 0, x + blockSize/2, y + blockSize/2, r);
+      const alpha = val * 0.6;
+      if (val > 0.7) { grad.addColorStop(0, `rgba(255,0,0,${alpha})`); grad.addColorStop(1, 'rgba(255,0,0,0)'); }
+      else if (val > 0.4) { grad.addColorStop(0, `rgba(255,255,0,${alpha})`); grad.addColorStop(1, 'rgba(255,255,0,0)'); }
+      else { grad.addColorStop(0, `rgba(0,100,255,${alpha*0.5})`); grad.addColorStop(1, 'rgba(0,100,255,0)'); }
+      hCtx.fillStyle = grad;
+      hCtx.fillRect(x - r, y - r, blockSize + r*2, blockSize + r*2);
+    }
+  }
+  // Overlay olarak canvas'ın üzerine koy
+  const wrap = imgC.parentElement;
+  const overlay = document.createElement('div');
+  overlay.id = 'eye-track-overlay';
+  overlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:20;display:flex;align-items:center;justify-content:center;';
+  const overlayC = document.createElement('canvas');
+  overlayC.width = imgC.clientWidth; overlayC.height = imgC.clientHeight;
+  overlayC.style.cssText = 'width:' + imgC.clientWidth + 'px;height:' + imgC.clientHeight + 'px;opacity:0.55;mix-blend-mode:screen;';
+  overlayC.getContext('2d').drawImage(heatC, 0, 0, overlayC.width, overlayC.height);
+  overlay.appendChild(overlayC);
+  // Etiketler
+  const label = document.createElement('div');
+  label.style.cssText = 'position:absolute;top:8px;left:8px;background:rgba(0,0,0,.8);color:#fff;font-size:9px;padding:4px 8px;border-radius:4px;font-weight:700;';
+  label.innerHTML = '👁 GÖZ TAKİP HARİTASI<br><span style="color:#ff4444">●</span> Yoğun <span style="color:#ffff00">●</span> Orta <span style="color:#4488ff">●</span> Düşük';
+  overlay.appendChild(label);
+  // Skor
+  const centerScore = Math.round((saliency[Math.floor(rows/2) * cols + Math.floor(cols/2)] / maxSal) * 100);
+  const scoreEl = document.createElement('div');
+  scoreEl.style.cssText = 'position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.8);color:#00ff88;font-size:10px;padding:4px 10px;border-radius:4px;font-weight:800;';
+  scoreEl.textContent = 'Merkez Odak: ' + centerScore + '%';
+  overlay.appendChild(scoreEl);
+  wrap.style.position = 'relative';
+  wrap.appendChild(overlay);
+  _eyeTrackOverlay = overlay;
+  toast('👁 Göz takip heatmap oluşturuldu', 'ok');
+  // Fenix log
+  if (typeof logShadow === 'function') logShadow('eye-tracking', { centerScore, blockCount: cols * rows });
+}
+
+// ════════════════════════════════════════════════════════════
+//  5.4 — A/B TEST SİMÜLATÖRÜ
+// ════════════════════════════════════════════════════════════
+var _abTestModal = null;
+function _openABTestSimulator() {
+  if (_abTestModal) { _abTestModal.remove(); _abTestModal = null; return; }
+  const imgC = document.getElementById('img-canvas');
+  if (!imgC || !imgC.width) return toast('Önce resim yükleyin', 'err');
+  const modal = document.createElement('div');
+  modal.id = 'ab-test-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.92);display:flex;flex-direction:column;align-items:center;padding:20px;overflow-y:auto;';
+  // Başlık
+  modal.innerHTML = `
+    <div style="display:flex;justify-content:space-between;width:100%;max-width:1000px;align-items:center;margin-bottom:15px;">
+      <div style="color:#00c8ff;font-size:14px;font-weight:800;letter-spacing:1px;">⚡ A/B TEST SİMÜLATÖRÜ</div>
+      <button onclick="document.getElementById('ab-test-modal').remove();_abTestModal=null;" style="background:none;border:1px solid rgba(255,255,255,.2);color:#fff;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:11px;">✕ Kapat</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;width:100%;max-width:1000px;">
+      <div style="background:rgba(0,200,255,.05);border:1px solid rgba(0,200,255,.2);border-radius:8px;padding:12px;">
+        <div style="color:#00c8ff;font-size:10px;font-weight:800;margin-bottom:8px;letter-spacing:1px;">VARYANT A — Orijinal</div>
+        <canvas id="ab-canvas-a" style="width:100%;border-radius:4px;background:#111;"></canvas>
+        <div id="ab-metrics-a" style="margin-top:10px;"></div>
+      </div>
+      <div style="background:rgba(249,115,22,.05);border:1px solid rgba(249,115,22,.2);border-radius:8px;padding:12px;">
+        <div style="color:#F97316;font-size:10px;font-weight:800;margin-bottom:8px;letter-spacing:1px;">VARYANT B — Modifiye</div>
+        <canvas id="ab-canvas-b" style="width:100%;border-radius:4px;background:#111;"></canvas>
+        <div id="ab-metrics-b" style="margin-top:10px;"></div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button onclick="_abApplyVariant('warm')" style="padding:6px 16px;border-radius:4px;border:1px solid rgba(0,200,255,.3);background:rgba(0,200,255,.08);color:#00c8ff;font-size:9px;font-weight:700;cursor:pointer;">🔥 Sıcak Ton</button>
+      <button onclick="_abApplyVariant('cool')" style="padding:6px 16px;border-radius:4px;border:1px solid rgba(0,200,255,.3);background:rgba(0,200,255,.08);color:#00c8ff;font-size:9px;font-weight:700;cursor:pointer;">❄ Soğuk Ton</button>
+      <button onclick="_abApplyVariant('bright')" style="padding:6px 16px;border-radius:4px;border:1px solid rgba(0,200,255,.3);background:rgba(0,200,255,.08);color:#00c8ff;font-size:9px;font-weight:700;cursor:pointer;">☀ Parlak</button>
+      <button onclick="_abApplyVariant('contrast')" style="padding:6px 16px;border-radius:4px;border:1px solid rgba(0,200,255,.3);background:rgba(0,200,255,.08);color:#00c8ff;font-size:9px;font-weight:700;cursor:pointer;">◐ Kontrast</button>
+      <button onclick="_abApplyVariant('vintage')" style="padding:6px 16px;border-radius:4px;border:1px solid rgba(0,200,255,.3);background:rgba(0,200,255,.08);color:#00c8ff;font-size:9px;font-weight:700;cursor:pointer;">📷 Vintage</button>
+    </div>
+    <div id="ab-winner" style="margin-top:12px;color:#00ff88;font-size:12px;font-weight:800;display:none;padding:8px 20px;border:1px solid rgba(0,255,136,.3);border-radius:6px;"></div>
+  `;
+  document.body.appendChild(modal);
+  _abTestModal = modal;
+  // Varyant A — orijinal
+  setTimeout(() => {
+    const cA = document.getElementById('ab-canvas-a');
+    if (cA) { cA.width = imgC.width; cA.height = imgC.height; cA.getContext('2d').drawImage(imgC, 0, 0); _abCalcMetrics('a', cA); }
+  }, 100);
+}
+
+function _abApplyVariant(type) {
+  const imgC = document.getElementById('img-canvas');
+  const cB = document.getElementById('ab-canvas-b');
+  if (!imgC || !cB) return;
+  cB.width = imgC.width; cB.height = imgC.height;
+  const ctx = cB.getContext('2d');
+  ctx.drawImage(imgC, 0, 0);
+  const imgData = ctx.getImageData(0, 0, cB.width, cB.height);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if (type === 'warm')     { d[i] = Math.min(255, d[i] * 1.1); d[i+2] = d[i+2] * 0.9; }
+    else if (type === 'cool')    { d[i] = d[i] * 0.9; d[i+2] = Math.min(255, d[i+2] * 1.12); }
+    else if (type === 'bright')  { d[i] = Math.min(255, d[i] * 1.15); d[i+1] = Math.min(255, d[i+1] * 1.15); d[i+2] = Math.min(255, d[i+2] * 1.15); }
+    else if (type === 'contrast'){ const avg = (d[i]+d[i+1]+d[i+2])/3; const f = 1.3; d[i] = Math.min(255, Math.max(0, (d[i]-128)*f+128)); d[i+1] = Math.min(255, Math.max(0, (d[i+1]-128)*f+128)); d[i+2] = Math.min(255, Math.max(0, (d[i+2]-128)*f+128)); }
+    else if (type === 'vintage') { const avg = (d[i]+d[i+1]+d[i+2])/3; d[i] = Math.min(255, avg * 1.1 + 20); d[i+1] = avg * 0.95 + 10; d[i+2] = avg * 0.8; }
+  }
+  ctx.putImageData(imgData, 0, 0);
+  _abCalcMetrics('b', cB);
+  // Kazanan karşılaştırma
+  setTimeout(_abCompareWinner, 200);
+}
+
+function _abCalcMetrics(variant, canvas) {
+  const ctx = canvas.getContext('2d');
+  const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  let sumBright = 0, sumSat = 0, sumContrast = 0, count = 0;
+  for (let i = 0; i < data.length; i += 16) { // Her 4. piksel örnekle
+    const r = data[i], g = data[i+1], b = data[i+2];
+    const bright = (r * 0.299 + g * 0.587 + b * 0.114) / 255;
+    const max = Math.max(r,g,b), min = Math.min(r,g,b);
+    const sat = max > 0 ? (max - min) / max : 0;
+    sumBright += bright; sumSat += sat;
+    if (i > 0) sumContrast += Math.abs(bright - (data[i-16]*0.299+data[i-15]*0.587+data[i-14]*0.114)/255);
+    count++;
+  }
+  const brightness = Math.round(sumBright / count * 100);
+  const saturation = Math.round(sumSat / count * 100);
+  const contrast = Math.round(sumContrast / count * 1000);
+  // Engagement skoru tahmini
+  const engagement = Math.min(100, Math.round(brightness * 0.3 + saturation * 0.4 + contrast * 0.3));
+  const el = document.getElementById('ab-metrics-' + variant);
+  if (el) el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:8px;">
+      <div style="color:rgba(255,255,255,.5);">Parlaklık</div><div style="color:#fbbf24;text-align:right;font-weight:700;">${brightness}%</div>
+      <div style="color:rgba(255,255,255,.5);">Doygunluk</div><div style="color:#a855f7;text-align:right;font-weight:700;">${saturation}%</div>
+      <div style="color:rgba(255,255,255,.5);">Kontrast</div><div style="color:#3b82f6;text-align:right;font-weight:700;">${contrast}</div>
+      <div style="color:rgba(255,255,255,.5);">Engagement</div><div style="color:#00ff88;text-align:right;font-weight:800;">${engagement}%</div>
+    </div>`;
+  return engagement;
+}
+
+function _abCompareWinner() {
+  const cA = document.getElementById('ab-canvas-a'), cB = document.getElementById('ab-canvas-b');
+  if (!cA || !cB || !cB.width) return;
+  const sA = _abCalcMetrics('a', cA), sB = _abCalcMetrics('b', cB);
+  const winner = document.getElementById('ab-winner');
+  if (winner) {
+    winner.style.display = 'block';
+    if (sB > sA) { winner.textContent = '🏆 Varyant B kazanıyor! (Engagement +' + (sB - sA) + '%)'; winner.style.color = '#F97316'; winner.style.borderColor = 'rgba(249,115,22,.4)'; }
+    else if (sA > sB) { winner.textContent = '🏆 Varyant A daha iyi! (Engagement +' + (sA - sB) + '%)'; winner.style.color = '#00c8ff'; winner.style.borderColor = 'rgba(0,200,255,.4)'; }
+    else { winner.textContent = '🤝 Eşit performans'; winner.style.color = '#fbbf24'; }
+  }
+  if (typeof logShadow === 'function') logShadow('ab-test', { scoreA: sA, scoreB: sB, winner: sB > sA ? 'B' : 'A' });
+}
+
+// ════════════════════════════════════════════════════════════
+//  3.4 — KULLANICI TAKİP (Session + Action Tracking)
+// ════════════════════════════════════════════════════════════
+var _userTracking = {
+  sessionId: 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2,6),
+  startTime: Date.now(),
+  actions: [],
+  modeTime: {},
+  _lastMode: null,
+  _lastModeStart: Date.now()
+};
+
+function _trackAction(action, detail) {
+  const entry = { t: Date.now() - _userTracking.startTime, action, detail: detail || null, mode: S?.mode || 'unknown' };
+  _userTracking.actions.push(entry);
+  if (_userTracking.actions.length > 500) _userTracking.actions.shift(); // Max 500 kayıt
+  // Mod süresi
+  const curMode = S?.mode || 'unknown';
+  if (curMode !== _userTracking._lastMode) {
+    if (_userTracking._lastMode) {
+      _userTracking.modeTime[_userTracking._lastMode] = (_userTracking.modeTime[_userTracking._lastMode] || 0) + (Date.now() - _userTracking._lastModeStart);
+    }
+    _userTracking._lastMode = curMode;
+    _userTracking._lastModeStart = Date.now();
+  }
+}
+
+function _getTrackingSummary() {
+  // Son mod süresini ekle
+  if (_userTracking._lastMode) {
+    _userTracking.modeTime[_userTracking._lastMode] = (_userTracking.modeTime[_userTracking._lastMode] || 0) + (Date.now() - _userTracking._lastModeStart);
+    _userTracking._lastModeStart = Date.now();
+  }
+  const totalSec = Math.round((Date.now() - _userTracking.startTime) / 1000);
+  const topActions = {};
+  _userTracking.actions.forEach(a => { topActions[a.action] = (topActions[a.action] || 0) + 1; });
+  const sorted = Object.entries(topActions).sort((a,b) => b[1] - a[1]).slice(0, 10);
+  return {
+    sessionId: _userTracking.sessionId,
+    totalTime: totalSec,
+    totalActions: _userTracking.actions.length,
+    topActions: sorted,
+    modeTime: _userTracking.modeTime,
+    avgActionPerMin: totalSec > 0 ? Math.round(_userTracking.actions.length / (totalSec / 60) * 10) / 10 : 0
+  };
+}
+
+// Mode switch tracking — mevcut hook'a ekleme
+var _switchModeForTracking = typeof switchMode === 'function' ? switchMode : null;
+if (_switchModeForTracking) {
+  switchMode = function(mode) {
+    _trackAction('mode-switch', mode);
+    _switchModeForTracking(mode);
+  };
+}
+
+// Tool usage tracking
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest?.('.sb-btn, .ai-btn, .uretim-tool-btn, .rps-btn');
+  if (btn) _trackAction('tool-click', btn.title || btn.textContent?.trim()?.substring(0, 30));
+}, true);
+
+// ════════════════════════════════════════════════════════════
+//  KATMANLAR PANELİ (2D Layer System)
+// ════════════════════════════════════════════════════════════
+var _layers = [];
+var _activeLayerId = null;
+
+function _initLayers() {
+  if (_layers.length > 0) return;
+  // Ana resim katmanı
+  _layers.push({ id: 'layer-bg', name: 'Arka Plan', type: 'image', visible: true, opacity: 1, locked: false, canvas: 'img-canvas' });
+  // Çizim katmanı
+  _layers.push({ id: 'layer-draw', name: 'Çizim', type: 'draw', visible: true, opacity: 1, locked: false, canvas: 'draw-canvas' });
+  _activeLayerId = 'layer-draw';
+}
+
+function _addLayer(name, type) {
+  _initLayers();
+  const id = 'layer-' + Date.now();
+  const newCanvas = document.createElement('canvas');
+  newCanvas.id = id;
+  const imgC = document.getElementById('img-canvas');
+  if (imgC) { newCanvas.width = imgC.width; newCanvas.height = imgC.height; }
+  newCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;';
+  const wrap = imgC?.parentElement;
+  if (wrap) wrap.appendChild(newCanvas);
+  const layer = { id, name: name || 'Katman ' + _layers.length, type: type || 'paint', visible: true, opacity: 1, locked: false, canvas: id };
+  _layers.push(layer);
+  _activeLayerId = id;
+  _renderLayersPanel();
+  _trackAction('layer-add', name);
+  return layer;
+}
+
+function _removeLayer(id) {
+  if (id === 'layer-bg' || id === 'layer-draw') return toast('Temel katmanlar silinemez', 'err');
+  const idx = _layers.findIndex(l => l.id === id);
+  if (idx < 0) return;
+  const el = document.getElementById(id);
+  if (el) el.remove();
+  _layers.splice(idx, 1);
+  if (_activeLayerId === id) _activeLayerId = _layers[_layers.length - 1]?.id;
+  _renderLayersPanel();
+  _trackAction('layer-remove', id);
+}
+
+function _toggleLayerVisibility(id) {
+  const layer = _layers.find(l => l.id === id);
+  if (!layer) return;
+  layer.visible = !layer.visible;
+  const el = document.getElementById(layer.canvas);
+  if (el) el.style.display = layer.visible ? '' : 'none';
+  _renderLayersPanel();
+}
+
+function _setLayerOpacity(id, opacity) {
+  const layer = _layers.find(l => l.id === id);
+  if (!layer) return;
+  layer.opacity = opacity;
+  const el = document.getElementById(layer.canvas);
+  if (el) el.style.opacity = opacity;
+  _renderLayersPanel();
+}
+
+function _moveLayer(id, dir) {
+  const idx = _layers.findIndex(l => l.id === id);
+  if (idx < 0) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= _layers.length) return;
+  [_layers[idx], _layers[newIdx]] = [_layers[newIdx], _layers[idx]];
+  // Z-order güncelle
+  _layers.forEach((l, i) => {
+    const el = document.getElementById(l.canvas);
+    if (el) el.style.zIndex = i;
+  });
+  _renderLayersPanel();
+}
+
+function _renderLayersPanel() {
+  const body = document.getElementById('layers-panel-body');
+  if (!body) return;
+  body.innerHTML = '';
+  [..._layers].reverse().forEach(layer => {
+    const div = document.createElement('div');
+    div.style.cssText = 'display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:4px;cursor:pointer;' +
+      (layer.id === _activeLayerId ? 'background:rgba(0,200,255,.12);border:1px solid rgba(0,200,255,.3);' : 'background:rgba(255,255,255,.03);border:1px solid transparent;');
+    div.onclick = () => { _activeLayerId = layer.id; _renderLayersPanel(); };
+    div.innerHTML = `
+      <button onclick="event.stopPropagation();_toggleLayerVisibility('${layer.id}')" style="background:none;border:none;color:${layer.visible ? '#00c8ff' : '#333'};cursor:pointer;font-size:10px;padding:0;">${layer.visible ? '👁' : '👁‍🗨'}</button>
+      <span style="flex:1;font-size:8px;color:${layer.id === _activeLayerId ? '#00c8ff' : '#888'};font-weight:${layer.id === _activeLayerId ? '700' : '400'};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${layer.name}</span>
+      <input type="range" min="0" max="1" step="0.05" value="${layer.opacity}" oninput="_setLayerOpacity('${layer.id}',this.value)" onclick="event.stopPropagation()" style="width:40px;height:10px;accent-color:#00c8ff;">
+      ${layer.id !== 'layer-bg' && layer.id !== 'layer-draw' ? `<button onclick="event.stopPropagation();_removeLayer('${layer.id}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:9px;padding:0;">✕</button>` : ''}
+    `;
+    body.appendChild(div);
+  });
+}
+
+function _openLayersPanel() {
+  _initLayers();
+  const panel = document.getElementById('slide-panel');
+  if (!panel) return;
+  const title = panel.querySelector('.sp-title');
+  if (title) title.textContent = '📚 Katmanlar';
+  const body = panel.querySelector('.sp-body');
+  if (body) {
+    body.id = 'layers-panel-body';
+    body.innerHTML = '';
+    // Üst bar
+    const topBar = document.createElement('div');
+    topBar.style.cssText = 'display:flex;gap:4px;margin-bottom:8px;';
+    topBar.innerHTML = `
+      <button onclick="_addLayer()" style="flex:1;padding:4px;border-radius:4px;border:1px solid rgba(0,200,255,.3);background:rgba(0,200,255,.08);color:#00c8ff;font-size:8px;font-weight:700;cursor:pointer;">+ Katman Ekle</button>
+      <button onclick="_addLayer('Metin','text')" style="flex:1;padding:4px;border-radius:4px;border:1px solid rgba(0,200,255,.3);background:rgba(0,200,255,.08);color:#00c8ff;font-size:8px;font-weight:700;cursor:pointer;">T Metin</button>
+    `;
+    body.appendChild(topBar);
+  }
+  _renderLayersPanel();
+  panel.classList.add('open');
+}
+
+// ════════════════════════════════════════════════════════════
+//  GÜVENLİK — CSRF Token + CSP Nonce + FingerprintJS hook
+// ════════════════════════════════════════════════════════════
+var _csrfToken = null;
+function _fetchCSRFToken() {
+  fetch('/api/csrf-token', { credentials: 'same-origin' })
+    .then(r => r.json())
+    .then(d => { _csrfToken = d.token; })
+    .catch(() => { _csrfToken = 'csrf_' + Date.now(); }); // Fallback: yerel token
+}
+// CSRF token'ı tüm POST/PUT/DELETE isteklerine ekle
+var _origFetch = window.fetch;
+window.fetch = function(url, opts) {
+  if (opts && ['POST','PUT','DELETE','PATCH'].includes(opts.method?.toUpperCase())) {
+    opts.headers = opts.headers || {};
+    if (_csrfToken) opts.headers['X-CSRF-Token'] = _csrfToken;
+  }
+  return _origFetch.call(this, url, opts);
+};
+
+// FingerprintJS — tarayıcı parmak izi
+var _deviceFingerprint = null;
+function _initFingerprint() {
+  // Basit fingerprint (kütüphane olmadan)
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.textBaseline = 'top';
+  ctx.font = '14px Arial';
+  ctx.fillText('Fenix fingerprint 🔥', 2, 2);
+  const canvasData = canvas.toDataURL();
+  const screen = window.screen.width + 'x' + window.screen.height + 'x' + window.screen.colorDepth;
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const plugins = navigator.plugins ? Array.from(navigator.plugins).map(p => p.name).join(',') : '';
+  const raw = canvasData + '|' + screen + '|' + tz + '|' + navigator.language + '|' + navigator.hardwareConcurrency + '|' + plugins;
+  // Simple hash
+  let hash = 0;
+  for (let i = 0; i < raw.length; i++) { hash = ((hash << 5) - hash) + raw.charCodeAt(i); hash |= 0; }
+  _deviceFingerprint = 'fp_' + Math.abs(hash).toString(36);
+  // Device header ekleme
+  var _origFetch2 = window.fetch;
+  window.fetch = function(url, opts) {
+    opts = opts || {};
+    opts.headers = opts.headers || {};
+    if (_deviceFingerprint) opts.headers['X-Device-FP'] = _deviceFingerprint;
+    return _origFetch2.call(this, url, opts);
+  };
+}
+
+// Init — sayfa yüklenince
+_fetchCSRFToken();
+_initFingerprint();
 
 </script>
 <!-- Tool cursor: body'nin direkt çocuğu — transform'lu atadan ETKİLENMEZ, position:fixed doğru çalışır -->

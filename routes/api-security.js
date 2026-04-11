@@ -244,4 +244,74 @@ router.post('/device/verify', async (req, res) => {
   }
 });
 
+// ════════════════════════════════════════════════════════════
+//  CSRF Token
+// ════════════════════════════════════════════════════════════
+const crypto = require('crypto');
+const _csrfTokens = new Map(); // token → expiry
+
+router.get('/csrf-token', (req, res) => {
+  const token = crypto.randomBytes(32).toString('hex');
+  _csrfTokens.set(token, Date.now() + 3600000); // 1 saat
+  // Eski token'ları temizle
+  for (const [k, v] of _csrfTokens) { if (v < Date.now()) _csrfTokens.delete(k); }
+  res.json({ token });
+});
+
+function validateCSRF(req, res, next) {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+  const token = req.headers['x-csrf-token'];
+  if (!token || !_csrfTokens.has(token)) return res.status(403).json({ ok: false, error: 'Geçersiz CSRF token.' });
+  if (_csrfTokens.get(token) < Date.now()) { _csrfTokens.delete(token); return res.status(403).json({ ok: false, error: 'CSRF token süresi doldu.' }); }
+  next();
+}
+
+// ════════════════════════════════════════════════════════════
+//  Kullanıcı Takip — Session Analytics
+// ════════════════════════════════════════════════════════════
+router.post('/track', (req, res) => {
+  try {
+    const { sessionId, totalTime, totalActions, topActions, modeTime, deviceFP } = req.body || {};
+    if (!sessionId) return res.status(400).json({ ok: false, error: 'sessionId gerekli' });
+    // Firestore'a kaydet (varsa)
+    const fdb = getDb();
+    if (fdb) {
+      fdb.collection('user_sessions').doc(sessionId).set({
+        sessionId, totalTime, totalActions, topActions, modeTime, deviceFP,
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        timestamp: new Date().toISOString()
+      }, { merge: true }).catch(() => {});
+    }
+    res.json({ ok: true });
+  } catch(e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// ════════════════════════════════════════════════════════════
+//  Device Fingerprint Doğrulama
+// ════════════════════════════════════════════════════════════
+router.post('/verify-device', async (req, res) => {
+  try {
+    const { fingerprint } = req.body || {};
+    if (!fingerprint) return res.status(400).json({ ok: false, error: 'fingerprint gerekli' });
+    const fdb = getDb();
+    if (!fdb) return res.json({ ok: true, verified: true, note: 'DB yok, otomatik onay' });
+    const doc = await fdb.collection('trusted_devices').doc(fingerprint).get();
+    if (doc.exists && doc.data().trusted) {
+      return res.json({ ok: true, verified: true });
+    }
+    // Yeni cihaz — kaydet ama doğrulanmamış
+    await fdb.collection('trusted_devices').doc(fingerprint).set({
+      fingerprint, trusted: false, firstSeen: new Date().toISOString(), ip: req.ip,
+      userAgent: req.headers['user-agent']
+    }, { merge: true });
+    return res.json({ ok: true, verified: false, message: 'Yeni cihaz — admin onayı gerekli' });
+  } catch(e) {
+    return res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 module.exports = router;
+module.exports.validateCSRF = validateCSRF;

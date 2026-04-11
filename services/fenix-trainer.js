@@ -29,11 +29,10 @@ const state = {
   budget:        20,
 };
 
-// ── Firestore checkpoint ──
+// ── Firestore checkpoint (firebase-admin) ──
 function getDb() {
   try {
-    const { Firestore } = require('@google-cloud/firestore');
-    return new Firestore({ projectId: process.env.FIRESTORE_PROJECT_ID || 'photoreel-491017' });
+    return require('firebase-admin').firestore();
   } catch(e) { return null; }
 }
 
@@ -398,6 +397,34 @@ const TOPICS = [
       'otonom-kalite-kontrol-gemini','otonom-begenmedi-yeniden-uret',
       'otonom-ogrenilenden-parametre-al','otonom-hic-soru-sormadan-bitir']
     .map(t => ({ topic: t, cat: 'plan-otonom-tam' })),
+
+  // Göz Takip & Heatmap (Eye-Tracking Simülasyonu)
+  ...['eyetrack-saliency-haritasi-olustur','eyetrack-gutenberg-diyagrami',
+      'eyetrack-merkez-agirlik-hesapla','eyetrack-kontrast-odak-analiz',
+      'eyetrack-renk-sicaklik-cekicilik','eyetrack-heatmap-overlay-gorsellestir',
+      'eyetrack-reklam-odak-puan-ver','eyetrack-cta-buton-konum-onerisi']
+    .map(t => ({ topic: t, cat: 'plan-eye-tracking' })),
+
+  // A/B Test & Engagement Tahmini
+  ...['abtest-varyant-olustur-renk-ton','abtest-parlaklik-doygunluk-karsilastir',
+      'abtest-engagement-skor-tahmin','abtest-kontrast-oran-analiz',
+      'abtest-kazanan-varyant-sec','abtest-sonuc-fenix-ogrenme-kaydet',
+      'abtest-kategori-bazli-optimizasyon','abtest-reels-kapak-en-iyi-sec']
+    .map(t => ({ topic: t, cat: 'plan-ab-test' })),
+
+  // Kullanıcı Davranış Analizi & Takip
+  ...['usertrack-session-baslat-bitir','usertrack-mod-gecis-suresi-olc',
+      'usertrack-en-cok-kullanilan-arac','usertrack-engagement-dakika-hesapla',
+      'usertrack-terk-noktasi-tespit','usertrack-uretkenlik-skoru',
+      'usertrack-oneri-motoru-kullaniciya-ozel','usertrack-anomali-tespit-bot-filtre']
+    .map(t => ({ topic: t, cat: 'plan-user-tracking' })),
+
+  // Güvenlik & Cihaz Doğrulama
+  ...['security-fingerprint-olustur','security-csrf-token-yonetimi',
+      'security-csp-nonce-uygula','security-xss-sanitize-input',
+      'security-rate-limit-akilli','security-cihaz-kayit-dogrulama',
+      'security-anomali-tespit-ip-davranis','security-admin-bildirim-alarm']
+    .map(t => ({ topic: t, cat: 'plan-security' })),
 ];
 
 // ── Gemini çağrısı — responseMimeType ile saf JSON zorla ──
