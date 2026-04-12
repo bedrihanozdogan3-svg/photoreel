@@ -466,30 +466,82 @@ const CATEGORIES = [
     color: '#3B82F6',
     gradient: 'linear-gradient(135deg,#3B82F6,#2563EB)',
     shadow: 'rgba(59,130,246,0.15)',
-    desc: '360 derece stitching, 3D & sanal tur',
+    desc: '360° cekim, spor, 3D, sanal tur, drone',
     commands: [
-      // Stitching & Birlestirme
-      { id:'360_stitch',     icon:'🧩', label:'360° Birlestir',    hint:'Dual-lens auto stitch',               type:'file', accept:'image/*,video/*,.insv', endpoint:'/api/pro/stitch',      field:'images' },
-      { id:'360_panorama',   icon:'🏔️', label:'Panorama',          hint:'Genis aci foto birlestir',            type:'file', accept:'image/*',        endpoint:'/api/pro/panorama',        field:'images' },
-      { id:'360_hdr',        icon:'🌅', label:'HDR Birlestir',     hint:'Farkli pozlama → HDR',                type:'file', accept:'image/*',        endpoint:'/api/pro/hdr-merge',       field:'images' },
-      { id:'360_timelapse',  icon:'⏰', label:'360 Timelapse',     hint:'360° zaman atlamali',                 type:'file', accept:'image/*',        endpoint:'/api/pro/360-timelapse',   field:'images' },
-      // Duzenleme & Efekt
-      { id:'360_horizon',    icon:'⚖️', label:'Horizon Lock',      hint:'Ufuk cizgisi kilitle',                type:'file', accept:'video/*',        endpoint:'/api/pro/horizon-lock',    field:'video' },
-      { id:'360_reframe',    icon:'🎯', label:'Reframe',           hint:'Yeniden cercevele + keyframe',        type:'file', accept:'video/*',        endpoint:'/api/pro/reframe',         field:'video' },
-      { id:'360_tiny',       icon:'🌍', label:'Tiny Planet',       hint:'Kucuk gezegen efekti',                type:'file', accept:'image/*,video/*',endpoint:'/api/pro/tiny-planet',     field:'video' },
-      { id:'360_stabilize',  icon:'🎥', label:'360 Stabilize',     hint:'Kuresel gyro stabilizasyon',          type:'file', accept:'video/*',        endpoint:'/api/pro/360-stabilize',   field:'video' },
-      { id:'360_denoise',    icon:'✨', label:'360 Gurultu Azalt', hint:'AI ile net goruntu',                  type:'file', accept:'video/*',        endpoint:'/api/pro/360-denoise',     field:'video' },
-      { id:'360_color',      icon:'🎨', label:'360 Renk Grading', hint:'Spherical color correction',          type:'file', accept:'video/*',        endpoint:'/api/pro/360-color',       field:'video' },
-      // 3D & Modelleme
-      { id:'360_3d',         icon:'🧊', label:'3D Model',          hint:'Fotogrametri → mesh + texture',       type:'file', accept:'image/*',        endpoint:'/api/pro/3d-model',        field:'images' },
-      { id:'360_pointcloud', icon:'☁️', label:'Point Cloud',       hint:'Nokta bulutu olustur',                type:'file', accept:'image/*',        endpoint:'/api/pro/point-cloud',     field:'images' },
-      { id:'360_floorplan',  icon:'📏', label:'Kat Plani',         hint:'360 → 2D kat plani cikart',           type:'file', accept:'image/*',        endpoint:'/api/pro/floor-plan',      field:'images' },
-      { id:'360_depth',      icon:'🔬', label:'Derinlik Haritasi', hint:'Mono/stereo depth estimation',        type:'file', accept:'image/*',        endpoint:'/api/pro/depth-map',       field:'images' },
-      // Sanal Tur & Yayinlama
-      { id:'360_vtour',      icon:'🏠', label:'Sanal Tur',         hint:'Interaktif 360 walkthrough',          type:'file', accept:'image/*',        endpoint:'/api/pro/virtual-tour',    field:'images' },
-      { id:'360_hotspot',    icon:'📌', label:'Hotspot Ekle',      hint:'Bilgi noktasi + link ekle',           type:'action', endpoint:'/api/pro/hotspot' },
-      { id:'360_embed',      icon:'🌐', label:'Web Embed',         hint:'Siteye 360 gomulu kod',               type:'action', endpoint:'/api/pro/360-embed' },
-      { id:'360_ar',         icon:'📱', label:'AR Goruntuler',     hint:'Arttirilmis gerceklik',               type:'file', accept:'image/*',        endpoint:'/api/pro/ar-view',         field:'images' },
+      // ── Stitching & Birlestirme ──
+      { id:'360_stitch',       icon:'🧩', label:'360° Birlestir',      hint:'Dual-lens auto stitch + seamless',      type:'file', accept:'image/*,video/*,.insv', endpoint:'/api/pro/stitch',          field:'images' },
+      { id:'360_panorama',     icon:'🏔️', label:'Panorama',            hint:'Genis aci foto birlestir',              type:'file', accept:'image/*',        endpoint:'/api/pro/panorama',            field:'images' },
+      { id:'360_hdr',          icon:'🌅', label:'HDR Birlestir',       hint:'Farkli pozlama → HDR tonemapping',      type:'file', accept:'image/*',        endpoint:'/api/pro/hdr-merge',           field:'images' },
+      { id:'360_timelapse',    icon:'⏰', label:'360 Timelapse',       hint:'360° zaman atlamali + deflicker',        type:'file', accept:'image/*',        endpoint:'/api/pro/360-timelapse',       field:'images' },
+      { id:'360_multicam',     icon:'📹', label:'Coklu Kamera',        hint:'Birden fazla 360 kamerayi sync + stitch',type:'file', accept:'video/*',       endpoint:'/api/pro/360-multicam',        field:'video' },
+      // ── Duzenleme & Efekt ──
+      { id:'360_horizon',      icon:'⚖️', label:'Horizon Lock',        hint:'Ufuk cizgisi kilitle + gyro duzelt',    type:'file', accept:'video/*',        endpoint:'/api/pro/horizon-lock',        field:'video' },
+      { id:'360_reframe',      icon:'🎯', label:'Reframe',             hint:'Yeniden cercevele + keyframe animasyon', type:'file', accept:'video/*',        endpoint:'/api/pro/reframe',             field:'video' },
+      { id:'360_tiny',         icon:'🌍', label:'Tiny Planet',         hint:'Kucuk gezegen efekti + animasyon',       type:'file', accept:'image/*,video/*',endpoint:'/api/pro/tiny-planet',         field:'video' },
+      { id:'360_stabilize',    icon:'🎥', label:'360 Stabilize',       hint:'Kuresel gyro + FlowState stabilize',    type:'file', accept:'video/*',        endpoint:'/api/pro/360-stabilize',       field:'video' },
+      { id:'360_denoise',      icon:'✨', label:'360 Gurultu Azalt',   hint:'AI ile net goruntu + gece modu',         type:'file', accept:'video/*',        endpoint:'/api/pro/360-denoise',         field:'video' },
+      { id:'360_color',        icon:'🎨', label:'360 Renk Grading',   hint:'Spherical color + tone mapping',         type:'file', accept:'video/*',        endpoint:'/api/pro/360-color',           field:'video' },
+      { id:'360_slowmo',       icon:'🐌', label:'360 Slow Motion',    hint:'Yuksek FPS + frame interpolation',       type:'file', accept:'video/*',        endpoint:'/api/pro/360-slowmo',          field:'video' },
+      { id:'360_hyperlapse',   icon:'🏃', label:'360 Hyperlapse',     hint:'Stabilize hizlandirilmis 360',           type:'file', accept:'video/*',        endpoint:'/api/pro/360-hyperlapse',      field:'video' },
+      { id:'360_transition',   icon:'🔀', label:'360 Gecis',          hint:'Sahne gecisleri + morph efekt',           type:'file', accept:'video/*',        endpoint:'/api/pro/360-transitions',     field:'video' },
+      // ── Motor Sporlari ──
+      { id:'360_motogp',       icon:'🏍️', label:'Motor Yaris',         hint:'Motosiklet/ATV 360 helmet cam + telemetri', type:'file', accept:'video/*', endpoint:'/api/pro/360-moto',            field:'video' },
+      { id:'360_formula',      icon:'🏎️', label:'Araba Yaris',         hint:'Onboard 360 + hiz gostergesi overlay', type:'file', accept:'video/*',        endpoint:'/api/pro/360-racing',          field:'video' },
+      { id:'360_rally',        icon:'🚗', label:'Ralli & Off-Road',    hint:'Toz, camur, vibrasyon stabilize',       type:'file', accept:'video/*',        endpoint:'/api/pro/360-rally',           field:'video' },
+      { id:'360_drift',        icon:'🔥', label:'Drift & Drag',        hint:'360 drift cam + lastik duman efekti',   type:'file', accept:'video/*',        endpoint:'/api/pro/360-drift',           field:'video' },
+      { id:'360_karting',      icon:'🏁', label:'Karting',              hint:'Go-kart 360 + tur sayaci overlay',      type:'file', accept:'video/*',        endpoint:'/api/pro/360-karting',         field:'video' },
+      { id:'360_bike',         icon:'🚴', label:'Bisiklet & BMX',      hint:'Helmet/handlebar 360 + GPS hiz',        type:'file', accept:'video/*',        endpoint:'/api/pro/360-cycling',         field:'video' },
+      { id:'360_boat',         icon:'🚤', label:'Tekne & Jet Ski',     hint:'Su ustu 360 + dalga stabilize',         type:'file', accept:'video/*',        endpoint:'/api/pro/360-boat',            field:'video' },
+      { id:'360_snowmobile',   icon:'🛷', label:'Kar Motoru & ATV',    hint:'Kar/toprak 360 + aksiyon cam',           type:'file', accept:'video/*',        endpoint:'/api/pro/360-snowmobile',      field:'video' },
+      // ── Hiz & Hava Sporlari ──
+      { id:'360_skydive',      icon:'🪂', label:'Skydiving',           hint:'Serbest dusus 360 + altimetre overlay', type:'file', accept:'video/*',        endpoint:'/api/pro/360-skydive',         field:'video' },
+      { id:'360_paraglide',    icon:'🪂', label:'Paragliding',         hint:'Yamac parasut 360 + rota haritasi',     type:'file', accept:'video/*',        endpoint:'/api/pro/360-paraglide',       field:'video' },
+      { id:'360_wingsuit',     icon:'🦅', label:'Wingsuit',            hint:'Wingsuit 360 + hiz + irtifa',           type:'file', accept:'video/*',        endpoint:'/api/pro/360-wingsuit',        field:'video' },
+      { id:'360_bungee',       icon:'🎢', label:'Bungee & Zipline',    hint:'Adrenalin 360 + G-kuvvet gostergesi',   type:'file', accept:'video/*',        endpoint:'/api/pro/360-bungee',          field:'video' },
+      { id:'360_climbing',     icon:'🧗', label:'Tirmanis & Dag',      hint:'Kaya/buz tirmanisi 360 + rota',         type:'file', accept:'video/*',        endpoint:'/api/pro/360-climbing',        field:'video' },
+      // ── Su Sporlari ──
+      { id:'360_surf',         icon:'🏄', label:'Sorf & Dalga',        hint:'Su alti/ustu 360 + dalga yakalama',     type:'file', accept:'video/*',        endpoint:'/api/pro/360-surf',            field:'video' },
+      { id:'360_dive',         icon:'🤿', label:'Dalis',               hint:'Su alti 360 + derinlik gostergesi',     type:'file', accept:'video/*',        endpoint:'/api/pro/360-dive',            field:'video' },
+      { id:'360_kayak',        icon:'🛶', label:'Kano & Rafting',      hint:'Nehir 360 + su sicragi stabilize',      type:'file', accept:'video/*',        endpoint:'/api/pro/360-kayak',           field:'video' },
+      { id:'360_wakeboard',    icon:'🏂', label:'Wakeboard & Kite',    hint:'Su kayagi 360 + hiz overlay',           type:'file', accept:'video/*',        endpoint:'/api/pro/360-wakeboard',       field:'video' },
+      { id:'360_sail',         icon:'⛵', label:'Yelken & Yat',        hint:'Acik deniz 360 + ruzgar gostergesi',    type:'file', accept:'video/*',        endpoint:'/api/pro/360-sailing',         field:'video' },
+      // ── Kis Sporlari ──
+      { id:'360_ski',          icon:'⛷️', label:'Kayak & Snowboard',   hint:'Pist 360 + hiz + GPS irtifa',           type:'file', accept:'video/*',        endpoint:'/api/pro/360-ski',             field:'video' },
+      { id:'360_iceclimb',     icon:'🧊', label:'Buz Tirmanisi',       hint:'Buzul 360 + sicaklik overlay',          type:'file', accept:'video/*',        endpoint:'/api/pro/360-ice-climb',       field:'video' },
+      { id:'360_hockey',       icon:'🏒', label:'Buz Hokeyi',          hint:'Arena 360 + oyuncu takip',              type:'file', accept:'video/*',        endpoint:'/api/pro/360-hockey',          field:'video' },
+      // ── Takim & Arena Sporlari ──
+      { id:'360_football',     icon:'⚽', label:'Futbol',               hint:'Saha 360 + top/oyuncu takip',           type:'file', accept:'video/*',        endpoint:'/api/pro/360-football',        field:'video' },
+      { id:'360_basketball',   icon:'🏀', label:'Basketbol',            hint:'Saha ici 360 + skor overlay',           type:'file', accept:'video/*',        endpoint:'/api/pro/360-basketball',      field:'video' },
+      { id:'360_tennis',       icon:'🎾', label:'Tenis & Badminton',    hint:'Kort 360 + top hizi takip',             type:'file', accept:'video/*',        endpoint:'/api/pro/360-tennis',          field:'video' },
+      { id:'360_volleyball',   icon:'🏐', label:'Voleybol & Hentbol',   hint:'Salon 360 + slow-mo replay',            type:'file', accept:'video/*',        endpoint:'/api/pro/360-volleyball',      field:'video' },
+      { id:'360_mma',          icon:'🥊', label:'Dovus & MMA',          hint:'Ring/kafes 360 + vuruş analiz',         type:'file', accept:'video/*',        endpoint:'/api/pro/360-combat',          field:'video' },
+      { id:'360_athletics',    icon:'🏃', label:'Atletizm & Kosu',      hint:'Pist 360 + tur suresi + hiz',           type:'file', accept:'video/*',        endpoint:'/api/pro/360-athletics',       field:'video' },
+      { id:'360_gymnastics',   icon:'🤸', label:'Jimnastik',            hint:'Salto/hareket 360 + slow-mo',           type:'file', accept:'video/*',        endpoint:'/api/pro/360-gymnastics',      field:'video' },
+      { id:'360_equestrian',   icon:'🏇', label:'Binicilik & At',       hint:'At ustu 360 + parkur takip',            type:'file', accept:'video/*',        endpoint:'/api/pro/360-equestrian',      field:'video' },
+      { id:'360_esport',       icon:'🎮', label:'E-Spor',               hint:'Oyun + oyuncu 360 + ekran overlay',     type:'file', accept:'video/*',        endpoint:'/api/pro/360-esport',          field:'video' },
+      // ── Drone & Hava ──
+      { id:'360_drone',        icon:'🚁', label:'Drone 360',            hint:'Havadan 360 + irtifa + GPS rota',       type:'file', accept:'video/*',        endpoint:'/api/pro/360-drone',           field:'video' },
+      { id:'360_fpvdrone',     icon:'🎮', label:'FPV Drone',            hint:'FPV yaris/freestyle 360 + hiz',         type:'file', accept:'video/*',        endpoint:'/api/pro/360-fpv',             field:'video' },
+      { id:'360_aerial',       icon:'🛩️', label:'Havadan Cekim',        hint:'Ucak/helikopter 360 panoramik',         type:'file', accept:'video/*',        endpoint:'/api/pro/360-aerial',          field:'video' },
+      // ── Spor Analiz & Overlay ──
+      { id:'360_telemetry',    icon:'📊', label:'Telemetri Overlay',    hint:'Hiz, RPM, G-kuvvet, GPS gosterge',     type:'file', accept:'video/*',        endpoint:'/api/pro/360-telemetry',       field:'video' },
+      { id:'360_tracker',      icon:'🎯', label:'Sporcu Takip',         hint:'AI ile oyuncu/arac otomatik takip',     type:'file', accept:'video/*',        endpoint:'/api/pro/360-tracker',         field:'video' },
+      { id:'360_replay',       icon:'🔁', label:'Instant Replay',       hint:'Kritik an slow-mo + coklu aci',         type:'file', accept:'video/*',        endpoint:'/api/pro/360-replay',          field:'video' },
+      { id:'360_scoreboard',   icon:'📋', label:'Skor Tablosu',         hint:'Canli skor + istatistik overlay',       type:'action', endpoint:'/api/pro/360-scoreboard' },
+      { id:'360_highlight',    icon:'🏆', label:'Spor Highlight',       hint:'AI ile en iyi anlari otomatik sec',     type:'file', accept:'video/*',        endpoint:'/api/pro/360-sport-highlight', field:'video' },
+      { id:'360_comparecam',   icon:'👀', label:'Aci Karsilastir',      hint:'2-4 farkli aciyi yan yana goster',      type:'file', accept:'video/*',        endpoint:'/api/pro/360-compare',         field:'video' },
+      // ── 3D & Modelleme ──
+      { id:'360_3d',           icon:'🧊', label:'3D Model',             hint:'Fotogrametri → mesh + texture',         type:'file', accept:'image/*',        endpoint:'/api/pro/3d-model',            field:'images' },
+      { id:'360_pointcloud',   icon:'☁️', label:'Point Cloud',          hint:'Nokta bulutu olustur + export',         type:'file', accept:'image/*',        endpoint:'/api/pro/point-cloud',         field:'images' },
+      { id:'360_floorplan',    icon:'📏', label:'Kat Plani',            hint:'360 → 2D kat plani cikart',             type:'file', accept:'image/*',        endpoint:'/api/pro/floor-plan',          field:'images' },
+      { id:'360_depth',        icon:'🔬', label:'Derinlik Haritasi',    hint:'Mono/stereo depth estimation',          type:'file', accept:'image/*',        endpoint:'/api/pro/depth-map',           field:'images' },
+      // ── Sanal Tur & Yayinlama ──
+      { id:'360_vtour',        icon:'🏠', label:'Sanal Tur',            hint:'Interaktif 360 walkthrough',            type:'file', accept:'image/*',        endpoint:'/api/pro/virtual-tour',        field:'images' },
+      { id:'360_hotspot',      icon:'📌', label:'Hotspot Ekle',         hint:'Bilgi noktasi + link + pop-up',         type:'action', endpoint:'/api/pro/hotspot' },
+      { id:'360_embed',        icon:'🌐', label:'Web Embed',            hint:'Siteye 360 gomulu iframe kod',          type:'action', endpoint:'/api/pro/360-embed' },
+      { id:'360_ar',           icon:'📱', label:'AR Goruntuler',        hint:'Arttirilmis gerceklik + WebXR',         type:'file', accept:'image/*',        endpoint:'/api/pro/ar-view',             field:'images' },
+      { id:'360_livestream',   icon:'📡', label:'360 Canli Yayin',      hint:'Spor etkinligi canli 360 stream',       type:'action', endpoint:'/api/pro/360-livestream' },
+      { id:'360_vr',           icon:'🥽', label:'VR Hazirla',           hint:'VR headset icin optimize et',           type:'file', accept:'video/*',        endpoint:'/api/pro/360-vr-export',       field:'video' },
     ]
   },
   {
@@ -646,11 +698,23 @@ let activeUploadCmd = null;
     trialCredits = TRIAL_MAX;
     localStorage.setItem('fenix_trial_credits', trialCredits);
   }
+  // Eski localStorage temizle (format degisti)
+  try {
+    const oldJobs = JSON.parse(localStorage.getItem('fenix_jobs') || '[]');
+    if (oldJobs.length > 0 && oldJobs[0].shortcutId) {
+      localStorage.removeItem('fenix_jobs');
+      jobs = [];
+    }
+  } catch(e) { localStorage.removeItem('fenix_jobs'); jobs = []; }
+
   setTimeout(() => {
-    document.getElementById('loadingScreen').classList.add('hide');
-    setTimeout(() => document.getElementById('loadingScreen').remove(), 400);
+    const ls = document.getElementById('loadingScreen');
+    if (ls) { ls.classList.add('hide'); setTimeout(() => ls.remove(), 400); }
   }, 600);
-  render();
+
+  try { render(); } catch(e) {
+    document.getElementById('mainContent').innerHTML = '<div style="padding:20px;color:#F97316;font-size:14px;font-weight:700">Yukleniyor... Sayfayi yenileyin.<br><br><span style="font-size:11px;color:#555">'+e.message+'</span></div>';
+  }
 })();
 
 // ════════════════════════════════════════
@@ -678,11 +742,17 @@ const isTrialActive = () => trialCredits > 0 && !isMaster();
 //  RENDER
 // ════════════════════════════════════════
 function render() {
-  renderCredits();
-  renderStatus();
-  renderJobsBtn();
-  if (currentView === 'shortcuts') renderShortcuts();
-  else renderJobs();
+  try {
+    renderCredits();
+    renderStatus();
+    renderJobsBtn();
+    if (currentView === 'shortcuts') renderShortcuts();
+    else renderJobs();
+  } catch(e) {
+    console.error('Render error:', e);
+    const c = document.getElementById('mainContent');
+    if (c) c.innerHTML = '<div style="padding:20px;color:#F97316">Hata: '+e.message+'</div>';
+  }
 }
 
 function renderCredits() {
