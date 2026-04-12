@@ -1192,16 +1192,17 @@ function switchTab(tab) {
 }
 
 // ══ GENEL DASHBOARD ══
+function parseMB(s){if(typeof s==='number')return s;if(typeof s==='string'){var n=parseFloat(s);return isNaN(n)?0:n}return 0}
+
 function loadGenel(){
   ft('/health').then(function(r){
     if(!r)return;
     var mem=r.memory||{};
-    var rss=Math.round((mem.rss||0)/1048576);
-    var heap=Math.round((mem.heapUsed||0)/1048576);
-    var heapT=Math.round((mem.heapTotal||0)/1048576);
+    var rss=parseMB(mem.rss);
+    var heap=parseMB(mem.heap);
     document.getElementById('srv-ram').textContent=heap+'MB';
     document.getElementById('si-rss').textContent=rss+'MB';
-    document.getElementById('si-heap').textContent=heap+'MB / '+heapT+'MB';
+    document.getElementById('si-heap').textContent=heap+'MB';
     document.getElementById('sys-mem').textContent=rss+'MB';
     var memPct=Math.min(100,Math.round(rss/420*100));
     document.getElementById('sys-mem-bar').style.width=memPct+'%';
@@ -1211,16 +1212,19 @@ function loadGenel(){
     var up=r.uptime||0;
     var d=Math.floor(up/86400),h=Math.floor((up%86400)/3600),m=Math.floor((up%3600)/60);
     document.getElementById('si-uptime').textContent=(d?d+'d ':'')+(h?h+'h ':'')+(m+'m');
-    document.getElementById('si-conns').textContent=r.activeConnections||0;
-    document.getElementById('g-connections').textContent=r.activeConnections||0;
+    var conns=r.connections||0;
+    document.getElementById('si-conns').textContent=conns;
+    document.getElementById('g-connections').textContent=conns;
     document.getElementById('si-version').textContent=r.version||'1.0.0';
 
-    // Circuit breakers
-    var cbs=r.circuitBreakers||{};
+    // Circuit breakers — array format
+    var circuits=r.circuits||[];
+    var cbMap={};
+    circuits.forEach(function(c){cbMap[c.name]=c});
     var cbList=document.getElementById('cb-list');
     var cbHtml='';
     ['gemini','claude','firestore'].forEach(function(name){
-      var cb=cbs[name]||{};
+      var cb=cbMap[name]||{};
       var state=cb.state||'CLOSED';
       var fails=cb.failures||0;
       var cls=state==='CLOSED'?'cb-closed':state==='OPEN'?'cb-open':'cb-half';
@@ -1230,19 +1234,14 @@ function loadGenel(){
         '<div class="cb-name" style="text-transform:capitalize">'+name+'</div>'+
         '<div class="cb-status '+cls+'">'+state+'</div>'+
         '<div class="cb-fail">'+fails+' fail</div></div>';
-      // Update node graph
       var nstat=document.getElementById('n-'+name.replace('firestore','firebase')+'-stat');
       if(nstat)nstat.textContent=state==='CLOSED'?'Active':state;
     });
     cbList.innerHTML=cbHtml;
 
-    // API stats
-    var tokensPerSec=cbs.gemini?Math.round((cbs.gemini.successCount||0)/Math.max(1,up)):0;
-    document.getElementById('n-api-stat').textContent=tokensPerSec+' req/s';
-    var cacheHit=cbs.gemini&&cbs.gemini.cacheHitRate?cbs.gemini.cacheHitRate:'—';
-    document.getElementById('n-cache-gemini').textContent='Cache '+cacheHit;
-    var lat=cbs.gemini&&cbs.gemini.avgLatency?Math.round(cbs.gemini.avgLatency)+'ms':'—';
-    document.getElementById('n-latency-api').textContent='Lat '+lat;
+    document.getElementById('n-api-stat').textContent=conns+' req/s';
+    document.getElementById('n-cache-gemini').textContent='Cache —';
+    document.getElementById('n-latency-api').textContent='Lat —';
   }).catch(function(){});
 
   // Health score from fenix status
