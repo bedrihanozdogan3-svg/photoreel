@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0A0A0A">
 <title>Fenix Otonom</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg: #0A0A0A;
@@ -31,6 +31,10 @@
   --yellow: #EAB308;
   --yellow2: #CA8A04;
   --red: #EF4444;
+  --pink: #EC4899;
+  --pink2: #DB2777;
+  --cyan: #06B6D4;
+  --cyan2: #0891B2;
   --master-green: #22C55E;
 }
 
@@ -51,7 +55,7 @@ body {
 
 /* ── HEADER ── */
 .header {
-  padding: env(safe-area-inset-top, 16px) 20px 14px;
+  padding: env(safe-area-inset-top, 16px) 16px 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -60,11 +64,7 @@ body {
   top: 0;
   z-index: 10;
 }
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
+.header-left { display: flex; align-items: center; gap: 10px; }
 .logo-icon {
   width: 34px; height: 34px;
   border-radius: 9px;
@@ -81,9 +81,7 @@ body {
   background: linear-gradient(135deg, #151515, #111);
   border-radius: 24px;
   padding: 6px 14px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: flex; align-items: center; gap: 6px;
   border: 1px solid var(--border2);
 }
 .credit-badge.low {
@@ -99,8 +97,7 @@ body {
   border: 1px solid var(--border2);
   border-radius: 24px;
   padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 12px; font-weight: 700;
   color: var(--text4);
   cursor: pointer;
   position: relative;
@@ -124,12 +121,10 @@ body {
 
 /* ── STATUS BADGES ── */
 .status-badge {
-  margin: 8px 16px 0;
+  margin: 6px 16px 0;
   border-radius: 14px;
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+  padding: 10px 14px;
+  display: flex; align-items: center; gap: 12px;
   box-shadow: 0 4px 16px rgba(0,0,0,0.2);
 }
 .status-badge.master {
@@ -141,118 +136,134 @@ body {
   border: 1px solid rgba(249,115,22,0.13);
 }
 .status-icon {
-  width: 38px; height: 38px;
-  border-radius: 11px;
+  width: 34px; height: 34px;
+  border-radius: 10px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 19px;
+  font-size: 17px;
 }
 .status-badge.master .status-icon { background: linear-gradient(135deg, rgba(34,197,94,0.13), rgba(34,197,94,0.06)); }
 .status-badge.trial .status-icon { background: linear-gradient(135deg, rgba(249,115,22,0.13), rgba(249,115,22,0.06)); }
-.status-title { font-size: 12px; font-weight: 900; letter-spacing: 1px; }
+.status-title { font-size: 11px; font-weight: 900; letter-spacing: 1px; }
 .status-badge.master .status-title { color: var(--master-green); }
 .status-badge.trial .status-title { color: var(--orange); }
-.status-desc { font-size: 10px; margin-top: 1px; }
+.status-desc { font-size: 9px; margin-top: 1px; }
 .status-badge.master .status-desc { color: #166534; }
 .status-badge.trial .status-desc { color: #9A3412; }
 .trial-count {
   background: linear-gradient(135deg, var(--orange), var(--orange2));
   border-radius: 24px;
-  padding: 4px 12px;
-  font-size: 14px; font-weight: 900; color: #000;
+  padding: 3px 10px;
+  font-size: 13px; font-weight: 900; color: #000;
   box-shadow: 0 2px 8px rgba(249,115,22,0.3);
 }
 
 /* ── MAIN CONTENT ── */
 .content {
   flex: 1;
-  padding: 12px 16px 0;
+  padding: 10px 12px 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
-.section-label {
-  font-size: 10px;
-  color: var(--text5);
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-bottom: 8px;
-  padding-left: 4px;
-}
 
-/* ── SHORTCUT BUTTONS ── */
-.shortcut {
-  width: 100%;
-  background: linear-gradient(135deg, var(--surface), #0f0f0f);
-  border: 1px solid var(--border);
+/* ── CATEGORY ACCORDION ── */
+.category {
+  margin-bottom: 8px;
   border-radius: 18px;
-  padding: 18px 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  transition: border-color 0.3s;
+}
+.category.open {
+  border-color: var(--cat-color, var(--border2));
+  box-shadow: 0 4px 20px var(--cat-shadow, rgba(0,0,0,0.3));
+}
+.category.locked {
+  background: #080808;
+  border-color: #111;
+  opacity: 0.35;
+}
+.cat-header {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
+  padding: 14px 14px;
   cursor: pointer;
-  transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
-  margin-bottom: 8px;
-  -webkit-appearance: none;
-  font-family: inherit;
-  text-align: left;
-  color: inherit;
 }
-.shortcut:active { transform: scale(0.97); }
-.shortcut.locked {
-  background: #080808;
-  border-color: #141414;
-  opacity: 0.35;
-  cursor: default;
-}
-.shortcut .glow {
+.cat-header:active { opacity: 0.85; }
+.cat-glow {
   position: absolute;
   left: 0; top: 15%; bottom: 15%;
   width: 3px;
   border-radius: 0 3px 3px 0;
 }
-.shortcut .sc-icon {
-  width: 52px; height: 52px;
-  border-radius: 14px;
+.cat-icon {
+  width: 46px; height: 46px;
+  border-radius: 13px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 28px;
+  font-size: 24px;
   flex-shrink: 0;
 }
-.shortcut .sc-label { font-size: 16px; font-weight: 800; letter-spacing: 0.3px; }
-.shortcut.locked .sc-label { color: var(--text5); }
-.shortcut .sc-desc { font-size: 11px; color: var(--text4); margin-top: 3px; line-height: 1.3; }
-.shortcut.locked .sc-desc { color: #282828; }
-.sc-btn {
-  border-radius: 12px;
-  padding: 8px 16px;
-  font-size: 12px;
-  font-weight: 900;
-  color: #000;
-  flex-shrink: 0;
+.cat-label { font-size: 15px; font-weight: 800; letter-spacing: 0.3px; color: #eee; }
+.category.locked .cat-label { color: var(--text5); }
+.cat-desc { font-size: 10px; color: var(--text4); margin-top: 2px; }
+.category.locked .cat-desc { color: #282828; }
+.cat-count {
+  font-size: 9px; font-weight: 700; color: var(--text4);
+  background: #1a1a1a;
+  border-radius: 10px;
+  padding: 3px 8px;
   letter-spacing: 0.5px;
 }
-
-/* ── EMPTY STATE ── */
-.empty-state {
-  text-align: center;
-  padding: 60px 0;
-  color: var(--text5);
+.cat-arrow {
+  font-size: 14px; color: var(--text4);
+  transition: transform 0.3s;
+  margin-left: auto;
+  flex-shrink: 0;
 }
-.empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
-.empty-text { font-size: 14px; font-weight: 600; color: var(--text4); }
-.empty-btn {
-  margin-top: 20px;
-  background: linear-gradient(135deg, var(--orange), var(--orange2));
-  border: none;
+.category.open .cat-arrow { transform: rotate(180deg); }
+
+/* ── SUB COMMANDS ── */
+.cat-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.35s ease;
+}
+.category.open .cat-body {
+  max-height: 2000px;
+}
+.sub-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  padding: 0 10px 12px;
+}
+.sub-cmd {
+  background: linear-gradient(135deg, #0d0d0d, #0a0a0a);
+  border: 1px solid #1a1a1a;
   border-radius: 14px;
-  padding: 14px 32px;
-  color: #000;
-  font-weight: 800;
+  padding: 14px 12px;
   cursor: pointer;
-  font-size: 14px;
-  font-family: inherit;
-  box-shadow: 0 4px 16px rgba(249,115,22,0.3);
+  transition: all 0.15s;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.sub-cmd:active { transform: scale(0.95); background: #151515; }
+.sub-cmd .sub-icon { font-size: 26px; margin-bottom: 6px; display: block; }
+.sub-cmd .sub-label { font-size: 11px; font-weight: 700; color: #ddd; line-height: 1.2; }
+.sub-cmd .sub-hint { font-size: 8px; color: var(--text5); margin-top: 3px; letter-spacing: 0.3px; }
+.sub-cmd.file-cmd { border-color: #222; }
+.sub-cmd.file-cmd:active { border-color: var(--cat-color, #333); }
+.sub-cmd .file-tag {
+  position: absolute; top: 6px; right: 6px;
+  font-size: 7px; font-weight: 800;
+  background: #1a1a1a;
+  color: var(--text4);
+  padding: 2px 5px;
+  border-radius: 4px;
   letter-spacing: 0.5px;
 }
 
@@ -261,64 +272,62 @@ body {
   background: linear-gradient(135deg, var(--surface), #0f0f0f);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 16px 18px;
+  padding: 14px 16px;
   margin-bottom: 8px;
 }
 .job-card.done { border-color: rgba(34,197,94,0.2); box-shadow: 0 4px 16px rgba(34,197,94,0.06); }
-.job-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-.job-icon { font-size: 24px; }
-.job-name { font-size: 13px; font-weight: 700; color: #ddd; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.job-meta { font-size: 11px; color: var(--text4); margin-top: 2px; }
-.job-status {
-  font-size: 10px; font-weight: 900; padding: 4px 10px; border-radius: 24px; letter-spacing: 0.5px;
-}
+.job-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.job-icon { font-size: 22px; }
+.job-name { font-size: 12px; font-weight: 700; color: #ddd; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.job-meta { font-size: 10px; color: var(--text4); margin-top: 2px; }
+.job-status { font-size: 9px; font-weight: 900; padding: 3px 8px; border-radius: 24px; letter-spacing: 0.5px; }
 .job-status.done { background: rgba(5,46,22,0.6); color: #22C55E; }
 .job-status.error { background: rgba(45,10,10,0.6); color: #EF4444; }
 .job-status.pending { background: rgba(26,26,0,0.6); color: #EAB308; }
-.job-progress {
-  background: #1a1a1a;
-  border-radius: 6px;
-  height: 4px;
-  overflow: hidden;
-}
-.job-progress-bar {
-  height: 100%;
-  border-radius: 6px;
-  transition: width 0.5s ease;
-}
+.job-progress { background: #1a1a1a; border-radius: 6px; height: 4px; overflow: hidden; }
+.job-progress-bar { height: 100%; border-radius: 6px; transition: width 0.5s ease; }
 .job-download {
-  display: block;
-  margin-top: 12px;
-  border-radius: 12px;
-  padding: 12px 0;
-  text-align: center;
-  color: #000;
-  font-weight: 900;
-  font-size: 14px;
-  text-decoration: none;
-  letter-spacing: 0.5px;
+  display: block; margin-top: 10px;
+  border-radius: 12px; padding: 11px 0;
+  text-align: center; color: #000;
+  font-weight: 900; font-size: 13px;
+  text-decoration: none; letter-spacing: 0.5px;
 }
-.job-error { margin-top: 8px; font-size: 11px; color: var(--red); background: rgba(26,0,0,0.4); border-radius: 8px; padding: 6px 10px; }
+.job-error { margin-top: 6px; font-size: 10px; color: var(--red); background: rgba(26,0,0,0.4); border-radius: 8px; padding: 5px 8px; }
+
+/* ── EMPTY STATE ── */
+.empty-state { text-align: center; padding: 50px 0; color: var(--text5); }
+.empty-icon { font-size: 44px; margin-bottom: 14px; opacity: 0.5; }
+.empty-text { font-size: 13px; font-weight: 600; color: var(--text4); }
+.empty-btn {
+  margin-top: 16px;
+  background: linear-gradient(135deg, var(--orange), var(--orange2));
+  border: none; border-radius: 14px;
+  padding: 12px 28px; color: #000;
+  font-weight: 800; cursor: pointer;
+  font-size: 13px; font-family: inherit;
+  box-shadow: 0 4px 16px rgba(249,115,22,0.3);
+}
 
 /* ── FUEL EMPTY ── */
 .fuel-empty {
   background: linear-gradient(135deg, #1a0000, #200000);
   border: 1px solid rgba(127,29,29,0.2);
   border-radius: 14px;
-  padding: 16px 18px;
+  padding: 14px 16px;
   text-align: center;
   box-shadow: 0 4px 16px rgba(239,68,68,0.06);
   margin-bottom: 8px;
 }
-.fuel-title { font-size: 14px; font-weight: 800; color: var(--red); }
-.fuel-desc { font-size: 11px; color: #991B1B; margin-top: 4px; }
+.fuel-title { font-size: 13px; font-weight: 800; color: var(--red); }
+.fuel-desc { font-size: 10px; color: #991B1B; margin-top: 3px; }
 
 /* ── FOOTER ── */
 .footer {
-  padding: 14px 16px env(safe-area-inset-bottom, 14px);
+  padding: 12px 16px env(safe-area-inset-bottom, 12px);
   text-align: center;
-  font-size: 10px;
-  color: #2a2a2a;
+  font-size: 9px;
+  color: #222;
   letter-spacing: 0.5px;
 }
 
@@ -326,23 +335,19 @@ body {
 .loading-screen {
   min-height: 100dvh;
   background: var(--bg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: fixed;
-  inset: 0;
-  z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  position: fixed; inset: 0; z-index: 100;
   transition: opacity 0.4s;
 }
 .loading-screen.hide { opacity: 0; pointer-events: none; }
 .loading-ring {
-  width: 64px; height: 64px;
-  margin: 0 auto 20px;
+  width: 60px; height: 60px;
+  margin: 0 auto 16px;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(249,115,22,0.25), rgba(249,115,22,0.06));
   border: 2px solid rgba(249,115,22,0.2);
   display: flex; align-items: center; justify-content: center;
-  font-size: 32px;
+  font-size: 28px;
   animation: loadPulse 1.5s ease-in-out infinite;
 }
 @keyframes loadPulse {
@@ -350,7 +355,6 @@ body {
   50% { transform: scale(1.1); opacity: 1; }
 }
 
-/* Hidden file input */
 #fileInput { display: none; }
 </style>
 </head>
@@ -361,7 +365,7 @@ body {
   <div style="text-align:center">
     <div class="loading-ring">🔥</div>
     <div style="font-size:18px;font-weight:800;color:var(--orange);letter-spacing:3px">FENIX</div>
-    <div style="font-size:11px;color:var(--text4);margin-top:6px;letter-spacing:1px">OTONOM PANEL</div>
+    <div style="font-size:10px;color:var(--text4);margin-top:5px;letter-spacing:1px">OTONOM PANEL</div>
   </div>
 </div>
 
@@ -392,7 +396,7 @@ body {
 <div class="content" id="mainContent"></div>
 
 <!-- FOOTER -->
-<div class="footer">Telefonu kapatsan da islem devam eder</div>
+<div class="footer">Telefonu kapatsan da islem devam eder · Fenix AI</div>
 
 <!-- FILE INPUT -->
 <input type="file" id="fileInput">
@@ -402,17 +406,212 @@ body {
 //  CONFIG
 // ════════════════════════════════════════
 const API = window.location.origin;
-
-const SHORTCUTS = [
-  { id:'pro', label:'Video Isle', icon:'🎬', color:'#F97316', gradient:'linear-gradient(135deg,#F97316,#EA580C)', desc:'Kurgu, efekt, stabilizasyon', accept:'video/*', endpoint:'/api/pro/render', field:'video' },
-  { id:'360', label:'360° Birlestir', icon:'🌐', color:'#3B82F6', gradient:'linear-gradient(135deg,#3B82F6,#2563EB)', desc:'Stitching, horizon lock', accept:'image/*,video/*,.insv', endpoint:'/api/pro/stitch', field:'images' },
-  { id:'dublaj', label:'Dublaj Yap', icon:'🎙️', color:'#8B5CF6', gradient:'linear-gradient(135deg,#8B5CF6,#7C3AED)', desc:'Ses klonlama, lip-sync', accept:'video/*,audio/*', endpoint:'/api/dubbing/voiceover', field:'video' },
-  { id:'eticaret', label:'Urun Cek', icon:'🛍️', color:'#10B981', gradient:'linear-gradient(135deg,#10B981,#059669)', desc:'Arka plan sil, 3D tur', accept:'image/*', endpoint:'/api/pro/remove-bg', field:'image' },
-  { id:'free', label:'Hizli Isle', icon:'⚡', color:'#EAB308', gradient:'linear-gradient(135deg,#EAB308,#CA8A04)', desc:'Temel video isleme', accept:'video/*,image/*', endpoint:'/api/pro/render', field:'video' },
-];
-
-const ALL_IDS = ['pro','360','dublaj','eticaret','free'];
 const TRIAL_MAX = 2;
+const ALL_IDS = ['pro','360','dublaj','eticaret','otonom'];
+
+// ════════════════════════════════════════
+//  CATEGORIES + SUB-COMMANDS
+// ════════════════════════════════════════
+const CATEGORIES = [
+  {
+    id: 'pro',
+    label: 'PRO Video',
+    icon: '🎬',
+    color: '#F97316',
+    gradient: 'linear-gradient(135deg,#F97316,#EA580C)',
+    shadow: 'rgba(249,115,22,0.15)',
+    desc: 'Profesyonel video uretim & kurgu',
+    commands: [
+      // Temel Uretim
+      { id:'pro_render',     icon:'🎞️', label:'Video Render',      hint:'Tam kurgu + efekt + cikti',           type:'file', accept:'video/*',        endpoint:'/api/pro/render',          field:'video' },
+      { id:'pro_cut',        icon:'✂️', label:'Akilli Kesim',      hint:'AI sahne algilama + otomatik montaj', type:'file', accept:'video/*',        endpoint:'/api/pro/smart-cut',       field:'video' },
+      { id:'pro_highlight',  icon:'🏆', label:'Highlight Reel',    hint:'En iyi anlari sec + birlestir',       type:'file', accept:'video/*',        endpoint:'/api/pro/highlight',       field:'video' },
+      { id:'pro_trailer',    icon:'🎪', label:'Trailer Olustur',   hint:'Sinematik on izleme',                 type:'file', accept:'video/*',        endpoint:'/api/pro/trailer',         field:'video' },
+      // Gorsel Efektler
+      { id:'pro_effect',     icon:'✨', label:'Efekt Ekle',        hint:'Glow, glitch, bokeh, neon',           type:'file', accept:'video/*',        endpoint:'/api/pro/effects',         field:'video' },
+      { id:'pro_color',      icon:'🎨', label:'Renk Grading',      hint:'Sinematik LUT + ton esleme',          type:'file', accept:'video/*',        endpoint:'/api/pro/color-grade',     field:'video' },
+      { id:'pro_filter',     icon:'🌈', label:'Filtre Uygula',     hint:'Vintage, film, moody, vb.',           type:'file', accept:'video/*',        endpoint:'/api/pro/filter',          field:'video' },
+      { id:'pro_overlay',    icon:'🔲', label:'Overlay Ekle',      hint:'Logo, cerceve, animasyon',            type:'file', accept:'video/*',        endpoint:'/api/pro/overlay',         field:'video' },
+      { id:'pro_transition', icon:'🔀', label:'Gecis Efektleri',   hint:'Zoom, whip, morph, dissolve',         type:'file', accept:'video/*',        endpoint:'/api/pro/transitions',     field:'video' },
+      { id:'pro_greenscreen',icon:'🟩', label:'Green Screen',      hint:'Yesil perde kaldir + degistir',       type:'file', accept:'video/*',        endpoint:'/api/pro/chroma-key',      field:'video' },
+      // Hareket & Hiz
+      { id:'pro_stabilize',  icon:'📐', label:'Stabilizasyon',     hint:'Titresim gider, akici goruntu',       type:'file', accept:'video/*',        endpoint:'/api/pro/stabilize',       field:'video' },
+      { id:'pro_slow',       icon:'🐌', label:'Slow Motion',       hint:'AI frame interpolation',              type:'file', accept:'video/*',        endpoint:'/api/pro/speed-ramp',      field:'video' },
+      { id:'pro_timelapse',  icon:'⏩', label:'Timelapse',          hint:'Hizlandirilmis video',                type:'file', accept:'video/*',        endpoint:'/api/pro/timelapse',       field:'video' },
+      { id:'pro_hyperlapse', icon:'🏃', label:'Hyperlapse',         hint:'Stabilize timelapse',                 type:'file', accept:'video/*',        endpoint:'/api/pro/hyperlapse',      field:'video' },
+      { id:'pro_reverse',    icon:'⏪', label:'Tersine Oynat',      hint:'Video geri sar efekti',               type:'file', accept:'video/*',        endpoint:'/api/pro/reverse',         field:'video' },
+      // Ses & Yazi
+      { id:'pro_music',      icon:'🎵', label:'Muzik Ekle',        hint:'AI muzik uret + tempo esle',          type:'file', accept:'video/*',        endpoint:'/api/pro/add-music',       field:'video' },
+      { id:'pro_subtitle',   icon:'💬', label:'Altyazi Ekle',      hint:'Otomatik transkript + stil',          type:'file', accept:'video/*',        endpoint:'/api/pro/subtitle',        field:'video' },
+      { id:'pro_caption',    icon:'📝', label:'Animasyonlu Yazi',  hint:'Kinetic typography',                  type:'file', accept:'video/*',        endpoint:'/api/pro/animated-text',   field:'video' },
+      { id:'pro_watermark',  icon:'🏷️', label:'Video Damgasi',     hint:'Logo + zaman damgasi',                type:'file', accept:'video/*',        endpoint:'/api/pro/video-watermark', field:'video' },
+      // Cikti & Format
+      { id:'pro_thumb',      icon:'🖼️', label:'Thumbnail',         hint:'AI kapak resmi + varyantlar',         type:'file', accept:'video/*',        endpoint:'/api/pro/thumbnail',       field:'video' },
+      { id:'pro_resize',     icon:'📱', label:'Boyut Ayarla',      hint:'9:16 1:1 16:9 4:5 21:9',             type:'file', accept:'video/*',        endpoint:'/api/pro/resize',          field:'video' },
+      { id:'pro_format',     icon:'📦', label:'Format Donustur',   hint:'MP4, MOV, WebM, GIF, AVI',           type:'file', accept:'video/*',        endpoint:'/api/pro/convert',         field:'video' },
+      { id:'pro_compress',   icon:'🗜️', label:'Sikistir',          hint:'Boyut kucult, kalite koru',           type:'file', accept:'video/*',        endpoint:'/api/pro/compress',        field:'video' },
+      { id:'pro_gif',        icon:'🎭', label:'GIF Olustur',       hint:'Videodan animasyon',                  type:'file', accept:'video/*',        endpoint:'/api/pro/to-gif',          field:'video' },
+      // Gelismis AI
+      { id:'pro_upscale',    icon:'🔍', label:'AI Upscale',        hint:'720p → 4K super resolution',          type:'file', accept:'video/*',        endpoint:'/api/pro/upscale',         field:'video' },
+      { id:'pro_deold',      icon:'🕰️', label:'Restorasyon',       hint:'Eski videolari canlandir',            type:'file', accept:'video/*',        endpoint:'/api/pro/restore',         field:'video' },
+      { id:'pro_faceblur',   icon:'😶', label:'Yuz Buzlama',       hint:'Yuzleri otomatik buzla',              type:'file', accept:'video/*',        endpoint:'/api/pro/face-blur',       field:'video' },
+      { id:'pro_objremove',  icon:'🧹', label:'Nesne Kaldir',      hint:'Istenmeyen objeleri sil',             type:'file', accept:'video/*',        endpoint:'/api/pro/remove-object',   field:'video' },
+      { id:'pro_bgchange',   icon:'🌄', label:'Arka Plan Degistir',hint:'Video arka planini AI ile degis',     type:'file', accept:'video/*',        endpoint:'/api/pro/change-bg',       field:'video' },
+    ]
+  },
+  {
+    id: '360',
+    label: '360° Video',
+    icon: '🌐',
+    color: '#3B82F6',
+    gradient: 'linear-gradient(135deg,#3B82F6,#2563EB)',
+    shadow: 'rgba(59,130,246,0.15)',
+    desc: '360 derece stitching, 3D & sanal tur',
+    commands: [
+      // Stitching & Birlestirme
+      { id:'360_stitch',     icon:'🧩', label:'360° Birlestir',    hint:'Dual-lens auto stitch',               type:'file', accept:'image/*,video/*,.insv', endpoint:'/api/pro/stitch',      field:'images' },
+      { id:'360_panorama',   icon:'🏔️', label:'Panorama',          hint:'Genis aci foto birlestir',            type:'file', accept:'image/*',        endpoint:'/api/pro/panorama',        field:'images' },
+      { id:'360_hdr',        icon:'🌅', label:'HDR Birlestir',     hint:'Farkli pozlama → HDR',                type:'file', accept:'image/*',        endpoint:'/api/pro/hdr-merge',       field:'images' },
+      { id:'360_timelapse',  icon:'⏰', label:'360 Timelapse',     hint:'360° zaman atlamali',                 type:'file', accept:'image/*',        endpoint:'/api/pro/360-timelapse',   field:'images' },
+      // Duzenleme & Efekt
+      { id:'360_horizon',    icon:'⚖️', label:'Horizon Lock',      hint:'Ufuk cizgisi kilitle',                type:'file', accept:'video/*',        endpoint:'/api/pro/horizon-lock',    field:'video' },
+      { id:'360_reframe',    icon:'🎯', label:'Reframe',           hint:'Yeniden cercevele + keyframe',        type:'file', accept:'video/*',        endpoint:'/api/pro/reframe',         field:'video' },
+      { id:'360_tiny',       icon:'🌍', label:'Tiny Planet',       hint:'Kucuk gezegen efekti',                type:'file', accept:'image/*,video/*',endpoint:'/api/pro/tiny-planet',     field:'video' },
+      { id:'360_stabilize',  icon:'🎥', label:'360 Stabilize',     hint:'Kuresel gyro stabilizasyon',          type:'file', accept:'video/*',        endpoint:'/api/pro/360-stabilize',   field:'video' },
+      { id:'360_denoise',    icon:'✨', label:'360 Gurultu Azalt', hint:'AI ile net goruntu',                  type:'file', accept:'video/*',        endpoint:'/api/pro/360-denoise',     field:'video' },
+      { id:'360_color',      icon:'🎨', label:'360 Renk Grading', hint:'Spherical color correction',          type:'file', accept:'video/*',        endpoint:'/api/pro/360-color',       field:'video' },
+      // 3D & Modelleme
+      { id:'360_3d',         icon:'🧊', label:'3D Model',          hint:'Fotogrametri → mesh + texture',       type:'file', accept:'image/*',        endpoint:'/api/pro/3d-model',        field:'images' },
+      { id:'360_pointcloud', icon:'☁️', label:'Point Cloud',       hint:'Nokta bulutu olustur',                type:'file', accept:'image/*',        endpoint:'/api/pro/point-cloud',     field:'images' },
+      { id:'360_floorplan',  icon:'📏', label:'Kat Plani',         hint:'360 → 2D kat plani cikart',           type:'file', accept:'image/*',        endpoint:'/api/pro/floor-plan',      field:'images' },
+      { id:'360_depth',      icon:'🔬', label:'Derinlik Haritasi', hint:'Mono/stereo depth estimation',        type:'file', accept:'image/*',        endpoint:'/api/pro/depth-map',       field:'images' },
+      // Sanal Tur & Yayinlama
+      { id:'360_vtour',      icon:'🏠', label:'Sanal Tur',         hint:'Interaktif 360 walkthrough',          type:'file', accept:'image/*',        endpoint:'/api/pro/virtual-tour',    field:'images' },
+      { id:'360_hotspot',    icon:'📌', label:'Hotspot Ekle',      hint:'Bilgi noktasi + link ekle',           type:'action', endpoint:'/api/pro/hotspot' },
+      { id:'360_embed',      icon:'🌐', label:'Web Embed',         hint:'Siteye 360 gomulu kod',               type:'action', endpoint:'/api/pro/360-embed' },
+      { id:'360_ar',         icon:'📱', label:'AR Goruntuler',     hint:'Arttirilmis gerceklik',               type:'file', accept:'image/*',        endpoint:'/api/pro/ar-view',         field:'images' },
+    ]
+  },
+  {
+    id: 'dublaj',
+    label: 'Ses & Dublaj',
+    icon: '🎙️',
+    color: '#8B5CF6',
+    gradient: 'linear-gradient(135deg,#8B5CF6,#7C3AED)',
+    shadow: 'rgba(139,92,246,0.15)',
+    desc: 'Seslendirme, klonlama, muzik, podcast',
+    commands: [
+      // Seslendirme & Dublaj
+      { id:'dub_voiceover',  icon:'🗣️', label:'Seslendirme',       hint:'Metin → AI ses + duygu tonu',         type:'file', accept:'video/*,audio/*',endpoint:'/api/dubbing/voiceover',    field:'video' },
+      { id:'dub_clone',      icon:'🧬', label:'Ses Klonlama',      hint:'3sn ornekle sesin kopyasi',           type:'file', accept:'audio/*',        endpoint:'/api/dubbing/clone-voice',  field:'audio' },
+      { id:'dub_translate',  icon:'🌍', label:'Ceviri Dublaj',     hint:'30+ dil, otomatik ceviri + ses',      type:'file', accept:'video/*',        endpoint:'/api/dubbing/translate',    field:'video' },
+      { id:'dub_lipsync',    icon:'👄', label:'Lip-Sync',          hint:'Dudak hareketi senkronize',           type:'file', accept:'video/*',        endpoint:'/api/dubbing/lip-sync',     field:'video' },
+      { id:'dub_multispeaker',icon:'👥',label:'Coklu Konusmaci',   hint:'Her kisi icin ayrı ses',              type:'file', accept:'video/*',        endpoint:'/api/dubbing/multi-speaker',field:'video' },
+      { id:'dub_emotion',    icon:'😊', label:'Duygu Tonu Ayarla', hint:'Mutlu, ciddi, heyecanli',             type:'file', accept:'audio/*',        endpoint:'/api/dubbing/emotion',      field:'audio' },
+      // Ses Isleme
+      { id:'dub_clean',      icon:'🔇', label:'Ses Temizle',       hint:'Gurultu, eko, ruzgar kaldir',         type:'file', accept:'video/*,audio/*',endpoint:'/api/dubbing/denoise',      field:'audio' },
+      { id:'dub_separate',   icon:'🔊', label:'Ses Ayir',          hint:'Vokal + muzik + efekt ayir',          type:'file', accept:'audio/*',        endpoint:'/api/dubbing/separate',     field:'audio' },
+      { id:'dub_enhance',    icon:'📢', label:'Ses Iyilestir',     hint:'Kalite artir, normalize et',          type:'file', accept:'audio/*',        endpoint:'/api/dubbing/enhance-audio',field:'audio' },
+      { id:'dub_pitch',      icon:'🎚️', label:'Tempo & Pitch',     hint:'Hiz + ton + EQ ayarla',              type:'file', accept:'audio/*',        endpoint:'/api/dubbing/pitch-tempo',  field:'audio' },
+      { id:'dub_fade',       icon:'📉', label:'Fade In/Out',       hint:'Yumak giris/cikis efekti',           type:'file', accept:'audio/*',        endpoint:'/api/dubbing/fade',         field:'audio' },
+      // Muzik & Efekt
+      { id:'dub_music',      icon:'🎼', label:'Muzik Olustur',     hint:'AI beat, melodi, tur secimi',         type:'action', endpoint:'/api/dubbing/generate-music' },
+      { id:'dub_jingle',     icon:'🔔', label:'Jingle Olustur',    hint:'Marka melodisi + intro',              type:'action', endpoint:'/api/dubbing/jingle' },
+      { id:'dub_sfx',        icon:'💥', label:'Ses Efekti',        hint:'Whoosh, impact, ambient, nature',     type:'file', accept:'video/*',        endpoint:'/api/dubbing/add-sfx',      field:'video' },
+      { id:'dub_remix',      icon:'🎛️', label:'Remix / Mashup',    hint:'Parcalari karistir + yeniden yap',   type:'file', accept:'audio/*',        endpoint:'/api/dubbing/remix',        field:'audio' },
+      // Podcast & Diger
+      { id:'dub_podcast',    icon:'🎧', label:'Podcast Montaj',    hint:'Sessizlik kes, giris ekle, normalize',type:'file', accept:'audio/*',       endpoint:'/api/dubbing/podcast-edit', field:'audio' },
+      { id:'dub_transcribe', icon:'📄', label:'Transkript',        hint:'Ses → metin (30+ dil)',               type:'file', accept:'audio/*,video/*',endpoint:'/api/dubbing/transcribe',   field:'audio' },
+      { id:'dub_audiogram',  icon:'📊', label:'Audiogram',         hint:'Ses dalgasi + animasyon videosu',     type:'file', accept:'audio/*',        endpoint:'/api/dubbing/audiogram',    field:'audio' },
+      { id:'dub_ringtone',   icon:'📱', label:'Zil Sesi Olustur',  hint:'Kisa melodiden zil sesi kes',         type:'file', accept:'audio/*',        endpoint:'/api/dubbing/ringtone',     field:'audio' },
+    ]
+  },
+  {
+    id: 'eticaret',
+    label: 'E-Ticaret',
+    icon: '🛍️',
+    color: '#10B981',
+    gradient: 'linear-gradient(135deg,#10B981,#059669)',
+    shadow: 'rgba(16,185,129,0.15)',
+    desc: 'Urun cekim, katalog, marka, pazarlama',
+    commands: [
+      // Gorsel Isleme
+      { id:'et_removebg',    icon:'🖼️', label:'Arka Plan Kaldir',  hint:'Otomatik AI kesim + seffaf',          type:'file', accept:'image/*',        endpoint:'/api/pro/remove-bg',       field:'image' },
+      { id:'et_changebg',    icon:'🌄', label:'Arka Plan Degistir',hint:'Studio, dogal, gradient',             type:'file', accept:'image/*',        endpoint:'/api/pro/change-product-bg',field:'image' },
+      { id:'et_enhance',     icon:'💎', label:'Gorsel Iyilestir',  hint:'4K upscale + keskinlik + aydinlik',   type:'file', accept:'image/*',        endpoint:'/api/pro/enhance',         field:'image' },
+      { id:'et_retouch',     icon:'🪄', label:'Retouch',           hint:'Leke, golge, yansima duzelt',         type:'file', accept:'image/*',        endpoint:'/api/pro/retouch',         field:'image' },
+      { id:'et_colorfix',    icon:'🎨', label:'Renk Duzeltme',     hint:'Beyaz ayar + renk dogru',             type:'file', accept:'image/*',        endpoint:'/api/pro/color-correct',   field:'image' },
+      { id:'et_shadow',      icon:'💡', label:'Golge Ekle',        hint:'Dogal golge + yansima',               type:'file', accept:'image/*',        endpoint:'/api/pro/add-shadow',      field:'image' },
+      // Urun Fotograf
+      { id:'et_product',     icon:'📸', label:'Urun Fotograf',     hint:'Profesyonel studio cekim',            type:'file', accept:'image/*',        endpoint:'/api/pro/product-photo',   field:'image' },
+      { id:'et_lifestyle',   icon:'🏡', label:'Lifestyle Mockup',  hint:'Ortam icinde urun goster',            type:'file', accept:'image/*',        endpoint:'/api/pro/mockup',          field:'image' },
+      { id:'et_model',       icon:'👗', label:'Model Uzerine Giy', hint:'AI model + kiyafet giydirme',         type:'file', accept:'image/*',        endpoint:'/api/pro/virtual-tryon',   field:'image' },
+      { id:'et_flat',        icon:'📏', label:'Flat Lay',           hint:'Duzgun yatay dizilim',                type:'file', accept:'image/*',        endpoint:'/api/pro/flat-lay',        field:'image' },
+      { id:'et_multiangle',  icon:'📐', label:'Coklu Aci',         hint:'4-6 farkli acidan goruntule',         type:'file', accept:'image/*',        endpoint:'/api/pro/multi-angle',     field:'image' },
+      // Katalog & Toplu
+      { id:'et_catalog',     icon:'📋', label:'Katalog Olustur',   hint:'Toplu urun listesi + PDF',            type:'file', accept:'image/*',        endpoint:'/api/pro/catalog',         field:'images' },
+      { id:'et_spin',        icon:'🔄', label:'360° Urun',         hint:'Dondurme animasyonu + embed',         type:'file', accept:'image/*',        endpoint:'/api/pro/product-spin',    field:'images' },
+      { id:'et_batch',       icon:'📚', label:'Toplu Islem',       hint:'Yuzlerce urunu ayni anda isle',       type:'file', accept:'image/*',        endpoint:'/api/pro/batch-product',   field:'images' },
+      { id:'et_compare',     icon:'🔁', label:'Once/Sonra',        hint:'Karsilastirmali gorsel',              type:'file', accept:'image/*',        endpoint:'/api/pro/before-after',    field:'images' },
+      // Marka & Pazarlama
+      { id:'et_watermark',   icon:'🏷️', label:'Marka Damgasi',     hint:'Logo + filigran + copyright',         type:'file', accept:'image/*',        endpoint:'/api/pro/watermark',       field:'image' },
+      { id:'et_banner',      icon:'🎨', label:'Banner Tasarla',    hint:'Instagram, Facebook, Pinterest',      type:'file', accept:'image/*',        endpoint:'/api/pro/banner',          field:'image' },
+      { id:'et_infographic', icon:'📊', label:'Infografik',        hint:'Ozellik + fiyat + karsilastirma',     type:'file', accept:'image/*',        endpoint:'/api/pro/infographic',     field:'image' },
+      { id:'et_video',       icon:'🎬', label:'Urun Videosu',      hint:'Fotolardan sinematik video',          type:'file', accept:'image/*',        endpoint:'/api/pro/product-video',   field:'images' },
+      { id:'et_story',       icon:'📱', label:'Hikaye Tasarla',    hint:'Instagram/TikTok story boyutu',       type:'file', accept:'image/*',        endpoint:'/api/pro/story-design',    field:'image' },
+      { id:'et_carousel',    icon:'🎠', label:'Carousel',          hint:'Kaydirmali coklu gorsel',             type:'file', accept:'image/*',        endpoint:'/api/pro/carousel',        field:'images' },
+      // Teknik
+      { id:'et_measure',     icon:'📏', label:'Boyut Goster',      hint:'Urun olculeri + etiket',              type:'file', accept:'image/*',        endpoint:'/api/pro/show-dimensions', field:'image' },
+      { id:'et_seo',         icon:'🔍', label:'SEO Alt Text',      hint:'AI ile gorsel aciklama',              type:'file', accept:'image/*',        endpoint:'/api/pro/seo-alt',         field:'image' },
+    ]
+  },
+  {
+    id: 'otonom',
+    label: 'Otonom AI',
+    icon: '🤖',
+    color: '#EAB308',
+    gradient: 'linear-gradient(135deg,#EAB308,#CA8A04)',
+    shadow: 'rgba(234,179,8,0.15)',
+    desc: 'Tam otomatik uretim, analiz & yonetim',
+    commands: [
+      // Otomatik Uretim
+      { id:'oto_auto',       icon:'🚀', label:'Tam Otomatik',      hint:'AI senaryo → cekim → kurgu → cikti',type:'action', endpoint:'/api/otonom/auto-produce' },
+      { id:'oto_batch',      icon:'📚', label:'Toplu Uretim',      hint:'Coklu dosya paralel isle',           type:'file', accept:'video/*,image/*,audio/*', endpoint:'/api/otonom/batch', field:'files' },
+      { id:'oto_template',   icon:'🎭', label:'Sablon Uret',       hint:'Hazir sablondan hizli uretim',       type:'action', endpoint:'/api/otonom/template-produce' },
+      { id:'oto_series',     icon:'📺', label:'Seri Icerik',       hint:'Bolumluk icerik zinciri',            type:'action', endpoint:'/api/otonom/series' },
+      { id:'oto_remix',      icon:'🔄', label:'Icerik Yenile',     hint:'Mevcut icerigi farkli versiyonla',   type:'file', accept:'video/*,image/*', endpoint:'/api/otonom/remix', field:'files' },
+      // Planlama & Zamanlama
+      { id:'oto_schedule',   icon:'📅', label:'Zamanli Uretim',    hint:'Saat, gun, hafta planla',            type:'action', endpoint:'/api/otonom/schedule' },
+      { id:'oto_plan',       icon:'🧠', label:'AI Icerik Planla',  hint:'Haftalik/aylik icerik takvimi',      type:'action', endpoint:'/api/otonom/content-plan' },
+      { id:'oto_calendar',   icon:'🗓️', label:'Yayin Takvimi',     hint:'Tum platformlar tek gorunumde',      type:'action', endpoint:'/api/otonom/calendar' },
+      { id:'oto_besttime',   icon:'⏰', label:'En Iyi Zaman',      hint:'AI ile optimal paylasim saati',      type:'action', endpoint:'/api/otonom/best-time' },
+      // Yayinlama & Dagitim
+      { id:'oto_publish',    icon:'📤', label:'Yayinla',           hint:'Instagram, TikTok, YouTube, X',      type:'action', endpoint:'/api/otonom/publish' },
+      { id:'oto_multipost',  icon:'📡', label:'Coklu Platform',    hint:'Tek tusla tum platformlara',         type:'action', endpoint:'/api/otonom/multi-publish' },
+      { id:'oto_repost',     icon:'♻️', label:'Yeniden Paylas',    hint:'Evergreen icerik tekrar yayinla',    type:'action', endpoint:'/api/otonom/repost' },
+      { id:'oto_crosspost',  icon:'🔗', label:'Cross-Post',        hint:'Platformlar arasi adapte et',        type:'action', endpoint:'/api/otonom/cross-post' },
+      // Analiz & Raporlama
+      { id:'oto_trend',      icon:'📊', label:'Trend Analiz',      hint:'Guncel viral trendleri tara',        type:'action', endpoint:'/api/otonom/trend-analysis' },
+      { id:'oto_report',     icon:'📈', label:'Performans Rapor',  hint:'Izlenme, begeni, paylasim',          type:'action', endpoint:'/api/otonom/performance' },
+      { id:'oto_competitor', icon:'🔍', label:'Rakip Analiz',      hint:'Rakip icerikleri izle + karsilastir', type:'action', endpoint:'/api/otonom/competitor' },
+      { id:'oto_audience',   icon:'👥', label:'Kitle Analiz',      hint:'Demografi, ilgi alani, davranis',    type:'action', endpoint:'/api/otonom/audience' },
+      { id:'oto_hashtag',    icon:'#️⃣', label:'Hashtag Onerisi',   hint:'Trend + niche hashtag bul',          type:'action', endpoint:'/api/otonom/hashtag' },
+      { id:'oto_sentiment',  icon:'💭', label:'Yorum Analiz',      hint:'Olumlu/olumsuz duygu analizi',       type:'action', endpoint:'/api/otonom/sentiment' },
+      // Test & Optimizasyon
+      { id:'oto_ab',         icon:'🔬', label:'A/B Test',          hint:'2 varyant karsilastir + kazanani sec',type:'file', accept:'video/*,image/*', endpoint:'/api/otonom/ab-test', field:'files' },
+      { id:'oto_optimize',   icon:'⚡', label:'Icerik Optimize',   hint:'Baslik, aciklama, etiket iyilestir', type:'action', endpoint:'/api/otonom/optimize-content' },
+      { id:'oto_hook',       icon:'🪝', label:'Hook Olustur',      hint:'Ilk 3 saniye dikkat cekici',         type:'file', accept:'video/*', endpoint:'/api/otonom/create-hook', field:'video' },
+      // Kampanya & Gelir
+      { id:'oto_campaign',   icon:'🎯', label:'Kampanya',          hint:'Reklam kampanyasi olustur + yonet',  type:'action', endpoint:'/api/otonom/campaign' },
+      { id:'oto_funnel',     icon:'🔻', label:'Satis Hunisi',      hint:'Farkindalik → ilgi → satin al',      type:'action', endpoint:'/api/otonom/funnel' },
+      { id:'oto_revenue',    icon:'💰', label:'Gelir Takip',       hint:'Kazanc, maliyet, ROI raporu',        type:'action', endpoint:'/api/otonom/revenue' },
+      // Kuyruk & Sistem
+      { id:'oto_queue',      icon:'📋', label:'Kuyruk Yonetimi',   hint:'Sirala, duraklat, iptal et',         type:'action', endpoint:'/api/otonom/queue-manage' },
+      { id:'oto_logs',       icon:'📜', label:'AI Gunluk',         hint:'Tum islem gecmisi + detay',          type:'action', endpoint:'/api/otonom/logs' },
+      { id:'oto_settings',   icon:'⚙️', label:'Otonom Ayarlari',   hint:'Varsayilan kalite, format, dil',     type:'action', endpoint:'/api/otonom/settings' },
+    ]
+  },
+];
 
 // ════════════════════════════════════════
 //  STATE
@@ -422,7 +621,8 @@ let credits = parseInt(localStorage.getItem('fenix_otonom_credits') || '15');
 let trialCredits = parseInt(localStorage.getItem('fenix_trial_credits') ?? TRIAL_MAX);
 let jobs = JSON.parse(localStorage.getItem('fenix_jobs') || '[]');
 let currentView = 'shortcuts'; // shortcuts | jobs
-let activeUploadId = null;
+let openCategoryId = null;
+let activeUploadCmd = null;
 
 // ════════════════════════════════════════
 //  QR TOKEN LOGIN
@@ -442,12 +642,10 @@ let activeUploadId = null;
       }
     } catch(e) {}
   }
-  // Init trial
   if (localStorage.getItem('fenix_trial_credits') === null && plan !== 'free') {
     trialCredits = TRIAL_MAX;
     localStorage.setItem('fenix_trial_credits', trialCredits);
   }
-  // Hide loading
   setTimeout(() => {
     document.getElementById('loadingScreen').classList.add('hide');
     setTimeout(() => document.getElementById('loadingScreen').remove(), 400);
@@ -460,11 +658,11 @@ let activeUploadId = null;
 // ════════════════════════════════════════
 function getOwnedCards() {
   if (plan === 'master' || plan === 'otonom') return ALL_IDS;
-  if (plan === 'pro') return ['pro','free'];
-  if (plan === '360') return ['360','free'];
-  if (plan === 'dublaj') return ['dublaj','free'];
-  if (plan === 'eticaret') return ['eticaret','free'];
-  return ['free'];
+  if (plan === 'pro') return ['pro'];
+  if (plan === '360') return ['360'];
+  if (plan === 'dublaj') return ['dublaj'];
+  if (plan === 'eticaret') return ['eticaret'];
+  return [];
 }
 
 function getActiveCards() {
@@ -502,7 +700,7 @@ function renderStatus() {
         <div class="status-icon">🔓</div>
         <div style="flex:1">
           <div class="status-title">MASTER OTONOM</div>
-          <div class="status-desc">Tum kisa yollar aktif</div>
+          <div class="status-desc">Tum kisayollar ve katmanlar aktif</div>
         </div>
       </div>`;
   } else if (isTrialActive()) {
@@ -545,21 +743,40 @@ function renderJobsBtn() {
 function renderShortcuts() {
   const active = getActiveCards();
   const content = document.getElementById('mainContent');
-  let html = '<div class="section-label">Dosya at, gerisini Fenix yapsin</div>';
+  let html = '';
 
-  SHORTCUTS.forEach(sc => {
-    const unlocked = active.includes(sc.id);
+  CATEGORIES.forEach(cat => {
+    const unlocked = active.includes(cat.id);
+    const isOpen = openCategoryId === cat.id && unlocked;
+    const cmdCount = cat.commands.length;
+
     html += `
-      <div class="shortcut ${unlocked ? '' : 'locked'}" onclick="${unlocked ? `tapShortcut('${sc.id}')` : ''}">
-        ${unlocked ? `<div class="glow" style="background:${sc.gradient};box-shadow:0 0 12px ${sc.color}66"></div>` : ''}
-        <div class="sc-icon" style="background:${unlocked ? sc.color+'18' : '#0e0e0e'};border:1px solid ${unlocked ? sc.color+'15' : '#1a1a1a'}">
-          ${unlocked ? sc.icon : '🔒'}
+      <div class="category ${isOpen ? 'open' : ''} ${unlocked ? '' : 'locked'}" style="--cat-color:${cat.color}22;--cat-shadow:${cat.shadow}">
+        <div class="cat-header" onclick="${unlocked ? `toggleCategory('${cat.id}')` : ''}">
+          ${unlocked ? `<div class="cat-glow" style="background:${cat.gradient};box-shadow:0 0 12px ${cat.color}66"></div>` : ''}
+          <div class="cat-icon" style="background:${unlocked ? cat.color+'18' : '#0e0e0e'};border:1px solid ${unlocked ? cat.color+'15' : '#1a1a1a'}">
+            ${unlocked ? cat.icon : '🔒'}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div class="cat-label">${cat.label}</div>
+            <div class="cat-desc">${unlocked ? cat.desc : cat.id.toUpperCase()+' karti veya Otonom paketi al'}</div>
+          </div>
+          ${unlocked ? `<span class="cat-count">${cmdCount}</span>` : ''}
+          ${unlocked ? `<span class="cat-arrow">▼</span>` : ''}
         </div>
-        <div style="flex:1">
-          <div class="sc-label" style="color:${unlocked ? '#eee' : ''}">${sc.label}</div>
-          <div class="sc-desc">${unlocked ? sc.desc : sc.id.toUpperCase()+' karti veya Otonom paketi al'}</div>
-        </div>
-        ${unlocked ? `<div class="sc-btn" style="background:${sc.gradient};box-shadow:0 2px 12px ${sc.color}33">AT →</div>` : ''}
+        ${unlocked ? `
+        <div class="cat-body">
+          <div class="sub-grid">
+            ${cat.commands.map(cmd => `
+              <div class="sub-cmd ${cmd.type === 'file' ? 'file-cmd' : ''}" onclick="tapCommand('${cat.id}','${cmd.id}')">
+                ${cmd.type === 'file' ? '<span class="file-tag">DOSYA</span>' : ''}
+                <span class="sub-icon">${cmd.icon}</span>
+                <div class="sub-label">${cmd.label}</div>
+                <div class="sub-hint">${cmd.hint}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>` : ''}
       </div>`;
   });
 
@@ -583,15 +800,16 @@ function renderJobs() {
       <div class="empty-state">
         <div class="empty-icon">📭</div>
         <div class="empty-text">Henuz islem yok</div>
-        <button class="empty-btn" onclick="toggleView()">Dosya At</button>
+        <button class="empty-btn" onclick="toggleView()">Komut Sec</button>
       </div>`;
     return;
   }
 
-  let html = `<div class="section-label">${activeJobs > 0 ? activeJobs+' islem devam ediyor' : 'Gecmis islemler'}</div>`;
+  let html = `<div style="font-size:10px;color:var(--text5);font-weight:700;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px;padding-left:4px">${activeJobs > 0 ? activeJobs+' islem devam ediyor' : 'Gecmis islemler'}</div>`;
 
   jobs.forEach(job => {
-    const sc = SHORTCUTS.find(s => s.id === job.shortcutId) || SHORTCUTS[0];
+    const cat = CATEGORIES.find(c => c.id === job.categoryId) || CATEGORIES[0];
+    const cmd = cat.commands.find(c => c.id === job.commandId) || cat.commands[0];
     const elapsed = formatTime(Date.now() - job.startedAt);
     const statusLabel = job.status === 'done' ? 'HAZIR' : job.status === 'error' ? 'HATA' : job.status === 'uploading' ? 'YUKLUYOR' : job.status === 'queued' ? 'SIRADA' : '%'+job.progress;
     const statusClass = job.status === 'done' ? 'done' : job.status === 'error' ? 'error' : 'pending';
@@ -599,19 +817,19 @@ function renderJobs() {
     html += `
       <div class="job-card ${job.status === 'done' ? 'done' : ''}">
         <div class="job-header">
-          <span class="job-icon">${sc.icon}</span>
+          <span class="job-icon">${cmd.icon}</span>
           <div style="flex:1;min-width:0">
-            <div class="job-name">${job.fileName}</div>
-            <div class="job-meta">${sc.label} · ${elapsed}</div>
+            <div class="job-name">${job.fileName || cmd.label}</div>
+            <div class="job-meta">${cat.label} → ${cmd.label} · ${elapsed}</div>
           </div>
           <span class="job-status ${statusClass}">${statusLabel}</span>
         </div>
         ${['processing','queued','uploading'].includes(job.status) ? `
           <div class="job-progress">
-            <div class="job-progress-bar" style="background:${sc.gradient};width:${job.status==='uploading'?10:job.status==='queued'?5:job.progress}%;box-shadow:0 0 8px ${sc.color}44"></div>
+            <div class="job-progress-bar" style="background:${cat.gradient};width:${job.status==='uploading'?10:job.status==='queued'?5:job.progress}%;box-shadow:0 0 8px ${cat.color}44"></div>
           </div>` : ''}
         ${job.status === 'done' && job.outputUrl ? `
-          <a href="${job.outputUrl}" download class="job-download" style="background:${sc.gradient};box-shadow:0 4px 16px ${sc.color}33">INDIR</a>` : ''}
+          <a href="${job.outputUrl}" download class="job-download" style="background:${cat.gradient};box-shadow:0 4px 16px ${cat.color}33">INDIR</a>` : ''}
         ${job.status === 'error' ? `<div class="job-error">${job.error||'Bilinmeyen hata'}</div>` : ''}
       </div>`;
   });
@@ -627,69 +845,117 @@ function toggleView() {
   render();
 }
 
-function tapShortcut(id) {
+function toggleCategory(catId) {
+  openCategoryId = openCategoryId === catId ? null : catId;
+  render();
+}
+
+function tapCommand(catId, cmdId) {
   if (credits <= 0) { showToast('Yakit tukendi! Kredi yukle.', 'error'); return; }
-  activeUploadId = id;
-  const sc = SHORTCUTS.find(s => s.id === id);
-  const input = document.getElementById('fileInput');
-  input.accept = sc.accept;
-  input.click();
+
+  const cat = CATEGORIES.find(c => c.id === catId);
+  const cmd = cat.commands.find(c => c.id === cmdId);
+
+  if (cmd.type === 'file') {
+    activeUploadCmd = { catId, cmdId, accept: cmd.accept, endpoint: cmd.endpoint, field: cmd.field };
+    const input = document.getElementById('fileInput');
+    input.accept = cmd.accept;
+    input.click();
+  } else {
+    // Action type — no file needed, direct API call
+    executeAction(catId, cmdId, cmd.endpoint);
+  }
+}
+
+async function executeAction(catId, cmdId, endpoint) {
+  const cat = CATEGORIES.find(c => c.id === catId);
+  const cmd = cat.commands.find(c => c.id === cmdId);
+  const jobId = crypto.randomUUID();
+
+  jobs.unshift({ id: jobId, categoryId: catId, commandId: cmdId, fileName: null, status: 'queued', progress: 0, startedAt: Date.now() });
+  saveJobs();
+  currentView = 'jobs';
+  render();
+
+  try {
+    const res = await fetch(`${API}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan, action: cmdId })
+    });
+    if (!res.ok) throw new Error('Islem basarisiz');
+    const data = await res.json();
+    updateJob(jobId, { id: data.jobId || data.id || jobId, status: data.status === 'done' ? 'done' : 'processing', progress: data.progress || 0, outputUrl: data.downloadUrl });
+
+    deductCredit(catId);
+    showToast('Kuyruga alindi', 'ok');
+  } catch(err) {
+    updateJob(jobId, { status: 'error', error: err.message || 'Hata' });
+    showToast(err.message || 'Hata olustu', 'error');
+  }
+  render();
 }
 
 document.getElementById('fileInput').addEventListener('change', async function(e) {
   const file = e.target.files?.[0];
-  if (!file || !activeUploadId) return;
+  if (!file || !activeUploadCmd) return;
 
-  const sc = SHORTCUTS.find(s => s.id === activeUploadId);
+  const { catId, cmdId, endpoint, field } = activeUploadCmd;
   const jobId = crypto.randomUUID();
 
-  // Add job
-  jobs.unshift({ id: jobId, shortcutId: activeUploadId, fileName: file.name, status: 'uploading', progress: 0, startedAt: Date.now() });
+  jobs.unshift({ id: jobId, categoryId: catId, commandId: cmdId, fileName: file.name, status: 'uploading', progress: 0, startedAt: Date.now() });
   saveJobs();
   currentView = 'jobs';
   render();
 
   try {
     const fd = new FormData();
-    fd.append(sc.field, file, file.name);
+    fd.append(field, file, file.name);
 
-    if (activeUploadId === '360' || activeUploadId === 'eticaret') {
-      const res = await fetch(`${API}${sc.endpoint}`, { method: 'POST', body: fd });
+    // Direct upload endpoints (360 stitch, remove-bg etc.)
+    const directEndpoints = ['/api/pro/stitch','/api/pro/remove-bg','/api/pro/panorama','/api/pro/product-photo','/api/pro/catalog','/api/pro/product-spin','/api/pro/mockup','/api/pro/watermark','/api/pro/enhance','/api/pro/multi-angle','/api/pro/banner'];
+    if (directEndpoints.includes(endpoint)) {
+      const res = await fetch(`${API}${endpoint}`, { method: 'POST', body: fd });
       if (!res.ok) throw new Error('Islem basarisiz');
       const data = await res.json();
       updateJob(jobId, { id: data.jobId||data.id||jobId, status: data.downloadUrl ? 'done' : 'queued', progress: data.downloadUrl ? 100 : 0, outputUrl: data.downloadUrl });
     } else {
+      // Upload first, then start job
       const uploadRes = await fetch(`${API}/api/pro/upload`, { method: 'POST', body: fd });
       if (!uploadRes.ok) throw new Error('Yukleme basarisiz');
       const { fileId } = await uploadRes.json();
-      const body = activeUploadId === 'dublaj'
-        ? { fileId, targetLang: 'tr', sourceLang: 'tr' }
-        : { sourceFileId: fileId, resolution: activeUploadId === 'pro' ? '1080' : '720' };
-      const jobRes = await fetch(`${API}${sc.endpoint}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+
+      const body = { fileId, action: cmdId };
+      if (catId === 'dublaj') { body.targetLang = 'tr'; body.sourceLang = 'tr'; }
+
+      const jobRes = await fetch(`${API}${endpoint}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
       if (!jobRes.ok) throw new Error('Islem baslatilamadi');
       const jobData = await jobRes.json();
       updateJob(jobId, { id: jobData.jobId||jobData.id||jobId, status: 'queued', progress: 0 });
     }
 
-    // Deduct credit
-    const owned = getOwnedCards();
-    if (isTrialActive() && !owned.includes(activeUploadId)) {
-      trialCredits--;
-      localStorage.setItem('fenix_trial_credits', trialCredits);
-    } else {
-      credits--;
-      localStorage.setItem('fenix_otonom_credits', credits);
-    }
+    deductCredit(catId);
     showToast('Kuyruga alindi — telefonu kapatsan da devam eder', 'ok');
   } catch(err) {
     updateJob(jobId, { status: 'error', error: err.message || 'Hata' });
     showToast(err.message || 'Hata olustu', 'error');
   }
 
-  activeUploadId = null;
+  activeUploadCmd = null;
   this.value = '';
   render();
 });
+
+function deductCredit(catId) {
+  const owned = getOwnedCards();
+  if (isTrialActive() && !owned.includes(catId)) {
+    trialCredits--;
+    localStorage.setItem('fenix_trial_credits', trialCredits);
+  } else {
+    credits--;
+    localStorage.setItem('fenix_otonom_credits', credits);
+  }
+}
 
 // ════════════════════════════════════════
 //  HELPERS
@@ -712,7 +978,7 @@ function formatTime(ms) {
 
 function showToast(msg, type) {
   const t = document.createElement('div');
-  t.style.cssText = `position:fixed;bottom:env(safe-area-inset-bottom,20px);left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:14px;font-size:13px;font-weight:700;z-index:999;animation:fadeUp .3s ease;font-family:Inter,sans-serif;max-width:90%;text-align:center;`;
+  t.style.cssText = `position:fixed;bottom:env(safe-area-inset-bottom,20px);left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:14px;font-size:12px;font-weight:700;z-index:999;animation:fadeUp .3s ease;font-family:Inter,sans-serif;max-width:90%;text-align:center;`;
   if (type === 'error') {
     t.style.background = 'linear-gradient(135deg,#2d0a0a,#1a0000)';
     t.style.color = '#EF4444';
@@ -735,11 +1001,13 @@ setInterval(async () => {
   if (!active.length) return;
   for (const job of active) {
     try {
-      const url = job.shortcutId === '360'
-        ? `${API}/api/pro/stitch/status/${job.id}`
-        : job.shortcutId === 'dublaj'
-        ? `${API}/api/dubbing/status/${job.id}`
-        : `${API}/api/pro/render-progress/${job.id}`;
+      const cat = CATEGORIES.find(c => c.id === job.categoryId);
+      let url;
+      if (job.categoryId === '360') url = `${API}/api/pro/stitch/status/${job.id}`;
+      else if (job.categoryId === 'dublaj') url = `${API}/api/dubbing/status/${job.id}`;
+      else if (job.categoryId === 'otonom') url = `${API}/api/otonom/status/${job.id}`;
+      else url = `${API}/api/pro/render-progress/${job.id}`;
+
       const res = await fetch(url);
       if (!res.ok) continue;
       const d = await res.json();
