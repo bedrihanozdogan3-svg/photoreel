@@ -12,6 +12,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const rateLimit = require('express-rate-limit');
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
@@ -25,8 +26,122 @@ try { fs.mkdirSync(PIPELINE_DIR, { recursive: true }); } catch(e) {}
 try { fs.mkdirSync(path.join(PIPELINE_DIR, 'scenes'), { recursive: true }); } catch(e) {}
 try { fs.mkdirSync(path.join(PIPELINE_DIR, 'reels'), { recursive: true }); } catch(e) {}
 
-// Aktif job'lar
+// ═══════════════════════════════════════════
+//  PRODUCTION GUARDS — Binlerce kullanıcı için
+// ═══════════════════════════════════════════
+
+// Concurrency limiter — aynı anda max N paralel işlem (OOM koruması)
+function pLimit(concurrency) {
+  let active = 0;
+  const queue = [];
+  function next() {
+    if (active >= concurrency || queue.length === 0) return;
+    active++;
+    const { fn, resolve, reject } = queue.shift();
+    fn().then(resolve, reject).finally(() => { active--; next(); });
+  }
+  return function(fn) {
+    return new Promise((resolve, reject) => {
+      queue.push({ fn, resolve, reject });
+      next();
+    });
+  };
+}
+
+// BG removal: max 3 paralel (her biri ~200MB RAM kullanır)
+const bgLimit = pLimit(3);
+// FFmpeg: max 2 paralel (CPU-yoğun)
+const ffmpegLimit = pLimit(2);
+// Gemini API: max 3 paralel (rate limit koruması)
+const geminiLimit = pLimit(3);
+
+// Aktif job limiti
+const MAX_ACTIVE_JOBS = 20;
+const MAX_JOBS_HISTORY = 200;
+const JOB_TTL_MS = 2 * 60 * 60 * 1000;       // 2 saat
+const FILE_TTL_MS = 2 * 60 * 60 * 1000;       // 2 saat
+const CLEANUP_INTERVAL_MS = 5 * 60 * 1000;    // 5 dk'da bir temizlik
+
+// Aktif job'lar (LRU eviction ile)
 const _pipelineJobs = {};
+let _activeJobCount = 0;
+
+// Pipeline rate limiter — IP başına 5 req/dk (auto-produce ve reels için)
+const pipelineRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 5,
+  keyGenerator: (req) => req.ip || req.headers['x-forwarded-for'] || 'unknown',
+  handler: (_req, res) => res.status(429).json({ ok: false, error: 'Çok fazla istek — 1 dakika bekleyin' }),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Hafif endpoint'ler için daha yüksek limit
+const lightRateLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  keyGenerator: (req) => req.ip || req.headers['x-forwarded-for'] || 'unknown',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// ═══════════════════════════════════════════
+//  CLEANUP — Bellek sızıntısı koruması
+// ═══════════════════════════════════════════
+
+/** Job ve dosya temizliği (5 dk'da bir çalışır) */
+function cleanupExpiredResources() {
+  const now = Date.now();
+
+  // 1) Eski job'ları temizle (2 saatten eski + tamamlanmış/hatalı)
+  const jobIds = Object.keys(_pipelineJobs);
+  let cleaned = 0;
+  for (const id of jobIds) {
+    const job = _pipelineJobs[id];
+    const age = now - (job.created || 0);
+    if (age > JOB_TTL_MS || (jobIds.length > MAX_JOBS_HISTORY && age > 10 * 60 * 1000)) {
+      if (job.status === 'processing') _activeJobCount = Math.max(0, _activeJobCount - 1);
+      delete _pipelineJobs[id];
+      cleaned++;
+    }
+  }
+
+  // 2) Eski dosya referanslarını temizle
+  let filesCleaned = 0;
+  if (global._pipeFiles) {
+    for (const [id, file] of Object.entries(global._pipeFiles)) {
+      if (now - (file.created || 0) > FILE_TTL_MS) {
+        try { fs.unlinkSync(file.path); } catch(e) {}
+        delete global._pipeFiles[id];
+        filesCleaned++;
+      }
+    }
+  }
+
+  // 3) Orphan temp dosyaları temizle (pipeline dizinindeki 2 saatten eski dosyalar)
+  try {
+    const files = fs.readdirSync(PIPELINE_DIR);
+    for (const f of files) {
+      if (f === 'scenes' || f === 'reels') continue;
+      const fp = path.join(PIPELINE_DIR, f);
+      try {
+        const stat = fs.statSync(fp);
+        if (now - stat.mtimeMs > FILE_TTL_MS) {
+          fs.unlinkSync(fp);
+          filesCleaned++;
+        }
+      } catch(e) {}
+    }
+  } catch(e) {}
+
+  if (cleaned > 0 || filesCleaned > 0) {
+    logger.info(`Pipeline temizlik: ${cleaned} job, ${filesCleaned} dosya silindi. Aktif: ${_activeJobCount}`);
+  }
+}
+
+// Periyodik temizlik başlat
+const _cleanupTimer = setInterval(cleanupExpiredResources, CLEANUP_INTERVAL_MS);
+if (_cleanupTimer.unref) _cleanupTimer.unref(); // Process'i canlı tutmasın
 
 // Multer — çoklu fotoğraf yükleme (maks 20 dosya, 10MB/dosya)
 const _pipeUpload = multer({
@@ -111,7 +226,7 @@ const SCENE_PROMPTS = {
 // ═══════════════════════════════════════════
 //  1) ARKA PLAN SİLME (proxy → /api/pro/remove-bg)
 // ═══════════════════════════════════════════
-router.post('/remove-bg', _pipeUpload.single('image'), async (req, res) => {
+router.post('/remove-bg', lightRateLimit, _pipeUpload.single('image'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ ok: false, error: 'Görsel dosyası gerekli' });
 
@@ -145,7 +260,7 @@ router.post('/remove-bg', _pipeUpload.single('image'), async (req, res) => {
 // ═══════════════════════════════════════════
 //  2) SAHNE ÜRETME (Gemini Imagen)
 // ═══════════════════════════════════════════
-router.post('/scene-generate', express.json(), async (req, res) => {
+router.post('/scene-generate', lightRateLimit, express.json(), async (req, res) => {
   try {
     const { category, customPrompt, width, height } = req.body;
     const cat = (category || 'default').toLowerCase();
@@ -229,10 +344,15 @@ router.post('/scene-generate', express.json(), async (req, res) => {
 // ═══════════════════════════════════════════
 //  3) REELS OLUŞTUR (FFmpeg Slideshow)
 // ═══════════════════════════════════════════
-router.post('/reels', _pipeUpload.array('photos', 20), async (req, res) => {
+router.post('/reels', pipelineRateLimit, _pipeUpload.array('photos', 20), async (req, res) => {
   const jobId = crypto.randomBytes(6).toString('hex');
 
   try {
+    // Aktif job limiti kontrolü
+    if (_activeJobCount >= MAX_ACTIVE_JOBS) {
+      return res.status(503).json({ ok: false, error: `Sistem yoğun — ${MAX_ACTIVE_JOBS} aktif iş var, lütfen bekleyin` });
+    }
+
     const files = req.files || [];
     if (files.length < 2) return res.status(400).json({ ok: false, error: 'En az 2 fotoğraf gerekli' });
 
@@ -250,6 +370,7 @@ router.post('/reels', _pipeUpload.array('photos', 20), async (req, res) => {
     const cat = category.toLowerCase();
 
     // Job başlat
+    _activeJobCount++;
     _pipelineJobs[jobId] = {
       status: 'processing',
       progress: 0,
@@ -266,7 +387,8 @@ router.post('/reels', _pipeUpload.array('photos', 20), async (req, res) => {
       .catch(err => {
         logger.error('Reels pipeline hatası', { jobId, error: err.message });
         _pipelineJobs[jobId] = { ..._pipelineJobs[jobId], status: 'error', error: err.message };
-      });
+      })
+      .finally(() => { _activeJobCount = Math.max(0, _activeJobCount - 1); });
 
   } catch(e) {
     logger.error('pipeline/reels hatası', { error: e.message });
@@ -278,10 +400,15 @@ router.post('/reels', _pipeUpload.array('photos', 20), async (req, res) => {
 // ═══════════════════════════════════════════
 //  4) TAM OTONOM — Auto Produce
 // ═══════════════════════════════════════════
-router.post('/auto-produce', _pipeUpload.array('photos', 20), async (req, res) => {
+router.post('/auto-produce', pipelineRateLimit, _pipeUpload.array('photos', 20), async (req, res) => {
   const jobId = crypto.randomBytes(6).toString('hex');
 
   try {
+    // Aktif job limiti kontrolü
+    if (_activeJobCount >= MAX_ACTIVE_JOBS) {
+      return res.status(503).json({ ok: false, error: `Sistem yoğun — ${MAX_ACTIVE_JOBS} aktif iş var, lütfen bekleyin` });
+    }
+
     const files = req.files || [];
     if (files.length < 1) return res.status(400).json({ ok: false, error: 'En az 1 fotoğraf gerekli' });
 
@@ -299,6 +426,7 @@ router.post('/auto-produce', _pipeUpload.array('photos', 20), async (req, res) =
 
     const cat = category.toLowerCase();
 
+    _activeJobCount++;
     _pipelineJobs[jobId] = {
       status: 'processing',
       progress: 0,
@@ -325,7 +453,7 @@ router.post('/auto-produce', _pipeUpload.array('photos', 20), async (req, res) =
     }).catch(err => {
       logger.error('Auto-produce hatası', { jobId, error: err.message });
       _pipelineJobs[jobId] = { ..._pipelineJobs[jobId], status: 'error', error: err.message };
-    });
+    }).finally(() => { _activeJobCount = Math.max(0, _activeJobCount - 1); });
 
   } catch(e) {
     logger.error('pipeline/auto-produce hatası', { error: e.message });
@@ -336,10 +464,25 @@ router.post('/auto-produce', _pipeUpload.array('photos', 20), async (req, res) =
 // ═══════════════════════════════════════════
 //  STATUS & DOWNLOAD
 // ═══════════════════════════════════════════
-router.get('/status/:jobId', (req, res) => {
+router.get('/status/:jobId', lightRateLimit, (req, res) => {
   const job = _pipelineJobs[req.params.jobId];
   if (!job) return res.status(404).json({ ok: false, error: 'Job bulunamadı' });
   res.json({ ok: true, ...job });
+});
+
+// Pipeline sağlık durumu
+router.get('/health', (_req, res) => {
+  const jobCount = Object.keys(_pipelineJobs).length;
+  const fileCount = global._pipeFiles ? Object.keys(global._pipeFiles).length : 0;
+  res.json({
+    ok: true,
+    activeJobs: _activeJobCount,
+    totalJobs: jobCount,
+    maxJobs: MAX_ACTIVE_JOBS,
+    trackedFiles: fileCount,
+    memoryMB: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+    uptime: Math.round(process.uptime())
+  });
 });
 
 router.get('/download/:fileId', (req, res) => {
@@ -371,7 +514,7 @@ async function autoProducePipeline(jobId, files, opts) {
       const bgRemover = require('../services/background-remover');
       let done = 0;
 
-      const results = await Promise.all(files.map(async (file, i) => {
+      const results = await Promise.all(files.map((file, i) => bgLimit(async () => {
         const imgBuf = fs.readFileSync(file.path);
         try {
           const result = await bgRemover.processProductImage(imgBuf, {});
@@ -389,7 +532,7 @@ async function autoProducePipeline(jobId, files, opts) {
           logger.warn(`[${jobId}] BG hata, orijinal: ${bgErr.message}`);
         }
         return file.path;
-      }));
+      })));
 
       results.forEach(p => processedPhotos.push(p));
     } else {
@@ -413,11 +556,11 @@ async function autoProducePipeline(jobId, files, opts) {
         job.stage = 'compositing';
         job.progress = 40;
 
-        const composited = await Promise.all(processedPhotos.map(async (photoPath, i) => {
+        const composited = await Promise.all(processedPhotos.map((photoPath, i) => ffmpegLimit(async () => {
           const compPath = path.join(PIPELINE_DIR, `comp-${jobId}-${i}.png`);
           await compositeOnScene(photoPath, scenePath, compPath);
           return compPath;
-        }));
+        })));
         job.progress = 55;
 
         // Composited fotoğrafları kullan
