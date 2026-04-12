@@ -236,15 +236,15 @@ body {
 }
 .sub-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  padding: 0 10px 12px;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 5px;
+  padding: 0 8px 10px;
 }
 .sub-cmd {
   background: linear-gradient(135deg, #0d0d0d, #0a0a0a);
   border: 1px solid #1a1a1a;
-  border-radius: 14px;
-  padding: 14px 12px;
+  border-radius: 12px;
+  padding: 10px 6px 8px;
   cursor: pointer;
   transition: all 0.15s;
   text-align: center;
@@ -252,20 +252,10 @@ body {
   overflow: hidden;
 }
 .sub-cmd:active { transform: scale(0.95); background: #151515; }
-.sub-cmd .sub-icon { font-size: 26px; margin-bottom: 6px; display: block; }
-.sub-cmd .sub-label { font-size: 11px; font-weight: 700; color: #ddd; line-height: 1.2; }
-.sub-cmd .sub-hint { font-size: 8px; color: var(--text5); margin-top: 3px; letter-spacing: 0.3px; }
-.sub-cmd.file-cmd { border-color: #222; }
+.sub-cmd .sub-icon { font-size: 22px; margin-bottom: 3px; display: block; }
+.sub-cmd .sub-label { font-size: 9px; font-weight: 700; color: #ccc; line-height: 1.2; }
+.sub-cmd.file-cmd { border-color: #1e1e1e; }
 .sub-cmd.file-cmd:active { border-color: var(--cat-color, #333); }
-.sub-cmd .file-tag {
-  position: absolute; top: 6px; right: 6px;
-  font-size: 7px; font-weight: 800;
-  background: #1a1a1a;
-  color: var(--text4);
-  padding: 2px 5px;
-  border-radius: 4px;
-  letter-spacing: 0.5px;
-}
 
 /* ── JOB CARDS ── */
 .job-card {
@@ -626,41 +616,86 @@ const CATEGORIES = [
     shadow: 'rgba(234,179,8,0.15)',
     desc: 'Tam otomatik uretim, analiz & yonetim',
     commands: [
-      // Otomatik Uretim
-      { id:'oto_auto',       icon:'🚀', label:'Tam Otomatik',      hint:'AI senaryo → cekim → kurgu → cikti',type:'action', endpoint:'/api/otonom/auto-produce' },
-      { id:'oto_batch',      icon:'📚', label:'Toplu Uretim',      hint:'Coklu dosya paralel isle',           type:'file', accept:'video/*,image/*,audio/*', endpoint:'/api/otonom/batch', field:'files' },
-      { id:'oto_template',   icon:'🎭', label:'Sablon Uret',       hint:'Hazir sablondan hizli uretim',       type:'action', endpoint:'/api/otonom/template-produce' },
-      { id:'oto_series',     icon:'📺', label:'Seri Icerik',       hint:'Bolumluk icerik zinciri',            type:'action', endpoint:'/api/otonom/series' },
-      { id:'oto_remix',      icon:'🔄', label:'Icerik Yenile',     hint:'Mevcut icerigi farkli versiyonla',   type:'file', accept:'video/*,image/*', endpoint:'/api/otonom/remix', field:'files' },
-      // Planlama & Zamanlama
-      { id:'oto_schedule',   icon:'📅', label:'Zamanli Uretim',    hint:'Saat, gun, hafta planla',            type:'action', endpoint:'/api/otonom/schedule' },
-      { id:'oto_plan',       icon:'🧠', label:'AI Icerik Planla',  hint:'Haftalik/aylik icerik takvimi',      type:'action', endpoint:'/api/otonom/content-plan' },
-      { id:'oto_calendar',   icon:'🗓️', label:'Yayin Takvimi',     hint:'Tum platformlar tek gorunumde',      type:'action', endpoint:'/api/otonom/calendar' },
-      { id:'oto_besttime',   icon:'⏰', label:'En Iyi Zaman',      hint:'AI ile optimal paylasim saati',      type:'action', endpoint:'/api/otonom/best-time' },
-      // Yayinlama & Dagitim
-      { id:'oto_publish',    icon:'📤', label:'Yayinla',           hint:'Instagram, TikTok, YouTube, X',      type:'action', endpoint:'/api/otonom/publish' },
-      { id:'oto_multipost',  icon:'📡', label:'Coklu Platform',    hint:'Tek tusla tum platformlara',         type:'action', endpoint:'/api/otonom/multi-publish' },
-      { id:'oto_repost',     icon:'♻️', label:'Yeniden Paylas',    hint:'Evergreen icerik tekrar yayinla',    type:'action', endpoint:'/api/otonom/repost' },
-      { id:'oto_crosspost',  icon:'🔗', label:'Cross-Post',        hint:'Platformlar arasi adapte et',        type:'action', endpoint:'/api/otonom/cross-post' },
-      // Analiz & Raporlama
-      { id:'oto_trend',      icon:'📊', label:'Trend Analiz',      hint:'Guncel viral trendleri tara',        type:'action', endpoint:'/api/otonom/trend-analysis' },
-      { id:'oto_report',     icon:'📈', label:'Performans Rapor',  hint:'Izlenme, begeni, paylasim',          type:'action', endpoint:'/api/otonom/performance' },
-      { id:'oto_competitor', icon:'🔍', label:'Rakip Analiz',      hint:'Rakip icerikleri izle + karsilastir', type:'action', endpoint:'/api/otonom/competitor' },
-      { id:'oto_audience',   icon:'👥', label:'Kitle Analiz',      hint:'Demografi, ilgi alani, davranis',    type:'action', endpoint:'/api/otonom/audience' },
-      { id:'oto_hashtag',    icon:'#️⃣', label:'Hashtag Onerisi',   hint:'Trend + niche hashtag bul',          type:'action', endpoint:'/api/otonom/hashtag' },
-      { id:'oto_sentiment',  icon:'💭', label:'Yorum Analiz',      hint:'Olumlu/olumsuz duygu analizi',       type:'action', endpoint:'/api/otonom/sentiment' },
-      // Test & Optimizasyon
-      { id:'oto_ab',         icon:'🔬', label:'A/B Test',          hint:'2 varyant karsilastir + kazanani sec',type:'file', accept:'video/*,image/*', endpoint:'/api/otonom/ab-test', field:'files' },
-      { id:'oto_optimize',   icon:'⚡', label:'Icerik Optimize',   hint:'Baslik, aciklama, etiket iyilestir', type:'action', endpoint:'/api/otonom/optimize-content' },
-      { id:'oto_hook',       icon:'🪝', label:'Hook Olustur',      hint:'Ilk 3 saniye dikkat cekici',         type:'file', accept:'video/*', endpoint:'/api/otonom/create-hook', field:'video' },
-      // Kampanya & Gelir
-      { id:'oto_campaign',   icon:'🎯', label:'Kampanya',          hint:'Reklam kampanyasi olustur + yonet',  type:'action', endpoint:'/api/otonom/campaign' },
-      { id:'oto_funnel',     icon:'🔻', label:'Satis Hunisi',      hint:'Farkindalik → ilgi → satin al',      type:'action', endpoint:'/api/otonom/funnel' },
-      { id:'oto_revenue',    icon:'💰', label:'Gelir Takip',       hint:'Kazanc, maliyet, ROI raporu',        type:'action', endpoint:'/api/otonom/revenue' },
-      // Kuyruk & Sistem
-      { id:'oto_queue',      icon:'📋', label:'Kuyruk Yonetimi',   hint:'Sirala, duraklat, iptal et',         type:'action', endpoint:'/api/otonom/queue-manage' },
-      { id:'oto_logs',       icon:'📜', label:'AI Gunluk',         hint:'Tum islem gecmisi + detay',          type:'action', endpoint:'/api/otonom/logs' },
-      { id:'oto_settings',   icon:'⚙️', label:'Otonom Ayarlari',   hint:'Varsayilan kalite, format, dil',     type:'action', endpoint:'/api/otonom/settings' },
+      // ── Tam Otonom Uretim ──
+      { id:'oto_auto',       icon:'🚀', label:'Tam Otomatik',     type:'action', endpoint:'/api/otonom/auto-produce' },
+      { id:'oto_batch',      icon:'📚', label:'Toplu Uretim',     type:'file', accept:'video/*,image/*,audio/*', endpoint:'/api/otonom/batch', field:'files' },
+      { id:'oto_template',   icon:'🎭', label:'Sablon Uret',      type:'action', endpoint:'/api/otonom/template-produce' },
+      { id:'oto_series',     icon:'📺', label:'Seri Icerik',      type:'action', endpoint:'/api/otonom/series' },
+      { id:'oto_remix',      icon:'🔄', label:'Icerik Yenile',    type:'file', accept:'video/*,image/*', endpoint:'/api/otonom/remix', field:'files' },
+      // ── Video (PRO) ──
+      { id:'oto_render',     icon:'🎞️', label:'Video Render',     type:'file', accept:'video/*', endpoint:'/api/pro/render', field:'video' },
+      { id:'oto_cut',        icon:'✂️', label:'Akilli Kesim',     type:'file', accept:'video/*', endpoint:'/api/pro/smart-cut', field:'video' },
+      { id:'oto_effect',     icon:'✨', label:'Efekt Ekle',       type:'file', accept:'video/*', endpoint:'/api/pro/effects', field:'video' },
+      { id:'oto_color',      icon:'🎨', label:'Renk Grading',     type:'file', accept:'video/*', endpoint:'/api/pro/color-grade', field:'video' },
+      { id:'oto_stabilize',  icon:'📐', label:'Stabilizasyon',    type:'file', accept:'video/*', endpoint:'/api/pro/stabilize', field:'video' },
+      { id:'oto_slow',       icon:'🐌', label:'Slow Motion',      type:'file', accept:'video/*', endpoint:'/api/pro/speed-ramp', field:'video' },
+      { id:'oto_subtitle',   icon:'💬', label:'Altyazi',          type:'file', accept:'video/*', endpoint:'/api/pro/subtitle', field:'video' },
+      { id:'oto_music',      icon:'🎵', label:'Muzik Ekle',       type:'file', accept:'video/*', endpoint:'/api/pro/add-music', field:'video' },
+      { id:'oto_thumb',      icon:'🖼️', label:'Thumbnail',        type:'file', accept:'video/*', endpoint:'/api/pro/thumbnail', field:'video' },
+      { id:'oto_greenscreen',icon:'🟩', label:'Green Screen',     type:'file', accept:'video/*', endpoint:'/api/pro/chroma-key', field:'video' },
+      { id:'oto_upscale',    icon:'🔍', label:'AI Upscale',       type:'file', accept:'video/*', endpoint:'/api/pro/upscale', field:'video' },
+      { id:'oto_resize',     icon:'📱', label:'Boyut Ayarla',     type:'file', accept:'video/*', endpoint:'/api/pro/resize', field:'video' },
+      { id:'oto_objremove',  icon:'🧹', label:'Nesne Kaldir',     type:'file', accept:'video/*', endpoint:'/api/pro/remove-object', field:'video' },
+      // ── 360° & Spor ──
+      { id:'oto_stitch',     icon:'🧩', label:'360 Birlestir',    type:'file', accept:'image/*,video/*,.insv', endpoint:'/api/pro/stitch', field:'images' },
+      { id:'oto_reframe',    icon:'🎯', label:'Reframe',          type:'file', accept:'video/*', endpoint:'/api/pro/reframe', field:'video' },
+      { id:'oto_tiny',       icon:'🌍', label:'Tiny Planet',      type:'file', accept:'image/*,video/*', endpoint:'/api/pro/tiny-planet', field:'video' },
+      { id:'oto_3d',         icon:'🧊', label:'3D Model',         type:'file', accept:'image/*', endpoint:'/api/pro/3d-model', field:'images' },
+      { id:'oto_vtour',      icon:'🏠', label:'Sanal Tur',        type:'file', accept:'image/*', endpoint:'/api/pro/virtual-tour', field:'images' },
+      { id:'oto_drone',      icon:'🚁', label:'Drone 360',        type:'file', accept:'video/*', endpoint:'/api/pro/360-drone', field:'video' },
+      { id:'oto_moto',       icon:'🏍️', label:'Motor Yaris',      type:'file', accept:'video/*', endpoint:'/api/pro/360-moto', field:'video' },
+      { id:'oto_formula',    icon:'🏎️', label:'Araba Yaris',      type:'file', accept:'video/*', endpoint:'/api/pro/360-racing', field:'video' },
+      { id:'oto_sport360',   icon:'⚽', label:'Spor 360',         type:'file', accept:'video/*', endpoint:'/api/pro/360-football', field:'video' },
+      { id:'oto_telemetry',  icon:'📊', label:'Telemetri',        type:'file', accept:'video/*', endpoint:'/api/pro/360-telemetry', field:'video' },
+      { id:'oto_replay',     icon:'🔁', label:'Instant Replay',   type:'file', accept:'video/*', endpoint:'/api/pro/360-replay', field:'video' },
+      // ── Ses & Dublaj ──
+      { id:'oto_voiceover',  icon:'🗣️', label:'Seslendirme',      type:'file', accept:'video/*,audio/*', endpoint:'/api/dubbing/voiceover', field:'video' },
+      { id:'oto_clone',      icon:'🧬', label:'Ses Klonlama',     type:'file', accept:'audio/*', endpoint:'/api/dubbing/clone-voice', field:'audio' },
+      { id:'oto_translate',  icon:'🌍', label:'Ceviri Dublaj',    type:'file', accept:'video/*', endpoint:'/api/dubbing/translate', field:'video' },
+      { id:'oto_lipsync',    icon:'👄', label:'Lip-Sync',         type:'file', accept:'video/*', endpoint:'/api/dubbing/lip-sync', field:'video' },
+      { id:'oto_denoise',    icon:'🔇', label:'Ses Temizle',      type:'file', accept:'video/*,audio/*', endpoint:'/api/dubbing/denoise', field:'audio' },
+      { id:'oto_separate',   icon:'🔊', label:'Ses Ayir',         type:'file', accept:'audio/*', endpoint:'/api/dubbing/separate', field:'audio' },
+      { id:'oto_genmusic',   icon:'🎼', label:'Muzik Olustur',    type:'action', endpoint:'/api/dubbing/generate-music' },
+      { id:'oto_transcribe', icon:'📄', label:'Transkript',       type:'file', accept:'audio/*,video/*', endpoint:'/api/dubbing/transcribe', field:'audio' },
+      // ── E-Ticaret ──
+      { id:'oto_removebg',   icon:'🖼️', label:'Arka Plan Sil',    type:'file', accept:'image/*', endpoint:'/api/pro/remove-bg', field:'image' },
+      { id:'oto_product',    icon:'📸', label:'Urun Foto',        type:'file', accept:'image/*', endpoint:'/api/pro/product-photo', field:'image' },
+      { id:'oto_catalog',    icon:'📋', label:'Katalog',          type:'file', accept:'image/*', endpoint:'/api/pro/catalog', field:'images' },
+      { id:'oto_spin',       icon:'🔄', label:'360 Urun',         type:'file', accept:'image/*', endpoint:'/api/pro/product-spin', field:'images' },
+      { id:'oto_mockup',     icon:'👕', label:'Mockup',           type:'file', accept:'image/*', endpoint:'/api/pro/mockup', field:'image' },
+      { id:'oto_enhance',    icon:'💎', label:'Gorsel Iyilestir', type:'file', accept:'image/*', endpoint:'/api/pro/enhance', field:'image' },
+      { id:'oto_banner',     icon:'🎨', label:'Banner',           type:'file', accept:'image/*', endpoint:'/api/pro/banner', field:'image' },
+      { id:'oto_tryon',      icon:'👗', label:'Sanal Giydirme',   type:'file', accept:'image/*', endpoint:'/api/pro/virtual-tryon', field:'image' },
+      { id:'oto_carousel',   icon:'🎠', label:'Carousel',         type:'file', accept:'image/*', endpoint:'/api/pro/carousel', field:'images' },
+      // ── Planlama & Zamanlama ──
+      { id:'oto_schedule',   icon:'📅', label:'Zamanla',          type:'action', endpoint:'/api/otonom/schedule' },
+      { id:'oto_plan',       icon:'🧠', label:'Icerik Planla',    type:'action', endpoint:'/api/otonom/content-plan' },
+      { id:'oto_calendar',   icon:'🗓️', label:'Takvim',           type:'action', endpoint:'/api/otonom/calendar' },
+      { id:'oto_besttime',   icon:'⏰', label:'En Iyi Saat',      type:'action', endpoint:'/api/otonom/best-time' },
+      // ── Yayinlama ──
+      { id:'oto_publish',    icon:'📤', label:'Yayinla',          type:'action', endpoint:'/api/otonom/publish' },
+      { id:'oto_multipost',  icon:'📡', label:'Coklu Platform',   type:'action', endpoint:'/api/otonom/multi-publish' },
+      { id:'oto_repost',     icon:'♻️', label:'Tekrar Paylas',    type:'action', endpoint:'/api/otonom/repost' },
+      { id:'oto_crosspost',  icon:'🔗', label:'Cross-Post',       type:'action', endpoint:'/api/otonom/cross-post' },
+      // ── Analiz ──
+      { id:'oto_trend',      icon:'📊', label:'Trend Analiz',     type:'action', endpoint:'/api/otonom/trend-analysis' },
+      { id:'oto_report',     icon:'📈', label:'Performans',       type:'action', endpoint:'/api/otonom/performance' },
+      { id:'oto_competitor', icon:'🔍', label:'Rakip Analiz',     type:'action', endpoint:'/api/otonom/competitor' },
+      { id:'oto_audience',   icon:'👥', label:'Kitle Analiz',     type:'action', endpoint:'/api/otonom/audience' },
+      { id:'oto_hashtag',    icon:'#️⃣', label:'Hashtag',          type:'action', endpoint:'/api/otonom/hashtag' },
+      { id:'oto_sentiment',  icon:'💭', label:'Yorum Analiz',     type:'action', endpoint:'/api/otonom/sentiment' },
+      // ── Test & Optimizasyon ──
+      { id:'oto_ab',         icon:'🔬', label:'A/B Test',         type:'file', accept:'video/*,image/*', endpoint:'/api/otonom/ab-test', field:'files' },
+      { id:'oto_optimize',   icon:'⚡', label:'Optimize',         type:'action', endpoint:'/api/otonom/optimize-content' },
+      { id:'oto_hook',       icon:'🪝', label:'Hook Olustur',     type:'file', accept:'video/*', endpoint:'/api/otonom/create-hook', field:'video' },
+      // ── Kampanya & Gelir ──
+      { id:'oto_campaign',   icon:'🎯', label:'Kampanya',         type:'action', endpoint:'/api/otonom/campaign' },
+      { id:'oto_funnel',     icon:'🔻', label:'Satis Hunisi',     type:'action', endpoint:'/api/otonom/funnel' },
+      { id:'oto_revenue',    icon:'💰', label:'Gelir Takip',      type:'action', endpoint:'/api/otonom/revenue' },
+      // ── Sistem ──
+      { id:'oto_queue',      icon:'📋', label:'Kuyruk',           type:'action', endpoint:'/api/otonom/queue-manage' },
+      { id:'oto_logs',       icon:'📜', label:'AI Gunluk',        type:'action', endpoint:'/api/otonom/logs' },
+      { id:'oto_settings',   icon:'⚙️', label:'Ayarlar',          type:'action', endpoint:'/api/otonom/settings' },
     ]
   },
 ];
@@ -838,11 +873,9 @@ function renderShortcuts() {
         <div class="cat-body">
           <div class="sub-grid">
             ${cat.commands.map(cmd => `
-              <div class="sub-cmd ${cmd.type === 'file' ? 'file-cmd' : ''}" onclick="tapCommand('${cat.id}','${cmd.id}')">
-                ${cmd.type === 'file' ? '<span class="file-tag">DOSYA</span>' : ''}
+              <div class="sub-cmd" onclick="tapCommand('${cat.id}','${cmd.id}')">
                 <span class="sub-icon">${cmd.icon}</span>
                 <div class="sub-label">${cmd.label}</div>
-                <div class="sub-hint">${cmd.hint}</div>
               </div>
             `).join('')}
           </div>
