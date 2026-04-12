@@ -168,6 +168,7 @@ const CATEGORY_LUT = {
   pet:        { vf: 'eq=contrast=1.06:saturation=1.2:brightness=0.04,colorbalance=rs=0.08:gs=0.05:bs=-0.04', label: 'Warm Soft' },
   taki:       { vf: 'eq=contrast=1.2:saturation=0.95:brightness=-0.03,vignette=PI/3,colorbalance=rs=0.1:gs=0.06:bs=-0.02', label: 'Rich Gold' },
   oyuncak:    { vf: 'eq=contrast=1.1:saturation=1.5:brightness=0.05', label: 'Vivid Pop' },
+  aksesuar:   { vf: 'eq=contrast=1.1:saturation=1.05:brightness=0.02,colorbalance=rs=0.03:gs=0.01:bs=0.01', label: 'Clean Natural' },
   default:    { vf: 'eq=contrast=1.1:saturation=1.1:brightness=0.0', label: 'Standard' }
 };
 
@@ -206,21 +207,26 @@ const CATEGORY_TRANSITIONS = {
   pet:        ['dissolve', 'fade', 'smoothleft', 'dissolve'],
   taki:       ['fadewhite', 'fade', 'smoothleft', 'fadewhite'],
   oyuncak:    ['circlecrop', 'slideleft', 'distance', 'circlecrop'],
+  aksesuar:   ['fadewhite', 'slideleft', 'smoothleft', 'fade'],
 };
 
-// Kategori → sahne prompt (Gemini Imagen)
+// SAHNE PROMPT KURALI: Sadece YÜZEY + ARKA PLAN + IŞIK.
+// Kesinlikle insan, model, manken, el, ürün YOK.
+const _NO_ITEMS = 'STRICT RULE: The image must contain ONLY an empty surface and background. Absolutely NO people, NO human models, NO mannequins, NO hands, NO products, NO objects, NO items. Just an empty backdrop ready for product placement.';
+
 const SCENE_PROMPTS = {
-  gida:       'Professional food photography background: rustic wooden table, warm golden hour lighting, fresh herbs and spices scattered, soft bokeh, appetizing atmosphere, high-end restaurant style',
-  icecek:     'Professional beverage photography: dark gradient background with ice cubes, water droplets, cool blue neon rim light, condensation effect, refreshing atmosphere',
-  kozmetik:   'Luxury cosmetic product background: white marble surface, pink satin fabric, flower petals, gold accessories, soft diffuse lighting, elegant and minimal',
-  giyim:      'Fashion product photography: clean white seamless studio background, soft directional lighting, professional lookbook style, minimal and modern',
-  elektronik: 'Tech product photography: matte black surface, blue-purple neon ambient glow, geometric light lines, dark background with rim lighting, futuristic',
-  spor:       'Sports product photography: outdoor natural setting, dynamic lighting, concrete texture, energetic atmosphere, bright daylight',
-  ev:         'Home decor photography: minimalist room setting, natural window light, plants and warm wood tones, cozy Scandinavian style',
-  otomotiv:   'Automotive product photography: dramatic garage setting with dark background, rim light highlighting edges, premium feel, polished reflections',
-  pet:        'Pet product photography: soft green grass background, warm natural sunlight, cozy and inviting, soft focus bokeh',
-  taki:       'Jewelry photography: black velvet surface, single spotlight creating sparkle, bokeh lights, luxury feel, macro close-up setting',
-  oyuncak:    'Colorful children\'s product background: bright pastel room, confetti, playful and fun, even lighting without shadows, vibrant colors',
+  gida:       `Empty food photography backdrop: rustic wooden table surface, warm golden hour lighting from window, soft bokeh background, no food. ${_NO_ITEMS}`,
+  icecek:     `Empty beverage photography backdrop: dark surface with subtle water droplets, cool blue rim light, dark gradient background. ${_NO_ITEMS}`,
+  kozmetik:   `Empty cosmetic photography backdrop: white marble surface, soft pink fabric draped in background, gold shimmer, diffuse lighting. ${_NO_ITEMS}`,
+  giyim:      `Empty product photography backdrop: clean white seamless studio paper, soft even lighting from both sides, light gray gradient, minimal. ${_NO_ITEMS}`,
+  elektronik: `Empty tech photography backdrop: matte black surface, blue-purple neon ambient glow from edges, dark background. ${_NO_ITEMS}`,
+  spor:       `Empty sports photography backdrop: concrete floor surface, outdoor natural bright light, blurred green trees in background. ${_NO_ITEMS}`,
+  ev:         `Empty home decor photography backdrop: light wood table surface, natural window light, blurred plants in background, Scandinavian style. ${_NO_ITEMS}`,
+  otomotiv:   `Empty automotive photography backdrop: dark polished floor, dramatic rim lighting from sides, dark background. ${_NO_ITEMS}`,
+  pet:        `Empty pet product photography backdrop: soft green grass surface, warm natural sunlight, soft focus flowers in background. ${_NO_ITEMS}`,
+  taki:       `Empty jewelry photography backdrop: black velvet surface, single spotlight from above, soft bokeh lights in dark background. ${_NO_ITEMS}`,
+  oyuncak:    `Empty children product photography backdrop: bright pastel colored surface, even soft lighting, colorful blurred confetti in background. ${_NO_ITEMS}`,
+  aksesuar:   `Empty accessory photography backdrop: clean white surface with subtle shadow, soft directional light, light gray gradient background. ${_NO_ITEMS}`,
 };
 
 // ═══════════════════════════════════════════
@@ -266,7 +272,7 @@ router.post('/scene-generate', lightRateLimit, express.json(), async (req, res) 
     const cat = (category || 'default').toLowerCase();
 
     const prompt = customPrompt || SCENE_PROMPTS[cat] || SCENE_PROMPTS.giyim;
-    const finalPrompt = `${prompt}. IMPORTANT: This is ONLY the background/backdrop, absolutely NO products, NO objects, NO items in the scene. Empty surface and background only. 1080x1920 vertical format, photorealistic.`;
+    const finalPrompt = `${prompt}. Vertical 9:16 aspect ratio, photorealistic, high quality. 1080x1920 vertical format, photorealistic.`;
 
     const GEMINI_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_KEY) return res.status(500).json({ ok: false, error: 'Gemini API key tanımlı değil' });
@@ -799,7 +805,7 @@ async function generateSceneImage(outputPath, category) {
   }
 
   const prompt = SCENE_PROMPTS[category] || SCENE_PROMPTS.giyim;
-  const finalPrompt = `${prompt}. IMPORTANT: This is ONLY the background/backdrop, absolutely NO products, NO objects, NO items in the scene. Empty surface and background only. 1080x1920 vertical, photorealistic.`;
+  const finalPrompt = `${prompt}. Vertical 9:16 aspect ratio, photorealistic, high quality. 1080x1920 vertical, photorealistic.`;
 
   try {
     const resp = await fetch(
