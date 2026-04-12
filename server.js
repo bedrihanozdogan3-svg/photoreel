@@ -233,6 +233,59 @@ app.get('/api/card/:token', async (req, res) => {
 
 });
 
+// POST /api/card/use-credit — kredi düşür (kart bazlı izole)
+// Otonom kart → tüm kategorilerde geçerli ama kendi 30 kredisinden düşer
+// PRO/360/Dublaj/E-ticaret kart → sadece kendi kategorisinde, 15 kredisinden düşer
+app.post('/api/card/use-credit', async (req, res) => {
+  const { token, category } = req.body;
+  if (!token) return res.status(400).json({ ok: false, error: 'Token gerekli' });
+
+  try {
+    const admin = require('firebase-admin');
+    const db = admin.firestore();
+    const doc = await db.collection('cards').doc(token).get();
+    if (!doc.exists) return res.status(404).json({ ok: false, error: 'Kart bulunamadi' });
+
+    const data = doc.data();
+    const plan = data.plan;
+    const credits = data.credits || 0;
+
+    // Kredi kontrolü
+    if (credits <= 0) {
+      return res.json({ ok: false, error: 'Kredi tukendi', credits: 0 });
+    }
+
+    // Otonom kart → her kategoride geçerli
+    // Diğer kartlar → sadece kendi kategorisi
+    const planCategory = { pro: 'pro', '360': '360', dublaj: 'dublaj', eticaret: 'eticaret' };
+    if (plan !== 'otonom' && plan !== 'master' && planCategory[plan] !== category) {
+      return res.json({ ok: false, error: 'Bu kart ' + category + ' kategorisinde kullanilamaz', credits });
+    }
+
+    // 1 kredi düşür (en pahalıdan baz alınmış — her işlem 1 kredi)
+    const newCredits = credits - 1;
+    await db.collection('cards').doc(token).update({ credits: newCredits });
+
+    res.json({ ok: true, credits: newCredits, plan });
+  } catch(e) {
+    res.json({ ok: false, error: e.message });
+  }
+});
+
+// GET /api/card/:token/credits — güncel kredi sorgula
+app.get('/api/card/:token/credits', async (req, res) => {
+  const { token } = req.params;
+  try {
+    const admin = require('firebase-admin');
+    const doc = await admin.firestore().collection('cards').doc(token).get();
+    if (!doc.exists) return res.status(404).json({ ok: false, error: 'Kart bulunamadi' });
+    const data = doc.data();
+    res.json({ ok: true, credits: data.credits || 0, plan: data.plan });
+  } catch(e) {
+    res.json({ ok: false, credits: 0, error: e.message });
+  }
+});
+
 // GET /api/cards/list — tüm kartları listele (admin)
 app.get('/api/cards/list', async (req, res) => {
   try {

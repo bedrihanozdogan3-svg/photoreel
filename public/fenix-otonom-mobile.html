@@ -390,21 +390,75 @@ const CATEGORIES = [
       { title:'Gorsel Isleme', color:'#10B981', cmds:[
         {id:'et_removebg',icon:'🖼️',label:'BG Sil'},{id:'et_changebg',icon:'🌄',label:'BG Degis'},
         {id:'et_enhance',icon:'💎',label:'Iyilestir'},{id:'et_retouch',icon:'🪄',label:'Retouch'},
-        {id:'et_shadow',icon:'💡',label:'Golge'},
+        {id:'et_shadow',icon:'💡',label:'Golge'},{id:'et_resize',icon:'📐',label:'Boyutla'},
+        {id:'et_crop',icon:'✂️',label:'Kirp'},{id:'et_whitebg',icon:'⬜',label:'Beyaz BG'},
       ]},
       { title:'Urun Cekim', color:'#3B82F6', cmds:[
         {id:'et_product',icon:'📸',label:'Urun Foto'},{id:'et_mockup',icon:'👕',label:'Mockup'},
         {id:'et_tryon',icon:'👗',label:'Giydirme'},{id:'et_flat',icon:'📏',label:'Flat Lay'},
-        {id:'et_multiangle',icon:'📐',label:'Coklu Aci'},
+        {id:'et_multiangle',icon:'📐',label:'Coklu Aci'},{id:'et_lifestyle',icon:'🏠',label:'Yasam Tarz'},
+        {id:'et_onmodel',icon:'🧑',label:'Model Ustu'},{id:'et_detail',icon:'🔍',label:'Detay Zoom'},
+      ]},
+      { title:'Giyim & Moda', color:'#EC4899', cmds:[
+        {id:'et_tshirt',icon:'👕',label:'Tisort'},{id:'et_dress',icon:'👗',label:'Elbise'},
+        {id:'et_shoes',icon:'👟',label:'Ayakkabi'},{id:'et_bag',icon:'👜',label:'Canta'},
+        {id:'et_jewelry',icon:'💍',label:'Taki'},{id:'et_watch',icon:'⌚',label:'Saat'},
+        {id:'et_glasses',icon:'🕶️',label:'Gozluk'},{id:'et_hat',icon:'🧢',label:'Sapka'},
+      ]},
+      { title:'Elektronik', color:'#6366F1', cmds:[
+        {id:'et_phone',icon:'📱',label:'Telefon'},{id:'et_laptop',icon:'💻',label:'Laptop'},
+        {id:'et_headphone',icon:'🎧',label:'Kulaklik'},{id:'et_camera',icon:'📷',label:'Kamera'},
+        {id:'et_tv',icon:'📺',label:'TV'},{id:'et_tablet',icon:'📲',label:'Tablet'},
+        {id:'et_console',icon:'🎮',label:'Konsol'},{id:'et_charger',icon:'🔌',label:'Aksesuar'},
+      ]},
+      { title:'Ev & Dekor', color:'#F59E0B', cmds:[
+        {id:'et_furniture',icon:'🛋️',label:'Mobilya'},{id:'et_lamp',icon:'💡',label:'Aydinlatma'},
+        {id:'et_carpet',icon:'🧶',label:'Hali'},{id:'et_curtain',icon:'🪟',label:'Perde'},
+        {id:'et_kitchen',icon:'🍳',label:'Mutfak'},{id:'et_bath',icon:'🛁',label:'Banyo'},
+        {id:'et_garden',icon:'🌿',label:'Bahce'},{id:'et_decor',icon:'🖼️',label:'Dekor'},
+      ]},
+      { title:'Kozmetik & Bakim', color:'#F472B6', cmds:[
+        {id:'et_skincare',icon:'🧴',label:'Bakim'},{id:'et_makeup',icon:'💄',label:'Makyaj'},
+        {id:'et_perfume',icon:'🧪',label:'Parfum'},{id:'et_hair',icon:'💇',label:'Sac'},
+        {id:'et_nail',icon:'💅',label:'Tirnak'},{id:'et_cream',icon:'🫧',label:'Krem'},
+      ]},
+      { title:'Gida & Icecek', color:'#22C55E', cmds:[
+        {id:'et_food',icon:'🍽️',label:'Yemek'},{id:'et_drink',icon:'🥤',label:'Icecek'},
+        {id:'et_snack',icon:'🍿',label:'Atistirma'},{id:'et_organic',icon:'🌾',label:'Organik'},
+        {id:'et_supplement',icon:'💊',label:'Takviye'},{id:'et_package',icon:'📦',label:'Paketleme'},
+      ]},
+      { title:'Spor & Outdoor', color:'#EF4444', cmds:[
+        {id:'et_sportgear',icon:'🏋️',label:'Ekipman'},{id:'et_sportshoe',icon:'👟',label:'Spor Ayak.'},
+        {id:'et_camp',icon:'⛺',label:'Kamp'},{id:'et_bike',icon:'🚴',label:'Bisiklet'},
+        {id:'et_swim',icon:'🏊',label:'Yuzme'},{id:'et_yoga',icon:'🧘',label:'Yoga'},
+      ]},
+      { title:'Oyuncak & Cocuk', color:'#A855F7', cmds:[
+        {id:'et_toy',icon:'🧸',label:'Oyuncak'},{id:'et_baby',icon:'👶',label:'Bebek'},
+        {id:'et_school',icon:'🎒',label:'Okul'},{id:'et_game',icon:'🎲',label:'Oyun'},
+      ]},
+      { title:'Otomotiv & Parca', color:'#64748B', cmds:[
+        {id:'et_carpart',icon:'🔧',label:'Parca'},{id:'et_tire',icon:'🛞',label:'Lastik'},
+        {id:'et_accessory',icon:'🚗',label:'Aksesuar'},{id:'et_tool',icon:'🧰',label:'Alet'},
+      ]},
+      { title:'Pet & Hayvan', color:'#FB923C', cmds:[
+        {id:'et_petfood',icon:'🐾',label:'Mama'},{id:'et_petacc',icon:'🦴',label:'Aksesuar'},
+        {id:'et_petbed',icon:'🛏️',label:'Yatak'},{id:'et_petcloth',icon:'🐕',label:'Kiyafet'},
       ]},
       { title:'Katalog & Toplu', color:'#EAB308', cmds:[
         {id:'et_catalog',icon:'📋',label:'Katalog'},{id:'et_spin',icon:'🔄',label:'360 Urun'},
         {id:'et_batch',icon:'📚',label:'Toplu Isle'},{id:'et_compare',icon:'🔁',label:'Karsilastir'},
+        {id:'et_variant',icon:'🎨',label:'Varyant'},{id:'et_sku',icon:'🏷️',label:'SKU Olustur'},
       ]},
-      { title:'Pazarlama', color:'#EC4899', cmds:[
+      { title:'Pazarlama & Icerik', color:'#EC4899', cmds:[
         {id:'et_banner',icon:'🎨',label:'Banner'},{id:'et_story',icon:'📱',label:'Story'},
         {id:'et_carousel',icon:'🎠',label:'Carousel'},{id:'et_video',icon:'🎬',label:'Urun Video'},
-        {id:'et_watermark',icon:'🏷️',label:'Damga'},
+        {id:'et_watermark',icon:'🏷️',label:'Damga'},{id:'et_aplus',icon:'⭐',label:'A+ Icerik'},
+        {id:'et_infographic',icon:'📊',label:'Infografik'},{id:'et_seo',icon:'🔍',label:'SEO Gorsel'},
+      ]},
+      { title:'Marketplace', color:'#0EA5E9', cmds:[
+        {id:'et_amazon',icon:'📦',label:'Amazon'},{id:'et_trendyol',icon:'🟠',label:'Trendyol'},
+        {id:'et_hepsiburada',icon:'🔵',label:'Hepsiburada'},{id:'et_n11',icon:'🟣',label:'N11'},
+        {id:'et_etsy',icon:'🟡',label:'Etsy'},{id:'et_shopify',icon:'🟢',label:'Shopify'},
       ]},
     ],
     defaultEndpoint:'/api/pro/remove-bg', defaultAccept:'image/*', defaultField:'image'
@@ -451,8 +505,9 @@ const CATEGORIES = [
 const NOTIF = {pro:'Videon hazir! 🎬','360':'360 videon hazir! 🌐',dublaj:'Dublajin hazir! 🎙️',eticaret:'Urunun hazir! 🛍️',otonom:'Islemin bitti! 🤖'};
 
 // ── STATE ──
+let cardToken = new URLSearchParams(window.location.search).get('t') || localStorage.getItem('fenix_card_token') || '';
 let plan = localStorage.getItem('fenix_plan') || 'free';
-let credits = parseInt(localStorage.getItem('fenix_otonom_credits') || '15');
+let credits = parseInt(localStorage.getItem('fenix_otonom_credits') || '0');
 let trialCredits = parseInt(localStorage.getItem('fenix_trial_credits') ?? TRIAL_MAX);
 let jobs = JSON.parse(localStorage.getItem('fenix_jobs') || '[]');
 let activeCat = 'pro';
@@ -489,7 +544,26 @@ function sendNotif(catId, name) {
 // ── INIT ──
 (async function init() {
   const t = new URLSearchParams(window.location.search).get('t');
-  if (t && t.length >= 8) { try { const r = await fetch(`${API}/api/card/${t}`); if(r.ok){const d=await r.json();plan=d.plan||'free';credits=d.credits||15;localStorage.setItem('fenix_plan',plan);localStorage.setItem('fenix_otonom_credits',credits)} } catch(e){} }
+  if (t && t.length >= 8) {
+    cardToken = t;
+    localStorage.setItem('fenix_card_token', t);
+    try {
+      const r = await fetch(`${API}/api/card/${t}`);
+      if (r.ok) {
+        const d = await r.json();
+        plan = d.plan || 'free';
+        credits = d.credits || 0;
+        localStorage.setItem('fenix_plan', plan);
+        localStorage.setItem('fenix_otonom_credits', credits);
+      }
+    } catch(e) {}
+  } else if (cardToken) {
+    // Token varsa backend'den güncel kredi çek
+    try {
+      const r = await fetch(`${API}/api/card/${cardToken}/credits`);
+      if (r.ok) { const d = await r.json(); credits = d.credits || 0; plan = d.plan || plan; localStorage.setItem('fenix_otonom_credits', credits); }
+    } catch(e) {}
+  }
   if (!localStorage.getItem('fenix_trial_credits') && plan !== 'free') { trialCredits=TRIAL_MAX; localStorage.setItem('fenix_trial_credits',trialCredits); }
   try { const o=JSON.parse(localStorage.getItem('fenix_jobs')||'[]'); if(o.length>0&&o[0].shortcutId){localStorage.removeItem('fenix_jobs');jobs=[]} } catch(e){localStorage.removeItem('fenix_jobs');jobs=[]}
   reqNotif();
@@ -566,7 +640,14 @@ function renderJobs() {
 function switchCat(id) { activeCat=id; render(); }
 
 function tapCmd(catId, cmdId, isAction) {
-  if (credits<=0) { showToast('Kredi tukendi!','error'); return; }
+  // Kredi kontrolü
+  if (isTrialActive() && !getOwned().includes(catId)) {
+    if (trialCredits <= 0) { showToast('Deneme hakki bitti!','error'); return; }
+  } else {
+    if (credits <= 0) { showToast('Kredi tukendi!','error'); return; }
+    // Kart kategorisi kontrolü — PRO kartla sadece PRO, Otonom kartla her sey
+    if (!isMaster() && !getOwned().includes(catId)) { showToast('Bu islem icin '+catId+' karti gerekli','error'); return; }
+  }
   const cat = CATEGORIES.find(c=>c.id===catId);
   const cmd = findCmd(cat, cmdId);
   if (isAction) { execAction(catId, cmdId, cmd); }
@@ -644,8 +725,17 @@ document.getElementById('msgInput').addEventListener('keydown',e=>{if(e.key==='E
 
 // ── HELPERS ──
 function deduct(catId) {
-  if (isTrialActive() && !getOwned().includes(catId)) { trialCredits--; localStorage.setItem('fenix_trial_credits',trialCredits); }
-  else { credits--; localStorage.setItem('fenix_otonom_credits',credits); }
+  if (isTrialActive() && !getOwned().includes(catId)) {
+    trialCredits--; localStorage.setItem('fenix_trial_credits',trialCredits);
+  } else {
+    credits--; localStorage.setItem('fenix_otonom_credits',credits);
+    // Backend'de de kredi düşür (Firestore senkron)
+    if (cardToken) {
+      fetch(`${API}/api/card/use-credit`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:cardToken,category:catId})})
+        .then(r=>r.json()).then(d=>{ if(d.ok){credits=d.credits;localStorage.setItem('fenix_otonom_credits',credits);renderCredits()} })
+        .catch(()=>{});
+    }
+  }
 }
 function updJob(id, u) {
   const prev = jobs.find(j=>j.id===id);
