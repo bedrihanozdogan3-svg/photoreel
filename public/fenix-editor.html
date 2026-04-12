@@ -15594,7 +15594,7 @@ function set3DPaintLayer(layer, btn) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (paint3D.saved[layer]) ctx.putImageData(paint3D.saved[layer], 0, 0);
   // UI
-  document.querySelectorAll('#3d-paint-tabs .ltab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('[id="3d-paint-tabs"] .ltab').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   // Sync right panel layer list
   document.querySelectorAll('.layer-item').forEach(b => b.classList.remove('active'));
@@ -15604,7 +15604,7 @@ function set3DPaintLayer(layer, btn) {
 function set3DPaintLayerById(layer, el) {
   document.querySelectorAll('.layer-item').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
-  const tabBtns = document.querySelectorAll('#3d-paint-tabs .ltab');
+  const tabBtns = document.querySelectorAll('[id="3d-paint-tabs"] .ltab');
   const idx = { base:0, rough:1, metal:2, emit:3 }[layer] || 0;
   set3DPaintLayer(layer, tabBtns[idx]);
 }
@@ -16527,7 +16527,7 @@ function runWallThicknessCheck() {
 
 function updateAnalysisDashboard() {
   let verts = 0, faces = 0, isWater = true;
-  if (window._scene) {
+  if (window._scene && typeof _scene.traverse === 'function') {
     _scene.traverse(obj => {
       if (!obj.isMesh || !obj.geometry || obj._wireHelper || obj._isCSGHelper) return;
       const p = obj.geometry.attributes.position;
@@ -16675,7 +16675,7 @@ async function _uretimDoGenerateQR() {
 
 function updateExportEstimates() {
   let vol = 0;
-  if (window._scene) {
+  if (window._scene && typeof _scene.traverse === 'function') {
     _scene.traverse(obj => {
       if (!obj.isMesh || !obj.geometry || obj._wireHelper || obj._isCSGHelper) return;
       const box = new THREE.Box3().setFromObject(obj);
