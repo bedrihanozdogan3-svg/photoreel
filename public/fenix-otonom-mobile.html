@@ -269,11 +269,11 @@ body{
   </div>
 </div>
 
-<input type="file" id="fileInput" multiple>
+<input type="file" id="fileInput" multiple accept="image/*,video/*">
 
 <script>
 const API = window.location.origin;
-const TRIAL_MAX = 2;
+const TRIAL_MAX = 10;
 const ALL_IDS = ['pro','360','dublaj','eticaret','otonom'];
 
 const CATEGORIES = [
@@ -564,7 +564,10 @@ function sendNotif(catId, name) {
       if (r.ok) { const d = await r.json(); credits = d.credits || 0; plan = d.plan || plan; localStorage.setItem('fenix_otonom_credits', credits); }
     } catch(e) {}
   }
-  if (!localStorage.getItem('fenix_trial_credits') && plan !== 'free') { trialCredits=TRIAL_MAX; localStorage.setItem('fenix_trial_credits',trialCredits); }
+  // Herkese deneme kredisi ver (ilk kullanımda)
+  if (!localStorage.getItem('fenix_trial_credits')) { trialCredits=TRIAL_MAX; localStorage.setItem('fenix_trial_credits',trialCredits); }
+  // Kredi 0 ise ve kart yoksa varsayılan test kredisi ver
+  if (credits <= 0 && !cardToken) { credits = 30; localStorage.setItem('fenix_otonom_credits', credits); }
   try { const o=JSON.parse(localStorage.getItem('fenix_jobs')||'[]'); if(o.length>0&&o[0].shortcutId){localStorage.removeItem('fenix_jobs');jobs=[]} } catch(e){localStorage.removeItem('fenix_jobs');jobs=[]}
   reqNotif();
   setTimeout(()=>{const l=document.getElementById('loadingScreen');if(l){l.classList.add('hide');setTimeout(()=>l.remove(),400)}},500);
@@ -642,13 +645,8 @@ function switchCat(id) { activeCat=id; render(); }
 
 function tapCmd(catId, cmdId, isAction) {
   // Kredi kontrolü
-  if (isTrialActive() && !getOwned().includes(catId)) {
-    if (trialCredits <= 0) { showToast('Deneme hakki bitti!','error'); return; }
-  } else {
-    if (credits <= 0) { showToast('Kredi tukendi!','error'); return; }
-    // Kart kategorisi kontrolü — PRO kartla sadece PRO, Otonom kartla her sey
-    if (!isMaster() && !getOwned().includes(catId)) { showToast('Bu islem icin '+catId+' karti gerekli','error'); return; }
-  }
+  const totalCredits = credits + trialCredits;
+  if (totalCredits <= 0) { showToast('Kredi tukendi!','error'); return; }
   const cat = CATEGORIES.find(c=>c.id===catId);
   const cmd = findCmd(cat, cmdId);
   if (isAction) { execAction(catId, cmdId, cmd); }
