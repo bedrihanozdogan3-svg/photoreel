@@ -137,6 +137,21 @@ body{
 .j-status.done{background:#001a0a;color:var(--master)}
 .j-status.error{background:#1a0000;color:var(--red)}
 .j-dl{background:linear-gradient(135deg,var(--master),#059669);border-radius:8px;padding:4px 10px;font-size:8px;font-weight:900;color:#000;text-decoration:none;flex-shrink:0}
+.j-preview{background:linear-gradient(135deg,#3B82F6,#2563EB);border-radius:8px;padding:4px 8px;font-size:8px;font-weight:900;color:#fff;border:none;cursor:pointer;flex-shrink:0;margin-right:4px}
+/* Önizleme Modal */
+.preview-overlay{display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.95);flex-direction:column;align-items:center;justify-content:center}
+.preview-overlay.show{display:flex}
+.preview-video{max-width:90vw;max-height:60vh;border-radius:12px;border:2px solid #333}
+.preview-actions{display:flex;gap:12px;margin-top:16px;align-items:center}
+.preview-btn{padding:12px 24px;border-radius:12px;border:none;font-size:14px;font-weight:800;cursor:pointer;font-family:'Rajdhani',sans-serif;display:flex;align-items:center;gap:6px}
+.preview-btn.like{background:linear-gradient(135deg,#22C55E,#16A34A);color:#fff}
+.preview-btn.dislike{background:linear-gradient(135deg,#EF4444,#DC2626);color:#fff}
+.preview-btn.download{background:linear-gradient(135deg,#3B82F6,#2563EB);color:#fff}
+.preview-btn.close{background:#222;color:#888;border:1px solid #333}
+.preview-feedback{color:#888;font-size:11px;margin-top:10px;text-align:center}
+.preview-rating{display:flex;gap:4px;margin-top:8px}
+.preview-star{font-size:24px;cursor:pointer;opacity:0.3;transition:opacity .2s}
+.preview-star.active{opacity:1}
 
 /* ── MESSAGE BAR ── */
 .msg-bar{
@@ -643,7 +658,7 @@ function renderJobs() {
         ${isAct?`<div class="j-bar"><div class="j-bar-fill" style="background:${cat.gradient};width:${job.status==='uploading'?10:job.status==='queued'?5:job.progress}%"></div></div>`:''}
       </div>
       <span class="j-status ${sc}">${st}</span>
-      ${job.status==='done'&&job.url?`<a href="${job.url}" download class="j-dl">INDIR</a>`:''}
+      ${job.status==='done'&&job.url?`<button class="j-preview" onclick="openPreview('${job.url}','${job.id}','${job.catId}','${(job.name||'').replace(/'/g,'')}')">ÖNIZLE</button><a href="${job.url}" download class="j-dl">INDIR</a>`:''}
     </div>`;
   }).join('');
 }
@@ -877,6 +892,93 @@ function updJob(id, u) {
 }
 function saveJobs() { localStorage.setItem('fenix_jobs', JSON.stringify(jobs.slice(0,50))); }
 function fmtTime(ms) { const s=Math.floor(ms/1000); return s<60?s+'sn':s<3600?Math.floor(s/60)+'dk':Math.floor(s/3600)+'sa'; }
+// ── ÖNİZLEME & DEĞERLENDİRME ──
+let _previewJobId = null;
+let _previewCatId = null;
+let _previewRating = 0;
+
+function openPreview(url, jobId, catId, name) {
+  _previewJobId = jobId;
+  _previewCatId = catId;
+  _previewRating = 0;
+  const overlay = document.getElementById('previewOverlay');
+  const video = document.getElementById('previewVideo');
+  const img = document.getElementById('previewImage');
+  const dl = document.getElementById('previewDownload');
+  const feedback = document.getElementById('previewFeedback');
+  feedback.textContent = name || '';
+
+  // Video mu görsel mi?
+  const isImage = url.includes('remove-bg') || url.includes('nobg') || url.includes('.png');
+  if (isImage) {
+    video.style.display = 'none';
+    img.style.display = 'block';
+    img.src = url;
+  } else {
+    img.style.display = 'none';
+    video.style.display = 'block';
+    video.src = url;
+    video.load();
+  }
+  dl.href = url;
+  overlay.classList.add('show');
+
+  // Yıldızları sıfırla
+  document.querySelectorAll('.preview-star').forEach(s => s.classList.remove('active'));
+}
+
+function closePreview() {
+  const overlay = document.getElementById('previewOverlay');
+  const video = document.getElementById('previewVideo');
+  overlay.classList.remove('show');
+  video.pause();
+  video.src = '';
+}
+
+function rateResult(type) {
+  const feedback = document.getElementById('previewFeedback');
+  if (type === 'like') {
+    feedback.textContent = '👍 Begendin — Fenix bunu ogreniyor!';
+    feedback.style.color = '#22C55E';
+  } else {
+    feedback.textContent = '👎 Begenmedin — Fenix bir dahaki sefere daha iyi yapacak';
+    feedback.style.color = '#EF4444';
+  }
+
+  // Shadow Learning'e gönder
+  fetch(`${API}/api/fenix/shadow`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      type: 'pipeline-feedback',
+      jobId: _previewJobId,
+      category: _previewCatId,
+      rating: type,
+      stars: _previewRating,
+      timestamp: new Date().toISOString()
+    })
+  }).catch(() => {});
+
+  // Feedback'i localStorage'a da kaydet
+  const feedbacks = JSON.parse(localStorage.getItem('fenix_feedbacks') || '[]');
+  feedbacks.push({ jobId: _previewJobId, cat: _previewCatId, rating: type, stars: _previewRating, ts: Date.now() });
+  localStorage.setItem('fenix_feedbacks', JSON.stringify(feedbacks.slice(-100)));
+
+  setTimeout(() => { feedback.style.color = '#888'; }, 2000);
+}
+
+function rateStar(n) {
+  _previewRating = n;
+  const stars = document.querySelectorAll('.preview-star');
+  stars.forEach((s, i) => {
+    s.classList.toggle('active', i < n);
+  });
+  const feedback = document.getElementById('previewFeedback');
+  const labels = ['', 'Cok kotu', 'Kotu', 'Fena degil', 'Iyi', 'Mukemmel!'];
+  feedback.textContent = '⭐'.repeat(n) + ' ' + labels[n];
+  feedback.style.color = n >= 4 ? '#22C55E' : n >= 3 ? '#EAB308' : '#EF4444';
+}
+
 function showToast(msg,type) {
   const t=document.createElement('div');t.className='toast '+(type||'ok');t.textContent=msg;
   document.body.appendChild(t);
@@ -902,6 +1004,28 @@ setInterval(async()=>{
   }
 },3000);
 </script>
+<!-- Önizleme Modal -->
+<div id="previewOverlay" class="preview-overlay" onclick="if(event.target===this)closePreview()">
+  <div style="text-align:center;max-width:95vw">
+    <video id="previewVideo" class="preview-video" controls playsinline autoplay></video>
+    <img id="previewImage" class="preview-video" style="display:none">
+    <div class="preview-actions">
+      <button class="preview-btn like" onclick="rateResult('like')">👍 Beğen</button>
+      <button class="preview-btn dislike" onclick="rateResult('dislike')">👎 Beğenme</button>
+      <a id="previewDownload" href="#" download class="preview-btn download">⬇ İndir</a>
+      <button class="preview-btn close" onclick="closePreview()">✕</button>
+    </div>
+    <div class="preview-rating" id="previewStars">
+      <span class="preview-star" onclick="rateStar(1)">⭐</span>
+      <span class="preview-star" onclick="rateStar(2)">⭐</span>
+      <span class="preview-star" onclick="rateStar(3)">⭐</span>
+      <span class="preview-star" onclick="rateStar(4)">⭐</span>
+      <span class="preview-star" onclick="rateStar(5)">⭐</span>
+    </div>
+    <div class="preview-feedback" id="previewFeedback"></div>
+  </div>
+</div>
+
 <!-- QR Modal -->
 <div id="qrOverlay" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);align-items:center;justify-content:center">
 <div style="background:#151515;border:2px solid #22C55E55;border-radius:20px;padding:28px;text-align:center;max-width:320px;width:90%">
