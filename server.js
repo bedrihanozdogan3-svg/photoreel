@@ -9,6 +9,19 @@ const path = require('path');
 const logger = require('./utils/logger');
 const { errorHandler, notFoundHandler, setupGlobalHandlers } = require('./middlewares/error');
 
+// Firebase Admin init — Cloud Run'da ADC kullanır
+const admin = require('firebase-admin');
+if (!admin.apps.length) {
+  try {
+    admin.initializeApp({
+      projectId: process.env.FIREBASE_PROJECT_ID || 'fenixai-b93c9',
+    });
+    logger.info('Firebase Admin initialized');
+  } catch(e) {
+    logger.warn('Firebase Admin init hatası:', e.message);
+  }
+}
+
 // Global hata yakalama
 setupGlobalHandlers();
 
@@ -160,10 +173,9 @@ app.post('/api/card/generate', async (req, res) => {
 
   // Firestore'a kaydet
   try {
-    const db = require('firebase-admin').firestore();
-    await db.collection('cards').doc(token).set(cardData);
+    const admin = require('firebase-admin');
+    await admin.firestore().collection('cards').doc(token).set(cardData);
   } catch(e) {
-    // Firestore yoksa bellekte devam et
     console.log('Card Firestore kayıt hatası (devam):', e.message);
   }
 
@@ -179,13 +191,13 @@ app.get('/api/card/:token', async (req, res) => {
 
   // Önce Firestore'dan bak
   try {
-    const db = require('firebase-admin').firestore();
-    const doc = await db.collection('cards').doc(token).get();
+    const admin = require('firebase-admin');
+    const doc = await admin.firestore().collection('cards').doc(token).get();
     if (doc.exists) {
       const data = doc.data();
       // İlk aktivasyonu kaydet
       if (!data.activatedAt) {
-        await db.collection('cards').doc(token).update({
+        await admin.firestore().collection('cards').doc(token).update({
           activatedAt: new Date().toISOString(),
         });
       }
@@ -224,8 +236,8 @@ app.get('/api/card/:token', async (req, res) => {
 // GET /api/cards/list — tüm kartları listele (admin)
 app.get('/api/cards/list', async (req, res) => {
   try {
-    const db = require('firebase-admin').firestore();
-    const snap = await db.collection('cards').orderBy('createdAt', 'desc').limit(100).get();
+    const admin = require('firebase-admin');
+    const snap = await admin.firestore().collection('cards').orderBy('createdAt', 'desc').limit(100).get();
     const cards = [];
     snap.forEach(doc => cards.push(doc.data()));
     res.json({ ok: true, cards });
