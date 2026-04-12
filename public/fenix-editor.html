@@ -1922,14 +1922,6 @@
         <span class="sb-lbl">Damga</span>
       </button>
       <div class="sb-sep"></div>
-      <button class="sb-btn" onclick="_toggleEyeTrackHeatmap()" title="👁 Göz Takip Heatmap — Odak analizi">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="3" stroke="currentColor" stroke-width="1.4"/><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1" opacity=".4"/><path d="M9 2v3M9 13v3M2 9h3M13 9h3" stroke="currentColor" stroke-width="1" opacity=".3"/></svg>
-        <span class="sb-lbl">GÖZ TAKİP</span>
-      </button>
-      <button class="sb-btn" onclick="_openABTestSimulator()" title="⚡ A/B Test — Varyant karşılaştırma">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="3" width="7" height="12" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="10" y="3" width="7" height="12" rx="1" stroke="currentColor" stroke-width="1.2"/><text x="4.5" y="11" text-anchor="middle" fill="currentColor" font-size="6" font-weight="bold">A</text><text x="13.5" y="11" text-anchor="middle" fill="currentColor" font-size="6" font-weight="bold">B</text></svg>
-        <span class="sb-lbl">A/B TEST</span>
-      </button>
       <button class="sb-btn" onclick="_openLayersPanel()" title="📚 Katmanlar — Layer sistemi">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2L2 6l7 4 7-4-7-4z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M2 9l7 4 7-4" stroke="currentColor" stroke-width="1.2" fill="none" opacity=".6"/><path d="M2 12l7 4 7-4" stroke="currentColor" stroke-width="1.2" fill="none" opacity=".3"/></svg>
         <span class="sb-lbl">KATMANLAR</span>
@@ -1997,6 +1989,15 @@
           <path d="M3 9h18M9 21V9"/>
         </svg>
         <span class="sb-lbl">Format</span>
+      </button>
+      <div class="sb-sep"></div>
+      <button class="sb-btn" onclick="_toggleEyeTrackHeatmap()" title="👁 Göz Takip Heatmap — İzleyici odak analizi">
+        <svg width="17" height="17" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="3" stroke="currentColor" stroke-width="1.4"/><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1" opacity=".4"/><path d="M9 2v3M9 13v3M2 9h3M13 9h3" stroke="currentColor" stroke-width="1" opacity=".3"/></svg>
+        <span class="sb-lbl">Göz Takip</span>
+      </button>
+      <button class="sb-btn" onclick="_openABTestSimulator()" title="⚡ A/B Test — Varyant karşılaştırma">
+        <svg width="17" height="17" viewBox="0 0 18 18" fill="none"><rect x="1" y="3" width="7" height="12" rx="1" stroke="currentColor" stroke-width="1.2"/><rect x="10" y="3" width="7" height="12" rx="1" stroke="currentColor" stroke-width="1.2"/><text x="4.5" y="11" text-anchor="middle" fill="currentColor" font-size="6" font-weight="bold">A</text><text x="13.5" y="11" text-anchor="middle" fill="currentColor" font-size="6" font-weight="bold">B</text></svg>
+        <span class="sb-lbl">A/B Test</span>
       </button>
       <div class="sb-sep"></div>
       <button class="sb-btn" id="sb-media-pool-btn" title="Media Havuzu" onclick="toggleMediaPool()">
