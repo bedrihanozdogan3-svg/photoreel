@@ -985,7 +985,7 @@ updTime();
 function showQR(){
 var o=document.getElementById('qrOverlay');o.style.display='flex';
 var t=new URLSearchParams(window.location.search).get('t')||localStorage.getItem('fenix_qr_pro')||'';
-var url='https://witty-card-wizard.lovable.app/qr/'+t;
+var url='https://fenix-ai-1002279588287.europe-west1.run.app/fenix-otonom-mobile.html'+(t?'?t='+t:'');
 document.getElementById('qrToken').textContent=t?t.slice(0,8).toUpperCase()+' ··· '+t.slice(-4).toUpperCase():'';
 var c=document.getElementById('qrCanvas'),x=c.getContext('2d');
 // Simple QR via API image
