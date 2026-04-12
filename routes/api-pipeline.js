@@ -504,18 +504,77 @@ router.get('/download/:fileId', (req, res) => {
 // ═══════════════════════════════════════════
 
 /**
- * Tam otonom pipeline: Fotoğraflar → BG Remove → Sahne → Composite → Reels
+ * Tam otonom pipeline: Fotoğraflar → Gemini sahne yerleştirme → Reels
+ * Gemini tek adımda: BG sil + yeni sahneye yerleştir
  */
 async function autoProducePipeline(jobId, files, opts) {
   const job = _pipelineJobs[jobId];
   const processedPhotos = [];
 
   try {
-    // ADIM 1: Arka plan silme (PARALEL — tüm fotoğraflar aynı anda)
-    if (opts.removeBg) {
+    // ADIM 1+2: Gemini ile direkt sahneye yerleştir (BG silme + sahne + composite TEK ADIM)
+    if (opts.generateScene) {
+      job.stage = 'generating-scene';
+      job.progress = 5;
+      logger.info(`[${jobId}] Gemini sahne yerleştirme başlıyor — ${files.length} fotoğraf, kategori: ${opts.cat}`);
+
+      const GEMINI_KEY = process.env.GEMINI_API_KEY;
+      let done = 0;
+
+      const scenePrompt = SCENE_PROMPTS[opts.cat] || SCENE_PROMPTS.giyim;
+
+      const results = await Promise.all(files.map((file, i) => geminiLimit(async () => {
+        const imgBuf = fs.readFileSync(file.path);
+        const b64 = imgBuf.toString('base64');
+        const mimeType = file.mimetype || 'image/jpeg';
+
+        try {
+          const resp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${GEMINI_KEY}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [
+                  { text: `Take this product photo and place it on a new professional background. Remove the original background COMPLETELY — no traces of the old background should remain. The product must stay exactly the same (same angle, same details, same colors). New background: ${scenePrompt}. Output a vertical 9:16 product photography image.` },
+                  { inlineData: { mimeType, data: b64 } }
+                ]}],
+                generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
+              })
+            }
+          );
+
+          if (!resp.ok) throw new Error(`Gemini HTTP ${resp.status}`);
+          const data = await resp.json();
+          const parts = data.candidates?.[0]?.content?.parts || [];
+          const imgPart = parts.find(p => p.inlineData);
+
+          if (imgPart) {
+            const outBuf = Buffer.from(imgPart.inlineData.data, 'base64');
+            const outPath = path.join(PIPELINE_DIR, `scene-${jobId}-${i}.png`);
+            fs.writeFileSync(outPath, outBuf);
+            done++;
+            job.progress = 5 + Math.round(done / files.length * 50);
+            logger.info(`[${jobId}] Gemini sahne ${done}/${files.length} hazır (${outBuf.length} bytes)`);
+            return outPath;
+          }
+          throw new Error('Gemini görsel döndürmedi');
+        } catch(e) {
+          done++;
+          job.progress = 5 + Math.round(done / files.length * 50);
+          logger.warn(`[${jobId}] Gemini sahne hata #${i}: ${e.message}, orijinal kullanılıyor`);
+          return file.path; // Fallback: orijinal fotoğraf
+        }
+      })));
+
+      results.forEach(p => processedPhotos.push(p));
+      logger.info(`[${jobId}] Sahne yerleştirme tamamlandı: ${processedPhotos.length}/${files.length}`);
+
+    } else if (opts.removeBg) {
+      // Sadece BG silme istendi (sahne yok)
       job.stage = 'removing-bg';
       job.progress = 5;
-      logger.info(`[${jobId}] Arka plan silme başlıyor — ${files.length} fotoğraf PARALEL`);
+      logger.info(`[${jobId}] Sadece BG silme — ${files.length} fotoğraf`);
 
       const bgRemover = require('../services/background-remover');
       let done = 0;
@@ -525,7 +584,7 @@ async function autoProducePipeline(jobId, files, opts) {
         try {
           const result = await bgRemover.processProductImage(imgBuf, {});
           done++;
-          job.progress = 5 + Math.round(done / files.length * 20);
+          job.progress = 5 + Math.round(done / files.length * 50);
           if (result.success && Buffer.isBuffer(result.removed)) {
             const noBgPath = path.join(PIPELINE_DIR, `nobg-${jobId}-${i}.png`);
             fs.writeFileSync(noBgPath, result.removed);
@@ -534,48 +593,16 @@ async function autoProducePipeline(jobId, files, opts) {
           }
         } catch(bgErr) {
           done++;
-          job.progress = 5 + Math.round(done / files.length * 20);
-          logger.warn(`[${jobId}] BG hata, orijinal: ${bgErr.message}`);
+          job.progress = 5 + Math.round(done / files.length * 50);
+          logger.warn(`[${jobId}] BG hata: ${bgErr.message}`);
         }
         return file.path;
       })));
 
       results.forEach(p => processedPhotos.push(p));
-      logger.info(`[${jobId}] BG tamamlandı: ${processedPhotos.length}/${files.length} fotoğraf hazır`);
     } else {
       files.forEach(f => processedPhotos.push(f.path));
-      job.progress = 25;
-    }
-
-    // ADIM 2: Sahne üretme ve composite
-    if (opts.generateScene && opts.removeBg) {
-      job.stage = 'generating-scene';
-      job.progress = 30;
-      logger.info(`[${jobId}] Sahne üretiliyor: ${opts.cat}`);
-
-      const scenePath = path.join(PIPELINE_DIR, 'scenes', `scene-${jobId}.png`);
-
-      // Gemini Imagen ile sahne üret
-      const sceneGenerated = await generateSceneImage(scenePath, opts.cat);
-
-      if (sceneGenerated) {
-        // Her ürün fotoğrafını sahne üzerine composite et (PARALEL)
-        job.stage = 'compositing';
-        job.progress = 40;
-
-        const composited = await Promise.all(processedPhotos.map((photoPath, i) => ffmpegLimit(async () => {
-          const compPath = path.join(PIPELINE_DIR, `comp-${jobId}-${i}.png`);
-          await compositeOnScene(photoPath, scenePath, compPath);
-          return compPath;
-        })));
-        job.progress = 55;
-
-        // Composited fotoğrafları kullan
-        processedPhotos.length = 0;
-        composited.forEach(p => processedPhotos.push(p));
-      } else {
-        logger.warn(`[${jobId}] Sahne üretilemedi, direkt fotoğraflar kullanılıyor`);
-      }
+      job.progress = 55;
     }
 
     // ADIM 3: Reels oluştur (FFmpeg)
