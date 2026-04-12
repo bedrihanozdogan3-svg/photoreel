@@ -271,9 +271,9 @@ router.post('/scene-generate', lightRateLimit, express.json(), async (req, res) 
     const GEMINI_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_KEY) return res.status(500).json({ ok: false, error: 'Gemini API key tanımlı değil' });
 
-    // Gemini Imagen 3 ile sahne üret
+    // Imagen 4.0 Fast ile sahne üret
     const geminiResp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${GEMINI_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-fast-generate-001:predict?key=${GEMINI_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -281,8 +281,7 @@ router.post('/scene-generate', lightRateLimit, express.json(), async (req, res) 
           instances: [{ prompt: finalPrompt }],
           parameters: {
             sampleCount: 1,
-            aspectRatio: '9:16',
-            safetyFilterLevel: 'block_only_high'
+            aspectRatio: '9:16'
           }
         })
       }
@@ -536,6 +535,7 @@ async function autoProducePipeline(jobId, files, opts) {
       })));
 
       results.forEach(p => processedPhotos.push(p));
+      logger.info(`[${jobId}] BG tamamlandı: ${processedPhotos.length}/${files.length} fotoğraf hazır`);
     } else {
       files.forEach(f => processedPhotos.push(f.path));
       job.progress = 25;
@@ -575,6 +575,7 @@ async function autoProducePipeline(jobId, files, opts) {
     // ADIM 3: Reels oluştur (FFmpeg)
     job.stage = 'building-reels';
     job.progress = 55;
+    logger.info(`[${jobId}] Reels oluşturuluyor: ${processedPhotos.length} fotoğraf`);
 
     const reelsPath = path.join(PIPELINE_DIR, 'reels', `reels-${jobId}.mp4`);
 
@@ -697,14 +698,17 @@ function buildSlideshowWithTransitions(photoPaths, outputPath, opts) {
       filterParts.push(`[${i}:v]scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2:black,setsar=1,format=yuva420p[v${i}]`);
     }
 
-    // xfade zinciri
+    // xfade zinciri — doğru offset hesabı
     let lastLabel = 'v0';
+    let cumulativeOffset = 0;
     for (let i = 1; i < n; i++) {
       const tr = transitionList[(i - 1) % transitionList.length];
-      const offset = (photoDuration * i) - (transDuration * i);
+      cumulativeOffset = photoDuration * i - transDuration * (i - 1);
+      // Her geçiş önceki clip'in sonuna yakın başlar
       const outLabel = i < n - 1 ? `xf${i}` : 'xfinal';
-      filterParts.push(`[${lastLabel}][v${i}]xfade=transition=${tr}:duration=${transDuration}:offset=${Math.max(0, offset).toFixed(2)}[${outLabel}]`);
+      filterParts.push(`[${lastLabel}][v${i}]xfade=transition=${tr}:duration=${transDuration}:offset=${Math.max(0.1, cumulativeOffset - transDuration).toFixed(2)}[${outLabel}]`);
       lastLabel = outLabel;
+      logger.info(`[xfade] ${i}: tr=${tr}, offset=${(cumulativeOffset - transDuration).toFixed(2)}`);
     }
 
     // LUT (renk grading)
@@ -725,16 +729,24 @@ function buildSlideshowWithTransitions(photoPaths, outputPath, opts) {
       '-filter_complex', filterParts.join(';'),
       '-map', `[${finalLabel}]`,
       '-c:v', 'libx264',
-      '-preset', 'fast',
-      '-crf', '23',
+      '-preset', 'ultrafast',
+      '-crf', '20',
       '-pix_fmt', 'yuv420p',
       '-movflags', '+faststart',
       '-y', outputPath
     ];
 
-    // Müzik ekleme (varsa)
-    if (musicUrl && fs.existsSync(musicUrl)) {
-      ffArgs.splice(ffArgs.indexOf('-filter_complex'), 0, '-i', musicUrl);
+    // Müzik ekleme
+    const musicPath = musicUrl && fs.existsSync(musicUrl) ? musicUrl : null;
+    if (musicPath) {
+      ffArgs.splice(ffArgs.indexOf('-filter_complex'), 0, '-i', musicPath);
+      const mapIdx = ffArgs.indexOf('-map');
+      ffArgs.splice(mapIdx + 2, 0, '-map', `${n}:a`, '-c:a', 'aac', '-shortest');
+    } else {
+      // Müzik yoksa FFmpeg ile ambient ton üret (sine wave + fade)
+      const totalDur = (n * photoDuration) - ((n - 1) * transDuration);
+      const ambientFilter = `sine=frequency=220:duration=${totalDur.toFixed(1)},volume=0.05,afade=t=in:d=1,afade=t=out:st=${(totalDur - 1.5).toFixed(1)}:d=1.5`;
+      ffArgs.splice(ffArgs.indexOf('-filter_complex'), 0, '-f', 'lavfi', '-i', ambientFilter);
       const mapIdx = ffArgs.indexOf('-map');
       ffArgs.splice(mapIdx + 2, 0, '-map', `${n}:a`, '-c:a', 'aac', '-shortest');
     }
@@ -791,13 +803,13 @@ async function generateSceneImage(outputPath, category) {
 
   try {
     const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${GEMINI_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-fast-generate-001:predict?key=${GEMINI_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           instances: [{ prompt: finalPrompt }],
-          parameters: { sampleCount: 1, aspectRatio: '9:16', safetyFilterLevel: 'block_only_high' }
+          parameters: { sampleCount: 1, aspectRatio: '9:16' }
         })
       }
     );
@@ -843,14 +855,21 @@ function generateGradientBg(outputPath, category) {
   ]);
 }
 
-/** Ürün fotoğrafını sahne üzerine composite et (FFmpeg overlay) */
+/** Ürün fotoğrafını sahne üzerine composite et (FFmpeg overlay + gölge) */
 function compositeOnScene(productPath, scenePath, outputPath) {
+  // Ürünü sahnenin %60'ı genişliğinde, ortalanmış, alt 1/3'e yerleştir
+  // Gölge efekti ile profesyonel görünüm
   return runFFmpeg([
     '-i', scenePath,
     '-i', productPath,
     '-filter_complex',
-    `[1:v]scale=700:-1[prod];[0:v][prod]overlay=(W-w)/2:(H-h)/2:format=auto`,
+    `[1:v]scale=600:-1:flags=lanczos[scaled];` +
+    `[scaled]split[shadow_src][prod];` +
+    `[shadow_src]colorchannelmixer=aa=0.3,boxblur=8:8[shadow];` +
+    `[0:v][shadow]overlay=(W-w)/2:(H-h*0.35+15):format=auto[with_shadow];` +
+    `[with_shadow][prod]overlay=(W-w)/2:(H-h*0.35):format=auto`,
     '-frames:v', '1',
+    '-q:v', '2',
     '-y', outputPath
   ]);
 }
