@@ -45,8 +45,8 @@ async function remove(imageBuffer) {
       // imgly Blob bekler — Buffer'dan Blob oluştur
       const blob = new Blob([imageBuffer], { type: 'image/png' });
       const resultBlob = await remover(blob, {
-        model: 'medium',       // small/medium/large — medium iyi denge
-        output: { format: 'image/png', quality: 0.9 }
+        model: 'small',        // small=hızlı(~5sn), medium=dengeli(~15sn), large=kaliteli(~30sn)
+        output: { format: 'image/png', quality: 0.8 }
       });
 
       // Blob → Buffer

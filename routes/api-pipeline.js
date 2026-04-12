@@ -362,34 +362,36 @@ async function autoProducePipeline(jobId, files, opts) {
   const processedPhotos = [];
 
   try {
-    // ADIM 1: Arka plan silme
+    // ADIM 1: Arka plan silme (PARALEL — tüm fotoğraflar aynı anda)
     if (opts.removeBg) {
       job.stage = 'removing-bg';
       job.progress = 5;
-      logger.info(`[${jobId}] Arka plan silme başlıyor (${files.length} fotoğraf)`);
+      logger.info(`[${jobId}] Arka plan silme başlıyor — ${files.length} fotoğraf PARALEL`);
 
       const bgRemover = require('../services/background-remover');
+      let done = 0;
 
-      for (let i = 0; i < files.length; i++) {
-        const imgBuf = fs.readFileSync(files[i].path);
+      const results = await Promise.all(files.map(async (file, i) => {
+        const imgBuf = fs.readFileSync(file.path);
         try {
           const result = await bgRemover.processProductImage(imgBuf, {});
+          done++;
+          job.progress = 5 + Math.round(done / files.length * 20);
           if (result.success && Buffer.isBuffer(result.removed)) {
             const noBgPath = path.join(PIPELINE_DIR, `nobg-${jobId}-${i}.png`);
             fs.writeFileSync(noBgPath, result.removed);
-            processedPhotos.push(noBgPath);
-            logger.info(`[${jobId}] BG silindi: ${i + 1}/${files.length}`);
-          } else {
-            // Arka plan silinemezse orijinali kullan
-            processedPhotos.push(files[i].path);
-            logger.warn(`[${jobId}] BG silinemedi, orijinal kullanılıyor: ${i + 1}`);
+            logger.info(`[${jobId}] BG silindi: ${done}/${files.length}`);
+            return noBgPath;
           }
         } catch(bgErr) {
-          processedPhotos.push(files[i].path);
+          done++;
+          job.progress = 5 + Math.round(done / files.length * 20);
           logger.warn(`[${jobId}] BG hata, orijinal: ${bgErr.message}`);
         }
-        job.progress = 5 + Math.round((i + 1) / files.length * 20);
-      }
+        return file.path;
+      }));
+
+      results.forEach(p => processedPhotos.push(p));
     } else {
       files.forEach(f => processedPhotos.push(f.path));
       job.progress = 25;
@@ -407,17 +409,16 @@ async function autoProducePipeline(jobId, files, opts) {
       const sceneGenerated = await generateSceneImage(scenePath, opts.cat);
 
       if (sceneGenerated) {
-        // Her ürün fotoğrafını sahne üzerine composite et
+        // Her ürün fotoğrafını sahne üzerine composite et (PARALEL)
         job.stage = 'compositing';
         job.progress = 40;
-        const composited = [];
 
-        for (let i = 0; i < processedPhotos.length; i++) {
+        const composited = await Promise.all(processedPhotos.map(async (photoPath, i) => {
           const compPath = path.join(PIPELINE_DIR, `comp-${jobId}-${i}.png`);
-          await compositeOnScene(processedPhotos[i], scenePath, compPath);
-          composited.push(compPath);
-          job.progress = 40 + Math.round((i + 1) / processedPhotos.length * 15);
-        }
+          await compositeOnScene(photoPath, scenePath, compPath);
+          return compPath;
+        }));
+        job.progress = 55;
 
         // Composited fotoğrafları kullan
         processedPhotos.length = 0;
