@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fenix Dublaj Stüdyosu</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600;700&family=Orbitron:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --orange: #f97316; --orange-dim: rgba(249,115,22,.12);
+  --deep: #0a0a0a; --surface: rgba(14,14,14,.9);
+  --glass: rgba(255,255,255,.03); --glass-border: rgba(249,115,22,.1);
+  --border: rgba(249,115,22,.06); --text: #e4e4e7; --text2: #a1a1aa; --text3: #52525b;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0a0a;color:var(--text);font-family:'Rajdhani',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden;user-select:none;}
+h1,h2,h3,.topbar .logo{font-family:'Orbitron',sans-serif;}
+
+/* ═══ TOPBAR ═══ */
+.topbar{height:44px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:12px;flex-shrink:0;backdrop-filter:blur(24px);}
+.topbar::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,#f97316,#ea580c,transparent);opacity:.4;}
+.topbar .logo{font-size:13px;font-weight:800;background:linear-gradient(90deg,#f97316,#ea580c);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:2px;}
+.tb-btn{padding:5px 14px;font-size:10px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text2);border-radius:6px;cursor:pointer;transition:all .2s;font-family:'Rajdhani',sans-serif;font-weight:600;}
+.tb-btn:hover{border-color:var(--orange);color:var(--orange);}
+.tb-btn.primary{background:linear-gradient(135deg,#f97316,#ea580c);border:none;color:#fff;font-weight:700;}
+.spacer{flex:1;}
+
+/* ═══ MAIN ═══ */
+.main{flex:1;display:flex;overflow:hidden;position:relative;}
+
+/* ═══ SOL PANEL ═══ */
+.left-panel{width:280px;background:var(--surface);border-right:1px solid var(--glass-border);backdrop-filter:blur(24px);flex-shrink:0;overflow-y:auto;display:flex;flex-direction:column;}
+.lp-section{padding:12px 14px;border-bottom:1px solid var(--border);}
+.lp-section h3{font-size:10px;color:var(--orange);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px;font-family:'Orbitron',sans-serif;}
+.lp-section h3 .dot{width:6px;height:6px;border-radius:50%;background:var(--orange);box-shadow:0 0 8px var(--orange);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{box-shadow:0 0 8px var(--orange)}50%{box-shadow:0 0 3px var(--orange);opacity:.5}}
+
+.tool-btn{width:100%;padding:10px 12px;background:var(--glass);border:1px solid var(--glass-border);color:var(--text2);border-radius:8px;cursor:pointer;text-align:left;font-size:11px;margin-bottom:4px;transition:all .2s;display:flex;align-items:center;gap:8px;backdrop-filter:blur(14px);font-family:'Rajdhani',sans-serif;}
+.tool-btn:hover{border-color:rgba(249,115,22,.35);color:var(--text);transform:translateX(3px) scale(1.02);box-shadow:0 4px 16px rgba(249,115,22,.1);}
+.tool-btn:active{transform:scale(.97);}
+.tool-btn .ico{font-size:15px;width:22px;text-align:center;}
+.tool-btn .lbl{flex:1;font-weight:500;}
+.tool-btn .arrow{color:var(--text3);font-size:10px;}
+.slider-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;padding:0 4px;}
+.slider-row label{font-size:10px;color:var(--text3);width:56px;flex-shrink:0;}
+.slider-row input[type=range]{flex:1;accent-color:var(--orange);height:3px;}
+.slider-row .val{font-size:10px;color:var(--text2);width:32px;text-align:right;}
+
+/* ═══ CANVAS ═══ */
+.canvas-area{flex:1;position:relative;background:#050508;display:flex;flex-direction:column;overflow:hidden;}
+
+/* Waveform */
+.waveform-area{flex:1;position:relative;display:flex;align-items:center;justify-content:center;}
+.waveform-area canvas{width:100%;height:80%;border-radius:8px;}
+.wave-overlay{position:absolute;top:12px;left:12px;font-size:8px;color:rgba(249,115,22,.4);font-family:'JetBrains Mono',monospace;letter-spacing:1px;}
+
+/* Text Preview */
+.text-preview{height:120px;background:rgba(0,0,0,.4);border-top:1px solid var(--border);padding:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.text-preview .subtitle-box{background:rgba(0,0,0,.7);border:1px solid rgba(249,115,22,.2);border-radius:8px;padding:12px 24px;font-size:16px;color:#fff;text-align:center;max-width:80%;line-height:1.6;font-family:'Rajdhani',sans-serif;}
+
+/* ═══ SAĞ PANEL ═══ */
+.right-panel{width:260px;background:var(--surface);border-left:1px solid var(--glass-border);backdrop-filter:blur(24px);flex-shrink:0;overflow-y:auto;display:flex;flex-direction:column;}
+
+/* ═══ TIMELINE ═══ */
+.timeline{height:80px;background:var(--surface);border-top:1px solid var(--border);flex-shrink:0;display:flex;flex-direction:column;position:relative;}
+.tl-controls{height:28px;display:flex;align-items:center;padding:0 14px;gap:6px;border-bottom:1px solid var(--border);}
+.tl-btn{width:24px;height:24px;border:1px solid var(--glass-border);background:var(--glass);color:var(--text3);border-radius:5px;cursor:pointer;font-size:11px;transition:all .2s;display:flex;align-items:center;justify-content:center;}
+.tl-btn:hover{border-color:var(--orange);color:var(--orange);}
+.tl-time{font-size:10px;color:var(--text2);font-family:'Orbitron',sans-serif;margin-left:6px;}
+.tl-body{flex:1;position:relative;padding:6px 14px;}
+.tl-track{height:20px;display:flex;align-items:center;gap:6px;margin-bottom:3px;}
+.tl-label{width:40px;font-size:8px;color:var(--text3);text-align:right;flex-shrink:0;}
+.tl-bar{flex:1;height:16px;background:var(--glass);border:1px solid var(--glass-border);border-radius:3px;position:relative;overflow:hidden;}
+.tl-segment{position:absolute;top:2px;bottom:2px;border-radius:2px;}
+.tl-segment.voice{background:linear-gradient(90deg,rgba(249,115,22,.4),rgba(234,88,12,.3));border:1px solid rgba(249,115,22,.3);}
+.tl-segment.music{background:linear-gradient(90deg,rgba(59,130,246,.3),rgba(59,130,246,.2));border:1px solid rgba(59,130,246,.3);}
+.tl-playhead{position:absolute;top:0;bottom:0;width:2px;background:var(--orange);box-shadow:0 0 6px var(--orange);z-index:5;left:25%;pointer-events:none;}
+
+/* ═══ STATUSBAR ═══ */
+.statusbar{height:22px;background:rgba(10,10,10,.95);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:14px;font-size:8px;color:var(--text3);flex-shrink:0;font-family:'JetBrains Mono',monospace;}
+.led{width:5px;height:5px;border-radius:50%;display:inline-block;margin-right:4px;}
+.led.green{background:#22c55e;box-shadow:0 0 6px #22c55e;}
+.led.orange{background:var(--orange);box-shadow:0 0 6px var(--orange);}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar" style="position:relative;">
+  <span class="logo">FENIX DUBLAJ</span>
+  <div class="spacer"></div>
+  <button class="tb-btn" onclick="document.getElementById('audioInput').click()">🎤 Ses Yükle</button>
+  <button class="tb-btn" onclick="document.getElementById('videoInput2').click()">🎬 Video Yükle</button>
+  <button class="tb-btn primary" onclick="showToast('Dışa aktarılıyor...')">💾 Dışa Aktar</button>
+  <button class="tb-btn" onclick="showQR()" title="QR Kod" style="font-size:14px">📱</button>
+  <input type="file" id="audioInput" accept="audio/*" style="display:none">
+  <input type="file" id="videoInput2" accept="video/*" style="display:none">
+</div>
+
+<div class="main">
+
+  <!-- SOL PANEL -->
+  <div class="left-panel">
+    <div class="lp-section">
+      <h3><span class="dot"></span> SES KLONLAMA</h3>
+      <button class="tool-btn" onclick="showToast('🎤 Ses kaydı başlıyor...')"><span class="ico">🎤</span><span class="lbl">Ses Kaydet (5sn)</span><span class="arrow">→</span></button>
+      <button class="tool-btn" onclick="showToast('📁 Referans ses yükleniyor...')"><span class="ico">📁</span><span class="lbl">Referans Ses Yükle</span><span class="arrow">→</span></button>
+      <button class="tool-btn" onclick="showToast('🤖 AI ses klonlama başlatıldı...')"><span class="ico">🤖</span><span class="lbl">AI Ses Klonla</span><span class="arrow">→</span></button>
+    </div>
+
+    <div class="lp-section">
+      <h3><span class="dot"></span> METİN → SES (TTS)</h3>
+      <textarea id="ttsText" placeholder="Dublaj metninizi buraya yazın..." style="width:100%;height:80px;background:rgba(0,0,0,.3);border:1px solid var(--glass-border);border-radius:6px;color:var(--text);padding:8px;font-size:11px;resize:none;font-family:'Rajdhani',sans-serif;"></textarea>
+      <div class="slider-row"><label>Hız</label><input type="range" min="50" max="200" value="100"><span class="val">1.0x</span></div>
+      <div class="slider-row"><label>Ton</label><input type="range" min="-12" max="12" value="0"><span class="val">0</span></div>
+      <button class="tool-btn" onclick="showToast('🔊 TTS sentez başlatıldı...')"><span class="ico">🔊</span><span class="lbl">Sentezle</span><span class="arrow">→</span></button>
+    </div>
+
+    <div class="lp-section">
+      <h3><span class="dot"></span> DİL SEÇİMİ</h3>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">
+        <button class="tool-btn" style="width:auto;flex:1;justify-content:center;padding:8px;" onclick="showToast('🇹🇷 Türkçe seçildi')">🇹🇷 TR</button>
+        <button class="tool-btn" style="width:auto;flex:1;justify-content:center;padding:8px;" onclick="showToast('🇬🇧 İngilizce seçildi')">🇬🇧 EN</button>
+        <button class="tool-btn" style="width:auto;flex:1;justify-content:center;padding:8px;" onclick="showToast('🇩🇪 Almanca seçildi')">🇩🇪 DE</button>
+        <button class="tool-btn" style="width:auto;flex:1;justify-content:center;padding:8px;" onclick="showToast('🇫🇷 Fransızca seçildi')">🇫🇷 FR</button>
+        <button class="tool-btn" style="width:auto;flex:1;justify-content:center;padding:8px;" onclick="showToast('🇪🇸 İspanyolca seçildi')">🇪🇸 ES</button>
+        <button class="tool-btn" style="width:auto;flex:1;justify-content:center;padding:8px;" onclick="showToast('🇸🇦 Arapça seçildi')">🇸🇦 AR</button>
+      </div>
+    </div>
+
+    <div class="lp-section">
+      <h3><span class="dot"></span> LIP SYNC</h3>
+      <button class="tool-btn" onclick="showToast('👄 Lip sync analizi başlatıldı...')"><span class="ico">👄</span><span class="lbl">Otomatik Lip Sync</span><span class="arrow">→</span></button>
+      <button class="tool-btn" onclick="showToast('📝 Altyazı çıkarılıyor...')"><span class="ico">📝</span><span class="lbl">Altyazı Çıkar (SRT)</span><span class="arrow">→</span></button>
+    </div>
+  </div>
+
+  <!-- CANVAS -->
+  <div class="canvas-area">
+    <div class="waveform-area">
+      <div class="wave-overlay">FENIX AUDIO ENGINE · WAVEFORM</div>
+      <canvas id="mainWaveform"></canvas>
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;">
+        <div style="font-size:48px;opacity:.1;">🎙</div>
+        <p style="font-size:12px;color:var(--text3);margin-top:8px;">Ses veya video yükle</p>
+        <p style="font-size:9px;color:var(--text3);opacity:.5;">WAV · MP3 · AAC · FLAC</p>
+      </div>
+    </div>
+    <div class="text-preview">
+      <div class="subtitle-box" id="subtitlePreview">
+        "Merhaba, ben Fenix. Sesinizi klonlayabilirim."
+      </div>
+    </div>
+  </div>
+
+  <!-- SAĞ PANEL -->
+  <div class="right-panel">
+    <div class="lp-section">
+      <h3><span class="dot"></span> SES EFEKTLERİ</h3>
+      <button class="tool-btn" onclick="showToast('🔇 Gürültü temizlendi')"><span class="ico">🔇</span><span class="lbl">Gürültü Temizle</span></button>
+      <button class="tool-btn" onclick="showToast('🎚 Normalleştirme uygulandı')"><span class="ico">🎚</span><span class="lbl">Normalleştir</span></button>
+      <button class="tool-btn" onclick="showToast('🎛 Kompresör uygulandı')"><span class="ico">🎛</span><span class="lbl">Kompresör</span></button>
+      <button class="tool-btn" onclick="showToast('🏔 Reverb uygulandı')"><span class="ico">🏔</span><span class="lbl">Reverb Ekle</span></button>
+      <button class="tool-btn" onclick="showToast('🎵 EQ ayarlandı')"><span class="ico">🎵</span><span class="lbl">EQ Ayarları</span></button>
+    </div>
+
+    <div class="lp-section">
+      <h3><span class="dot"></span> MİKSAJ</h3>
+      <div class="slider-row"><label>Orijinal</label><input type="range" min="0" max="100" value="30"><span class="val">30%</span></div>
+      <div class="slider-row"><label>Dublaj</label><input type="range" min="0" max="100" value="100"><span class="val">100%</span></div>
+      <div class="slider-row"><label>Müzik</label><input type="range" min="0" max="100" value="60"><span class="val">60%</span></div>
+      <div class="slider-row"><label>SFX</label><input type="range" min="0" max="100" value="80"><span class="val">80%</span></div>
+    </div>
+
+    <div class="lp-section">
+      <h3><span class="dot"></span> SES MODELLERİ</h3>
+      <button class="tool-btn" onclick="showToast('Erkek 1 seçildi')"><span class="ico">🧑</span><span class="lbl">Erkek — Doğal</span></button>
+      <button class="tool-btn" onclick="showToast('Kadın 1 seçildi')"><span class="ico">👩</span><span class="lbl">Kadın — Doğal</span></button>
+      <button class="tool-btn" onclick="showToast('Çocuk sesi seçildi')"><span class="ico">👶</span><span class="lbl">Çocuk</span></button>
+      <button class="tool-btn" onclick="showToast('Robot sesi seçildi')"><span class="ico">🤖</span><span class="lbl">Robot / AI</span></button>
+      <button class="tool-btn" style="border-color:rgba(249,115,22,.3);background:var(--orange-dim);" onclick="showToast('Klonlanmış ses seçildi')"><span class="ico">🔥</span><span class="lbl" style="color:var(--orange);font-weight:700;">Klonlanmış Ses</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- TIMELINE -->
+<div class="timeline">
+  <div class="tl-controls">
+    <button class="tl-btn" id="dubPlay" onclick="toggleDubPlay()">▶</button>
+    <button class="tl-btn">⏮</button>
+    <button class="tl-btn">⏭</button>
+    <span class="tl-time">00:00 / 00:00</span>
+    <div style="flex:1"></div>
+    <span style="font-size:8px;color:var(--text3);">🎤 Dublaj Stüdyosu</span>
+  </div>
+  <div class="tl-body">
+    <div class="tl-track">
+      <span class="tl-label">🎤 Ses</span>
+      <div class="tl-bar"><div class="tl-segment voice" style="left:5%;right:20%;"></div></div>
+    </div>
+    <div class="tl-track">
+      <span class="tl-label">🎵 BGM</span>
+      <div class="tl-bar"><div class="tl-segment music" style="left:0%;right:5%;"></div></div>
+    </div>
+    <div class="tl-playhead" id="dubPlayhead"></div>
+  </div>
+</div>
+
+<!-- STATUSBAR -->
+<div class="statusbar">
+  <span><span class="led green"></span>Fenix TTS: Ready</span>
+  <span><span class="led orange"></span>Voice Clone: Standby</span>
+  <span><span class="led green"></span>Lip Sync: Ready</span>
+  <div style="flex:1"></div>
+  <span>Fenix Dublaj Stüdyosu v1.0</span>
+</div>
+
+<!-- TOAST -->
+<div id="toast" style="position:fixed;bottom:60px;left:50%;transform:translateX(-50%) translateY(40px);background:var(--surface);border:1px solid var(--orange);color:var(--text);padding:10px 22px;border-radius:10px;font-size:12px;z-index:9999;transition:all .3s;pointer-events:none;backdrop-filter:blur(20px);opacity:0;"></div>
+
+<script>
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.opacity = '1';
+  t.style.transform = 'translateX(-50%) translateY(0)';
+  setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(-50%) translateY(40px)';
+  }, 2500);
+}
+
+let dubPlaying = false;
+function toggleDubPlay() {
+  dubPlaying = !dubPlaying;
+  document.getElementById('dubPlay').textContent = dubPlaying ? '⏸' : '▶';
+  showToast(dubPlaying ? '▶ Oynatılıyor' : '⏸ Duraklatıldı');
+}
+
+// Waveform çizimi
+(function(){
+  const c = document.getElementById('mainWaveform');
+  if (!c) return;
+  const ctx = c.getContext('2d');
+  c.width = 800; c.height = 200;
+  function draw() {
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.strokeStyle = 'rgba(249,115,22,.2)';
+    ctx.lineWidth = 1;
+    // Orta çizgi
+    ctx.beginPath(); ctx.moveTo(0, 100); ctx.lineTo(800, 100); ctx.stroke();
+    // Waveform
+    ctx.strokeStyle = 'rgba(249,115,22,.4)';
+    ctx.beginPath();
+    for (let x = 0; x < 800; x++) {
+      const y = 100 + Math.sin(x * 0.03 + Date.now() * 0.001) * 30 * Math.sin(x * 0.01) + Math.random() * 5;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// Slider value güncelleme
+document.querySelectorAll('.slider-row input[type=range]').forEach(s => {
+  s.addEventListener('input', function() {
+    const val = this.nextElementSibling;
+    if (val) {
+      if (this.max == 200) val.textContent = (this.value / 100).toFixed(1) + 'x';
+      else if (this.min == -12) val.textContent = this.value;
+      else val.textContent = this.value + '%';
+    }
+  });
+});
+</script>
+<!-- QR Modal -->
+<div id="qrOverlay" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);align-items:center;justify-content:center">
+<div style="background:#151515;border:2px solid #F9731655;border-radius:20px;padding:28px;text-align:center;max-width:320px;width:90%">
+<div style="font-size:10px;color:#666;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">FENIX AI</div>
+<div style="font-size:20px;font-weight:800;color:#F97316;margin-bottom:16px">DUBLAJ</div>
+<canvas id="qrCanvas" style="border-radius:12px;border:3px solid #F97316;box-shadow:0 0 30px #F9731644"></canvas>
+<div id="qrToken" style="margin-top:12px;font-size:11px;color:#555;letter-spacing:1px;font-family:monospace"></div>
+<div style="margin-top:14px;font-size:11px;color:#777">Telefona kurmak icin tara</div>
+<button onclick="document.getElementById('qrOverlay').style.display='none'" style="margin-top:16px;padding:10px 32px;border:1px solid #333;background:transparent;color:#888;border-radius:10px;cursor:pointer;font-size:12px">Kapat</button>
+</div>
+</div>
+<script>
+function showQR(){
+var o=document.getElementById('qrOverlay');o.style.display='flex';
+var t=new URLSearchParams(window.location.search).get('t')||localStorage.getItem('fenix_qr_dublaj')||'';
+var url='https://witty-card-wizard.lovable.app/qr/'+t;
+document.getElementById('qrToken').textContent=t?t.slice(0,8).toUpperCase()+' ··· '+t.slice(-4).toUpperCase():'';
+var c=document.getElementById('qrCanvas'),x=c.getContext('2d');
+var img=new Image();img.crossOrigin='anonymous';
+img.src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=F97316&bgcolor=FFFFFF&data='+encodeURIComponent(url);
+img.onload=function(){c.width=200;c.height=200;x.drawImage(img,0,0)};
+}
+</script>
+</body>
+</html>

@@ -217,6 +217,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
   <div class="sp"></div>
   <div class="qbadge"><div class="qdot"></div><span id="qtxt">— Kredi</span></div>
   <div class="sep"></div>
+  <button class="tb-btn" onclick="showQR()" style="font-size:15px" title="QR Kod">📱</button>
   <button class="tb-btn" onclick="doExport()">⬇ Dışa Aktar</button>
 </div>
 
@@ -497,6 +498,46 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
           <button class="rbtn" onclick="aLut('golden')">🌅 Altın</button>
           <button class="rbtn" onclick="aLut('moody')">🌙 Karanlık</button>
         </div>
+        <div class="rrow mt6">
+          <button class="rbtn" onclick="aLut('vintage')">📷 Vintage</button>
+          <button class="rbtn" onclick="aLut('neon')">💜 Neon</button>
+          <button class="rbtn" onclick="aLut('bw')">⬛ S&amp;B</button>
+        </div>
+      </div>
+    </details>
+
+    <details class="rsec">
+      <summary>🎥 Kamera Hareketi<span class="rch">▼</span></summary>
+      <div class="rbd">
+        <div class="sl">Hareket Tipi</div>
+        <div class="rrow mt6">
+          <button class="rbtn" id="cam-zoom_in" onclick="setCam('zoom_in')">🔍 Zoom In</button>
+          <button class="rbtn" id="cam-zoom_out" onclick="setCam('zoom_out')">🔭 Zoom Out</button>
+        </div>
+        <div class="rrow mt6">
+          <button class="rbtn" id="cam-pan_left" onclick="setCam('pan_left')">⬅ Sola Pan</button>
+          <button class="rbtn" id="cam-pan_right" onclick="setCam('pan_right')">➡ Sağa Pan</button>
+        </div>
+        <button class="rbtn mt8" style="width:100%;opacity:0.6" onclick="setCam(null)">✖ Kamera Temizle</button>
+      </div>
+    </details>
+
+    <details class="rsec">
+      <summary>🏷 Marka (Branding)<span class="rch">▼</span></summary>
+      <div class="rbd">
+        <div class="sl">Logo</div>
+        <div class="udrop mt6" onclick="document.getElementById('logoInput').click()" style="padding:10px;font-size:10px">📎 Logo Yükle (PNG)</div>
+        <input type="file" id="logoInput" accept="image/png,image/jpeg" style="display:none" onchange="handleLogo(this)">
+        <div id="logoPreview" style="display:none;margin-top:6px;text-align:center"><img id="logoImg" style="max-height:40px;border-radius:4px"></div>
+        <div class="sl mt8">Slogan</div>
+        <input class="rin mt4" id="brandSlogan" placeholder="Marka sloganınız..." maxlength="50">
+        <div class="sl mt8">Logo Konumu</div>
+        <div class="spills mt4">
+          <div class="spill on" data-pos="sol-alt" onclick="setBrandPos(this)">Sol Alt</div>
+          <div class="spill" data-pos="sag-alt" onclick="setBrandPos(this)">Sağ Alt</div>
+          <div class="spill" data-pos="sol-ust" onclick="setBrandPos(this)">Sol Üst</div>
+          <div class="spill" data-pos="merkez" onclick="setBrandPos(this)">Merkez</div>
+        </div>
       </div>
     </details>
 
@@ -519,8 +560,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;heigh
       <summary>🎵 Ses Parametreleri<span class="rch">▼</span></summary>
       <div class="rbd">
         <div class="sr"><label>Ses Seviyesi</label><input type="range" min="0" max="200" value="100" oninput="aA('volume',this.value);this.nextElementSibling.textContent=this.value+'%'"><span class="sv">100%</span></div>
-        <div class="sr"><label>Fade Giriş</label><input type="range" min="0" max="5" step=".1" value="0" oninput="this.nextElementSibling.textContent=this.value+'s'"><span class="sv">0s</span></div>
-        <div class="sr"><label>Fade Çıkış</label><input type="range" min="0" max="5" step=".1" value="0" oninput="this.nextElementSibling.textContent=this.value+'s'"><span class="sv">0s</span></div>
+        <div class="sr"><label>Fade Giriş</label><input type="range" min="0" max="5" step=".1" value="0" oninput="aA('fadeIn',this.value);this.nextElementSibling.textContent=this.value+'s'"><span class="sv">0s</span></div>
+        <div class="sr"><label>Fade Çıkış</label><input type="range" min="0" max="5" step=".1" value="0" oninput="aA('fadeOut',this.value);this.nextElementSibling.textContent=this.value+'s'"><span class="sv">0s</span></div>
         <div class="trow mt8">
           <span class="tlbl">Gürültü Azaltma</span>
           <label class="tgl"><input type="checkbox"><span class="tslider"></span></label>
@@ -606,7 +647,7 @@ if (!S.cid) location.href='/app?redirect=workspace-pro';
 if (S.cid) { localStorage.setItem('fx_cid',S.cid); localStorage.setItem('fx_pkg',S.pkg); }
 
 // STATE
-const ST = { items:[], cur:null, playing:false, t:0, dur:30, cp:{brightness:0,contrast:0,saturation:0} };
+const ST = { items:[], cur:null, playing:false, t:0, dur:30, cp:{brightness:0,contrast:0,saturation:0,temperature:0,sharpness:0}, lut:null, camera:null, branding:{logoBase64:null,slogan:'',position:'sol-alt'}, audio:{volume:100,fadeIn:0,fadeOut:0,echo:false,reverb:false,bass:0,noiseReduce:false} };
 
 // PARTICLES
 (function(){
@@ -707,8 +748,71 @@ function aF(){
   const pm=document.getElementById('pm'); if(pm)pm.style.filter=f;
   const pi=document.querySelector('.pi'); if(pi)pi.style.filter=f;
 }
-function aLut(n){toast('LUT uygulandı: '+n,'s');}
-function aA(p,v){console.log('audio:',p,v);}
+// ── LUT Önizleme (CSS) + Export'ta FFmpeg ──
+const LUT_CSS = {
+  cinematic: 'contrast(1.15) saturate(1.1) brightness(0.97)',
+  golden: 'contrast(1.08) saturate(1.3) brightness(1.04) sepia(0.15)',
+  moody: 'contrast(1.25) saturate(0.7) brightness(0.92)',
+  vintage: 'contrast(1.1) saturate(0.6) brightness(1.02) sepia(0.25)',
+  neon: 'contrast(1.3) saturate(1.8) brightness(1.02)',
+  bw: 'contrast(1.2) brightness(0.98) grayscale(1)'
+};
+function aLut(n){
+  ST.lut = n;
+  const pm=document.getElementById('pm'), pi=document.querySelector('.pi');
+  const f = LUT_CSS[n] || '';
+  if(pm) pm.style.filter = f;
+  if(pi) pi.style.filter = f;
+  // Aktif butonu göster
+  document.querySelectorAll('.rbd .rbtn').forEach(b => {
+    if(b.textContent.includes('Sinema')||b.textContent.includes('Altın')||b.textContent.includes('Karanlık')||b.textContent.includes('Vintage')||b.textContent.includes('Neon')||b.textContent.includes('S&B'))
+      b.style.borderColor = 'var(--border)';
+  });
+  const lutNames = {cinematic:'Sinema',golden:'Altın',moody:'Karanlık',vintage:'Vintage',neon:'Neon',bw:'S&B'};
+  document.querySelectorAll('.rbd .rbtn').forEach(b => {
+    if(b.textContent.includes(lutNames[n])) b.style.borderColor = 'var(--gold)';
+  });
+  toast('Filtre: ' + (lutNames[n]||n), 's');
+}
+
+// ── Kamera Hareketi ──
+function setCam(type) {
+  ST.camera = type;
+  ['zoom_in','zoom_out','pan_left','pan_right'].forEach(id => {
+    const el = document.getElementById('cam-'+id);
+    if(el) el.style.borderColor = (type === id) ? 'var(--gold)' : 'var(--border)';
+  });
+  toast(type ? 'Kamera: ' + type : 'Kamera temizlendi', type ? 's' : '');
+}
+
+// ── Branding ──
+ST.branding = { logoBase64: null, slogan: '', position: 'sol-alt' };
+function handleLogo(input) {
+  const file = input.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    ST.branding.logoBase64 = e.target.result;
+    document.getElementById('logoImg').src = e.target.result;
+    document.getElementById('logoPreview').style.display = 'block';
+    toast('Logo yüklendi', 's');
+  };
+  reader.readAsDataURL(file);
+}
+function setBrandPos(el) {
+  el.closest('.spills').querySelectorAll('.spill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  ST.branding.position = el.dataset.pos;
+}
+
+// ── Ses Parametreleri ──
+ST.audio = { volume: 100, fadeIn: 0, fadeOut: 0, echo: false, reverb: false, bass: 0, noiseReduce: false };
+function aA(p, v) {
+  if(p === 'volume') ST.audio.volume = parseFloat(v);
+  else if(p === 'fadeIn') ST.audio.fadeIn = parseFloat(v);
+  else if(p === 'fadeOut') ST.audio.fadeOut = parseFloat(v);
+  else if(p === 'bass') ST.audio.bass = parseFloat(v);
+}
 function addElem(t){toast('Öğe eklendi: '+t);}
 
 // CANVAS CONTROLS
@@ -741,7 +845,86 @@ function updTime(){const f=t=>{const s=Math.floor(t);return`${String(Math.floor(
 function mvPh(){const ph=document.getElementById('ph');if(ph)ph.style.left=(ST.t/ST.dur*100)+'%';}
 
 // EXPORT
-function doExport(){if(!ST.cur){toast('Önce bir medya yükle','e');return;}toast('Dışa aktarma hazırlanıyor...');setTimeout(()=>toast('Hazır! Bildirim gelecek ✦','s'),1500);}
+async function doExport(){
+  if(!ST.cur){toast('Önce bir medya yükle','e');return;}
+  if(!ST.cur.url && !ST.cur.src){toast('Video URL bulunamadı','e');return;}
+
+  const videoUrl = ST.cur.url || ST.cur.src;
+  const slogan = document.getElementById('brandSlogan')?.value?.trim() || '';
+
+  // Ses efektleri (toggle'lardan)
+  const audioSection = document.querySelectorAll('.rsec')[4]; // Ses Parametreleri
+  if(audioSection) {
+    const toggles = audioSection.querySelectorAll('.tgl input[type="checkbox"]');
+    if(toggles[0]) ST.audio.noiseReduce = toggles[0].checked;
+  }
+  // Ses efekt pilleri
+  const sesEfektler = document.querySelectorAll('.rsec:nth-child(5) .spill.on');
+  sesEfektler.forEach(p => {
+    const t = p.textContent.trim();
+    if(t === 'Echo') ST.audio.echo = true;
+    if(t === 'Reverb') ST.audio.reverb = true;
+  });
+
+  const body = {
+    videoUrl,
+    customerId: S.cid,
+    lut: ST.lut || null,
+    color: ST.cp,
+    audio: ST.audio,
+    branding: {
+      logoBase64: ST.branding?.logoBase64 || null,
+      slogan: slogan,
+      position: ST.branding?.position || 'sol-alt'
+    },
+    camera: ST.camera || null,
+    speed: parseFloat(document.querySelector('input[max="4"]')?.value) || 1
+  };
+
+  // Hiçbir ayar yapılmamışsa uyar
+  const hasChanges = body.lut || body.camera ||
+    Object.values(body.color || {}).some(v => v !== 0) ||
+    body.audio.volume !== 100 || body.audio.echo || body.audio.reverb ||
+    body.branding.logoBase64 || body.branding.slogan ||
+    body.speed !== 1;
+
+  if(!hasChanges){toast('Önce bir ayar yap (filtre, renk, ses, logo...)','e');return;}
+
+  // Export UI
+  const expBtn = document.querySelector('.tb-btn[onclick*="doExport"]') || document.querySelector('#expbtn');
+  const origText = expBtn ? expBtn.textContent : '';
+  if(expBtn){expBtn.textContent='⏳ İşleniyor...';expBtn.disabled=true;}
+  toast('Video işleniyor... Bu 30-60 saniye sürebilir');
+
+  try {
+    const r = await fetch('/api/pro/process', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const d = await r.json();
+    if(!r.ok || !d.ok) throw new Error(d.error || 'İşleme hatası');
+
+    toast('Video hazır! İndirme başlıyor... ✦', 's');
+
+    // İndirme linki aç
+    const a = document.createElement('a');
+    a.href = d.downloadUrl;
+    a.download = 'fenix-pro-video.mp4';
+    a.click();
+
+    // Videoyu önizlemede göster
+    if(d.downloadUrl) {
+      const pm = document.getElementById('pm');
+      if(pm) { pm.src = d.downloadUrl; pm.load(); }
+    }
+
+  } catch(e) {
+    toast('Hata: ' + e.message, 'e');
+  } finally {
+    if(expBtn){expBtn.textContent = origText; expBtn.disabled = false;}
+  }
+}
 
 // TOASTS
 function toast(msg,type=''){
@@ -786,6 +969,30 @@ if(S.cid){
 })();
 
 updTime();
+</script>
+<!-- QR Modal -->
+<div id="qrOverlay" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center">
+<div style="background:#151515;border:2px solid #F9731655;border-radius:20px;padding:28px;text-align:center;max-width:320px;width:90%">
+<div style="font-size:10px;color:#666;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">FENIX AI</div>
+<div style="font-size:20px;font-weight:800;color:#F97316;margin-bottom:16px">PRO</div>
+<canvas id="qrCanvas" style="border-radius:12px;border:3px solid #F97316;box-shadow:0 0 30px #F9731644"></canvas>
+<div id="qrToken" style="margin-top:12px;font-size:11px;color:#555;letter-spacing:1px;font-family:monospace"></div>
+<div style="margin-top:14px;font-size:11px;color:#777">Telefona kurmak icin tara</div>
+<button onclick="document.getElementById('qrOverlay').style.display='none'" style="margin-top:16px;padding:10px 32px;border:1px solid #333;background:transparent;color:#888;border-radius:10px;cursor:pointer;font-size:12px">Kapat</button>
+</div>
+</div>
+<script>
+function showQR(){
+var o=document.getElementById('qrOverlay');o.style.display='flex';
+var t=new URLSearchParams(window.location.search).get('t')||localStorage.getItem('fenix_qr_pro')||'';
+var url='https://witty-card-wizard.lovable.app/qr/'+t;
+document.getElementById('qrToken').textContent=t?t.slice(0,8).toUpperCase()+' ··· '+t.slice(-4).toUpperCase():'';
+var c=document.getElementById('qrCanvas'),x=c.getContext('2d');
+// Simple QR via API image
+var img=new Image();img.crossOrigin='anonymous';
+img.src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=F97316&bgcolor=FFFFFF&data='+encodeURIComponent(url);
+img.onload=function(){c.width=200;c.height=200;x.drawImage(img,0,0)};
+}
 </script>
 </body>
 </html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fenix Ücretsiz</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;600&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#07071a;color:#e4e4e7;font-family:'Rajdhani',sans-serif;height:100vh;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{height:44px;background:rgba(12,12,30,.88);border-bottom:1px solid rgba(59,130,246,.1);display:flex;align-items:center;padding:0 14px;gap:10px;backdrop-filter:blur(24px);}
+.topbar .logo{font-size:13px;font-weight:800;font-family:'Orbitron',sans-serif;background:linear-gradient(90deg,#3b82f6,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:2px;}
+.main{flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;}
+.main .icon{font-size:64px;opacity:.15;}
+.main p{font-size:14px;color:#52525b;}
+.main .sub{font-size:11px;color:#3f3f46;}
+.btn{padding:10px 24px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;font-family:'Rajdhani',sans-serif;}
+</style>
+</head>
+<body>
+<div class="topbar"><span class="logo">FENIX ÜCRETSİZ</span><span style="flex:1"></span><button onclick="showQR()" style="background:none;border:1px solid #3B82F644;border-radius:6px;padding:3px 8px;font-size:14px;cursor:pointer" title="QR Kod">📱</button></div>
+<div class="main">
+  <div class="icon">🔥</div>
+  <p>Ücretsiz plan — 2 AI video hakkı</p>
+  <p class="sub">Temel araçlar · Topluluk desteği · 1 GB depolama</p>
+  <button class="btn" onclick="alert('🔥 AI video üretimi yakında aktif olacak')">🎬 AI Video Oluştur</button>
+</div>
+<!-- QR Modal -->
+<div id="qrOverlay" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);align-items:center;justify-content:center">
+<div style="background:#151515;border:2px solid #3B82F655;border-radius:20px;padding:28px;text-align:center;max-width:320px;width:90%">
+<div style="font-size:10px;color:#666;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">FENIX AI</div>
+<div style="font-size:20px;font-weight:800;color:#3B82F6;margin-bottom:16px">UCRETSIZ</div>
+<canvas id="qrCanvas" style="border-radius:12px;border:3px solid #3B82F6;box-shadow:0 0 30px #3B82F644"></canvas>
+<div id="qrToken" style="margin-top:12px;font-size:11px;color:#555;letter-spacing:1px;font-family:monospace"></div>
+<div style="margin-top:14px;font-size:11px;color:#777">Telefona kurmak icin tara</div>
+<button onclick="document.getElementById('qrOverlay').style.display='none'" style="margin-top:16px;padding:10px 32px;border:1px solid #333;background:transparent;color:#888;border-radius:10px;cursor:pointer;font-size:12px">Kapat</button>
+</div>
+</div>
+<script>
+function showQR(){
+var o=document.getElementById('qrOverlay');o.style.display='flex';
+var t=new URLSearchParams(window.location.search).get('t')||localStorage.getItem('fenix_qr_free')||'';
+var url='https://witty-card-wizard.lovable.app/qr/'+t;
+document.getElementById('qrToken').textContent=t?t.slice(0,8).toUpperCase()+' ··· '+t.slice(-4).toUpperCase():'';
+var c=document.getElementById('qrCanvas'),x=c.getContext('2d');
+var img=new Image();img.crossOrigin='anonymous';
+img.src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=3B82F6&bgcolor=FFFFFF&data='+encodeURIComponent(url);
+img.onload=function(){c.width=200;c.height=200;x.drawImage(img,0,0)};
+}
+</script>
+</body>
+</html>

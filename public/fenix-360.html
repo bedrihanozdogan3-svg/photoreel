@@ -112,7 +112,7 @@ h1,h2,h3,h4,.topbar .logo,.stat-num { font-family:'Orbitron','Rajdhani',sans-ser
 
 /* ═══ CANVAS / VIDEO AREA ═══ */
 .canvas-area { flex:1; position:relative; background:#050510; overflow:hidden; z-index:auto; }
-.video-container { width:100%; height:100%; display:flex; align-items:center; justify-content:center; position:relative; z-index:3; }
+.video-container { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:3; }
 
 /* Neon grid */
 .neon-grid { position:absolute; bottom:0; left:0; right:0; height:40%; background:linear-gradient(0deg,rgba(168,85,247,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(168,85,247,.03) 1px,transparent 1px); background-size:40px 40px; perspective:500px; transform:rotateX(60deg); transform-origin:bottom; pointer-events:none; z-index:1; opacity:.5; }
@@ -538,6 +538,7 @@ h1,h2,h3,h4,.topbar .logo,.stat-num { font-family:'Orbitron','Rajdhani',sans-ser
   <button class="top-btn" onclick="document.getElementById('videoInput').click()">🎬 Video Yükle</button>
   <button class="top-btn fenix" onclick="showToast('🔥 Fenix AI işleme başlıyor...')">🔥 Fenix Yapsın</button>
   <button class="top-btn primary" onclick="showToast('📤 Render kuyruğuna eklendi')">📤 Render & İndir</button>
+  <button class="top-btn" onclick="showQR()" title="QR Kod" style="font-size:14px;padding:5px 10px">📱</button>
 </div>
 
 <!-- MAIN -->
@@ -555,7 +556,10 @@ h1,h2,h3,h4,.topbar .logo,.stat-num { font-family:'Orbitron','Rajdhani',sans-ser
     <div class="sb-divider"></div>
     <button class="sb-btn tooltip-wrap" data-tip="360° (6)" onclick="setTool('360')" id="sb-360">🌐</button>
     <button class="sb-btn tooltip-wrap" data-tip="Format (7)" onclick="setTool('format')" id="sb-format">📐</button>
-    <button class="sb-btn tooltip-wrap" data-tip="Render (8)" onclick="setTool('render')" id="sb-render">💾</button>
+    <div class="sb-divider"></div>
+    <button class="sb-btn tooltip-wrap" data-tip="Segmentasyon (8)" onclick="toggleRightPanel('segment')" id="sb-segment">🎭</button>
+    <button class="sb-btn tooltip-wrap" data-tip="Render (9)" onclick="setTool('render')" id="sb-render">💾</button>
+    <div style="flex:1;"></div>
   </div>
 
   <!-- LEFT PANEL -->
@@ -592,9 +596,8 @@ h1,h2,h3,h4,.topbar .logo,.stat-num { font-family:'Orbitron','Rajdhani',sans-ser
           <button class="tool-btn" onclick="simAction('Başlangıç işaretlendi','✂️')" style="flex:1;justify-content:center;padding:6px;"><span class="ico">▶</span><span class="lbl" style="font-size:10px;">Başlangıç</span></button>
           <button class="tool-btn" onclick="simAction('Bitiş işaretlendi','✂️')" style="flex:1;justify-content:center;padding:6px;"><span class="ico">⏹</span><span class="lbl" style="font-size:10px;">Bitiş</span></button>
         </div>
-        <button class="tool-btn" onclick="simProcess('Seçili bölüm kesiliyor...','Kes tamamlandı ✓')"><span class="ico">✂️</span><span class="lbl">Seçili Bölümü Kes</span><span class="arrow">→</span></button>
-        <button class="tool-btn" onclick="simProcess('Parçalar birleştiriliyor...','Birleştirme tamamlandı ✓')"><span class="ico">🔗</span><span class="lbl">Parçaları Birleştir</span><span class="arrow">→</span></button>
-        <button class="tool-btn" onclick="simProcess('Bölünüyor...','İkiye bölündü ✓')"><span class="ico">📐</span><span class="lbl">Playhead'den Böl</span><span class="arrow">→</span></button>
+        <button class="tool-btn" onclick="runFFmpegTool('cut')"><span class="ico">✂️</span><span class="lbl">Seçili Bölümü Kes</span><span class="arrow">→</span></button>
+        <button class="tool-btn" onclick="runFFmpegTool('split')"><span class="ico">📐</span><span class="lbl">Playhead'den Böl</span><span class="arrow">→</span></button>
       </div>
     </div>
 
@@ -603,9 +606,9 @@ h1,h2,h3,h4,.topbar .logo,.stat-num { font-family:'Orbitron','Rajdhani',sans-ser
       <div class="lp-header"><h3>🎵 Ses İşleme</h3></div>
       <div class="lp-section" style="padding:8px 10px;">
         <h4>Temizleme</h4>
-        <button class="tool-btn" onclick="simProcess('Rüzgar sesi temizleniyor...','Rüzgar temizlendi ✓')"><span class="ico">🌬️</span><span class="lbl">Rüzgar Temizleme</span><span class="arrow">→</span></button>
-        <button class="tool-btn" onclick="simProcess('Gürültü filtreleniyor...','Gürültü temizlendi ✓')"><span class="ico">🔇</span><span class="lbl">Gürültü Kapısı</span><span class="arrow">→</span></button>
-        <button class="tool-btn" onclick="simProcess('Ses odaklanıyor...','Ses odaklama tamamlandı ✓')"><span class="ico">🎯</span><span class="lbl">Ses Odaklama</span><span class="arrow">→</span></button>
+        <button class="tool-btn" onclick="runFFmpegTool('wind')"><span class="ico">🌬️</span><span class="lbl">Rüzgar Temizleme</span><span class="arrow">→</span></button>
+        <button class="tool-btn" onclick="runFFmpegTool('denoise')"><span class="ico">🔇</span><span class="lbl">Gürültü Kapısı</span><span class="arrow">→</span></button>
+        <button class="tool-btn" onclick="runFFmpegTool('audiofocus')"><span class="ico">🎯</span><span class="lbl">Ses Odaklama</span><span class="arrow">→</span></button>
       </div>
       <div class="lp-section" style="padding:8px 10px;">
         <h4>EQ & Mix</h4>
@@ -628,20 +631,19 @@ h1,h2,h3,h4,.topbar .logo,.stat-num { font-family:'Orbitron','Rajdhani',sans-ser
       <div class="lp-section" style="padding:8px 10px;">
         <h4>Video Efektleri</h4>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">
-          <button class="tool-btn" onclick="simAction('Blur uygulandı','🌫️')" style="justify-content:center;padding:6px;"><span class="ico">🌫️</span><span class="lbl" style="font-size:10px;">Blur</span></button>
-          <button class="tool-btn" onclick="simAction('Glitch uygulandı','📺')" style="justify-content:center;padding:6px;"><span class="ico">📺</span><span class="lbl" style="font-size:10px;">Glitch</span></button>
-          <button class="tool-btn" onclick="simAction('Zoom efekti','🔍')" style="justify-content:center;padding:6px;"><span class="ico">🔍</span><span class="lbl" style="font-size:10px;">Zoom</span></button>
-          <button class="tool-btn" onclick="simAction('Shake efekti','📳')" style="justify-content:center;padding:6px;"><span class="ico">📳</span><span class="lbl" style="font-size:10px;">Shake</span></button>
-          <button class="tool-btn" onclick="simAction('Fade in uygulandı','🌅')" style="justify-content:center;padding:6px;"><span class="ico">🌅</span><span class="lbl" style="font-size:10px;">Fade In</span></button>
-          <button class="tool-btn" onclick="simAction('Fade out uygulandı','🌆')" style="justify-content:center;padding:6px;"><span class="ico">🌆</span><span class="lbl" style="font-size:10px;">Fade Out</span></button>
+          <button class="tool-btn" onclick="runFFmpegTool('blur')" style="justify-content:center;padding:6px;"><span class="ico">🌫️</span><span class="lbl" style="font-size:10px;">Blur</span></button>
+          <button class="tool-btn" onclick="runFFmpegTool('glitch')" style="justify-content:center;padding:6px;"><span class="ico">📺</span><span class="lbl" style="font-size:10px;">Glitch</span></button>
+          <button class="tool-btn" onclick="runFFmpegTool('zoom')" style="justify-content:center;padding:6px;"><span class="ico">🔍</span><span class="lbl" style="font-size:10px;">Zoom</span></button>
+          <button class="tool-btn" onclick="runFFmpegTool('shake')" style="justify-content:center;padding:6px;"><span class="ico">📳</span><span class="lbl" style="font-size:10px;">Shake</span></button>
+          <button class="tool-btn" onclick="runFFmpegTool('fadein')" style="justify-content:center;padding:6px;"><span class="ico">🌅</span><span class="lbl" style="font-size:10px;">Fade In</span></button>
+          <button class="tool-btn" onclick="runFFmpegTool('fadeout')" style="justify-content:center;padding:6px;"><span class="ico">🌆</span><span class="lbl" style="font-size:10px;">Fade Out</span></button>
         </div>
       </div>
       <div class="lp-section" style="padding:8px 10px;">
         <h4>Geçişler</h4>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;">
-          <button class="tool-btn" onclick="simAction('Cross dissolve','🔀')" style="justify-content:center;padding:6px;"><span class="ico">🔀</span></button>
-          <button class="tool-btn" onclick="simAction('Wipe geçişi','➡️')" style="justify-content:center;padding:6px;"><span class="ico">➡️</span></button>
-          <button class="tool-btn" onclick="simAction('Flash geçişi','💥')" style="justify-content:center;padding:6px;"><span class="ico">💥</span></button>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;">
+          <button class="tool-btn" onclick="runFFmpegTool('dissolve')" style="justify-content:center;padding:6px;"><span class="ico">🔀</span><span class="lbl" style="font-size:10px;">Dissolve</span></button>
+          <button class="tool-btn" onclick="runFFmpegTool('reverse')" style="justify-content:center;padding:6px;"><span class="ico">🔄</span><span class="lbl" style="font-size:10px;">Ters Çevir</span></button>
         </div>
       </div>
       <div class="lp-section" style="padding:8px 10px;">
@@ -668,9 +670,9 @@ h1,h2,h3,h4,.topbar .logo,.stat-num { font-family:'Orbitron','Rajdhani',sans-ser
         </div>
       </div>
       <div class="lp-section" style="padding:8px 10px;">
-        <h4>Ters Çevir</h4>
-        <button class="tool-btn" onclick="simProcess('Video ters çevriliyor...','Ters çevrildi ✓')"><span class="ico">🔄</span><span class="lbl">Videoyu Ters Çevir</span><span class="arrow">→</span></button>
-        <button class="tool-btn" onclick="simProcess('Freeze frame oluşturuluyor...','Freeze frame eklendi ✓')"><span class="ico">❄️</span><span class="lbl">Freeze Frame</span><span class="arrow">→</span></button>
+        <h4>Özel</h4>
+        <button class="tool-btn" onclick="runFFmpegTool('freeze')"><span class="ico">❄️</span><span class="lbl">Freeze Frame</span><span class="arrow">→</span></button>
+        <button class="tool-btn" onclick="runFFmpegTool('speed',{rate:document.getElementById('speedSlider').value/100})"><span class="ico">⚡</span><span class="lbl">Hız Uygula</span><span class="arrow">→</span></button>
       </div>
     </div>
 
@@ -685,10 +687,10 @@ h1,h2,h3,h4,.topbar .logo,.stat-num { font-family:'Orbitron','Rajdhani',sans-ser
         <p style="font-size:8px;color:var(--text3);margin-top:4px;">Mouse ile sürükleyerek 360° çevirin</p>
       </div>
       <div class="lp-section" style="padding:8px 10px;">
-        <h4>Stabilizasyon</h4>
-        <button class="tool-btn" onclick="simProcess('360° stabilizasyon yapılıyor...','Stabilize edildi ✓')"><span class="ico">🎯</span><span class="lbl">Otomatik Stabilize</span><span class="arrow">→</span></button>
-        <button class="tool-btn" onclick="simProcess('Tiny planet oluşturuluyor...','Tiny planet hazır ✓')"><span class="ico">🌍</span><span class="lbl">Tiny Planet</span><span class="arrow">→</span></button>
-        <button class="tool-btn" onclick="simProcess('Reframe başlatılıyor...','Reframe tamamlandı ✓')"><span class="ico">🎞️</span><span class="lbl">Auto Reframe</span><span class="arrow">→</span></button>
+        <h4>360° Araçları</h4>
+        <button class="tool-btn" onclick="run360Tool('stabilize')"><span class="ico">🎯</span><span class="lbl">Otomatik Stabilize</span><span class="arrow">→</span></button>
+        <button class="tool-btn" onclick="run360Tool('tinyplanet')"><span class="ico">🌍</span><span class="lbl">Tiny Planet</span><span class="arrow">→</span></button>
+        <button class="tool-btn" onclick="run360Tool('reframe')"><span class="ico">🎞️</span><span class="lbl">Auto Reframe</span><span class="arrow">→</span></button>
       </div>
     </div>
 
@@ -698,18 +700,16 @@ h1,h2,h3,h4,.topbar .logo,.stat-num { font-family:'Orbitron','Rajdhani',sans-ser
       <div class="lp-section" style="padding:8px 10px;">
         <h4>Çıkış Formatı</h4>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:3px;">
-          <button class="tool-btn" onclick="simAction('1:1 Kare','📐')" style="justify-content:center;padding:8px;flex-direction:column;gap:2px;"><span class="ico">⬜</span><span style="font-size:8px;color:var(--text3);">1:1</span></button>
-          <button class="tool-btn" onclick="simAction('9:16 Dikey','📐')" style="justify-content:center;padding:8px;flex-direction:column;gap:2px;"><span class="ico">📱</span><span style="font-size:8px;color:var(--text3);">9:16</span></button>
-          <button class="tool-btn" onclick="simAction('16:9 Yatay','📐')" style="justify-content:center;padding:8px;flex-direction:column;gap:2px;"><span class="ico">🖥️</span><span style="font-size:8px;color:var(--text3);">16:9</span></button>
-          <button class="tool-btn" onclick="simAction('4:5 Portrait','📐')" style="justify-content:center;padding:8px;flex-direction:column;gap:2px;"><span class="ico">📷</span><span style="font-size:8px;color:var(--text3);">4:5</span></button>
-          <button class="tool-btn" onclick="simAction('21:9 Sinema','📐')" style="justify-content:center;padding:8px;flex-direction:column;gap:2px;"><span class="ico">🎬</span><span style="font-size:8px;color:var(--text3);">21:9</span></button>
-          <button class="tool-btn" onclick="simAction('Özel boyut','📐')" style="justify-content:center;padding:8px;flex-direction:column;gap:2px;"><span class="ico">✏️</span><span style="font-size:8px;color:var(--text3);">Özel</span></button>
+          <button class="tool-btn" onclick="runFFmpegTool('crop_1_1')" style="justify-content:center;padding:8px;flex-direction:column;gap:2px;"><span class="ico">⬜</span><span style="font-size:8px;color:var(--text3);">1:1</span></button>
+          <button class="tool-btn" onclick="runFFmpegTool('crop_9_16')" style="justify-content:center;padding:8px;flex-direction:column;gap:2px;"><span class="ico">📱</span><span style="font-size:8px;color:var(--text3);">9:16</span></button>
+          <button class="tool-btn" onclick="runFFmpegTool('crop_16_9')" style="justify-content:center;padding:8px;flex-direction:column;gap:2px;"><span class="ico">🖥️</span><span style="font-size:8px;color:var(--text3);">16:9</span></button>
+          <button class="tool-btn" onclick="runFFmpegTool('crop_4_5')" style="justify-content:center;padding:8px;flex-direction:column;gap:2px;"><span class="ico">📷</span><span style="font-size:8px;color:var(--text3);">4:5</span></button>
+          <button class="tool-btn" onclick="runFFmpegTool('crop_21_9')" style="justify-content:center;padding:8px;flex-direction:column;gap:2px;"><span class="ico">🎬</span><span style="font-size:8px;color:var(--text3);">21:9</span></button>
         </div>
       </div>
       <div class="lp-section" style="padding:8px 10px;">
         <h4>Altyazı</h4>
-        <button class="tool-btn" onclick="simProcess('AI altyazı oluşturuluyor...','Altyazı eklendi ✓')"><span class="ico">💬</span><span class="lbl">AI Otomatik Altyazı</span><span class="arrow">→</span></button>
-        <button class="tool-btn" onclick="simAction('Metin aracı açıldı','✏️')"><span class="ico">✏️</span><span class="lbl">Metin Ekle</span><span class="arrow">→</span></button>
+        <button class="tool-btn" onclick="runFFmpegTool('subtitle')"><span class="ico">💬</span><span class="lbl">AI Otomatik Altyazı</span><span class="arrow">→</span></button>
       </div>
     </div>
 
@@ -735,12 +735,12 @@ h1,h2,h3,h4,.topbar .logo,.stat-num { font-family:'Orbitron','Rajdhani',sans-ser
       </div>
       <div class="lp-section" style="padding:8px 10px;">
         <h4>Platform</h4>
-        <button class="tool-btn" onclick="simProcess('Instagram Reels formatı...','Instagram hazır ✓')"><span class="ico">📸</span><span class="lbl">Instagram Reels</span><span class="arrow">→</span></button>
-        <button class="tool-btn" onclick="simProcess('TikTok formatı...','TikTok hazır ✓')"><span class="ico">🎵</span><span class="lbl">TikTok</span><span class="arrow">→</span></button>
-        <button class="tool-btn" onclick="simProcess('YouTube formatı...','YouTube hazır ✓')"><span class="ico">▶️</span><span class="lbl">YouTube</span><span class="arrow">→</span></button>
+        <button class="tool-btn" onclick="runFFmpegTool('instagram')"><span class="ico">📸</span><span class="lbl">Instagram Reels</span><span class="arrow">→</span></button>
+        <button class="tool-btn" onclick="runFFmpegTool('tiktok')"><span class="ico">🎵</span><span class="lbl">TikTok</span><span class="arrow">→</span></button>
+        <button class="tool-btn" onclick="runFFmpegTool('youtube')"><span class="ico">▶️</span><span class="lbl">YouTube</span><span class="arrow">→</span></button>
       </div>
       <div class="lp-section" style="padding:8px 10px;">
-        <button class="tool-btn" onclick="simProcess('Bulut render başlatılıyor...','Render kuyruğuna eklendi ✓')" style="background:linear-gradient(135deg,rgba(168,85,247,.15),rgba(124,58,237,.1));border-color:rgba(168,85,247,.3);">
+        <button class="tool-btn" onclick="runFFmpegTool('render_hq')" style="background:linear-gradient(135deg,rgba(168,85,247,.15),rgba(124,58,237,.1));border-color:rgba(168,85,247,.3);">
           <span class="ico">☁️</span><span class="lbl" style="font-weight:700;">Bulut Render Başlat</span><span class="arrow">→</span>
         </button>
       </div>
@@ -754,11 +754,11 @@ h1,h2,h3,h4,.topbar .logo,.stat-num { font-family:'Orbitron','Rajdhani',sans-ser
     <div class="scanline"></div>
     <div class="drop-overlay" id="dropOverlay"><div class="target">🎯</div><span>VİDEO BIRAK</span></div>
 
-    <div class="canvas-badge" style="top:12px;left:12px;">
+    <div class="canvas-badge" id="badgeEncoder" style="top:12px;left:12px;">
       <div class="led blink" style="background:var(--purple);box-shadow:0 0 6px var(--purple)"></div>
       Fenix Encoder
     </div>
-    <div class="canvas-badge" style="top:12px;right:56px;">
+    <div class="canvas-badge" id="badgeCloud" style="top:12px;right:56px;">
       <div class="led" style="background:#22c55e;box-shadow:0 0 6px #22c55e"></div>
       ☁️ Bulut Aktif
     </div>
@@ -782,13 +782,26 @@ h1,h2,h3,h4,.topbar .logo,.stat-num { font-family:'Orbitron','Rajdhani',sans-ser
     <div class="video-container" id="videoContainer" style="display:none;">
       <video id="videoPlayer" style="display:none;"></video>
       <div id="threeSixtyContainer" style="width:100%;height:100%;position:absolute;inset:0;cursor:grab;"></div>
-      <!-- 360° Bilgi Rozeti -->
-      <div id="badge360" style="position:absolute;top:12px;left:12px;z-index:10;display:none;padding:4px 12px;background:rgba(0,0,0,.7);border:1px solid rgba(34,211,238,.3);border-radius:6px;font-size:10px;color:var(--neon-cyan);font-family:'Orbitron',sans-serif;backdrop-filter:blur(8px);pointer-events:none;">🌐 360° · Sürükle & Çevir</div>
+      <!-- 360° Mod Toggle — sol alt köşe -->
+      <div id="mode360Toggle" style="position:absolute;bottom:8px;left:8px;z-index:15;display:none;background:rgba(0,0,0,.8);border:1px solid rgba(168,85,247,.25);border-radius:8px;padding:5px 8px;backdrop-filter:blur(8px);font-family:'Rajdhani',sans-serif;">
+        <div style="display:flex;gap:3px;align-items:center;">
+          <span style="font-size:9px;color:rgba(255,255,255,.3);margin-right:2px;">360°</span>
+          <button id="btnModeEqui" onclick="switch360Mode('equi')" style="padding:3px 8px;font-size:9px;border:1px solid rgba(34,211,238,.4);background:rgba(34,211,238,.12);color:#22d3ee;border-radius:4px;cursor:pointer;font-family:inherit;">Equirect</button>
+          <button id="btnModeFish" onclick="switch360Mode('fish')" style="padding:3px 8px;font-size:9px;border:1px solid rgba(168,85,247,.15);background:transparent;color:rgba(255,255,255,.3);border-radius:4px;cursor:pointer;font-family:inherit;">Dual-Fish</button>
+        </div>
+        <div id="fishControls" style="display:none;padding-top:4px;margin-top:4px;border-top:1px solid rgba(255,255,255,.06);">
+          <label style="font-size:8px;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:4px;">Lens <input type="range" id="sliderFishR" min="0.30" max="0.60" step="0.01" value="0.50" oninput="updateFishParam()" style="width:50px;height:3px;accent-color:#a855f7;cursor:pointer;"><span id="valFishR" style="color:#a855f7;font-size:8px;">0.50</span></label>
+          <label style="font-size:8px;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:4px;margin-top:2px;">Blend <input type="range" id="sliderBlend" min="0.02" max="0.40" step="0.01" value="0.15" oninput="updateFishParam()" style="width:50px;height:3px;accent-color:#22d3ee;cursor:pointer;"><span id="valBlend" style="color:#22d3ee;font-size:8px;">0.15</span></label>
+          <label style="font-size:8px;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:4px;margin-top:2px;">Ön B <input type="range" id="sliderFrontB" min="0.60" max="1.40" step="0.02" value="1.00" oninput="updateFishParam()" style="width:50px;height:3px;accent-color:#f59e0b;cursor:pointer;"><span id="valFrontB" style="color:#f59e0b;font-size:8px;">1.00</span></label>
+          <label style="font-size:8px;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:4px;margin-top:2px;">Arka B <input type="range" id="sliderBackB" min="0.60" max="1.40" step="0.02" value="1.00" oninput="updateFishParam()" style="width:50px;height:3px;accent-color:#ef4444;cursor:pointer;"><span id="valBackB" style="color:#ef4444;font-size:8px;">1.00</span></label>
+          <label style="font-size:8px;color:rgba(255,255,255,.4);display:flex;align-items:center;gap:4px;margin-top:2px;">Rot° <input type="range" id="sliderBackRot" min="-0.15" max="0.15" step="0.005" value="0.00" oninput="updateFishParam()" style="width:50px;height:3px;accent-color:#22c55e;cursor:pointer;"><span id="valBackRot" style="color:#22c55e;font-size:8px;">0.00</span></label>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- RIGHT ICON STRIP -->
-  <div class="right-strip">
+  <!-- RIGHT ICON STRIP — gizlendi, sol sidebar yeterli -->
+  <div class="right-strip" style="display:none;">
     <button class="rs-btn" data-tip="Ses İşleme" onclick="toggleRightPanel('audio')">🎵</button>
     <button class="rs-btn" data-tip="Video İşleme" onclick="toggleRightPanel('video')">🎬</button>
     <button class="rs-btn" data-tip="360° & Format" onclick="toggleRightPanel('360')">🌐</button>
@@ -812,69 +825,6 @@ h1,h2,h3,h4,.topbar .logo,.stat-num { font-family:'Orbitron','Rajdhani',sans-ser
     <div class="ro-footer-micro">360_ENGINE_V3 · STATUS: OPTIMIZED</div>
   </div>
 
-  <!-- Eski right-panel gizli tutuldu (referans) -->
-  <div class="right-panel" style="display:none;">
-    <div class="rp-section">
-      <h3><span class="dot"></span> SES İŞLEME</h3>
-      <button class="tool-btn" id="btnWind" onclick="toggleSlider('slWind');setTool('audio');simProcess('Rüzgar temizleniyor...','Rüzgar temizlendi ✓')">
-        <span class="ico">🌬️</span><span class="lbl">Rüzgar Temizleme</span>
-        <div class="spectrum"><div class="sbar" style="height:8px"></div><div class="sbar" style="height:12px"></div><div class="sbar" style="height:5px"></div><div class="sbar" style="height:10px"></div><div class="sbar" style="height:7px"></div></div>
-      </button>
-      <div class="neon-slider" id="slWind"><div class="slider-row"><label style="font-size:9px;">Hassasiyet</label><input type="range" min="0" max="100" value="85"><span class="val" style="font-size:9px;">85%</span></div></div>
-
-      <button class="tool-btn" onclick="toggleSlider('slFocus');setTool('audio');simProcess('Ses odaklanıyor...','Odaklama tamamlandı ✓')">
-        <span class="ico">🎯</span><span class="lbl">Ses Odaklama</span>
-        <div class="spectrum"><div class="sbar" style="height:6px"></div><div class="sbar" style="height:14px"></div><div class="sbar" style="height:9px"></div><div class="sbar" style="height:11px"></div><div class="sbar" style="height:4px"></div></div>
-      </button>
-      <div class="neon-slider" id="slFocus"><div class="slider-row"><label style="font-size:9px;">Hassasiyet</label><input type="range" min="0" max="100" value="70"><span class="val" style="font-size:9px;">70%</span></div></div>
-
-      <button class="tool-btn" onclick="setTool('audio')">
-        <span class="ico">🎛️</span><span class="lbl">EQ Ayarları</span>
-        <div class="spectrum"><div class="sbar" style="height:10px"></div><div class="sbar" style="height:7px"></div><div class="sbar" style="height:13px"></div><div class="sbar" style="height:5px"></div><div class="sbar" style="height:9px"></div></div>
-      </button>
-    </div>
-    <div class="rp-section">
-      <h3><span class="dot"></span> VİDEO İŞLEME</h3>
-      <button class="tool-btn" onclick="setTool('cut')"><span class="ico">✂️</span><span class="lbl">Kes & Birleştir</span><span class="arrow">→</span></button>
-      <button class="tool-btn" onclick="setTool('effects')"><span class="ico">🌫️</span><span class="lbl">Blur Uygula</span><span class="arrow">→</span></button>
-      <button class="tool-btn" onclick="setTool('effects')"><span class="ico">✨</span><span class="lbl">Efekt Ekle</span><span class="arrow">→</span></button>
-      <button class="tool-btn" onclick="setTool('speed')"><span class="ico">⚡</span><span class="lbl">Hız Rampa</span><span class="arrow">→</span></button>
-    </div>
-    <div class="rp-section">
-      <h3><span class="dot"></span> 360° & FORMAT</h3>
-      <button class="tool-btn" onclick="setTool('360')" style="position:relative;">
-        <span class="ico"><span class="sphere-icon">🌐</span></span><span class="lbl">360° Görünüm</span><span class="arrow">→</span>
-      </button>
-      <button class="tool-btn" onclick="setTool('format')"><span class="ico">📐</span><span class="lbl">Format Değiştir</span><span class="arrow">→</span></button>
-      <button class="tool-btn" onclick="setTool('format');simProcess('AI altyazı oluşturuluyor...','Altyazı eklendi ✓')"><span class="ico">💬</span><span class="lbl">AI Altyazı</span><span class="arrow">→</span></button>
-    </div>
-    <div class="rp-section">
-      <h3><span class="dot"></span> HIZLI RENDER</h3>
-      <button class="tool-btn" onclick="simProcess('Instagram Reels...','Instagram hazır ✓')"><span class="ico">📸</span><span class="lbl">Instagram Reels</span><span class="arrow">→</span></button>
-      <button class="tool-btn" onclick="simProcess('TikTok render...','TikTok hazır ✓')"><span class="ico">🎵</span><span class="lbl">TikTok</span><span class="arrow">→</span></button>
-      <button class="tool-btn" onclick="startRenderDemo()" style="background:linear-gradient(135deg,rgba(249,115,22,.15),rgba(239,68,68,.1));border-color:rgba(249,115,22,.3);">
-        <span class="ico">☁️</span><span class="lbl" style="font-weight:700;color:#f97316;">Bulut Render</span><span class="arrow" style="color:#f97316;">→</span>
-      </button>
-    </div>
-
-    <!-- Video Info Band -->
-    <div class="video-info-band" id="videoInfoBand">
-      <div class="info-chip"><span class="chip-led"></span><span id="infoRes">—</span></div>
-      <div class="info-chip"><span class="chip-led"></span><span id="infoFps">—</span></div>
-      <div class="info-chip"><span class="chip-led"></span><span id="infoDur">—</span></div>
-      <div class="info-chip"><span class="chip-led"></span><span id="infoCodec">H.264</span></div>
-      <div class="info-chip"><span class="chip-led"></span><span id="infoBitrate">—</span></div>
-    </div>
-
-    <!-- Render Progress -->
-    <div class="render-progress" id="renderProgress">
-      <div class="render-wheel">
-        <svg viewBox="0 0 64 64"><circle class="bg" cx="32" cy="32" r="30"/><circle class="fg" id="renderCircle" cx="32" cy="32" r="30"/></svg>
-        <div class="render-pct" id="renderPct">0%</div>
-      </div>
-      <div class="render-label" id="renderLabel">Render bekleniyor...</div>
-    </div>
-  </div>
 </div>
 
 <!-- TIMELINE -->
@@ -1115,28 +1065,143 @@ function updateNav(){
 // Video loading — INSV/INSP desteği dahil
 document.getElementById('videoInput').addEventListener('change',(e)=>{
   const file=e.target.files[0];if(!file)return;
-  // INSV dosyası ise özel blob type ile yükle (tarayıcı MIME tanımayabilir)
+  window._lastUploadedFile = file; // Sunucu dönüşümü için sakla
   const isInsv = /\.(insv|insp)$/i.test(file.name);
   let blob = file;
   if (isInsv) {
-    // INSV aslında H.264/H.265 stream — MP4 MIME ile zorla
     blob = new Blob([file], { type: 'video/mp4' });
-    showToast('🎥 Insta360 dosyası algılandı, dönüştürülüyor...');
+    showToast('🎥 Insta360 dosyası algılandı...');
   }
   loadVideo(URL.createObjectURL(blob), file.name, file.size);
   e.target.value='';
 });
 
+// ── Sunucu Tarafı Video Dönüşümü (Chunk Upload + FFmpeg) ──
+async function _convertOnServer(file) {
+  const isInsv = /\.(insv|insp)$/i.test(file.name);
+  const tool = isInsv ? 'convert_insv' : 'convert_h264';
+  _showConvertOverlay();
+
+  // runFFmpegTool ile aynı chunk upload sistemini kullan
+  // Ama dualFisheye flag'i ile
+  const CHUNK_SIZE = 25 * 1024 * 1024;
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+  const uploadId = 'cv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+
+  _updateConvertOverlay(0, 'Dosya yükleniyor... (' + (file.size/1024/1024).toFixed(1) + ' MB)');
+
+  for (let i = 0; i < totalChunks; i++) {
+    const chunk = file.slice(i * CHUNK_SIZE, Math.min((i+1) * CHUNK_SIZE, file.size));
+    const cf = new FormData();
+    cf.append('chunk', chunk, 'chunk_' + i);
+    cf.append('uploadId', uploadId);
+    cf.append('chunkIndex', String(i));
+    cf.append('totalChunks', String(totalChunks));
+    cf.append('fileName', file.name);
+    try {
+      const r = await fetch('/api/upload/chunk', { method: 'POST', body: cf });
+      if (!r.ok) { _hideConvertOverlay(); showToast('⚠️ Yükleme başarısız'); return; }
+      _updateConvertOverlay(Math.round(((i+1)/totalChunks)*40), `Yükleniyor... ${i+1}/${totalChunks}`);
+    } catch(e) { _hideConvertOverlay(); showToast('⚠️ Yükleme hatası'); return; }
+  }
+
+  _updateConvertOverlay(42, 'Birleştiriliyor...');
+  const cr = await fetch('/api/upload/complete', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ uploadId, totalChunks, fileName: file.name, tool })
+  });
+  if (!cr.ok) { _hideConvertOverlay(); showToast('⚠️ Birleştirme hatası'); return; }
+
+  _updateConvertOverlay(45, 'FFmpeg dönüşüm başlatılıyor...');
+
+  // convert_insv → dualFisheye dönüşüm, convert_h264 → sadece re-encode
+  fetch('/api/360/process-chunked', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ uploadId, tool: isInsv ? 'convert_insv' : 'stabilize', dualFisheye: isInsv })
+  }).then(response => {
+    if (!response.ok) { _hideConvertOverlay(); showToast('⚠️ Dönüşüm hatası'); return; }
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    function pump() {
+      return reader.read().then(({ done, value }) => {
+        if (done) return;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n'); buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const msg = JSON.parse(line.slice(6));
+            if (msg.status === 'processing') _updateConvertOverlay(45 + Math.round((msg.progress||0)*0.55), msg.message);
+            else if (msg.status === 'done') {
+              _hideConvertOverlay();
+              showToast('✅ Dönüşüm tamamlandı!');
+              window._lastUploadedFile = null;
+              loadVideo(msg.url, file.name.replace(/\.\w+$/, '_360.mp4'), file.size);
+            } else if (msg.status === 'error') { _hideConvertOverlay(); showToast('⚠️ ' + msg.message); }
+          } catch(e) {}
+        }
+        return pump();
+      });
+    }
+    return pump();
+  }).catch(e => { _hideConvertOverlay(); showToast('⚠️ Bağlantı hatası'); });
+}
+
+function _showConvertOverlay() {
+  let el = document.getElementById('convertOverlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'convertOverlay';
+    el.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:12px;">
+        <div style="font-family:'Orbitron',sans-serif;font-size:13px;color:#a855f7;font-weight:700;">FENIX ENCODER</div>
+        <div style="font-size:11px;color:#e4e4e7;" id="convertMsg">Video dönüştürülüyor...</div>
+        <div style="width:240px;height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;">
+          <div id="convertBar" style="width:0%;height:100%;background:linear-gradient(90deg,#a855f7,#22d3ee);border-radius:3px;transition:width .3s;"></div>
+        </div>
+        <div style="font-size:10px;color:#a1a1aa;" id="convertPct">%0</div>
+        <div style="font-size:9px;color:#52525b;margin-top:4px;">Desteklenmeyen format otomatik çevriliyor</div>
+      </div>`;
+    Object.assign(el.style, {
+      position:'fixed', inset:'0', background:'rgba(7,7,26,.92)', display:'flex',
+      alignItems:'center', justifyContent:'center', zIndex:'99999', backdropFilter:'blur(8px)'
+    });
+    document.body.appendChild(el);
+  }
+  el.style.display = 'flex';
+}
+
+function _updateConvertOverlay(pct, msg) {
+  const bar = document.getElementById('convertBar');
+  const pctEl = document.getElementById('convertPct');
+  const msgEl = document.getElementById('convertMsg');
+  if (bar) bar.style.width = pct + '%';
+  if (pctEl) pctEl.textContent = '%' + pct;
+  if (msgEl && msg) msgEl.textContent = msg;
+}
+
+function _hideConvertOverlay() {
+  const el = document.getElementById('convertOverlay');
+  if (el) el.style.display = 'none';
+}
+
 function loadVideo(src,name,size){
   const video=document.getElementById('videoPlayer');
   video.src=src;
 
-  // Hata yakalama — INSV bazı codec'leri (H.265) tarayıcıda çalışmayabilir
+  // Hata yakalama — desteklenmeyen format otomatik sunucu dönüşümüne gider
   video.onerror = () => {
-    const isInsv = /\.(insv|insp)$/i.test(name||'');
-    if (isInsv) {
-      showToast('⚠️ Bu INSV dosyası tarayıcıda oynatılamıyor. Insta360 Studio ile MP4\'e çevirip tekrar deneyin.');
-      showStatusMsg('INSV codec desteklenmiyor — H.265/HEVC tarayıcıda sınırlı');
+    // Eğer zaten dönüştürülmüş URL ise tekrar deneme
+    if (src && src.includes('/converted/')) {
+      showToast('⚠️ Dönüştürülen video da oynatılamadı');
+      return;
+    }
+    // _lastUploadedFile varsa sunucuya gönder
+    if (window._lastUploadedFile) {
+      showToast('🔄 Format desteklenmiyor — Fenix otomatik dönüştürüyor...');
+      showStatusMsg('Sunucu tarafında FFmpeg dönüşümü başlatılıyor');
+      _convertOnServer(window._lastUploadedFile);
     } else {
       showToast('⚠️ Video formatı desteklenmiyor');
     }
@@ -1193,8 +1258,20 @@ function _updatePlayhead() {
   if (videoLoaded) {
     const v = document.getElementById('videoPlayer');
     if (v && v.duration) {
-      const pct = (v.currentTime / v.duration) * 100;
-      document.getElementById('playhead').style.left = pct + '%';
+      const pct = v.currentTime / v.duration;
+      // Track-bar'ın gerçek pozisyonuna göre playhead hizala
+      const trackBar = document.getElementById('trackVideo');
+      const body = document.querySelector('.tl-body');
+      if (trackBar && body) {
+        const bodyRect = body.getBoundingClientRect();
+        const barRect = trackBar.getBoundingClientRect();
+        const barLeft = barRect.left - bodyRect.left;
+        const barWidth = barRect.width;
+        const px = barLeft + (pct * barWidth);
+        document.getElementById('playhead').style.left = px + 'px';
+      } else {
+        document.getElementById('playhead').style.left = (pct * 100) + '%';
+      }
       document.getElementById('tlTime').textContent = formatTime(v.currentTime) + ' / ' + formatTime(v.duration);
       updatePlayheadClock();
     }
@@ -1807,13 +1884,13 @@ function buildRPAudio(body) {
   body.innerHTML = `
     <div class="ro-section">
       <h4>🎵 SES ARAÇLARI</h4>
-      <button class="tool-btn" onclick="setTool('audio');simProcess('Rüzgar temizleniyor...','Rüzgar temizlendi ✓')">
+      <button class="tool-btn" onclick="setTool('audio');runFFmpegTool('wind')">
         <span class="ico">🌬️</span><span class="lbl">Rüzgar Temizleme</span>
         <div class="spectrum"><div class="sbar" style="height:8px"></div><div class="sbar" style="height:12px"></div><div class="sbar" style="height:5px"></div><div class="sbar" style="height:10px"></div><div class="sbar" style="height:7px"></div></div>
       </button>
       <div class="slider-row"><label>Hassasiyet</label><input type="range" min="0" max="100" value="85"><span class="val">85%</span></div>
 
-      <button class="tool-btn" onclick="setTool('audio');simProcess('Ses odaklanıyor...','Odaklama tamamlandı ✓')">
+      <button class="tool-btn" onclick="setTool('audio');runFFmpegTool('audiofocus')">
         <span class="ico">🎯</span><span class="lbl">Ses Odaklama</span>
         <div class="spectrum"><div class="sbar" style="height:6px"></div><div class="sbar" style="height:14px"></div><div class="sbar" style="height:9px"></div><div class="sbar" style="height:11px"></div><div class="sbar" style="height:4px"></div></div>
       </button>
@@ -1870,7 +1947,7 @@ function buildRP360(body) {
         <span class="ico"><span class="sphere-icon">🌐</span></span><span class="lbl">360° Görünüm</span><span class="arrow">→</span>
       </button>
       <button class="tool-btn" onclick="setTool('format')"><span class="ico">📐</span><span class="lbl">Format Değiştir</span><span class="arrow">→</span></button>
-      <button class="tool-btn" onclick="setTool('format');simProcess('AI altyazı oluşturuluyor...','Altyazı eklendi ✓')"><span class="ico">💬</span><span class="lbl">AI Altyazı</span><span class="arrow">→</span></button>
+      <button class="tool-btn" onclick="setTool('format');runFFmpegTool('subtitle')"><span class="ico">💬</span><span class="lbl">AI Altyazı</span><span class="arrow">→</span></button>
     </div>
     <div class="ro-section">
       <h4>📐 FORMAT SEÇİMİ</h4>
@@ -1888,9 +1965,9 @@ function buildRPRender(body) {
   body.innerHTML = `
     <div class="ro-section">
       <h4>☁️ HIZLI RENDER</h4>
-      <button class="tool-btn" onclick="simProcess('Instagram Reels render...','Instagram hazır ✓')"><span class="ico">📸</span><span class="lbl">Instagram Reels</span><span class="arrow">→</span></button>
-      <button class="tool-btn" onclick="simProcess('TikTok render...','TikTok hazır ✓')"><span class="ico">🎵</span><span class="lbl">TikTok</span><span class="arrow">→</span></button>
-      <button class="tool-btn" onclick="simProcess('YouTube render...','YouTube hazır ✓')"><span class="ico">▶️</span><span class="lbl">YouTube</span><span class="arrow">→</span></button>
+      <button class="tool-btn" onclick="runFFmpegTool('instagram')"><span class="ico">📸</span><span class="lbl">Instagram Reels</span><span class="arrow">→</span></button>
+      <button class="tool-btn" onclick="runFFmpegTool('tiktok')"><span class="ico">🎵</span><span class="lbl">TikTok</span><span class="arrow">→</span></button>
+      <button class="tool-btn" onclick="runFFmpegTool('youtube')"><span class="ico">▶️</span><span class="lbl">YouTube</span><span class="arrow">→</span></button>
       <button class="tool-btn" style="background:linear-gradient(135deg,rgba(249,115,22,.15),rgba(239,68,68,.1));border-color:rgba(249,115,22,.3);" onclick="startRenderDemo()">
         <span class="ico">🔥</span><span class="lbl" style="font-weight:700;color:#f97316;">Bulut Render</span><span class="arrow" style="color:#f97316;">→</span>
       </button>
@@ -2056,7 +2133,8 @@ function updateGlobalSpeed(v) {
 
 function applySpeedRamp() {
   if (!videoLoaded) { showToast('⚠️ Önce video yükle'); return; }
-  simProcess('Speed-Ramp uygulanıyor...', 'Speed-Ramp uygulandı ✓');
+  const speed = parseInt(document.getElementById('speedSlider')?.value || '100');
+  runFFmpegTool('speed', { speed });
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2109,7 +2187,7 @@ function runSegmentation(mode) {
     'replace-bg': 'Arka plan değiştiriliyor...', 'green-screen': 'Green screen uygulanıyor...',
     'person': 'İnsan algılanıyor...', 'object': 'Nesne izole ediliyor...', 'face': 'Yüz maskesi oluşturuluyor...'
   };
-  simProcess(labels[mode] || 'İşleniyor...', 'Segmentasyon tamamlandı ✓');
+  runFFmpegTool('segment_' + mode);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2177,16 +2255,13 @@ function setFFRes(r) {
 
 function runFFmpegTask(task) {
   if (!videoLoaded) { showToast('⚠️ Önce video yükle'); return; }
-  const labels = {
-    'equirect': 'Equirect→Cubemap dönüştürülüyor...', 'cubemap': 'Cubemap→Equirect dönüştürülüyor...',
-    'stabilize': '360° stabilizasyon uygulanıyor...', 'reframe': 'AI Auto-Reframe hesaplanıyor...'
-  };
-  simProcess(labels[task] || 'FFmpeg işleniyor...', task + ' tamamlandı ✓');
+  const map = { equirect: 'equirect2cube', cubemap: 'cube2equirect', stabilize: 'stabilize', reframe: 'reframe' };
+  runFFmpegTool(map[task] || task);
 }
 
 function runFFmpegExport() {
   if (!videoLoaded) { showToast('⚠️ Önce video yükle'); return; }
-  simProcess('FFmpeg ' + _ffCodec.toUpperCase() + ' ' + _ffRes + ' export...', 'FFmpeg export tamamlandı ✓');
+  runFFmpegTool('export', { codec: _ffCodec, resolution: _ffRes });
 }
 
 // Timeline aç/kapat
@@ -2217,6 +2292,10 @@ let _waveformData = [];
 let _waveformAnim = null;
 
 function initTimelineWaveform() {
+  // Önceki animasyonu ve veriyi temizle (memory leak önleme)
+  if (_waveformAnim) { cancelAnimationFrame(_waveformAnim); _waveformAnim = null; }
+  _waveformData = [];
+
   const c = document.getElementById('tlWaveformCanvas');
   if (!c) return;
   const parent = c.parentElement;
@@ -2224,7 +2303,6 @@ function initTimelineWaveform() {
   c.height = parent.offsetHeight;
 
   // Rastgele dalga formu verisi üret (gerçek ses yüklenince değişecek)
-  _waveformData = [];
   for (let i = 0; i < c.width; i++) {
     // Farklı bölgelerde farklı yoğunluklar — konuşma, sessizlik, patlama simülasyonu
     const section = i / c.width;
@@ -2485,7 +2563,7 @@ document.addEventListener('DOMContentLoaded', () => {
 const ca=document.getElementById('canvasArea');
 ca.addEventListener('dragover',e=>{e.preventDefault();document.getElementById('dropOverlay').classList.add('show');});
 ca.addEventListener('dragleave',()=>document.getElementById('dropOverlay').classList.remove('show'));
-ca.addEventListener('drop',e=>{e.preventDefault();document.getElementById('dropOverlay').classList.remove('show');const f=e.dataTransfer.files[0];if(!f)return;const isVideo=f.type.startsWith('video/')||/\.(insv|insp|mp4|mov|mkv|webm|avi)$/i.test(f.name);if(isVideo){let blob=f;if(/\.(insv|insp)$/i.test(f.name)){blob=new Blob([f],{type:'video/mp4'});showToast('🎥 Insta360 dosyası algılandı');}loadVideo(URL.createObjectURL(blob),f.name,f.size);}});
+ca.addEventListener('drop',e=>{e.preventDefault();document.getElementById('dropOverlay').classList.remove('show');const f=e.dataTransfer.files[0];if(!f)return;const isVideo=f.type.startsWith('video/')||/\.(insv|insp|mp4|mov|mkv|webm|avi)$/i.test(f.name);if(isVideo){window._lastUploadedFile=f;let blob=f;if(/\.(insv|insp)$/i.test(f.name)){blob=new Blob([f],{type:'video/mp4'});showToast('🎥 Insta360 dosyası algılandı');}loadVideo(URL.createObjectURL(blob),f.name,f.size);}});
 
 // Simulate actions
 function simAction(msg,ico){showToast((ico||'✅')+' '+msg);showStatusMsg(msg);}
@@ -2493,6 +2571,185 @@ function simProcess(m1,m2){
   showToast(m1);showStatusMsg(m1.replace(/\.\.\./,''));
   const btn=event?.target?.closest('.tool-btn');if(btn)btn.classList.add('streaming');
   setTimeout(()=>{if(btn){btn.classList.remove('streaming');btn.classList.add('success');setTimeout(()=>btn.classList.remove('success'),2500);}showToast(m2);},2000);
+}
+
+// ── Tüm Araçlar — Gerçek FFmpeg Sunucu İşlemi ──
+const _toolLabels = {
+  stabilize: { msg: '360° Stabilizasyon', done: 'Stabilize edildi' },
+  tinyplanet: { msg: 'Tiny Planet', done: 'Tiny Planet hazır' },
+  reframe: { msg: 'Auto Reframe', done: 'Reframe tamamlandı' },
+  cut: { msg: 'Video kesiliyor', done: 'Kes tamamlandı' },
+  split: { msg: 'Video bölünüyor', done: 'Böl tamamlandı' },
+  wind: { msg: 'Rüzgar temizleniyor', done: 'Rüzgar temizlendi' },
+  denoise: { msg: 'Gürültü filtreleniyor', done: 'Gürültü temizlendi' },
+  audiofocus: { msg: 'Ses odaklanıyor', done: 'Ses odaklama tamamlandı' },
+  blur: { msg: 'Blur uygulanıyor', done: 'Blur uygulandı' },
+  glitch: { msg: 'Glitch efekti uygulanıyor', done: 'Glitch uygulandı' },
+  zoom: { msg: 'Zoom efekti uygulanıyor', done: 'Zoom uygulandı' },
+  shake: { msg: 'Shake efekti uygulanıyor', done: 'Shake uygulandı' },
+  fadein: { msg: 'Fade In uygulanıyor', done: 'Fade In uygulandı' },
+  fadeout: { msg: 'Fade Out uygulanıyor', done: 'Fade Out uygulandı' },
+  dissolve: { msg: 'Dissolve geçişi uygulanıyor', done: 'Dissolve uygulandı' },
+  reverse: { msg: 'Video ters çevriliyor', done: 'Ters çevrildi' },
+  freeze: { msg: 'Freeze Frame oluşturuluyor', done: 'Freeze Frame hazır' },
+  speed: { msg: 'Speed Ramp uygulanıyor', done: 'Speed Ramp uygulandı' },
+  crop_1_1: { msg: '1:1 format kesiliyor', done: '1:1 hazır' },
+  crop_9_16: { msg: '9:16 format kesiliyor', done: '9:16 hazır' },
+  crop_16_9: { msg: '16:9 format kesiliyor', done: '16:9 hazır' },
+  crop_4_5: { msg: '4:5 format kesiliyor', done: '4:5 hazır' },
+  crop_21_9: { msg: '21:9 format kesiliyor', done: '21:9 hazır' },
+  instagram: { msg: 'Instagram Reels render', done: 'Instagram hazır' },
+  tiktok: { msg: 'TikTok render', done: 'TikTok hazır' },
+  youtube: { msg: 'YouTube render', done: 'YouTube hazır' },
+  render_hq: { msg: 'Yüksek kalite render', done: 'Render tamamlandı' },
+  subtitle: { msg: 'AI altyazı oluşturuluyor', done: 'Altyazı eklendi' },
+  equirect2cube: { msg: 'Equirect→Cubemap', done: 'Cubemap hazır' },
+  cube2equirect: { msg: 'Cubemap→Equirect', done: 'Equirect hazır' },
+  export: { msg: 'FFmpeg export', done: 'Export tamamlandı' },
+};
+// segment_ prefix'li olanlar dinamik
+function _getToolLabel(tool) {
+  if (_toolLabels[tool]) return _toolLabels[tool];
+  if (tool.startsWith('segment_')) return { msg: 'Segmentasyon işleniyor', done: 'Segmentasyon tamamlandı' };
+  return { msg: tool + ' işleniyor', done: tool + ' tamamlandı' };
+}
+
+function run360Tool(tool) { runFFmpegTool(tool); }
+
+async function runFFmpegTool(tool, extra) {
+  if (!videoLoaded) { showToast('⚠️ Önce video yükle'); return; }
+  const file = window._lastUploadedFile;
+  if (!file) { showToast('⚠️ Orijinal dosya bulunamadı — videoyu tekrar yükle'); return; }
+
+  const lbl = _getToolLabel(tool);
+  showToast('🔄 ' + lbl.msg + '...');
+  showStatusMsg(lbl.msg + ' başlatılıyor');
+  _showConvertOverlay();
+  document.getElementById('convertMsg').textContent = lbl.msg + '...';
+
+  // Chunk upload — 25MB parçalar halinde yükle
+  const CHUNK_SIZE = 25 * 1024 * 1024; // 25MB
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+  const uploadId = 'u_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+
+  _updateConvertOverlay(0, 'Dosya yükleniyor... (' + (file.size / 1024 / 1024).toFixed(1) + ' MB)');
+
+  // 1) Chunk'ları sırayla yükle
+  let uploadOk = true;
+  for (let i = 0; i < totalChunks; i++) {
+    const start = i * CHUNK_SIZE;
+    const end = Math.min(start + CHUNK_SIZE, file.size);
+    const chunk = file.slice(start, end);
+
+    const chunkForm = new FormData();
+    chunkForm.append('chunk', chunk, 'chunk_' + i);
+    chunkForm.append('uploadId', uploadId);
+    chunkForm.append('chunkIndex', String(i));
+    chunkForm.append('totalChunks', String(totalChunks));
+    chunkForm.append('fileName', file.name);
+
+    try {
+      const resp = await fetch('/api/upload/chunk', { method: 'POST', body: chunkForm });
+      if (!resp.ok) { uploadOk = false; break; }
+      const uploadPct = Math.round(((i + 1) / totalChunks) * 40); // Upload = %0-40
+      _updateConvertOverlay(uploadPct, `Yükleniyor... ${i+1}/${totalChunks} parça`);
+    } catch(e) { uploadOk = false; break; }
+  }
+
+  if (!uploadOk) {
+    _hideConvertOverlay();
+    showToast('⚠️ Dosya yükleme başarısız');
+    return;
+  }
+
+  // 2) Parçaları birleştir
+  _updateConvertOverlay(42, 'Dosya birleştiriliyor...');
+  try {
+    const compResp = await fetch('/api/upload/complete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uploadId, totalChunks, fileName: file.name, tool })
+    });
+    if (!compResp.ok) {
+      _hideConvertOverlay();
+      const t = await compResp.text();
+      showToast('⚠️ Birleştirme hatası: ' + t.slice(0, 100));
+      return;
+    }
+  } catch(e) {
+    _hideConvertOverlay();
+    showToast('⚠️ Birleştirme hatası');
+    return;
+  }
+
+  // 3) FFmpeg işlemi başlat (SSE)
+  _updateConvertOverlay(45, lbl.msg + ' başlatılıyor...');
+  const video = document.getElementById('videoPlayer');
+
+  fetch('/api/360/process-chunked', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      uploadId, tool,
+      yaw: document.getElementById('slider360Yaw')?.value || '180',
+      pitch: document.getElementById('slider360Pitch')?.value || '0',
+      fov: document.getElementById('slider360Fov')?.value || '75',
+      currentTime: String(video.currentTime || 0),
+      duration: String(video.duration || 0),
+      speed: extra?.speed || '100',
+      codec: extra?.codec || 'h264',
+      resolution: extra?.resolution || '1080p'
+    })
+  })
+    .then(response => {
+      if (!response.ok) {
+        _hideConvertOverlay();
+        response.text().then(t => showToast('⚠️ İşlem hatası: ' + t.slice(0, 100)));
+        return;
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      function pump() {
+        return reader.read().then(({ done, value }) => {
+          if (done) return;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const msg = JSON.parse(line.slice(6));
+              if (msg.status === 'processing') {
+                // Upload %0-45, FFmpeg %45-100
+                const totalPct = 45 + Math.round((msg.progress || 0) * 0.55);
+                _updateConvertOverlay(totalPct, msg.message);
+              } else if (msg.status === 'done') {
+                _hideConvertOverlay();
+                showToast('✅ ' + lbl.done + '!');
+                showStatusMsg(lbl.done);
+                if (msg.download) {
+                  const a = document.createElement('a');
+                  a.href = msg.url; a.download = msg.filename || 'fenix_output.mp4';
+                  document.body.appendChild(a); a.click(); a.remove();
+                } else {
+                  loadVideo(msg.url, file.name.replace(/\.\w+$/, '_' + tool + '.mp4'), file.size);
+                }
+              } else if (msg.status === 'error') {
+                _hideConvertOverlay();
+                showToast('⚠️ Hata: ' + msg.message);
+              }
+            } catch(e) {}
+          }
+          return pump();
+        });
+      }
+      return pump();
+    })
+    .catch(err => {
+      _hideConvertOverlay();
+      showToast('⚠️ Bağlantı hatası: ' + err.message);
+    });
 }
 
 function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3000);}
@@ -2588,7 +2845,8 @@ let _360 = {
   sphere: null,
   videoTexture: null,
   active: false,
-  animId: null
+  animId: null,
+  forceDualFisheye: undefined
 };
 
 // ── Dual-Fisheye → Equirectangular GPU Shader ──
@@ -2603,53 +2861,156 @@ void main() {
 
 const _dualFisheyeFragShader = `
 uniform sampler2D videoTex;
+uniform float uFishRadius;
+uniform float uBlendWidth;
+uniform vec2 uFrontCenter;   // Ön lens merkezi (varsayılan 0.25, 0.5)
+uniform vec2 uBackCenter;    // Arka lens merkezi (varsayılan 0.75, 0.5)
+uniform float uFrontBright;
+uniform float uBackBright;
+uniform float uFrontContrast;
+uniform float uBackContrast;
+uniform float uBackRotation;  // Arka lens rotasyon ofseti (radyan)
 varying vec2 vUv;
 
 #define PI 3.14159265359
 
-void main() {
-  // UV → küresel koordinat
-  float lon = vUv.x * 2.0 * PI - PI; // -PI..PI
-  float lat = vUv.y * PI - PI * 0.5;  // -PI/2..PI/2
+vec3 adjustColor(vec3 c, float brightness, float contrast) {
+  c = c * brightness;
+  c = (c - 0.5) * contrast + 0.5;
+  return clamp(c, 0.0, 1.0);
+}
 
-  // Küresel → 3D yön vektörü
+float luminance(vec3 c) {
+  return dot(c, vec3(0.2126, 0.7152, 0.0722));
+}
+
+// ── Fisheye lens örnekleme (Equidistant projeksiyon) ──
+vec4 sampleFish(vec2 center, vec3 dir) {
+  float theta = atan(length(dir.xy), dir.z);
+  float phi = atan(dir.y, dir.x);
+  float r = theta / PI;
+  vec2 uv = center + uFishRadius * r * vec2(cos(phi), sin(phi));
+  if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
+    return vec4(0.0, 0.0, 0.0, 1.0);
+  }
+  return texture2D(videoTex, uv);
+}
+
+void main() {
+  float lon = vUv.x * 2.0 * PI - PI;
+  float lat = vUv.y * PI - PI * 0.5;
+
   vec3 dir = vec3(
     cos(lat) * sin(lon),
     sin(lat),
     cos(lat) * cos(lon)
   );
 
-  // Hangi lens? Ön lens (z > 0) sol yarı, arka lens (z < 0) sağ yarı
-  vec2 fishCenter;
-  float fishRadius = 0.24; // Video içindeki her bir fisheye dairesinin yarıçapı (normalize)
-  vec3 localDir;
+  // Ön lens (z > 0) ve arka lens (z < 0)
+  // Arka lens rotasyon ofseti — kalibrasyon kaymasını düzeltir
+  float cosR = cos(uBackRotation);
+  float sinR = sin(uBackRotation);
+  vec3 flippedDir = vec3(-dir.x, dir.y, -dir.z);
+  vec3 backDir = vec3(
+    flippedDir.x * cosR - flippedDir.y * sinR,
+    flippedDir.x * sinR + flippedDir.y * cosR,
+    flippedDir.z
+  );
 
-  if (dir.z >= 0.0) {
-    // Ön lens — sol yarı
-    fishCenter = vec2(0.25, 0.5);
-    localDir = dir;
-  } else {
-    // Arka lens — sağ yarı (ayna)
-    fishCenter = vec2(0.75, 0.5);
-    localDir = vec3(-dir.x, dir.y, -dir.z);
+  vec4 frontRaw = sampleFish(uFrontCenter, dir);
+  vec4 backRaw = sampleFish(uBackCenter, backDir);
+
+  // ── 1. Gain Compensation: Renk/Pozlama Eşitleme ──
+  vec3 frontColor = adjustColor(frontRaw.rgb, uFrontBright, uFrontContrast);
+  vec3 backColor = adjustColor(backRaw.rgb, uBackBright, uBackContrast);
+
+  // ── 2. Luminance + Chrominance Eşitleme (Agresif Gain Compensation) ──
+  float blend = smoothstep(-uBlendWidth, uBlendWidth, dir.z);
+
+  // Geniş feathering alanı — blend genişliğinin 6 katı
+  float seamProximity = 1.0 - smoothstep(0.0, uBlendWidth * 6.0, abs(dir.z));
+  if (seamProximity > 0.0) {
+    // Luminance (parlaklık) eşitleme
+    float lumFront = luminance(frontColor);
+    float lumBack = luminance(backColor);
+    float lumTarget = mix(lumBack, lumFront, blend);
+    float frontAdj = (lumFront > 0.005) ? lumTarget / lumFront : 1.0;
+    float backAdj = (lumBack > 0.005) ? lumTarget / lumBack : 1.0;
+    frontAdj = clamp(frontAdj, 0.5, 2.0);
+    backAdj = clamp(backAdj, 0.5, 2.0);
+
+    // Chrominance (renk tonu) eşitleme — RGB kanallarını ayrı ayrı düzelt
+    vec3 frontMean = frontColor / max(lumFront, 0.01);
+    vec3 backMean = backColor / max(lumBack, 0.01);
+    vec3 chromTarget = mix(backMean, frontMean, blend);
+    vec3 frontChromAdj = chromTarget / max(frontMean, vec3(0.01));
+    vec3 backChromAdj = chromTarget / max(backMean, vec3(0.01));
+    frontChromAdj = clamp(frontChromAdj, vec3(0.7), vec3(1.4));
+    backChromAdj = clamp(backChromAdj, vec3(0.7), vec3(1.4));
+
+    // Parlaklık + renk düzeltmesi uygula (seamProximity ile ağırlıklı)
+    float strength = seamProximity * 0.85;
+    frontColor = mix(frontColor, frontColor * frontAdj * frontChromAdj, strength);
+    backColor = mix(backColor, backColor * backAdj * backChromAdj, strength);
   }
 
-  // 3D yön → fisheye 2D projeksiyon (equisolid)
-  float theta = atan(length(localDir.xy), localDir.z);
-  float phi = atan(localDir.y, localDir.x);
+  // ── 3. Multi-band Blend ──
+  vec3 result = mix(backColor, frontColor, blend);
 
-  // Fisheye daire içindeki pozisyon
-  float r = theta / PI; // 0..1 normalize
-  vec2 fishUV = fishCenter + fishRadius * r * vec2(cos(phi), sin(phi));
+  // ── 4. Zenith/Nadir Kör Nokta Yaması (Agresif) ──
+  // Siyah piksel tespiti — konumdan bağımsız, her yerde çalışır
+  float darkLevel = luminance(result);
+  if (darkLevel < 0.03) {
+    // Bu piksel siyah/kör nokta — çevreden 4 yönden örnekle ve ortala
+    float offset = 0.15;
+    vec3 patchColor = vec3(0.0);
+    float patchCount = 0.0;
 
-  // Sınır kontrolü
-  if (fishUV.x < 0.0 || fishUV.x > 1.0 || fishUV.y < 0.0 || fishUV.y > 1.0) {
-    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
-    return;
+    // 4 komşu yönden örnekle
+    for (int i = 0; i < 4; i++) {
+      float angle = float(i) * PI * 0.5;
+      vec3 sDir = normalize(dir + vec3(cos(angle) * offset, -offset * 0.5, sin(angle) * offset));
+      vec3 sBackDir = vec3(-sDir.x, sDir.y, -sDir.z);
+      vec4 sF = sampleFish(uFrontCenter, sDir);
+      vec4 sB = sampleFish(uBackCenter, sBackDir);
+      float sBlend = smoothstep(-uBlendWidth, uBlendWidth, sDir.z);
+      vec3 sColor = mix(adjustColor(sB.rgb, uBackBright, uBackContrast),
+                        adjustColor(sF.rgb, uFrontBright, uFrontContrast), sBlend);
+      float sLum = luminance(sColor);
+      if (sLum > 0.03) {
+        patchColor += sColor;
+        patchCount += 1.0;
+      }
+    }
+    if (patchCount > 0.0) {
+      result = patchColor / patchCount;
+    }
   }
 
-  gl_FragColor = texture2D(videoTex, fishUV);
+  gl_FragColor = vec4(result, 1.0);
 }`;
+
+function _createFishShaderMat() {
+  var slR = document.getElementById('sliderFishR');
+  var slB = document.getElementById('sliderBlend');
+  return new THREE.ShaderMaterial({
+    uniforms: {
+      videoTex: { value: _360.videoTexture },
+      uFishRadius: { value: slR ? parseFloat(slR.value) : 0.50 },
+      uBlendWidth: { value: slB ? parseFloat(slB.value) : 0.15 },
+      uFrontCenter: { value: new THREE.Vector2(0.25, 0.5) },
+      uBackCenter: { value: new THREE.Vector2(0.75, 0.5) },
+      uFrontBright: { value: 1.0 },
+      uBackBright: { value: 1.0 },
+      uFrontContrast: { value: 1.0 },
+      uBackContrast: { value: 1.0 },
+      uBackRotation: { value: 0.0 }
+    },
+    vertexShader: _dualFisheyeVertShader,
+    fragmentShader: _dualFisheyeFragShader,
+    side: THREE.FrontSide
+  });
+}
 
 function init360Viewer(videoEl) {
   const container = document.getElementById('threeSixtyContainer');
@@ -2665,22 +3026,21 @@ function init360Viewer(videoEl) {
   if (rain) { rain.style.display = 'none'; }
 
   // ── Format algılama ──
-  // Aspect ratio ~2:1 = equirectangular (stitched), ~1:1 = dual-fisheye (ham)
+  // Aspect ratio ~2:1 = equirectangular (stitched), ~1:1 = dual-fisheye (ham Insta360)
   const vw = videoEl.videoWidth || 1920;
   const vh = videoEl.videoHeight || 960;
   const ratio = vw / vh;
-  // Dual-fisheye = yan yana iki daire, genelde 1:1 veya çok yakın
-  // Equirectangular = her zaman ~2:1 (3840×1920, 5760×2880 vb.)
-  // Güvenli eşik: 1.3 altı = dual-fisheye, üstü = equirectangular
-  const isDualFisheye = ratio < 1.3;
+  // Manuel seçim varsa onu kullan, yoksa otomatik algıla
+  // ratio < 1.4 = dual-fisheye (Insta360 ham), ratio >= 1.4 = equirectangular
+  const isDualFisheye = (_360.forceDualFisheye !== undefined) ? _360.forceDualFisheye : (ratio < 1.4);
   _360.isDualFisheye = isDualFisheye;
+  _360.forceDualFisheye = isDualFisheye;
 
   showStatusMsg('Video: ' + vw + '×' + vh + ' (ratio: ' + ratio.toFixed(2) + ')');
   if (isDualFisheye) {
-    showToast('🔄 Dual-fisheye algılandı — GPU stitching yapılıyor...');
-    showStatusMsg('Dual-fisheye → Equirectangular dönüşüm (GPU shader)');
+    showToast('🐟 Dual-Fisheye algılandı — GPU stitching aktif');
   } else {
-    showStatusMsg('Equirectangular 360° video algılandı');
+    showToast('🌐 360° Equirectangular — sürükleyerek çevirin');
   }
 
   // Sahne
@@ -2695,9 +3055,9 @@ function init360Viewer(videoEl) {
   _360.camera.position.set(0, 0, 0.1);
 
   // Renderer
-  _360.renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false, powerPreference: 'high-performance' });
+  _360.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
   _360.renderer.setSize(w, h);
-  _360.renderer.setPixelRatio(1);
+  _360.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   container.innerHTML = '';
   container.appendChild(_360.renderer.domElement);
   _360.renderer.domElement.style.cssText = 'display:block;width:100%;height:100%;cursor:grab;';
@@ -2706,7 +3066,7 @@ function init360Viewer(videoEl) {
   _360.videoTexture = new THREE.VideoTexture(videoEl);
   _360.videoTexture.minFilter = THREE.LinearFilter;
   _360.videoTexture.magFilter = THREE.LinearFilter;
-  _360.videoTexture.format = THREE.RGBFormat;
+  _360.videoTexture.colorSpace = THREE.SRGBColorSpace;
   _360.videoTexture.generateMipmaps = false;
 
   // ── Küre malzemesi — dual-fisheye ise shader, değilse düz texture ──
@@ -2714,18 +3074,14 @@ function init360Viewer(videoEl) {
   //      side: FrontSide kalır (scale zaten yüzeyi ters çevirdi).
   var material;
   if (isDualFisheye) {
-    material = new THREE.ShaderMaterial({
-      uniforms: { videoTex: { value: _360.videoTexture } },
-      vertexShader: _dualFisheyeVertShader,
-      fragmentShader: _dualFisheyeFragShader,
-      side: THREE.FrontSide
-    });
+    material = _createFishShaderMat();
+    _360.shaderMaterial = material;
   } else {
     material = new THREE.MeshBasicMaterial({ map: _360.videoTexture, side: THREE.FrontSide });
   }
 
   // Küre — equirectangular projeksiyon (içten bakılır — scale -1 ile yüzey ters)
-  var geometry = new THREE.SphereGeometry(500, 64, 32);
+  var geometry = new THREE.SphereGeometry(500, 128, 128);
   geometry.scale(-1, 1, 1);
   _360.sphere = new THREE.Mesh(geometry, material);
   _360.scene.add(_360.sphere);
@@ -2779,6 +3135,77 @@ function init360Viewer(videoEl) {
   var modeLabel = isDualFisheye ? 'Dual-Fisheye GPU Stitching' : 'Equirectangular';
   showToast('🌐 360° aktif (' + modeLabel + ') — sürükleyerek çevirin');
   showStatusMsg(modeLabel + ' projeksiyon başlatıldı · ' + vw + '×' + vh);
+
+  // Mod toggle'ı göster, rozetleri gizle (üst üste binmesin)
+  var toggle = document.getElementById('mode360Toggle');
+  if (toggle) toggle.style.display = 'block';
+  var be = document.getElementById('badgeEncoder');
+  var bc = document.getElementById('badgeCloud');
+  if (be) be.style.display = 'none';
+  if (bc) bc.style.display = 'none';
+  update360ModeButtons();
+}
+
+function switch360Mode(mode) {
+  if (!_360.active || !_360.sphere) return;
+  var videoEl = document.getElementById('videoPlayer');
+  if (!videoEl) return;
+
+  _360.forceDualFisheye = (mode === 'fish');
+  _360.isDualFisheye = _360.forceDualFisheye;
+
+  // Malzeme değiştir
+  if (_360.sphere.material) _360.sphere.material.dispose();
+
+  if (_360.forceDualFisheye) {
+    var mat = _createFishShaderMat();
+    _360.sphere.material = mat;
+    _360.shaderMaterial = mat;
+    showToast('🐟 Dual-Fisheye + Gain Compensation + Multi-Band Blend aktif');
+  } else {
+    _360.sphere.material = new THREE.MeshBasicMaterial({ map: _360.videoTexture, side: THREE.FrontSide });
+    _360.shaderMaterial = null;
+    showToast('🌐 Equirectangular modu');
+  }
+
+  update360ModeButtons();
+}
+
+function update360ModeButtons() {
+  var btnEqui = document.getElementById('btnModeEqui');
+  var btnFish = document.getElementById('btnModeFish');
+  var fishCtrl = document.getElementById('fishControls');
+  if (!btnEqui || !btnFish) return;
+
+  if (_360.forceDualFisheye) {
+    btnEqui.style.cssText = 'padding:4px 10px;font-size:10px;border:1px solid rgba(168,85,247,.2);background:transparent;color:rgba(255,255,255,.4);border-radius:5px;cursor:pointer;font-family:inherit;';
+    btnFish.style.cssText = 'padding:4px 10px;font-size:10px;border:1px solid rgba(168,85,247,.4);background:rgba(168,85,247,.15);color:#a855f7;border-radius:5px;cursor:pointer;font-family:inherit;';
+    if (fishCtrl) fishCtrl.style.display = 'block';
+  } else {
+    btnEqui.style.cssText = 'padding:4px 10px;font-size:10px;border:1px solid rgba(34,211,238,.4);background:rgba(34,211,238,.15);color:#22d3ee;border-radius:5px;cursor:pointer;font-family:inherit;';
+    btnFish.style.cssText = 'padding:4px 10px;font-size:10px;border:1px solid rgba(168,85,247,.2);background:transparent;color:rgba(255,255,255,.4);border-radius:5px;cursor:pointer;font-family:inherit;';
+    if (fishCtrl) fishCtrl.style.display = 'none';
+  }
+}
+
+function updateFishParam() {
+  if (!_360.shaderMaterial) return;
+  var u = _360.shaderMaterial.uniforms;
+  var r = parseFloat(document.getElementById('sliderFishR').value);
+  var b = parseFloat(document.getElementById('sliderBlend').value);
+  var fb = parseFloat(document.getElementById('sliderFrontB').value);
+  var bb = parseFloat(document.getElementById('sliderBackB').value);
+  u.uFishRadius.value = r;
+  u.uBlendWidth.value = b;
+  u.uFrontBright.value = fb;
+  u.uBackBright.value = bb;
+  var rot = parseFloat(document.getElementById('sliderBackRot').value);
+  u.uBackRotation.value = rot;
+  document.getElementById('valFishR').textContent = r.toFixed(2);
+  document.getElementById('valBlend').textContent = b.toFixed(2);
+  document.getElementById('valFrontB').textContent = fb.toFixed(2);
+  document.getElementById('valBackB').textContent = bb.toFixed(2);
+  document.getElementById('valBackRot').textContent = (rot * 57.3).toFixed(1) + '°';
 }
 
 function resize360Viewer() {
@@ -2924,6 +3351,29 @@ loadVideo = function(src, name, size) {
     });
   });
 })();
+</script>
+<!-- QR Modal -->
+<div id="qrOverlay" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);align-items:center;justify-content:center">
+<div style="background:#151515;border:2px solid #8B5CF655;border-radius:20px;padding:28px;text-align:center;max-width:320px;width:90%">
+<div style="font-size:10px;color:#666;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">FENIX AI</div>
+<div style="font-size:20px;font-weight:800;color:#8B5CF6;margin-bottom:16px">360° EDIT</div>
+<canvas id="qrCanvas" style="border-radius:12px;border:3px solid #8B5CF6;box-shadow:0 0 30px #8B5CF644"></canvas>
+<div id="qrToken" style="margin-top:12px;font-size:11px;color:#555;letter-spacing:1px;font-family:monospace"></div>
+<div style="margin-top:14px;font-size:11px;color:#777">Telefona kurmak icin tara</div>
+<button onclick="document.getElementById('qrOverlay').style.display='none'" style="margin-top:16px;padding:10px 32px;border:1px solid #333;background:transparent;color:#888;border-radius:10px;cursor:pointer;font-size:12px">Kapat</button>
+</div>
+</div>
+<script>
+function showQR(){
+var o=document.getElementById('qrOverlay');o.style.display='flex';
+var t=new URLSearchParams(window.location.search).get('t')||localStorage.getItem('fenix_qr_360')||'';
+var url='https://witty-card-wizard.lovable.app/qr/'+t;
+document.getElementById('qrToken').textContent=t?t.slice(0,8).toUpperCase()+' ··· '+t.slice(-4).toUpperCase():'';
+var c=document.getElementById('qrCanvas'),x=c.getContext('2d');
+var img=new Image();img.crossOrigin='anonymous';
+img.src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=8B5CF6&bgcolor=FFFFFF&data='+encodeURIComponent(url);
+img.onload=function(){c.width=200;c.height=200;x.drawImage(img,0,0)};
+}
 </script>
 </body>
 </html>
