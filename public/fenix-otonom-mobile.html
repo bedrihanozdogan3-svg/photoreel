@@ -236,26 +236,22 @@ body {
 }
 .sub-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 5px;
-  padding: 0 8px 10px;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 4px;
+  padding: 0 6px 8px;
 }
 .sub-cmd {
-  background: linear-gradient(135deg, #0d0d0d, #0a0a0a);
-  border: 1px solid #1a1a1a;
-  border-radius: 12px;
-  padding: 10px 6px 8px;
+  background: #0c0c0c;
+  border: 1px solid #161616;
+  border-radius: 10px;
+  padding: 7px 3px 5px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.12s;
   text-align: center;
-  position: relative;
-  overflow: hidden;
 }
-.sub-cmd:active { transform: scale(0.95); background: #151515; }
-.sub-cmd .sub-icon { font-size: 22px; margin-bottom: 3px; display: block; }
-.sub-cmd .sub-label { font-size: 9px; font-weight: 700; color: #ccc; line-height: 1.2; }
-.sub-cmd.file-cmd { border-color: #1e1e1e; }
-.sub-cmd.file-cmd:active { border-color: var(--cat-color, #333); }
+.sub-cmd:active { transform: scale(0.93); background: #181818; }
+.sub-cmd .sub-icon { font-size: 18px; display: block; line-height: 1; }
+.sub-cmd .sub-label { font-size: 7.5px; font-weight: 600; color: #999; line-height: 1.1; margin-top: 2px; }
 
 /* ── JOB CARDS ── */
 .job-card {
