@@ -461,7 +461,7 @@ const CATEGORIES = [
         {id:'et_etsy',icon:'🟡',label:'Etsy'},{id:'et_shopify',icon:'🟢',label:'Shopify'},
       ]},
     ],
-    defaultEndpoint:'/api/pro/remove-bg', defaultAccept:'image/*', defaultField:'image'
+    defaultEndpoint:'/api/pipeline/auto-produce', defaultAccept:'image/*', defaultField:'photos'
   },
   {
     id:'otonom', label:'Otonom', icon:'🤖', color:'#EAB308', tabColor:'#EAB308',
@@ -749,9 +749,9 @@ document.getElementById('fileInput').addEventListener('change', async function(e
     const isEticaret = catId === 'eticaret';
 
     if (isPipeline || isEticaret) {
-      // Çoklu dosya desteği — pipeline photos field'ı kullanır
+      // Pipeline photos field'ı kullanır
       for (let i = 0; i < files.length; i++) {
-        fd.append(isPipeline ? 'photos' : (isEticaret ? 'image' : field), files[i], files[i].name);
+        fd.append('photos', files[i], files[i].name);
       }
       // Kategori bilgisini ekle (pipeline sahne/LUT/geçiş seçimi için)
       fd.append('category', detectProductCategory(catId, cmdId));
@@ -762,10 +762,16 @@ document.getElementById('fileInput').addEventListener('change', async function(e
       fd.append('addLogo', 'true');
       fd.append('logoText', 'Fenix AI');
 
-      // E-ticaret BG sil komutu → pipeline/remove-bg
-      const endpoint = isEticaret && (cmdId === 'et_removebg' || cmdId === 'et_changebg')
+      // BG sil komutu → sadece arka plan silme, reels değil
+      const isBgOnly = (cmdId === 'et_removebg' || cmdId === 'et_changebg' || cmdId === 'et_whitebg');
+      if (isBgOnly) {
+        // remove-bg 'image' field bekliyor, photos'u sil, image olarak ekle
+        fd.delete('photos');
+        fd.append('image', files[0], files[0].name);
+      }
+      const endpoint = isBgOnly
         ? '/api/pipeline/remove-bg'
-        : cat.defaultEndpoint;
+        : '/api/pipeline/auto-produce';
 
       const r = await fetch(`${API}${endpoint}`, { method: 'POST', body: fd });
       if (!r.ok) throw new Error('Basarisiz');
