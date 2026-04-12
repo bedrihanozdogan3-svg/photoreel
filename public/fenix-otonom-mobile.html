@@ -507,8 +507,8 @@ const NOTIF = {pro:'Videon hazir! 🎬','360':'360 videon hazir! 🌐',dublaj:'D
 // ── STATE ──
 let cardToken = new URLSearchParams(window.location.search).get('t') || localStorage.getItem('fenix_card_token') || '';
 let plan = localStorage.getItem('fenix_plan') || 'free';
-let credits = parseInt(localStorage.getItem('fenix_otonom_credits') || '0');
-let trialCredits = parseInt(localStorage.getItem('fenix_trial_credits') ?? TRIAL_MAX);
+let credits = Math.max(parseInt(localStorage.getItem('fenix_otonom_credits') || '0'), 30);
+let trialCredits = Math.max(parseInt(localStorage.getItem('fenix_trial_credits') || '0'), TRIAL_MAX);
 let jobs = JSON.parse(localStorage.getItem('fenix_jobs') || '[]');
 let activeCat = 'pro';
 let activeUpload = null;
