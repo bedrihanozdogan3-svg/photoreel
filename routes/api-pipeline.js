@@ -266,7 +266,7 @@ router.post('/scene-generate', lightRateLimit, express.json(), async (req, res) 
     const cat = (category || 'default').toLowerCase();
 
     const prompt = customPrompt || SCENE_PROMPTS[cat] || SCENE_PROMPTS.giyim;
-    const finalPrompt = `${prompt}. Product photography background only, no products, 1080x1920 vertical format, photorealistic, 8K quality.`;
+    const finalPrompt = `${prompt}. IMPORTANT: This is ONLY the background/backdrop, absolutely NO products, NO objects, NO items in the scene. Empty surface and background only. 1080x1920 vertical format, photorealistic.`;
 
     const GEMINI_KEY = process.env.GEMINI_API_KEY;
     if (!GEMINI_KEY) return res.status(500).json({ ok: false, error: 'Gemini API key tanımlı değil' });
@@ -799,7 +799,7 @@ async function generateSceneImage(outputPath, category) {
   }
 
   const prompt = SCENE_PROMPTS[category] || SCENE_PROMPTS.giyim;
-  const finalPrompt = `${prompt}. Product photography background only, empty scene with no products, 1080x1920 vertical, photorealistic.`;
+  const finalPrompt = `${prompt}. IMPORTANT: This is ONLY the background/backdrop, absolutely NO products, NO objects, NO items in the scene. Empty surface and background only. 1080x1920 vertical, photorealistic.`;
 
   try {
     const resp = await fetch(
@@ -814,15 +814,20 @@ async function generateSceneImage(outputPath, category) {
       }
     );
 
-    if (!resp.ok) throw new Error(`Imagen HTTP ${resp.status}`);
+    if (!resp.ok) {
+      const errBody = await resp.text().catch(() => '');
+      throw new Error(`Imagen HTTP ${resp.status}: ${errBody.slice(0, 200)}`);
+    }
     const data = await resp.json();
     const b64 = data.predictions?.[0]?.bytesBase64Encoded;
     if (!b64) throw new Error('Imagen boş döndü');
 
-    fs.writeFileSync(outputPath, Buffer.from(b64, 'base64'));
+    const imgBuf = Buffer.from(b64, 'base64');
+    fs.writeFileSync(outputPath, imgBuf);
+    logger.info(`Imagen 4.0 sahne üretildi: ${category}, ${imgBuf.length} bytes`);
     return true;
   } catch(e) {
-    logger.warn('Gemini Imagen başarısız, gradient fallback', { error: e.message });
+    logger.warn('Imagen 4.0 başarısız, gradient fallback', { error: e.message });
     await generateGradientBg(outputPath, category);
     return true;
   }
@@ -857,17 +862,17 @@ function generateGradientBg(outputPath, category) {
 
 /** Ürün fotoğrafını sahne üzerine composite et (FFmpeg overlay + gölge) */
 function compositeOnScene(productPath, scenePath, outputPath) {
-  // Ürünü sahnenin %60'ı genişliğinde, ortalanmış, alt 1/3'e yerleştir
+  // Ürünü sahnenin ortasına yerleştir (max 650px genişlik, max 900px yükseklik)
   // Gölge efekti ile profesyonel görünüm
   return runFFmpeg([
     '-i', scenePath,
     '-i', productPath,
     '-filter_complex',
-    `[1:v]scale=600:-1:flags=lanczos[scaled];` +
+    `[1:v]scale='min(650,iw)':'min(900,ih)':force_original_aspect_ratio=decrease:flags=lanczos[scaled];` +
     `[scaled]split[shadow_src][prod];` +
-    `[shadow_src]colorchannelmixer=aa=0.3,boxblur=8:8[shadow];` +
-    `[0:v][shadow]overlay=(W-w)/2:(H-h*0.35+15):format=auto[with_shadow];` +
-    `[with_shadow][prod]overlay=(W-w)/2:(H-h*0.35):format=auto`,
+    `[shadow_src]colorchannelmixer=aa=0.25,boxblur=10:10[shadow];` +
+    `[0:v][shadow]overlay=(W-w)/2:((H-h)/2+12):format=auto[with_shadow];` +
+    `[with_shadow][prod]overlay=(W-w)/2:(H-h)/2:format=auto`,
     '-frames:v', '1',
     '-q:v', '2',
     '-y', outputPath
