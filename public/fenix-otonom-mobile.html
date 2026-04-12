@@ -1041,7 +1041,7 @@ setInterval(async()=>{
 function showQR(){
 var o=document.getElementById('qrOverlay');o.style.display='flex';
 var t=new URLSearchParams(window.location.search).get('t')||localStorage.getItem('fenix_qr_otonom')||'';
-var url='https://fenix-ai-1002279588287.europe-west1.run.app/fenix-otonom-mobile.html'+(t?'?t='+t:'');
+var url='https://fenix-ai-194617495310.europe-west1.run.app/fenix-otonom-mobile.html'+(t?'?t='+t:'');
 document.getElementById('qrToken').textContent=t?t.slice(0,8).toUpperCase()+' ··· '+t.slice(-4).toUpperCase():'';
 var c=document.getElementById('qrCanvas'),x=c.getContext('2d');
 var img=new Image();img.crossOrigin='anonymous';
