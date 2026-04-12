@@ -9,198 +9,176 @@
 <title>Fenix Otonom</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg:#0A0A0A; --surface:#111; --border:#1a1a1a; --border2:#222;
-  --text:#fff; --text2:#ccc; --text3:#888; --text4:#555; --text5:#333;
-  --orange:#F97316; --orange2:#EA580C; --blue:#3B82F6; --purple:#8B5CF6;
-  --green:#10B981; --yellow:#EAB308; --red:#EF4444; --master-green:#22C55E;
+:root{
+  --bg:#050505;--surface:#0c0c0c;--surface2:#111;--surface3:#161616;
+  --border:#1a1a1a;--border2:#222;
+  --text:#fff;--text2:#ddd;--text3:#999;--text4:#666;--text5:#333;
+  --orange:#F97316;--orange2:#EA580C;--blue:#3B82F6;--blue2:#2563EB;
+  --purple:#8B5CF6;--purple2:#7C3AED;--green:#10B981;--green2:#059669;
+  --yellow:#EAB308;--yellow2:#CA8A04;--red:#EF4444;--master:#22C55E;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{
   background:var(--bg);color:var(--text);
   font-family:'Inter',-apple-system,system-ui,sans-serif;
   height:100dvh;display:flex;flex-direction:column;
-  max-width:100%;margin:0 auto;
   user-select:none;-webkit-user-select:none;overflow:hidden;
 }
 
 /* ── HEADER ── */
 .header{
-  padding:env(safe-area-inset-top,12px) 16px 8px;
+  padding:env(safe-area-inset-top,10px) 16px 10px;
   display:flex;align-items:center;justify-content:space-between;
-  background:var(--surface);border-bottom:1px solid var(--border);
-  flex-shrink:0;
+  background:linear-gradient(180deg,#0f0f0f 0%,var(--bg) 100%);
+  border-bottom:1px solid #111;flex-shrink:0;
 }
-.h-left{display:flex;align-items:center;gap:8px}
-.h-logo{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--orange),var(--orange2));display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 8px rgba(249,115,22,0.3)}
-.h-title{font-weight:900;font-size:13px;letter-spacing:2px}
-.h-sub{font-size:7px;color:var(--text4);letter-spacing:1.5px;margin-top:1px}
-.h-right{display:flex;align-items:center;gap:6px}
-.h-credit{background:#151515;border:1px solid var(--border2);border-radius:20px;padding:4px 10px;display:flex;align-items:center;gap:4px;font-size:13px;font-weight:900;color:var(--orange)}
-.h-credit.low{color:var(--red);border-color:#7F1D1D44;background:#1a0000}
+.h-left{display:flex;align-items:center;gap:10px}
+.h-logo{
+  width:36px;height:36px;border-radius:10px;
+  background:linear-gradient(135deg,var(--orange),#D97706);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;box-shadow:0 4px 20px rgba(249,115,22,0.35);
+}
+.h-brand{display:flex;flex-direction:column}
+.h-title{font-weight:900;font-size:16px;letter-spacing:3px;
+  background:linear-gradient(135deg,#fff,#ccc);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.h-sub{font-size:7px;color:var(--text4);letter-spacing:2px;text-transform:uppercase}
+.h-credit{
+  background:linear-gradient(135deg,#111,#0a0a0a);
+  border:1px solid #1e1e1e;border-radius:24px;
+  padding:6px 14px;display:flex;align-items:center;gap:5px;
+  font-size:14px;font-weight:900;color:var(--orange);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,0.03);
+}
+.h-credit.low{color:var(--red);border-color:#7F1D1D44}
 
-/* ── CATEGORIES TAB ── */
-.cat-tabs{
-  display:flex;gap:0;overflow-x:auto;flex-shrink:0;
-  border-bottom:1px solid var(--border);
-  scrollbar-width:none;-ms-overflow-style:none;
+/* ── TABS ── */
+.tabs{
+  display:flex;flex-shrink:0;overflow-x:auto;
+  background:var(--surface);
+  border-bottom:1px solid #111;
+  scrollbar-width:none;
 }
-.cat-tabs::-webkit-scrollbar{display:none}
-.cat-tab{
-  flex:1 0 auto;padding:8px 14px;font-size:10px;font-weight:700;
-  color:var(--text4);cursor:pointer;white-space:nowrap;
-  border-bottom:2px solid transparent;transition:all .2s;
-  letter-spacing:0.5px;text-align:center;
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  flex:1;min-width:0;padding:10px 6px 8px;
+  text-align:center;cursor:pointer;
+  border-bottom:2px solid transparent;
+  transition:all .25s;position:relative;
 }
-.cat-tab.active{color:var(--text);border-bottom-color:var(--orange)}
-.cat-tab .tab-icon{font-size:14px;display:block;text-align:center;margin-bottom:2px}
+.tab .t-icon{font-size:18px;display:block;margin-bottom:3px}
+.tab .t-label{font-size:8px;font-weight:700;color:var(--text5);letter-spacing:0.5px;text-transform:uppercase}
+.tab.active .t-label{color:var(--text2)}
+.tab.active{border-bottom-color:var(--tab-color,var(--orange))}
+.tab.active::after{
+  content:'';position:absolute;bottom:-1px;left:20%;right:20%;height:2px;
+  background:var(--tab-color,var(--orange));filter:blur(4px);opacity:0.6;
+}
+.tab.locked{opacity:0.2}
 
-/* ── SHORTCUTS GRID ── */
-.shortcuts{
-  flex:1 1 auto;overflow-x:hidden;overflow-y:auto;
-  padding:8px;
+/* ── CONTENT ── */
+.content{
+  flex:1;overflow-y:auto;overflow-x:hidden;
   -webkit-overflow-scrolling:touch;
+  padding:0 0 8px;
 }
-.sc-grid{
+
+/* ── SECTION ── */
+.section{padding:12px 12px 0}
+.sec-header{
+  display:flex;align-items:center;gap:8px;
+  margin-bottom:8px;padding:0 4px;
+}
+.sec-line{flex:1;height:1px;background:linear-gradient(90deg,var(--sec-color,#222) 0%,transparent 100%)}
+.sec-title{
+  font-size:9px;font-weight:800;letter-spacing:2px;
+  text-transform:uppercase;color:var(--sec-color,var(--text4));
+  white-space:nowrap;
+}
+.sec-line-r{flex:1;height:1px;background:linear-gradient(90deg,transparent 0%,var(--sec-color,#222) 100%)}
+
+/* ── COMMAND GRID ── */
+.cmd-grid{
   display:grid;
-  grid-template-columns:repeat(4,1fr);
+  grid-template-columns:repeat(3,1fr);
   gap:6px;
 }
-.sc-btn{
-  background:#0c0c0c;border:1px solid #161616;border-radius:10px;
-  padding:10px 4px 8px;text-align:center;cursor:pointer;transition:all .12s;
+.cmd{
+  background:linear-gradient(145deg,var(--surface2),var(--surface));
+  border:1px solid #181818;border-radius:14px;
+  padding:14px 8px 10px;text-align:center;
+  cursor:pointer;transition:all .15s;
+  position:relative;overflow:hidden;
 }
-.sc-btn:active{transform:scale(0.93);background:#1a1a1a}
-.sc-btn .sc-i{font-size:22px;display:block;line-height:1}
-.sc-btn .sc-l{font-size:8px;font-weight:600;color:#999;margin-top:4px;line-height:1.15;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sc-btn.locked{opacity:0.25;cursor:default}
-.sc-btn.locked .sc-i{filter:grayscale(1)}
+.cmd::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.04),transparent);
+}
+.cmd:active{transform:scale(0.95);background:#151515;border-color:#252525}
+.cmd .c-icon{font-size:26px;display:block;line-height:1;margin-bottom:6px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))}
+.cmd .c-label{font-size:9px;font-weight:700;color:var(--text3);line-height:1.2}
 
-/* ── ACTIVE JOBS (inline, compact) ── */
-.jobs-area{
-  flex-shrink:0;overflow-y:auto;max-height:30vh;
-  padding:4px 8px;
-}
-
-/* ═══ TABLET (600px+) ═══ */
-@media (min-width:600px) {
-  .header{padding:env(safe-area-inset-top,14px) 24px 10px}
-  .h-logo{width:34px;height:34px;font-size:17px;border-radius:9px}
-  .h-title{font-size:16px;letter-spacing:3px}
-  .h-sub{font-size:8px}
-  .h-credit{font-size:15px;padding:5px 14px}
-  .cat-tab{padding:10px 20px;font-size:12px}
-  .cat-tab .tab-icon{font-size:18px;margin-bottom:3px}
-  .shortcuts{padding:12px}
-  .sc-grid{grid-template-columns:repeat(5,1fr);gap:8px}
-  .sc-btn{padding:14px 6px 10px;border-radius:12px}
-  .sc-btn .sc-i{font-size:28px}
-  .sc-btn .sc-l{font-size:10px;margin-top:5px}
-  .jobs-area{padding:6px 12px}
-  .job-row{padding:10px 14px;border-radius:14px;gap:10px}
-  .job-icon{font-size:22px}
-  .job-name{font-size:12px}
-  .job-meta{font-size:9px}
-  .job-status{font-size:9px;padding:3px 8px}
-  .job-dl{font-size:10px;padding:5px 14px}
-  .msg-area{padding:8px 12px env(safe-area-inset-bottom,10px)}
-  .msg-input{font-size:15px;padding:12px 18px}
-  .msg-send{width:44px;height:44px;font-size:18px}
-  .msg-file{width:44px;height:44px;font-size:20px}
-}
-
-/* ═══ LARGE TABLET (900px+) ═══ */
-@media (min-width:900px) {
-  .header{padding:16px 32px 12px}
-  .h-logo{width:40px;height:40px;font-size:20px;border-radius:10px}
-  .h-title{font-size:18px}
-  .cat-tab{padding:12px 28px;font-size:13px}
-  .cat-tab .tab-icon{font-size:20px}
-  .shortcuts{padding:16px 20px}
-  .sc-grid{grid-template-columns:repeat(6,1fr);gap:10px}
-  .sc-btn{padding:16px 8px 12px;border-radius:14px}
-  .sc-btn .sc-i{font-size:32px}
-  .sc-btn .sc-l{font-size:11px;margin-top:6px}
-  .jobs-area{padding:8px 20px}
-  .job-row{padding:12px 18px}
-  .msg-area{padding:10px 20px env(safe-area-inset-bottom,12px)}
-  .msg-input{font-size:16px;padding:14px 20px;border-radius:24px}
-  .msg-send{width:48px;height:48px;font-size:20px}
-  .msg-file{width:48px;height:48px;font-size:22px}
-}
-
-/* ═══ LANDSCAPE ═══ */
-@media (orientation:landscape) and (max-height:500px) {
-  .shortcuts{max-height:50vh}
-  .sc-grid{grid-template-columns:repeat(6,1fr);gap:4px}
-  .sc-btn{padding:6px 2px 4px}
-  .sc-btn .sc-i{font-size:18px}
-  .sc-btn .sc-l{font-size:7px;margin-top:2px}
-  .cat-tab{padding:6px 12px;font-size:9px}
-  .cat-tab .tab-icon{font-size:12px;margin-bottom:1px}
-  .header{padding:4px 12px}
-  .jobs-area{max-height:20vh}
-}
-.job-row{
+/* ── JOBS (inline) ── */
+.jobs{flex-shrink:0;max-height:28vh;overflow-y:auto;padding:4px 10px}
+.job{
   display:flex;align-items:center;gap:8px;
-  background:var(--surface);border:1px solid var(--border);
-  border-radius:12px;padding:8px 10px;margin-bottom:4px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:12px;padding:8px 12px;margin-bottom:4px;
 }
-.job-row.done{border-color:rgba(34,197,94,0.2)}
-.job-icon{font-size:18px;flex-shrink:0}
-.job-info{flex:1;min-width:0}
-.job-name{font-size:10px;font-weight:700;color:#ccc;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.job-meta{font-size:8px;color:var(--text4);margin-top:1px}
-.job-bar{height:3px;background:#1a1a1a;border-radius:3px;margin-top:4px;overflow:hidden}
-.job-bar-fill{height:100%;border-radius:3px;transition:width .5s}
-.job-status{font-size:8px;font-weight:900;padding:2px 6px;border-radius:12px;flex-shrink:0}
-.job-status.pending{background:rgba(26,26,0,0.6);color:var(--yellow)}
-.job-status.done{background:rgba(5,46,22,0.6);color:var(--master-green)}
-.job-status.error{background:rgba(45,10,10,0.6);color:var(--red)}
-.job-dl{
-  background:linear-gradient(135deg,var(--green),#059669);
-  border-radius:8px;padding:4px 10px;font-size:8px;font-weight:900;
-  color:#000;text-decoration:none;flex-shrink:0;
-}
+.job.done{border-color:rgba(34,197,94,0.15);background:linear-gradient(135deg,#050f05,var(--surface2))}
+.j-icon{font-size:18px;flex-shrink:0}
+.j-info{flex:1;min-width:0}
+.j-name{font-size:10px;font-weight:700;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.j-meta{font-size:8px;color:var(--text4);margin-top:1px}
+.j-bar{height:3px;background:#1a1a1a;border-radius:3px;margin-top:4px;overflow:hidden}
+.j-bar-fill{height:100%;border-radius:3px;transition:width .5s}
+.j-status{font-size:7px;font-weight:900;padding:2px 6px;border-radius:10px;flex-shrink:0;letter-spacing:0.5px}
+.j-status.pending{background:#1a1a00;color:var(--yellow)}
+.j-status.done{background:#001a0a;color:var(--master)}
+.j-status.error{background:#1a0000;color:var(--red)}
+.j-dl{background:linear-gradient(135deg,var(--master),#059669);border-radius:8px;padding:4px 10px;font-size:8px;font-weight:900;color:#000;text-decoration:none;flex-shrink:0}
 
-/* ── MESSAGE INPUT ── */
-.msg-area{
-  margin-top:auto;flex-shrink:0;
-  padding:6px 8px env(safe-area-inset-bottom,8px);
-  background:var(--surface);border-top:1px solid var(--border);
+/* ── MESSAGE BAR ── */
+.msg-bar{
+  flex-shrink:0;padding:8px 10px env(safe-area-inset-bottom,8px);
+  background:linear-gradient(180deg,var(--bg),#080808);
+  border-top:1px solid #111;
 }
 .msg-row{display:flex;gap:6px;align-items:center}
 .msg-input{
-  flex:1;background:#0a0a0a;border:1px solid var(--border2);
-  border-radius:20px;padding:10px 14px;color:var(--text);
-  font-size:13px;font-family:inherit;outline:none;
+  flex:1;background:var(--surface2);border:1px solid #1e1e1e;
+  border-radius:22px;padding:11px 16px;color:var(--text);
+  font-size:14px;font-family:inherit;outline:none;
   transition:border-color .2s;
+  box-shadow:inset 0 2px 4px rgba(0,0,0,0.2);
 }
-.msg-input:focus{border-color:var(--orange)}
+.msg-input:focus{border-color:var(--orange);box-shadow:inset 0 2px 4px rgba(0,0,0,0.2),0 0 12px rgba(249,115,22,0.1)}
 .msg-input::placeholder{color:var(--text5)}
 .msg-send{
-  width:38px;height:38px;border-radius:50%;border:none;
+  width:40px;height:40px;border-radius:50%;border:none;
   background:linear-gradient(135deg,var(--orange),var(--orange2));
-  color:#000;font-size:16px;cursor:pointer;flex-shrink:0;
+  color:#000;font-size:17px;cursor:pointer;flex-shrink:0;
   display:flex;align-items:center;justify-content:center;
-  box-shadow:0 2px 10px rgba(249,115,22,0.3);
+  box-shadow:0 4px 16px rgba(249,115,22,0.3);transition:transform .1s;
 }
 .msg-send:active{transform:scale(0.9)}
 .msg-file{
-  width:38px;height:38px;border-radius:50%;border:1px solid var(--border2);
-  background:transparent;color:var(--text3);font-size:18px;cursor:pointer;
-  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  width:40px;height:40px;border-radius:50%;border:1px solid #1e1e1e;
+  background:var(--surface2);color:var(--text4);font-size:18px;
+  cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  transition:all .15s;
 }
-.msg-file:active{background:#1a1a1a}
+.msg-file:active{background:#1a1a1a;border-color:var(--orange)}
 
 /* ── TOAST ── */
 .toast{
   position:fixed;top:env(safe-area-inset-top,16px);left:50%;transform:translateX(-50%);
-  padding:10px 20px;border-radius:12px;font-size:11px;font-weight:700;
+  padding:10px 20px;border-radius:14px;font-size:11px;font-weight:700;
   z-index:999;animation:fadeDown .3s ease;max-width:90%;text-align:center;
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
 }
-.toast.ok{background:linear-gradient(135deg,#052e16,#0a1a0a);color:var(--master-green);border:1px solid #16653433}
-.toast.error{background:linear-gradient(135deg,#2d0a0a,#1a0000);color:var(--red);border:1px solid #7F1D1D33}
+.toast.ok{background:rgba(5,46,22,0.85);color:var(--master);border:1px solid rgba(34,197,94,0.15)}
+.toast.error{background:rgba(45,10,10,0.85);color:var(--red);border:1px solid rgba(239,68,68,0.15)}
 @keyframes fadeDown{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 
 /* ── LOADING ── */
@@ -209,47 +187,82 @@ body{
   position:fixed;inset:0;z-index:100;transition:opacity .4s;
 }
 .loading-screen.hide{opacity:0;pointer-events:none}
-.ld-ring{width:50px;height:50px;margin:0 auto 12px;border-radius:50%;background:radial-gradient(circle,rgba(249,115,22,0.25),rgba(249,115,22,0.06));border:2px solid rgba(249,115,22,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;animation:pulse 1.5s ease-in-out infinite}
-@keyframes pulse{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.1);opacity:1}}
+.ld-ring{width:56px;height:56px;margin:0 auto 14px;border-radius:50%;
+  background:radial-gradient(circle,rgba(249,115,22,0.2),transparent);
+  border:2px solid rgba(249,115,22,0.15);display:flex;align-items:center;justify-content:center;
+  font-size:26px;animation:pulse 1.5s ease-in-out infinite;
+  box-shadow:0 0 30px rgba(249,115,22,0.1);
+}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:.8}50%{transform:scale(1.08);opacity:1}}
+
+/* ═══ RESPONSIVE ═══ */
+@media(min-width:600px){
+  .header{padding:env(safe-area-inset-top,14px) 24px 12px}
+  .h-logo{width:42px;height:42px;font-size:20px;border-radius:12px}
+  .h-title{font-size:18px}
+  .h-sub{font-size:8px}
+  .h-credit{font-size:16px;padding:7px 16px}
+  .tab{padding:12px 8px 10px}
+  .tab .t-icon{font-size:22px;margin-bottom:4px}
+  .tab .t-label{font-size:9px}
+  .section{padding:16px 16px 0}
+  .sec-title{font-size:10px}
+  .cmd-grid{grid-template-columns:repeat(4,1fr);gap:8px}
+  .cmd{padding:18px 10px 14px;border-radius:16px}
+  .cmd .c-icon{font-size:32px;margin-bottom:8px}
+  .cmd .c-label{font-size:10px}
+  .jobs{padding:6px 16px}
+  .msg-bar{padding:10px 16px env(safe-area-inset-bottom,10px)}
+  .msg-input{font-size:15px;padding:13px 20px}
+  .msg-send,.msg-file{width:46px;height:46px}
+}
+@media(min-width:900px){
+  .cmd-grid{grid-template-columns:repeat(5,1fr);gap:10px}
+  .cmd{padding:20px 12px 16px;border-radius:18px}
+  .cmd .c-icon{font-size:36px;margin-bottom:10px}
+  .cmd .c-label{font-size:11px}
+  .section{padding:20px 24px 0}
+}
+@media(orientation:landscape) and (max-height:500px){
+  .cmd-grid{grid-template-columns:repeat(5,1fr);gap:4px}
+  .cmd{padding:8px 4px 6px}
+  .cmd .c-icon{font-size:20px;margin-bottom:3px}
+  .cmd .c-label{font-size:7px}
+  .section{padding:6px 8px 0}
+  .sec-header{margin-bottom:4px}
+  .tab{padding:6px 4px 4px}
+  .tab .t-icon{font-size:14px;margin-bottom:1px}
+  .tab .t-label{font-size:7px}
+}
 
 #fileInput{display:none}
 </style>
 </head>
 <body>
 
-<!-- LOADING -->
 <div class="loading-screen" id="loadingScreen">
   <div style="text-align:center">
     <div class="ld-ring">🔥</div>
-    <div style="font-size:16px;font-weight:800;color:var(--orange);letter-spacing:3px">FENIX</div>
-    <div style="font-size:9px;color:var(--text4);margin-top:4px;letter-spacing:1px">OTONOM PANEL</div>
+    <div style="font-size:18px;font-weight:900;letter-spacing:4px;background:linear-gradient(135deg,var(--orange),#D97706);-webkit-background-clip:text;-webkit-text-fill-color:transparent">FENIX</div>
+    <div style="font-size:9px;color:var(--text5);margin-top:4px;letter-spacing:2px">OTONOM PANEL</div>
   </div>
 </div>
 
-<!-- HEADER -->
 <div class="header">
   <div class="h-left">
     <div class="h-logo">🔥</div>
-    <div><div class="h-title">FENIX</div><div class="h-sub">OTONOM</div></div>
+    <div class="h-brand"><div class="h-title">FENIX</div><div class="h-sub">Otonom Panel</div></div>
   </div>
-  <div class="h-right">
-    <div class="h-credit" id="creditBadge">⚡ <span id="creditNum">15</span></div>
-  </div>
+  <div class="h-credit" id="creditBadge">⚡ <span id="creditNum">15</span></div>
 </div>
 
-<!-- CATEGORY TABS -->
-<div class="cat-tabs" id="catTabs"></div>
+<div class="tabs" id="tabsArea"></div>
+<div class="content" id="contentArea"></div>
+<div class="jobs" id="jobsArea"></div>
 
-<!-- SHORTCUTS -->
-<div class="shortcuts" id="shortcutsArea"></div>
-
-<!-- ACTIVE JOBS -->
-<div class="jobs-area" id="jobsArea"></div>
-
-<!-- MESSAGE INPUT -->
-<div class="msg-area">
+<div class="msg-bar">
   <div class="msg-row">
-    <button class="msg-file" id="fileBtn" onclick="pickFile()">📎</button>
+    <button class="msg-file" onclick="pickFile()">📎</button>
     <input class="msg-input" id="msgInput" placeholder="Fenix'e komut yaz..." autocomplete="off">
     <button class="msg-send" onclick="sendMessage()">➤</button>
   </div>
@@ -258,538 +271,413 @@ body{
 <input type="file" id="fileInput">
 
 <script>
-// ════════════════════════════════════════
-//  CONFIG
-// ════════════════════════════════════════
 const API = window.location.origin;
 const TRIAL_MAX = 2;
 const ALL_IDS = ['pro','360','dublaj','eticaret','otonom'];
 
-// ════════════════════════════════════════
-//  CATEGORIES
-// ════════════════════════════════════════
 const CATEGORIES = [
   {
-    id:'pro', label:'PRO', icon:'🎬', color:'#F97316',
+    id:'pro', label:'PRO', icon:'🎬', color:'#F97316', tabColor:'#F97316',
     gradient:'linear-gradient(135deg,#F97316,#EA580C)',
-    commands:[
-      {id:'pro_render',icon:'🎞️',label:'Render',type:'file',accept:'video/*',endpoint:'/api/pro/render',field:'video'},
-      {id:'pro_cut',icon:'✂️',label:'Kesim',type:'file',accept:'video/*',endpoint:'/api/pro/smart-cut',field:'video'},
-      {id:'pro_highlight',icon:'🏆',label:'Highlight',type:'file',accept:'video/*',endpoint:'/api/pro/highlight',field:'video'},
-      {id:'pro_trailer',icon:'🎪',label:'Trailer',type:'file',accept:'video/*',endpoint:'/api/pro/trailer',field:'video'},
-      {id:'pro_effect',icon:'✨',label:'Efekt',type:'file',accept:'video/*',endpoint:'/api/pro/effects',field:'video'},
-      {id:'pro_color',icon:'🎨',label:'Renk',type:'file',accept:'video/*',endpoint:'/api/pro/color-grade',field:'video'},
-      {id:'pro_filter',icon:'🌈',label:'Filtre',type:'file',accept:'video/*',endpoint:'/api/pro/filter',field:'video'},
-      {id:'pro_overlay',icon:'🔲',label:'Overlay',type:'file',accept:'video/*',endpoint:'/api/pro/overlay',field:'video'},
-      {id:'pro_transition',icon:'🔀',label:'Gecis',type:'file',accept:'video/*',endpoint:'/api/pro/transitions',field:'video'},
-      {id:'pro_greenscreen',icon:'🟩',label:'Chroma',type:'file',accept:'video/*',endpoint:'/api/pro/chroma-key',field:'video'},
-      {id:'pro_stabilize',icon:'📐',label:'Stabilize',type:'file',accept:'video/*',endpoint:'/api/pro/stabilize',field:'video'},
-      {id:'pro_slow',icon:'🐌',label:'Slow-Mo',type:'file',accept:'video/*',endpoint:'/api/pro/speed-ramp',field:'video'},
-      {id:'pro_timelapse',icon:'⏩',label:'Timelapse',type:'file',accept:'video/*',endpoint:'/api/pro/timelapse',field:'video'},
-      {id:'pro_reverse',icon:'⏪',label:'Tersine',type:'file',accept:'video/*',endpoint:'/api/pro/reverse',field:'video'},
-      {id:'pro_music',icon:'🎵',label:'Muzik',type:'file',accept:'video/*',endpoint:'/api/pro/add-music',field:'video'},
-      {id:'pro_subtitle',icon:'💬',label:'Altyazi',type:'file',accept:'video/*',endpoint:'/api/pro/subtitle',field:'video'},
-      {id:'pro_thumb',icon:'🖼️',label:'Kapak',type:'file',accept:'video/*',endpoint:'/api/pro/thumbnail',field:'video'},
-      {id:'pro_resize',icon:'📱',label:'Boyut',type:'file',accept:'video/*',endpoint:'/api/pro/resize',field:'video'},
-      {id:'pro_compress',icon:'🗜️',label:'Sikistir',type:'file',accept:'video/*',endpoint:'/api/pro/compress',field:'video'},
-      {id:'pro_upscale',icon:'🔍',label:'4K Upscale',type:'file',accept:'video/*',endpoint:'/api/pro/upscale',field:'video'},
-      {id:'pro_faceblur',icon:'😶',label:'Yuz Buzla',type:'file',accept:'video/*',endpoint:'/api/pro/face-blur',field:'video'},
-      {id:'pro_objremove',icon:'🧹',label:'Nesne Sil',type:'file',accept:'video/*',endpoint:'/api/pro/remove-object',field:'video'},
-      {id:'pro_bgchange',icon:'🌄',label:'Arka Plan',type:'file',accept:'video/*',endpoint:'/api/pro/change-bg',field:'video'},
-      {id:'pro_gif',icon:'🎭',label:'GIF',type:'file',accept:'video/*',endpoint:'/api/pro/to-gif',field:'video'},
-    ]
+    sections:[
+      { title:'Uretim', color:'#F97316', cmds:[
+        {id:'pro_render',icon:'🎞️',label:'Render'},{id:'pro_cut',icon:'✂️',label:'Akilli Kesim'},
+        {id:'pro_highlight',icon:'🏆',label:'Highlight'},{id:'pro_trailer',icon:'🎪',label:'Trailer'},
+      ]},
+      { title:'Efektler', color:'#EC4899', cmds:[
+        {id:'pro_effect',icon:'✨',label:'Efekt'},{id:'pro_color',icon:'🎨',label:'Renk Grading'},
+        {id:'pro_filter',icon:'🌈',label:'Filtre'},{id:'pro_overlay',icon:'🔲',label:'Overlay'},
+        {id:'pro_transition',icon:'🔀',label:'Gecis'},{id:'pro_greenscreen',icon:'🟩',label:'Chroma Key'},
+      ]},
+      { title:'Hareket', color:'#06B6D4', cmds:[
+        {id:'pro_stabilize',icon:'📐',label:'Stabilize'},{id:'pro_slow',icon:'🐌',label:'Slow-Mo'},
+        {id:'pro_timelapse',icon:'⏩',label:'Timelapse'},{id:'pro_reverse',icon:'⏪',label:'Tersine'},
+      ]},
+      { title:'Ses & Yazi', color:'#8B5CF6', cmds:[
+        {id:'pro_music',icon:'🎵',label:'Muzik'},{id:'pro_subtitle',icon:'💬',label:'Altyazi'},
+      ]},
+      { title:'Cikti', color:'#10B981', cmds:[
+        {id:'pro_thumb',icon:'🖼️',label:'Kapak'},{id:'pro_resize',icon:'📱',label:'Boyut'},
+        {id:'pro_compress',icon:'🗜️',label:'Sikistir'},{id:'pro_gif',icon:'🎭',label:'GIF'},
+      ]},
+      { title:'AI Araclar', color:'#EAB308', cmds:[
+        {id:'pro_upscale',icon:'🔍',label:'4K Upscale'},{id:'pro_faceblur',icon:'😶',label:'Yuz Buzla'},
+        {id:'pro_objremove',icon:'🧹',label:'Nesne Sil'},{id:'pro_bgchange',icon:'🌄',label:'Arka Plan'},
+      ]},
+    ],
+    defaultEndpoint:'/api/pro/render', defaultAccept:'video/*', defaultField:'video'
   },
   {
-    id:'360', label:'360°', icon:'🌐', color:'#3B82F6',
+    id:'360', label:'360°', icon:'🌐', color:'#3B82F6', tabColor:'#3B82F6',
     gradient:'linear-gradient(135deg,#3B82F6,#2563EB)',
-    commands:[
-      {id:'360_stitch',icon:'🧩',label:'Birlestir',type:'file',accept:'image/*,video/*,.insv',endpoint:'/api/pro/stitch',field:'images'},
-      {id:'360_panorama',icon:'🏔️',label:'Panorama',type:'file',accept:'image/*',endpoint:'/api/pro/panorama',field:'images'},
-      {id:'360_horizon',icon:'⚖️',label:'Horizon',type:'file',accept:'video/*',endpoint:'/api/pro/horizon-lock',field:'video'},
-      {id:'360_reframe',icon:'🎯',label:'Reframe',type:'file',accept:'video/*',endpoint:'/api/pro/reframe',field:'video'},
-      {id:'360_tiny',icon:'🌍',label:'Tiny Planet',type:'file',accept:'image/*,video/*',endpoint:'/api/pro/tiny-planet',field:'video'},
-      {id:'360_stabilize',icon:'🎥',label:'Stabilize',type:'file',accept:'video/*',endpoint:'/api/pro/360-stabilize',field:'video'},
-      {id:'360_3d',icon:'🧊',label:'3D Model',type:'file',accept:'image/*',endpoint:'/api/pro/3d-model',field:'images'},
-      {id:'360_vtour',icon:'🏠',label:'Sanal Tur',type:'file',accept:'image/*',endpoint:'/api/pro/virtual-tour',field:'images'},
-      {id:'360_depth',icon:'🔬',label:'Derinlik',type:'file',accept:'image/*',endpoint:'/api/pro/depth-map',field:'images'},
-      {id:'360_ar',icon:'📱',label:'AR',type:'file',accept:'image/*',endpoint:'/api/pro/ar-view',field:'images'},
-      // Spor
-      {id:'360_moto',icon:'🏍️',label:'Motor',type:'file',accept:'video/*',endpoint:'/api/pro/360-moto',field:'video'},
-      {id:'360_racing',icon:'🏎️',label:'Yaris',type:'file',accept:'video/*',endpoint:'/api/pro/360-racing',field:'video'},
-      {id:'360_rally',icon:'🚗',label:'Ralli',type:'file',accept:'video/*',endpoint:'/api/pro/360-rally',field:'video'},
-      {id:'360_drift',icon:'🔥',label:'Drift',type:'file',accept:'video/*',endpoint:'/api/pro/360-drift',field:'video'},
-      {id:'360_bike',icon:'🚴',label:'Bisiklet',type:'file',accept:'video/*',endpoint:'/api/pro/360-cycling',field:'video'},
-      {id:'360_boat',icon:'🚤',label:'Tekne',type:'file',accept:'video/*',endpoint:'/api/pro/360-boat',field:'video'},
-      {id:'360_skydive',icon:'🪂',label:'Skydive',type:'file',accept:'video/*',endpoint:'/api/pro/360-skydive',field:'video'},
-      {id:'360_surf',icon:'🏄',label:'Sorf',type:'file',accept:'video/*',endpoint:'/api/pro/360-surf',field:'video'},
-      {id:'360_dive',icon:'🤿',label:'Dalis',type:'file',accept:'video/*',endpoint:'/api/pro/360-dive',field:'video'},
-      {id:'360_ski',icon:'⛷️',label:'Kayak',type:'file',accept:'video/*',endpoint:'/api/pro/360-ski',field:'video'},
-      {id:'360_football',icon:'⚽',label:'Futbol',type:'file',accept:'video/*',endpoint:'/api/pro/360-football',field:'video'},
-      {id:'360_mma',icon:'🥊',label:'Dovus',type:'file',accept:'video/*',endpoint:'/api/pro/360-combat',field:'video'},
-      {id:'360_drone',icon:'🚁',label:'Drone',type:'file',accept:'video/*',endpoint:'/api/pro/360-drone',field:'video'},
-      {id:'360_fpv',icon:'🎮',label:'FPV',type:'file',accept:'video/*',endpoint:'/api/pro/360-fpv',field:'video'},
-      {id:'360_telemetry',icon:'📊',label:'Telemetri',type:'file',accept:'video/*',endpoint:'/api/pro/360-telemetry',field:'video'},
-      {id:'360_tracker',icon:'🎯',label:'Takip',type:'file',accept:'video/*',endpoint:'/api/pro/360-tracker',field:'video'},
-      {id:'360_replay',icon:'🔁',label:'Replay',type:'file',accept:'video/*',endpoint:'/api/pro/360-replay',field:'video'},
-      {id:'360_highlight',icon:'🏆',label:'Highlight',type:'file',accept:'video/*',endpoint:'/api/pro/360-sport-highlight',field:'video'},
-      {id:'360_livestream',icon:'📡',label:'Canli',type:'action',endpoint:'/api/pro/360-livestream'},
-      {id:'360_vr',icon:'🥽',label:'VR',type:'file',accept:'video/*',endpoint:'/api/pro/360-vr-export',field:'video'},
-    ]
+    sections:[
+      { title:'Birlestirme', color:'#3B82F6', cmds:[
+        {id:'360_stitch',icon:'🧩',label:'360 Stitch'},{id:'360_panorama',icon:'🏔️',label:'Panorama'},
+        {id:'360_horizon',icon:'⚖️',label:'Horizon Lock'},{id:'360_reframe',icon:'🎯',label:'Reframe'},
+      ]},
+      { title:'Efekt & Duzenleme', color:'#06B6D4', cmds:[
+        {id:'360_tiny',icon:'🌍',label:'Tiny Planet'},{id:'360_stabilize',icon:'🎥',label:'Stabilize'},
+        {id:'360_slowmo',icon:'🐌',label:'Slow-Mo'},{id:'360_hyperlapse',icon:'🏃',label:'Hyperlapse'},
+      ]},
+      { title:'Motor Sporlari', color:'#EF4444', cmds:[
+        {id:'360_moto',icon:'🏍️',label:'Motor'},{id:'360_racing',icon:'🏎️',label:'Araba'},
+        {id:'360_rally',icon:'🚗',label:'Ralli'},{id:'360_drift',icon:'🔥',label:'Drift'},
+        {id:'360_karting',icon:'🏁',label:'Karting'},{id:'360_bike',icon:'🚴',label:'Bisiklet'},
+      ]},
+      { title:'Hava & Adrenalin', color:'#F97316', cmds:[
+        {id:'360_skydive',icon:'🪂',label:'Skydive'},{id:'360_paraglide',icon:'🦅',label:'Yamaç'},
+        {id:'360_climbing',icon:'🧗',label:'Tirmanis'},{id:'360_bungee',icon:'🎢',label:'Bungee'},
+      ]},
+      { title:'Su Sporlari', color:'#06B6D4', cmds:[
+        {id:'360_surf',icon:'🏄',label:'Sorf'},{id:'360_dive',icon:'🤿',label:'Dalis'},
+        {id:'360_kayak',icon:'🛶',label:'Kano'},{id:'360_boat',icon:'🚤',label:'Tekne'},
+        {id:'360_sail',icon:'⛵',label:'Yelken'},
+      ]},
+      { title:'Kis Sporlari', color:'#93C5FD', cmds:[
+        {id:'360_ski',icon:'⛷️',label:'Kayak'},{id:'360_snowboard',icon:'🏂',label:'Snowboard'},
+        {id:'360_hockey',icon:'🏒',label:'Hokey'},
+      ]},
+      { title:'Takim Sporlari', color:'#22C55E', cmds:[
+        {id:'360_football',icon:'⚽',label:'Futbol'},{id:'360_basketball',icon:'🏀',label:'Basketbol'},
+        {id:'360_tennis',icon:'🎾',label:'Tenis'},{id:'360_mma',icon:'🥊',label:'Dovus'},
+        {id:'360_athletics',icon:'🏃',label:'Atletizm'},{id:'360_equestrian',icon:'🏇',label:'Binicilik'},
+      ]},
+      { title:'Drone & Hava Cekimi', color:'#A855F7', cmds:[
+        {id:'360_drone',icon:'🚁',label:'Drone'},{id:'360_fpv',icon:'🎮',label:'FPV'},
+        {id:'360_aerial',icon:'🛩️',label:'Havadan'},
+      ]},
+      { title:'Analiz & Overlay', color:'#EAB308', cmds:[
+        {id:'360_telemetry',icon:'📊',label:'Telemetri'},{id:'360_tracker',icon:'🎯',label:'Takip'},
+        {id:'360_replay',icon:'🔁',label:'Replay'},{id:'360_highlight',icon:'🏆',label:'Highlight'},
+      ]},
+      { title:'3D & Mekan', color:'#8B5CF6', cmds:[
+        {id:'360_3d',icon:'🧊',label:'3D Model'},{id:'360_vtour',icon:'🏠',label:'Sanal Tur'},
+        {id:'360_depth',icon:'🔬',label:'Derinlik'},{id:'360_ar',icon:'📱',label:'AR'},
+        {id:'360_vr',icon:'🥽',label:'VR'},{id:'360_livestream',icon:'📡',label:'Canli'},
+      ]},
+    ],
+    defaultEndpoint:'/api/pro/stitch', defaultAccept:'image/*,video/*,.insv', defaultField:'images'
   },
   {
-    id:'dublaj', label:'Dublaj', icon:'🎙️', color:'#8B5CF6',
+    id:'dublaj', label:'Dublaj', icon:'🎙️', color:'#8B5CF6', tabColor:'#8B5CF6',
     gradient:'linear-gradient(135deg,#8B5CF6,#7C3AED)',
-    commands:[
-      {id:'dub_voiceover',icon:'🗣️',label:'Seslendir',type:'file',accept:'video/*,audio/*',endpoint:'/api/dubbing/voiceover',field:'video'},
-      {id:'dub_clone',icon:'🧬',label:'Klonla',type:'file',accept:'audio/*',endpoint:'/api/dubbing/clone-voice',field:'audio'},
-      {id:'dub_translate',icon:'🌍',label:'Ceviri',type:'file',accept:'video/*',endpoint:'/api/dubbing/translate',field:'video'},
-      {id:'dub_lipsync',icon:'👄',label:'Lip-Sync',type:'file',accept:'video/*',endpoint:'/api/dubbing/lip-sync',field:'video'},
-      {id:'dub_clean',icon:'🔇',label:'Temizle',type:'file',accept:'video/*,audio/*',endpoint:'/api/dubbing/denoise',field:'audio'},
-      {id:'dub_separate',icon:'🔊',label:'Ayir',type:'file',accept:'audio/*',endpoint:'/api/dubbing/separate',field:'audio'},
-      {id:'dub_music',icon:'🎼',label:'Muzik Uret',type:'action',endpoint:'/api/dubbing/generate-music'},
-      {id:'dub_sfx',icon:'💥',label:'SFX',type:'file',accept:'video/*',endpoint:'/api/dubbing/add-sfx',field:'video'},
-      {id:'dub_podcast',icon:'🎧',label:'Podcast',type:'file',accept:'audio/*',endpoint:'/api/dubbing/podcast-edit',field:'audio'},
-      {id:'dub_transcribe',icon:'📄',label:'Transkript',type:'file',accept:'audio/*,video/*',endpoint:'/api/dubbing/transcribe',field:'audio'},
-      {id:'dub_pitch',icon:'🎚️',label:'Pitch',type:'file',accept:'audio/*',endpoint:'/api/dubbing/pitch-tempo',field:'audio'},
-      {id:'dub_emotion',icon:'😊',label:'Duygu',type:'file',accept:'audio/*',endpoint:'/api/dubbing/emotion',field:'audio'},
-    ]
+    sections:[
+      { title:'Seslendirme', color:'#8B5CF6', cmds:[
+        {id:'dub_voiceover',icon:'🗣️',label:'Seslendir'},{id:'dub_clone',icon:'🧬',label:'Klonla'},
+        {id:'dub_translate',icon:'🌍',label:'Ceviri'},{id:'dub_lipsync',icon:'👄',label:'Lip-Sync'},
+        {id:'dub_emotion',icon:'😊',label:'Duygu Tonu'},
+      ]},
+      { title:'Ses Isleme', color:'#06B6D4', cmds:[
+        {id:'dub_clean',icon:'🔇',label:'Temizle'},{id:'dub_separate',icon:'🔊',label:'Ayir'},
+        {id:'dub_enhance',icon:'📢',label:'Iyilestir'},{id:'dub_pitch',icon:'🎚️',label:'Pitch'},
+      ]},
+      { title:'Muzik & Efekt', color:'#EC4899', cmds:[
+        {id:'dub_music',icon:'🎼',label:'Muzik Uret',isAction:true},{id:'dub_jingle',icon:'🔔',label:'Jingle',isAction:true},
+        {id:'dub_sfx',icon:'💥',label:'SFX'},{id:'dub_remix',icon:'🎛️',label:'Remix'},
+      ]},
+      { title:'Diger', color:'#10B981', cmds:[
+        {id:'dub_podcast',icon:'🎧',label:'Podcast'},{id:'dub_transcribe',icon:'📄',label:'Transkript'},
+        {id:'dub_audiogram',icon:'📊',label:'Audiogram'},
+      ]},
+    ],
+    defaultEndpoint:'/api/dubbing/voiceover', defaultAccept:'video/*,audio/*', defaultField:'video'
   },
   {
-    id:'eticaret', label:'E-Ticaret', icon:'🛍️', color:'#10B981',
+    id:'eticaret', label:'E-Ticaret', icon:'🛍️', color:'#10B981', tabColor:'#10B981',
     gradient:'linear-gradient(135deg,#10B981,#059669)',
-    commands:[
-      {id:'et_removebg',icon:'🖼️',label:'BG Sil',type:'file',accept:'image/*',endpoint:'/api/pro/remove-bg',field:'image'},
-      {id:'et_changebg',icon:'🌄',label:'BG Degis',type:'file',accept:'image/*',endpoint:'/api/pro/change-product-bg',field:'image'},
-      {id:'et_enhance',icon:'💎',label:'Iyilestir',type:'file',accept:'image/*',endpoint:'/api/pro/enhance',field:'image'},
-      {id:'et_product',icon:'📸',label:'Urun Foto',type:'file',accept:'image/*',endpoint:'/api/pro/product-photo',field:'image'},
-      {id:'et_mockup',icon:'👕',label:'Mockup',type:'file',accept:'image/*',endpoint:'/api/pro/mockup',field:'image'},
-      {id:'et_tryon',icon:'👗',label:'Giydirme',type:'file',accept:'image/*',endpoint:'/api/pro/virtual-tryon',field:'image'},
-      {id:'et_catalog',icon:'📋',label:'Katalog',type:'file',accept:'image/*',endpoint:'/api/pro/catalog',field:'images'},
-      {id:'et_spin',icon:'🔄',label:'360 Urun',type:'file',accept:'image/*',endpoint:'/api/pro/product-spin',field:'images'},
-      {id:'et_watermark',icon:'🏷️',label:'Damga',type:'file',accept:'image/*',endpoint:'/api/pro/watermark',field:'image'},
-      {id:'et_banner',icon:'🎨',label:'Banner',type:'file',accept:'image/*',endpoint:'/api/pro/banner',field:'image'},
-      {id:'et_carousel',icon:'🎠',label:'Carousel',type:'file',accept:'image/*',endpoint:'/api/pro/carousel',field:'images'},
-      {id:'et_video',icon:'🎬',label:'Urun Video',type:'file',accept:'image/*',endpoint:'/api/pro/product-video',field:'images'},
-    ]
+    sections:[
+      { title:'Gorsel Isleme', color:'#10B981', cmds:[
+        {id:'et_removebg',icon:'🖼️',label:'BG Sil'},{id:'et_changebg',icon:'🌄',label:'BG Degis'},
+        {id:'et_enhance',icon:'💎',label:'Iyilestir'},{id:'et_retouch',icon:'🪄',label:'Retouch'},
+        {id:'et_shadow',icon:'💡',label:'Golge'},
+      ]},
+      { title:'Urun Cekim', color:'#3B82F6', cmds:[
+        {id:'et_product',icon:'📸',label:'Urun Foto'},{id:'et_mockup',icon:'👕',label:'Mockup'},
+        {id:'et_tryon',icon:'👗',label:'Giydirme'},{id:'et_flat',icon:'📏',label:'Flat Lay'},
+        {id:'et_multiangle',icon:'📐',label:'Coklu Aci'},
+      ]},
+      { title:'Katalog & Toplu', color:'#EAB308', cmds:[
+        {id:'et_catalog',icon:'📋',label:'Katalog'},{id:'et_spin',icon:'🔄',label:'360 Urun'},
+        {id:'et_batch',icon:'📚',label:'Toplu Isle'},{id:'et_compare',icon:'🔁',label:'Karsilastir'},
+      ]},
+      { title:'Pazarlama', color:'#EC4899', cmds:[
+        {id:'et_banner',icon:'🎨',label:'Banner'},{id:'et_story',icon:'📱',label:'Story'},
+        {id:'et_carousel',icon:'🎠',label:'Carousel'},{id:'et_video',icon:'🎬',label:'Urun Video'},
+        {id:'et_watermark',icon:'🏷️',label:'Damga'},
+      ]},
+    ],
+    defaultEndpoint:'/api/pro/remove-bg', defaultAccept:'image/*', defaultField:'image'
   },
   {
-    id:'otonom', label:'Otonom', icon:'🤖', color:'#EAB308',
+    id:'otonom', label:'Otonom', icon:'🤖', color:'#EAB308', tabColor:'#EAB308',
     gradient:'linear-gradient(135deg,#EAB308,#CA8A04)',
-    commands:[
-      {id:'oto_auto',icon:'🚀',label:'Otomatik',type:'action',endpoint:'/api/otonom/auto-produce'},
-      {id:'oto_batch',icon:'📚',label:'Toplu',type:'file',accept:'video/*,image/*,audio/*',endpoint:'/api/otonom/batch',field:'files'},
-      {id:'oto_schedule',icon:'📅',label:'Zamanla',type:'action',endpoint:'/api/otonom/schedule'},
-      {id:'oto_plan',icon:'🧠',label:'Planla',type:'action',endpoint:'/api/otonom/content-plan'},
-      {id:'oto_publish',icon:'📤',label:'Yayinla',type:'action',endpoint:'/api/otonom/publish'},
-      {id:'oto_multipost',icon:'📡',label:'Coklu',type:'action',endpoint:'/api/otonom/multi-publish'},
-      {id:'oto_trend',icon:'📊',label:'Trend',type:'action',endpoint:'/api/otonom/trend-analysis'},
-      {id:'oto_report',icon:'📈',label:'Rapor',type:'action',endpoint:'/api/otonom/performance'},
-      {id:'oto_competitor',icon:'🔍',label:'Rakip',type:'action',endpoint:'/api/otonom/competitor'},
-      {id:'oto_ab',icon:'🔬',label:'A/B Test',type:'file',accept:'video/*,image/*',endpoint:'/api/otonom/ab-test',field:'files'},
-      {id:'oto_campaign',icon:'🎯',label:'Kampanya',type:'action',endpoint:'/api/otonom/campaign'},
-      {id:'oto_revenue',icon:'💰',label:'Gelir',type:'action',endpoint:'/api/otonom/revenue'},
-      {id:'oto_queue',icon:'📋',label:'Kuyruk',type:'action',endpoint:'/api/otonom/queue-manage'},
-      {id:'oto_settings',icon:'⚙️',label:'Ayarlar',type:'action',endpoint:'/api/otonom/settings'},
-      {id:'oto_hook',icon:'🪝',label:'Hook',type:'file',accept:'video/*',endpoint:'/api/otonom/create-hook',field:'video'},
-      {id:'oto_optimize',icon:'⚡',label:'Optimize',type:'action',endpoint:'/api/otonom/optimize-content'},
-    ]
+    sections:[
+      { title:'Otomatik Uretim', color:'#EAB308', cmds:[
+        {id:'oto_auto',icon:'🚀',label:'Tam Oto',isAction:true},{id:'oto_batch',icon:'📚',label:'Toplu'},
+        {id:'oto_template',icon:'🎭',label:'Sablon',isAction:true},{id:'oto_series',icon:'📺',label:'Seri',isAction:true},
+        {id:'oto_remix',icon:'🔄',label:'Yenile'},
+      ]},
+      { title:'Planlama', color:'#3B82F6', cmds:[
+        {id:'oto_schedule',icon:'📅',label:'Zamanla',isAction:true},{id:'oto_plan',icon:'🧠',label:'Planla',isAction:true},
+        {id:'oto_calendar',icon:'🗓️',label:'Takvim',isAction:true},{id:'oto_besttime',icon:'⏰',label:'En Iyi Saat',isAction:true},
+      ]},
+      { title:'Yayinlama', color:'#22C55E', cmds:[
+        {id:'oto_publish',icon:'📤',label:'Yayinla',isAction:true},{id:'oto_multipost',icon:'📡',label:'Coklu',isAction:true},
+        {id:'oto_repost',icon:'♻️',label:'Tekrar',isAction:true},{id:'oto_crosspost',icon:'🔗',label:'Cross',isAction:true},
+      ]},
+      { title:'Analiz', color:'#8B5CF6', cmds:[
+        {id:'oto_trend',icon:'📊',label:'Trend',isAction:true},{id:'oto_report',icon:'📈',label:'Rapor',isAction:true},
+        {id:'oto_competitor',icon:'🔍',label:'Rakip',isAction:true},{id:'oto_audience',icon:'👥',label:'Kitle',isAction:true},
+        {id:'oto_sentiment',icon:'💭',label:'Yorum',isAction:true},{id:'oto_hashtag',icon:'#️⃣',label:'Hashtag',isAction:true},
+      ]},
+      { title:'Test & Optimizasyon', color:'#F97316', cmds:[
+        {id:'oto_ab',icon:'🔬',label:'A/B Test'},{id:'oto_optimize',icon:'⚡',label:'Optimize',isAction:true},
+        {id:'oto_hook',icon:'🪝',label:'Hook'},
+      ]},
+      { title:'Kampanya & Gelir', color:'#EC4899', cmds:[
+        {id:'oto_campaign',icon:'🎯',label:'Kampanya',isAction:true},{id:'oto_funnel',icon:'🔻',label:'Huni',isAction:true},
+        {id:'oto_revenue',icon:'💰',label:'Gelir',isAction:true},
+      ]},
+      { title:'Sistem', color:'#666', cmds:[
+        {id:'oto_queue',icon:'📋',label:'Kuyruk',isAction:true},{id:'oto_logs',icon:'📜',label:'Gunluk',isAction:true},
+        {id:'oto_settings',icon:'⚙️',label:'Ayarlar',isAction:true},
+      ]},
+    ],
+    defaultEndpoint:'/api/otonom/auto-produce', defaultAccept:'video/*,image/*', defaultField:'files'
   },
 ];
 
-// ════════════════════════════════════════
-//  NOTIFICATION LABELS
-// ════════════════════════════════════════
-const NOTIF_LABELS = {
-  pro:'Videon hazir! 🎬',
-  '360':'360° videon hazir! 🌐',
-  dublaj:'Dublajin hazir! 🎙️',
-  eticaret:'Urunun hazir! 🛍️',
-  otonom:'Islemin tamamlandi! 🤖',
-};
+const NOTIF = {pro:'Videon hazir! 🎬','360':'360 videon hazir! 🌐',dublaj:'Dublajin hazir! 🎙️',eticaret:'Urunun hazir! 🛍️',otonom:'Islemin bitti! 🤖'};
 
-// ════════════════════════════════════════
-//  STATE
-// ════════════════════════════════════════
+// ── STATE ──
 let plan = localStorage.getItem('fenix_plan') || 'free';
 let credits = parseInt(localStorage.getItem('fenix_otonom_credits') || '15');
 let trialCredits = parseInt(localStorage.getItem('fenix_trial_credits') ?? TRIAL_MAX);
 let jobs = JSON.parse(localStorage.getItem('fenix_jobs') || '[]');
-let activeCatId = 'pro';
-let activeUploadCmd = null;
+let activeCat = 'pro';
+let activeUpload = null;
 
-// ════════════════════════════════════════
-//  CARD LOGIC
-// ════════════════════════════════════════
-function getOwnedCards() {
-  if (plan === 'master' || plan === 'otonom') return ALL_IDS;
-  if (plan === 'pro') return ['pro'];
-  if (plan === '360') return ['360'];
-  if (plan === 'dublaj') return ['dublaj'];
-  if (plan === 'eticaret') return ['eticaret'];
+// ── CARD LOGIC ──
+function getOwned() {
+  if (plan==='master'||plan==='otonom') return ALL_IDS;
+  if (plan==='pro') return ['pro'];
+  if (plan==='360') return ['360'];
+  if (plan==='dublaj') return ['dublaj'];
+  if (plan==='eticaret') return ['eticaret'];
   return [];
 }
-function getActiveCards() {
-  if (plan === 'master' || plan === 'otonom') return ALL_IDS;
+function getActive() {
+  if (plan==='master'||plan==='otonom') return ALL_IDS;
   if (trialCredits > 0) return ALL_IDS;
-  return getOwnedCards();
+  return getOwned();
 }
-function isMaster() { return plan === 'master' || plan === 'otonom'; }
+function isMaster() { return plan==='master'||plan==='otonom'; }
 function isTrialActive() { return trialCredits > 0 && !isMaster(); }
 
-// ════════════════════════════════════════
-//  PUSH NOTIFICATION
-// ════════════════════════════════════════
-function requestNotifPermission() {
-  if ('Notification' in window && Notification.permission === 'default') {
-    Notification.requestPermission();
-  }
-}
-
-function sendNotification(catId, fileName) {
+// ── NOTIFICATIONS ──
+function reqNotif() { if ('Notification' in window && Notification.permission==='default') Notification.requestPermission(); }
+function sendNotif(catId, name) {
   if (!('Notification' in window) || Notification.permission !== 'granted') return;
-  const title = NOTIF_LABELS[catId] || 'Islemin hazir!';
-  const body = fileName ? fileName : 'Fenix islemi tamamladi.';
   try {
-    new Notification(title, {
-      body: body,
-      icon: '/fenix-icon-192.png',
-      badge: '/fenix-icon-192.png',
-      tag: 'fenix-job-done',
-      vibrate: [200, 100, 200],
-    });
+    new Notification(NOTIF[catId]||'Hazir!', { body:name||'Fenix tamamladi.', icon:'/fenix-icon-192.png', badge:'/fenix-icon-192.png', tag:'fenix-done', vibrate:[200,100,200] });
   } catch(e) {
-    // SW fallback
-    if (navigator.serviceWorker && navigator.serviceWorker.ready) {
-      navigator.serviceWorker.ready.then(reg => {
-        reg.showNotification(title, { body, icon: '/fenix-icon-192.png', badge: '/fenix-icon-192.png', tag: 'fenix-job-done', vibrate: [200, 100, 200] });
-      });
-    }
+    if (navigator.serviceWorker?.ready) navigator.serviceWorker.ready.then(r => r.showNotification(NOTIF[catId]||'Hazir!',{body:name||'',icon:'/fenix-icon-192.png'}));
   }
 }
 
-// ════════════════════════════════════════
-//  INIT
-// ════════════════════════════════════════
+// ── INIT ──
 (async function init() {
-  // QR token
-  const params = new URLSearchParams(window.location.search);
-  const token = params.get('t');
-  if (token && token.length >= 8) {
-    try {
-      const res = await fetch(`${API}/api/card/${token}`);
-      if (res.ok) {
-        const data = await res.json();
-        plan = data.plan || 'free';
-        credits = data.credits || 15;
-        localStorage.setItem('fenix_plan', plan);
-        localStorage.setItem('fenix_otonom_credits', credits);
-      }
-    } catch(e) {}
-  }
-  if (localStorage.getItem('fenix_trial_credits') === null && plan !== 'free') {
-    trialCredits = TRIAL_MAX;
-    localStorage.setItem('fenix_trial_credits', trialCredits);
-  }
-  // Clear old format
-  try {
-    const old = JSON.parse(localStorage.getItem('fenix_jobs') || '[]');
-    if (old.length > 0 && old[0].shortcutId) { localStorage.removeItem('fenix_jobs'); jobs = []; }
-  } catch(e) { localStorage.removeItem('fenix_jobs'); jobs = []; }
-
-  // Request notification permission
-  requestNotifPermission();
-
-  // Hide loading
-  setTimeout(() => {
-    const ls = document.getElementById('loadingScreen');
-    if (ls) { ls.classList.add('hide'); setTimeout(() => ls.remove(), 400); }
-  }, 500);
-
-  try { render(); } catch(e) {
-    document.getElementById('shortcutsArea').innerHTML = '<div style="padding:16px;color:var(--orange);font-size:12px">Hata: '+e.message+'</div>';
-  }
+  const t = new URLSearchParams(window.location.search).get('t');
+  if (t && t.length >= 8) { try { const r = await fetch(`${API}/api/card/${t}`); if(r.ok){const d=await r.json();plan=d.plan||'free';credits=d.credits||15;localStorage.setItem('fenix_plan',plan);localStorage.setItem('fenix_otonom_credits',credits)} } catch(e){} }
+  if (!localStorage.getItem('fenix_trial_credits') && plan !== 'free') { trialCredits=TRIAL_MAX; localStorage.setItem('fenix_trial_credits',trialCredits); }
+  try { const o=JSON.parse(localStorage.getItem('fenix_jobs')||'[]'); if(o.length>0&&o[0].shortcutId){localStorage.removeItem('fenix_jobs');jobs=[]} } catch(e){localStorage.removeItem('fenix_jobs');jobs=[]}
+  reqNotif();
+  setTimeout(()=>{const l=document.getElementById('loadingScreen');if(l){l.classList.add('hide');setTimeout(()=>l.remove(),400)}},500);
+  try{render()}catch(e){document.getElementById('contentArea').innerHTML='<div style="padding:20px;color:var(--orange)">'+e.message+'</div>'}
 })();
 
-// ════════════════════════════════════════
-//  RENDER
-// ════════════════════════════════════════
-function render() {
-  try {
-    renderCredits();
-    renderTabs();
-    renderShortcuts();
-    renderJobs();
-  } catch(e) {
-    console.error('Render:', e);
-  }
-}
+// ── RENDER ──
+function render() { try{renderCredits();renderTabs();renderContent();renderJobs()}catch(e){console.error(e)} }
 
 function renderCredits() {
-  const el = document.getElementById('creditNum');
-  const badge = document.getElementById('creditBadge');
-  el.textContent = credits;
-  badge.className = 'h-credit' + (credits <= 3 ? ' low' : '');
+  document.getElementById('creditNum').textContent = credits;
+  document.getElementById('creditBadge').className = 'h-credit' + (credits<=3?' low':'');
 }
 
 function renderTabs() {
-  const container = document.getElementById('catTabs');
-  const active = getActiveCards();
-  container.innerHTML = CATEGORIES.map(cat => {
-    const unlocked = active.includes(cat.id);
-    return `<div class="cat-tab ${activeCatId === cat.id ? 'active' : ''} ${unlocked ? '' : ''}" onclick="${unlocked ? `switchCat('${cat.id}')` : `showToast('${cat.id.toUpperCase()} karti gerekli','error')`}" style="${!unlocked ? 'opacity:0.3' : ''}">
-      <span class="tab-icon">${cat.icon}</span>${cat.label}
+  const active = getActive();
+  document.getElementById('tabsArea').innerHTML = CATEGORIES.map(c => {
+    const ok = active.includes(c.id);
+    return `<div class="tab ${activeCat===c.id?'active':''} ${ok?'':'locked'}" style="--tab-color:${c.tabColor}" onclick="${ok?`switchCat('${c.id}')`:`showToast('${c.label} karti gerekli','error')`}">
+      <span class="t-icon">${c.icon}</span><span class="t-label">${c.label}</span>
     </div>`;
   }).join('');
 }
 
-function renderShortcuts() {
-  const cat = CATEGORIES.find(c => c.id === activeCatId);
-  const active = getActiveCards();
-  const unlocked = active.includes(cat.id);
-  const container = document.getElementById('shortcutsArea');
+function renderContent() {
+  const cat = CATEGORIES.find(c=>c.id===activeCat);
+  const active = getActive();
+  const el = document.getElementById('contentArea');
+  if (!active.includes(cat.id)) { el.innerHTML='<div style="padding:40px;text-align:center;color:var(--text5)">🔒 Kart gerekli</div>'; return; }
 
-  if (!unlocked) {
-    container.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text5);font-size:11px">🔒 Bu kategori icin kart gerekli</div>';
-    return;
-  }
-
-  container.innerHTML = '<div class="sc-grid">' + cat.commands.map(cmd =>
-    `<div class="sc-btn" onclick="tapCommand('${cat.id}','${cmd.id}')">
-      <span class="sc-i">${cmd.icon}</span>
-      <div class="sc-l">${cmd.label}</div>
-    </div>`
-  ).join('') + '</div>';
+  el.innerHTML = cat.sections.map(sec => `
+    <div class="section">
+      <div class="sec-header" style="--sec-color:${sec.color}">
+        <div class="sec-line"></div>
+        <span class="sec-title">${sec.title}</span>
+        <div class="sec-line-r"></div>
+      </div>
+      <div class="cmd-grid">
+        ${sec.cmds.map(cmd => `
+          <div class="cmd" onclick="tapCmd('${cat.id}','${cmd.id}',${cmd.isAction?'true':'false'})">
+            <span class="c-icon">${cmd.icon}</span>
+            <div class="c-label">${cmd.label}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
 }
 
 function renderJobs() {
-  const container = document.getElementById('jobsArea');
-  const activeJobs = jobs.filter(j => ['processing','queued','uploading'].includes(j.status));
-  const doneJobs = jobs.filter(j => j.status === 'done' || j.status === 'error').slice(0, 3);
-  const show = [...activeJobs, ...doneJobs];
-
-  if (show.length === 0) { container.innerHTML = ''; return; }
-
-  container.innerHTML = show.map(job => {
-    const cat = CATEGORIES.find(c => c.id === job.categoryId) || CATEGORIES[0];
-    const cmd = cat.commands.find(c => c.id === job.commandId) || cat.commands[0];
-    const isActive = ['processing','queued','uploading'].includes(job.status);
-    const statusText = job.status === 'done' ? 'HAZIR' : job.status === 'error' ? 'HATA' : job.status === 'uploading' ? 'YUKLUYOR' : job.status === 'queued' ? 'SIRADA' : '%'+job.progress;
-    const statusCls = job.status === 'done' ? 'done' : job.status === 'error' ? 'error' : 'pending';
-
-    return `<div class="job-row ${job.status === 'done' ? 'done' : ''}">
-      <span class="job-icon">${cmd.icon}</span>
-      <div class="job-info">
-        <div class="job-name">${job.fileName || cmd.label}</div>
-        <div class="job-meta">${cat.label} · ${formatTime(Date.now() - job.startedAt)}</div>
-        ${isActive ? `<div class="job-bar"><div class="job-bar-fill" style="background:${cat.gradient};width:${job.status==='uploading'?10:job.status==='queued'?5:job.progress}%"></div></div>` : ''}
+  const el = document.getElementById('jobsArea');
+  const show = [...jobs.filter(j=>['processing','queued','uploading'].includes(j.status)), ...jobs.filter(j=>j.status==='done'||j.status==='error').slice(0,3)];
+  if (!show.length) { el.innerHTML=''; return; }
+  el.innerHTML = show.map(job => {
+    const cat = CATEGORIES.find(c=>c.id===job.catId)||CATEGORIES[0];
+    const isAct = ['processing','queued','uploading'].includes(job.status);
+    const st = job.status==='done'?'HAZIR':job.status==='error'?'HATA':job.status==='uploading'?'YUKLUYOR':job.status==='queued'?'SIRADA':'%'+job.progress;
+    const sc = job.status==='done'?'done':job.status==='error'?'error':'pending';
+    return `<div class="job ${job.status==='done'?'done':''}">
+      <span class="j-icon">${job.icon||'🔥'}</span>
+      <div class="j-info">
+        <div class="j-name">${job.name||job.cmdId}</div>
+        <div class="j-meta">${cat.label} · ${fmtTime(Date.now()-job.ts)}</div>
+        ${isAct?`<div class="j-bar"><div class="j-bar-fill" style="background:${cat.gradient};width:${job.status==='uploading'?10:job.status==='queued'?5:job.progress}%"></div></div>`:''}
       </div>
-      <span class="job-status ${statusCls}">${statusText}</span>
-      ${job.status === 'done' && job.outputUrl ? `<a href="${job.outputUrl}" download class="job-dl">INDIR</a>` : ''}
+      <span class="j-status ${sc}">${st}</span>
+      ${job.status==='done'&&job.url?`<a href="${job.url}" download class="j-dl">INDIR</a>`:''}
     </div>`;
   }).join('');
 }
 
-// ════════════════════════════════════════
-//  ACTIONS
-// ════════════════════════════════════════
-function switchCat(id) {
-  activeCatId = id;
-  render();
+// ── ACTIONS ──
+function switchCat(id) { activeCat=id; render(); }
+
+function tapCmd(catId, cmdId, isAction) {
+  if (credits<=0) { showToast('Kredi tukendi!','error'); return; }
+  const cat = CATEGORIES.find(c=>c.id===catId);
+  const cmd = findCmd(cat, cmdId);
+  if (isAction) { execAction(catId, cmdId, cmd); }
+  else {
+    activeUpload = { catId, cmdId, accept: cat.defaultAccept, field: cat.defaultField, icon: cmd?.icon };
+    const inp = document.getElementById('fileInput');
+    inp.accept = cat.defaultAccept;
+    inp.click();
+  }
 }
 
-function tapCommand(catId, cmdId) {
-  if (credits <= 0) { showToast('Kredi tukendi!', 'error'); return; }
-  const cat = CATEGORIES.find(c => c.id === catId);
-  const cmd = cat.commands.find(c => c.id === cmdId);
-
-  if (cmd.type === 'file') {
-    activeUploadCmd = { catId, cmdId, accept: cmd.accept, endpoint: cmd.endpoint, field: cmd.field };
-    const input = document.getElementById('fileInput');
-    input.accept = cmd.accept;
-    input.click();
-  } else {
-    executeAction(catId, cmdId, cmd.endpoint);
-  }
+function findCmd(cat, cmdId) {
+  for (const sec of cat.sections) { const c = sec.cmds.find(x=>x.id===cmdId); if(c) return c; }
+  return null;
 }
 
 function pickFile() {
-  // Generic file pick — uses active category's first file command
-  const cat = CATEGORIES.find(c => c.id === activeCatId);
-  const cmd = cat.commands.find(c => c.type === 'file');
-  if (cmd) tapCommand(cat.id, cmd.id);
-  else showToast('Dosya gerektiren komut yok', 'error');
+  const cat = CATEGORIES.find(c=>c.id===activeCat);
+  const inp = document.getElementById('fileInput');
+  activeUpload = { catId:cat.id, cmdId:'upload', accept:cat.defaultAccept, field:cat.defaultField, icon:'📎' };
+  inp.accept = cat.defaultAccept;
+  inp.click();
 }
 
 function sendMessage() {
-  const input = document.getElementById('msgInput');
-  const msg = input.value.trim();
+  const inp = document.getElementById('msgInput');
+  const msg = inp.value.trim();
   if (!msg) return;
-  input.value = '';
-
-  // AI command via message
-  const jobId = crypto.randomUUID();
-  jobs.unshift({ id: jobId, categoryId: activeCatId, commandId: 'msg', fileName: null, status: 'queued', progress: 0, startedAt: Date.now(), message: msg });
-  saveJobs();
-  render();
-
-  fetch(`${API}/api/otonom/command`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ plan, command: msg, category: activeCatId })
-  }).then(r => r.json()).then(data => {
-    updateJob(jobId, { id: data.jobId || jobId, status: data.status === 'done' ? 'done' : 'processing', progress: data.progress || 0, outputUrl: data.downloadUrl });
-    if (data.status === 'done') sendNotification(activeCatId, msg);
-    deductCredit(activeCatId);
-  }).catch(err => {
-    updateJob(jobId, { status: 'error', error: err.message || 'Hata' });
-  });
-
-  showToast('Komut gonderildi', 'ok');
+  inp.value = '';
+  const jid = crypto.randomUUID();
+  jobs.unshift({id:jid,catId:activeCat,cmdId:'msg',name:msg,icon:'💬',status:'queued',progress:0,ts:Date.now()});
+  saveJobs(); render();
+  fetch(`${API}/api/otonom/command`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan,command:msg,category:activeCat})})
+    .then(r=>r.json()).then(d=>{updJob(jid,{id:d.jobId||jid,status:d.status==='done'?'done':'processing',progress:d.progress||0,url:d.downloadUrl});deduct(activeCat)})
+    .catch(e=>updJob(jid,{status:'error',error:e.message}));
+  showToast('Komut gonderildi','ok');
 }
 
-async function executeAction(catId, cmdId, endpoint) {
-  const cat = CATEGORIES.find(c => c.id === catId);
-  const cmd = cat.commands.find(c => c.id === cmdId);
-  const jobId = crypto.randomUUID();
-
-  jobs.unshift({ id: jobId, categoryId: catId, commandId: cmdId, fileName: null, status: 'queued', progress: 0, startedAt: Date.now() });
-  saveJobs();
-  render();
-
+async function execAction(catId, cmdId, cmd) {
+  const cat = CATEGORIES.find(c=>c.id===catId);
+  const jid = crypto.randomUUID();
+  jobs.unshift({id:jid,catId,cmdId,name:cmd?.label||cmdId,icon:cmd?.icon||'🤖',status:'queued',progress:0,ts:Date.now()});
+  saveJobs(); render();
   try {
-    const res = await fetch(`${API}${endpoint}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan, action: cmdId })
-    });
-    if (!res.ok) throw new Error('Basarisiz');
-    const data = await res.json();
-    updateJob(jobId, { id: data.jobId || jobId, status: data.status === 'done' ? 'done' : 'processing', progress: data.progress || 0, outputUrl: data.downloadUrl });
-    if (data.status === 'done') sendNotification(catId, cmd.label);
-    deductCredit(catId);
-    showToast('Kuyruga alindi', 'ok');
-  } catch(err) {
-    updateJob(jobId, { status: 'error', error: err.message });
-    showToast(err.message, 'error');
-  }
-  render();
+    const r = await fetch(`${API}${cat.defaultEndpoint}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan,action:cmdId})});
+    if(!r.ok) throw new Error('Basarisiz');
+    const d = await r.json();
+    updJob(jid,{id:d.jobId||jid,status:d.status==='done'?'done':'processing',progress:d.progress||0,url:d.downloadUrl});
+    if(d.status==='done') sendNotif(catId,cmd?.label);
+    deduct(catId); showToast('Kuyruga alindi','ok');
+  } catch(e) { updJob(jid,{status:'error',error:e.message}); showToast(e.message,'error'); }
 }
 
 document.getElementById('fileInput').addEventListener('change', async function(e) {
   const file = e.target.files?.[0];
-  if (!file || !activeUploadCmd) return;
-
-  const { catId, cmdId, endpoint, field } = activeUploadCmd;
-  const cat = CATEGORIES.find(c => c.id === catId);
-  const jobId = crypto.randomUUID();
-
-  jobs.unshift({ id: jobId, categoryId: catId, commandId: cmdId, fileName: file.name, status: 'uploading', progress: 0, startedAt: Date.now() });
-  saveJobs();
-  render();
-
+  if (!file || !activeUpload) return;
+  const {catId,cmdId,field,icon} = activeUpload;
+  const cat = CATEGORIES.find(c=>c.id===catId);
+  const jid = crypto.randomUUID();
+  jobs.unshift({id:jid,catId,cmdId,name:file.name,icon:icon||'📄',status:'uploading',progress:0,ts:Date.now()});
+  saveJobs(); render();
   try {
-    const fd = new FormData();
-    fd.append(field, file, file.name);
-
-    const directEP = ['/api/pro/stitch','/api/pro/remove-bg','/api/pro/panorama','/api/pro/product-photo','/api/pro/catalog','/api/pro/product-spin','/api/pro/mockup','/api/pro/watermark','/api/pro/enhance','/api/pro/multi-angle','/api/pro/banner','/api/pro/change-product-bg'];
-    if (directEP.includes(endpoint)) {
-      const res = await fetch(`${API}${endpoint}`, { method: 'POST', body: fd });
-      if (!res.ok) throw new Error('Basarisiz');
-      const data = await res.json();
-      updateJob(jobId, { id: data.jobId||data.id||jobId, status: data.downloadUrl ? 'done' : 'queued', progress: data.downloadUrl ? 100 : 0, outputUrl: data.downloadUrl });
-      if (data.downloadUrl) sendNotification(catId, file.name);
-    } else {
-      const upRes = await fetch(`${API}/api/pro/upload`, { method: 'POST', body: fd });
-      if (!upRes.ok) throw new Error('Yukleme basarisiz');
-      const { fileId } = await upRes.json();
-      const body = { fileId, action: cmdId };
-      if (catId === 'dublaj') { body.targetLang = 'tr'; body.sourceLang = 'tr'; }
-      const jobRes = await fetch(`${API}${endpoint}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
-      if (!jobRes.ok) throw new Error('Basarisiz');
-      const jobData = await jobRes.json();
-      updateJob(jobId, { id: jobData.jobId||jobData.id||jobId, status: 'queued', progress: 0 });
-    }
-    deductCredit(catId);
-    showToast('Kuyruga alindi', 'ok');
-  } catch(err) {
-    updateJob(jobId, { status: 'error', error: err.message });
-    showToast(err.message, 'error');
-  }
-
-  activeUploadCmd = null;
-  this.value = '';
-  render();
+    const fd = new FormData(); fd.append(field, file, file.name);
+    const r = await fetch(`${API}${cat.defaultEndpoint}`,{method:'POST',body:fd});
+    if(!r.ok) throw new Error('Basarisiz');
+    const d = await r.json();
+    updJob(jid,{id:d.jobId||d.id||jid,status:d.downloadUrl?'done':'queued',progress:d.downloadUrl?100:0,url:d.downloadUrl});
+    if(d.downloadUrl) sendNotif(catId,file.name);
+    deduct(catId); showToast('Kuyruga alindi','ok');
+  } catch(e) { updJob(jid,{status:'error',error:e.message}); showToast(e.message,'error'); }
+  activeUpload=null; this.value=''; render();
 });
 
-// Enter key
-document.getElementById('msgInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { e.preventDefault(); sendMessage(); }
-});
+document.getElementById('msgInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();sendMessage()}});
 
-// ════════════════════════════════════════
-//  HELPERS
-// ════════════════════════════════════════
-function deductCredit(catId) {
-  const owned = getOwnedCards();
-  if (isTrialActive() && !owned.includes(catId)) {
-    trialCredits--;
-    localStorage.setItem('fenix_trial_credits', trialCredits);
-  } else {
-    credits--;
-    localStorage.setItem('fenix_otonom_credits', credits);
-  }
+// ── HELPERS ──
+function deduct(catId) {
+  if (isTrialActive() && !getOwned().includes(catId)) { trialCredits--; localStorage.setItem('fenix_trial_credits',trialCredits); }
+  else { credits--; localStorage.setItem('fenix_otonom_credits',credits); }
 }
-
-function updateJob(id, updates) {
-  const prev = jobs.find(j => j.id === id);
-  jobs = jobs.map(j => j.id === id ? { ...j, ...updates } : j);
+function updJob(id, u) {
+  const prev = jobs.find(j=>j.id===id);
+  jobs = jobs.map(j=>j.id===id?{...j,...u}:j);
   saveJobs();
-  // Send notification if just became done
-  if (updates.status === 'done' && prev && prev.status !== 'done') {
-    sendNotification(prev.categoryId, prev.fileName || '');
-  }
+  if (u.status==='done' && prev?.status!=='done') sendNotif(prev?.catId||'', prev?.name||'');
   render();
 }
-
-function saveJobs() {
-  localStorage.setItem('fenix_jobs', JSON.stringify(jobs.slice(0, 50)));
-}
-
-function formatTime(ms) {
-  const s = Math.floor(ms / 1000);
-  if (s < 60) return s + 'sn';
-  if (s < 3600) return Math.floor(s/60) + 'dk';
-  return Math.floor(s/3600) + 'sa';
-}
-
-function showToast(msg, type) {
-  const t = document.createElement('div');
-  t.className = 'toast ' + (type || 'ok');
-  t.textContent = msg;
+function saveJobs() { localStorage.setItem('fenix_jobs', JSON.stringify(jobs.slice(0,50))); }
+function fmtTime(ms) { const s=Math.floor(ms/1000); return s<60?s+'sn':s<3600?Math.floor(s/60)+'dk':Math.floor(s/3600)+'sa'; }
+function showToast(msg,type) {
+  const t=document.createElement('div');t.className='toast '+(type||'ok');t.textContent=msg;
   document.body.appendChild(t);
-  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, 2000);
+  setTimeout(()=>{t.style.opacity='0';t.style.transition='opacity .3s';setTimeout(()=>t.remove(),300)},2000);
 }
 
-// ════════════════════════════════════════
-//  POLLING
-// ════════════════════════════════════════
-setInterval(async () => {
-  const active = jobs.filter(j => j.status === 'processing' || j.status === 'queued');
-  if (!active.length) return;
-  for (const job of active) {
-    try {
+// ── POLLING ──
+setInterval(async()=>{
+  const act=jobs.filter(j=>j.status==='processing'||j.status==='queued');
+  if(!act.length) return;
+  for(const job of act){
+    try{
       let url;
-      if (job.categoryId === '360') url = `${API}/api/pro/stitch/status/${job.id}`;
-      else if (job.categoryId === 'dublaj') url = `${API}/api/dubbing/status/${job.id}`;
-      else if (job.categoryId === 'otonom') url = `${API}/api/otonom/status/${job.id}`;
-      else url = `${API}/api/pro/render-progress/${job.id}`;
-      const res = await fetch(url);
-      if (!res.ok) continue;
-      const d = await res.json();
-      updateJob(job.id, { status: d.status, progress: d.progress ?? job.progress, outputUrl: d.downloadUrl || d.outputUrl, error: d.error });
-    } catch(e) {}
+      if(job.catId==='360') url=`${API}/api/pro/stitch/status/${job.id}`;
+      else if(job.catId==='dublaj') url=`${API}/api/dubbing/status/${job.id}`;
+      else if(job.catId==='otonom') url=`${API}/api/otonom/status/${job.id}`;
+      else url=`${API}/api/pro/render-progress/${job.id}`;
+      const r=await fetch(url);if(!r.ok) continue;
+      const d=await r.json();
+      updJob(job.id,{status:d.status,progress:d.progress??job.progress,url:d.downloadUrl||d.outputUrl,error:d.error});
+    }catch(e){}
   }
-}, 3000);
+},3000);
 </script>
 </body>
 </html>
