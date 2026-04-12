@@ -735,8 +735,8 @@ function getActiveCards() {
   return getOwnedCards();
 }
 
-const isMaster = () => plan === 'master' || plan === 'otonom';
-const isTrialActive = () => trialCredits > 0 && !isMaster();
+function isMaster() { return plan === 'master' || plan === 'otonom'; }
+function isTrialActive() { return trialCredits > 0 && !isMaster(); }
 
 // ════════════════════════════════════════
 //  RENDER
