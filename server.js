@@ -133,21 +133,81 @@ app.post('/api/waitlist', async (req, res) => {
   res.json({ ok: true });
 });
 
-// QR kart doğrulama — telefon taradığında bu endpoint'e gelir
-app.get('/api/card/:token', (req, res) => {
+// ─── QR KART SİSTEMİ ───────────────────────────────────────────────
+// Her müşteriye benzersiz QR üret — hiçbiri birbirinin kopyası değil
+
+// POST /api/card/generate — yeni müşteri kartı oluştur (benzersiz QR token)
+app.post('/api/card/generate', async (req, res) => {
+  const { email, plan, name } = req.body;
+  const validPlans = ['pro', '360', 'dublaj', 'eticaret', 'otonom', 'free', 'master'];
+  const safePlan = validPlans.includes(plan) ? plan : 'free';
+  const credits = (safePlan === 'master' || safePlan === 'otonom') ? 30 : 15;
+
+  // Benzersiz token: crypto random + timestamp → asla tekrar etmez
+  const crypto = require('crypto');
+  const token = crypto.randomBytes(8).toString('hex') + Date.now().toString(36);
+
+  const cardData = {
+    token,
+    email: email || `musteri-${token.slice(0,6)}@fenix.ai`,
+    name: name || '',
+    plan: safePlan,
+    credits,
+    createdAt: new Date().toISOString(),
+    activatedAt: null,
+    status: 'active',
+  };
+
+  // Firestore'a kaydet
+  try {
+    const db = require('firebase-admin').firestore();
+    await db.collection('cards').doc(token).set(cardData);
+  } catch(e) {
+    // Firestore yoksa bellekte devam et
+    console.log('Card Firestore kayıt hatası (devam):', e.message);
+  }
+
+  res.json({ ok: true, ...cardData });
+});
+
+// GET /api/card/:token — QR tarandığında kart doğrula
+app.get('/api/card/:token', async (req, res) => {
   const { token } = req.params;
-  if (!token || token.length < 8) {
+  if (!token || token.length < 6) {
     return res.status(400).json({ error: 'Geçersiz token' });
   }
-  // Token'dan plan bilgisi çöz (base64 decode)
+
+  // Önce Firestore'dan bak
+  try {
+    const db = require('firebase-admin').firestore();
+    const doc = await db.collection('cards').doc(token).get();
+    if (doc.exists) {
+      const data = doc.data();
+      // İlk aktivasyonu kaydet
+      if (!data.activatedAt) {
+        await db.collection('cards').doc(token).update({
+          activatedAt: new Date().toISOString(),
+        });
+      }
+      return res.json({
+        plan: data.plan,
+        credits: data.credits,
+        email: data.email,
+        name: data.name || '',
+        token,
+        activatedAt: data.activatedAt || new Date().toISOString(),
+      });
+    }
+  } catch(e) { /* Firestore yoksa fallback */ }
+
+  // Fallback: eski base64 token formatı (geriye uyumluluk)
   try {
     const decoded = Buffer.from(token, 'base64').toString('utf-8');
-    // format: email-slug-timestamp
     const parts = decoded.split('-');
     const slug = parts.length >= 2 ? parts[parts.length - 2] : 'free';
     const validPlans = ['pro', '360', 'dublaj', 'eticaret', 'otonom', 'free', 'master'];
     const plan = validPlans.includes(slug) ? slug : 'free';
-    const credits = plan === 'master' || plan === 'otonom' ? 30 : 15;
+    const credits = (plan === 'master' || plan === 'otonom') ? 30 : 15;
     res.json({
       plan,
       credits,
@@ -157,6 +217,20 @@ app.get('/api/card/:token', (req, res) => {
     });
   } catch {
     res.status(400).json({ error: 'Token çözülemedi' });
+  }
+
+});
+
+// GET /api/cards/list — tüm kartları listele (admin)
+app.get('/api/cards/list', async (req, res) => {
+  try {
+    const db = require('firebase-admin').firestore();
+    const snap = await db.collection('cards').orderBy('createdAt', 'desc').limit(100).get();
+    const cards = [];
+    snap.forEach(doc => cards.push(doc.data()));
+    res.json({ ok: true, cards });
+  } catch(e) {
+    res.json({ ok: false, cards: [], error: e.message });
   }
 });
 
