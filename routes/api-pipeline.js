@@ -510,18 +510,57 @@ router.get('/download/:fileId', (req, res) => {
 async function autoProducePipeline(jobId, files, opts) {
   const job = _pipelineJobs[jobId];
   const processedPhotos = [];
+  let finalCategory = opts.cat; // Gemini tespit ederse güncellenir
 
   try {
     // ADIM 1+2: Gemini ile direkt sahneye yerleştir (BG silme + sahne + composite TEK ADIM)
     if (opts.generateScene) {
-      job.stage = 'generating-scene';
-      job.progress = 5;
-      logger.info(`[${jobId}] Gemini sahne yerleştirme başlıyor — ${files.length} fotoğraf, kategori: ${opts.cat}`);
+      job.stage = 'detecting-category';
+      job.progress = 3;
 
       const GEMINI_KEY = process.env.GEMINI_API_KEY;
+
+      // Kategori otomatik tespit — ilk fotoğrafı Gemini'ye sor
+      let detectedCat = opts.cat;
+      if (opts.cat === 'giyim' || opts.cat === 'default' || !SCENE_PROMPTS[opts.cat]) {
+        try {
+          const firstImg = fs.readFileSync(files[0].path);
+          const catResp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                contents: [{ parts: [
+                  { text: `Look at this product photo. What category does this product belong to? Reply with ONLY ONE of these exact words, nothing else: gida, icecek, kozmetik, giyim, elektronik, spor, ev, otomotiv, pet, taki, oyuncak, aksesuar` },
+                  { inlineData: { mimeType: files[0].mimetype || 'image/jpeg', data: firstImg.toString('base64') } }
+                ]}]
+              })
+            }
+          );
+          if (catResp.ok) {
+            const catData = await catResp.json();
+            const catText = (catData.candidates?.[0]?.content?.parts?.[0]?.text || '').trim().toLowerCase();
+            const validCats = Object.keys(SCENE_PROMPTS);
+            if (validCats.includes(catText)) {
+              detectedCat = catText;
+              logger.info(`[${jobId}] Kategori otomatik tespit: ${detectedCat}`);
+            }
+          }
+        } catch(e) {
+          logger.warn(`[${jobId}] Kategori tespit hatası: ${e.message}`);
+        }
+      }
+
+      finalCategory = detectedCat;
+      job.category = detectedCat;
+      job.stage = 'generating-scene';
+      job.progress = 5;
+      logger.info(`[${jobId}] Gemini sahne yerleştirme başlıyor — ${files.length} fotoğraf, kategori: ${detectedCat}`);
+
       let done = 0;
 
-      const scenePrompt = SCENE_PROMPTS[opts.cat] || SCENE_PROMPTS.giyim;
+      const scenePrompt = SCENE_PROMPTS[detectedCat] || SCENE_PROMPTS.giyim;
 
       const results = await Promise.all(files.map((file, i) => geminiLimit(async () => {
         const imgBuf = fs.readFileSync(file.path);
@@ -613,7 +652,7 @@ async function autoProducePipeline(jobId, files, opts) {
     const reelsPath = path.join(PIPELINE_DIR, 'reels', `reels-${jobId}.mp4`);
 
     await buildSlideshowWithTransitions(processedPhotos, reelsPath, {
-      cat: opts.cat,
+      cat: finalCategory,
       photoDuration: opts.duration,
       transition: opts.transition,
       lut: opts.lut,
