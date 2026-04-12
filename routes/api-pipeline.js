@@ -536,7 +536,7 @@ async function autoProducePipeline(jobId, files, opts) {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 contents: [{ parts: [
-                  { text: `Take this product photo and place it on a new professional background. Remove the original background COMPLETELY — no traces of the old background should remain. The product must stay exactly the same (same angle, same details, same colors). New background: ${scenePrompt}. Output a vertical 9:16 product photography image.` },
+                  { text: `This is a product photo. Keep the product EXACTLY as it is — do NOT modify, remove, or regenerate the product. Only change the BACKGROUND behind and around the product. Replace the background with: ${scenePrompt}. The product must be clearly visible, centered, and prominent in the final image. Output a vertical 9:16 product photography image.` },
                   { inlineData: { mimeType, data: b64 } }
                 ]}],
                 generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
