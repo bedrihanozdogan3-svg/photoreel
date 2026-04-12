@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0A0A0A">
+<title>Fenix Otonom</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0A0A0A;
+  --surface: #111111;
+  --surface2: #161616;
+  --border: #1a1a1a;
+  --border2: #222222;
+  --text: #ffffff;
+  --text2: #cccccc;
+  --text3: #888888;
+  --text4: #555555;
+  --text5: #333333;
+  --orange: #F97316;
+  --orange2: #EA580C;
+  --blue: #3B82F6;
+  --blue2: #2563EB;
+  --purple: #8B5CF6;
+  --purple2: #7C3AED;
+  --green: #10B981;
+  --green2: #059669;
+  --yellow: #EAB308;
+  --yellow2: #CA8A04;
+  --red: #EF4444;
+  --master-green: #22C55E;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', -apple-system, 'SF Pro Display', system-ui, sans-serif;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  max-width: 480px;
+  margin: 0 auto;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+.header {
+  padding: env(safe-area-inset-top, 16px) 20px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(180deg, #111 0%, transparent 100%);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-icon {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--orange), var(--orange2));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px;
+  box-shadow: 0 3px 12px rgba(249,115,22,0.3);
+}
+.logo-text { font-weight: 900; font-size: 15px; letter-spacing: 3px; line-height: 1; }
+.logo-sub { font-size: 8px; color: var(--text4); letter-spacing: 2px; margin-top: 1px; }
+
+.header-right { display: flex; align-items: center; gap: 8px; }
+.credit-badge {
+  background: linear-gradient(135deg, #151515, #111);
+  border-radius: 24px;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border2);
+}
+.credit-badge.low {
+  background: linear-gradient(135deg, #1a0000, #2a0000);
+  border-color: #7F1D1D;
+  box-shadow: 0 0 12px rgba(239,68,68,0.15);
+}
+.credit-num { font-size: 16px; font-weight: 900; color: var(--orange); }
+.credit-badge.low .credit-num { color: var(--red); }
+
+.jobs-btn {
+  background: linear-gradient(135deg, #151515, #111);
+  border: 1px solid var(--border2);
+  border-radius: 24px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text4);
+  cursor: pointer;
+  position: relative;
+  font-family: inherit;
+}
+.jobs-btn.active {
+  background: linear-gradient(135deg, #0a1a0a, #0f2a0f);
+  border-color: #166534;
+  color: var(--master-green);
+  box-shadow: 0 0 12px rgba(34,197,94,0.15);
+}
+.jobs-btn .badge {
+  position: absolute; top: -5px; right: -5px;
+  background: linear-gradient(135deg, #22C55E, #16A34A);
+  border-radius: 50%;
+  width: 16px; height: 16px;
+  font-size: 9px; font-weight: 900; color: #000;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(34,197,94,0.3);
+}
+
+/* ── STATUS BADGES ── */
+.status-badge {
+  margin: 8px 16px 0;
+  border-radius: 14px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.status-badge.master {
+  background: linear-gradient(135deg, #071a07, #0a200a);
+  border: 1px solid rgba(34,197,94,0.13);
+}
+.status-badge.trial {
+  background: linear-gradient(135deg, #1a1200, #1a0e00);
+  border: 1px solid rgba(249,115,22,0.13);
+}
+.status-icon {
+  width: 38px; height: 38px;
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 19px;
+}
+.status-badge.master .status-icon { background: linear-gradient(135deg, rgba(34,197,94,0.13), rgba(34,197,94,0.06)); }
+.status-badge.trial .status-icon { background: linear-gradient(135deg, rgba(249,115,22,0.13), rgba(249,115,22,0.06)); }
+.status-title { font-size: 12px; font-weight: 900; letter-spacing: 1px; }
+.status-badge.master .status-title { color: var(--master-green); }
+.status-badge.trial .status-title { color: var(--orange); }
+.status-desc { font-size: 10px; margin-top: 1px; }
+.status-badge.master .status-desc { color: #166534; }
+.status-badge.trial .status-desc { color: #9A3412; }
+.trial-count {
+  background: linear-gradient(135deg, var(--orange), var(--orange2));
+  border-radius: 24px;
+  padding: 4px 12px;
+  font-size: 14px; font-weight: 900; color: #000;
+  box-shadow: 0 2px 8px rgba(249,115,22,0.3);
+}
+
+/* ── MAIN CONTENT ── */
+.content {
+  flex: 1;
+  padding: 12px 16px 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.section-label {
+  font-size: 10px;
+  color: var(--text5);
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+
+/* ── SHORTCUT BUTTONS ── */
+.shortcut {
+  width: 100%;
+  background: linear-gradient(135deg, var(--surface), #0f0f0f);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 8px;
+  -webkit-appearance: none;
+  font-family: inherit;
+  text-align: left;
+  color: inherit;
+}
+.shortcut:active { transform: scale(0.97); }
+.shortcut.locked {
+  background: #080808;
+  border-color: #141414;
+  opacity: 0.35;
+  cursor: default;
+}
+.shortcut .glow {
+  position: absolute;
+  left: 0; top: 15%; bottom: 15%;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+}
+.shortcut .sc-icon {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  flex-shrink: 0;
+}
+.shortcut .sc-label { font-size: 16px; font-weight: 800; letter-spacing: 0.3px; }
+.shortcut.locked .sc-label { color: var(--text5); }
+.shortcut .sc-desc { font-size: 11px; color: var(--text4); margin-top: 3px; line-height: 1.3; }
+.shortcut.locked .sc-desc { color: #282828; }
+.sc-btn {
+  border-radius: 12px;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 900;
+  color: #000;
+  flex-shrink: 0;
+  letter-spacing: 0.5px;
+}
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  text-align: center;
+  padding: 60px 0;
+  color: var(--text5);
+}
+.empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+.empty-text { font-size: 14px; font-weight: 600; color: var(--text4); }
+.empty-btn {
+  margin-top: 20px;
+  background: linear-gradient(135deg, var(--orange), var(--orange2));
+  border: none;
+  border-radius: 14px;
+  padding: 14px 32px;
+  color: #000;
+  font-weight: 800;
+  cursor: pointer;
+  font-size: 14px;
+  font-family: inherit;
+  box-shadow: 0 4px 16px rgba(249,115,22,0.3);
+  letter-spacing: 0.5px;
+}
+
+/* ── JOB CARDS ── */
+.job-card {
+  background: linear-gradient(135deg, var(--surface), #0f0f0f);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px 18px;
+  margin-bottom: 8px;
+}
+.job-card.done { border-color: rgba(34,197,94,0.2); box-shadow: 0 4px 16px rgba(34,197,94,0.06); }
+.job-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.job-icon { font-size: 24px; }
+.job-name { font-size: 13px; font-weight: 700; color: #ddd; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.job-meta { font-size: 11px; color: var(--text4); margin-top: 2px; }
+.job-status {
+  font-size: 10px; font-weight: 900; padding: 4px 10px; border-radius: 24px; letter-spacing: 0.5px;
+}
+.job-status.done { background: rgba(5,46,22,0.6); color: #22C55E; }
+.job-status.error { background: rgba(45,10,10,0.6); color: #EF4444; }
+.job-status.pending { background: rgba(26,26,0,0.6); color: #EAB308; }
+.job-progress {
+  background: #1a1a1a;
+  border-radius: 6px;
+  height: 4px;
+  overflow: hidden;
+}
+.job-progress-bar {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.5s ease;
+}
+.job-download {
+  display: block;
+  margin-top: 12px;
+  border-radius: 12px;
+  padding: 12px 0;
+  text-align: center;
+  color: #000;
+  font-weight: 900;
+  font-size: 14px;
+  text-decoration: none;
+  letter-spacing: 0.5px;
+}
+.job-error { margin-top: 8px; font-size: 11px; color: var(--red); background: rgba(26,0,0,0.4); border-radius: 8px; padding: 6px 10px; }
+
+/* ── FUEL EMPTY ── */
+.fuel-empty {
+  background: linear-gradient(135deg, #1a0000, #200000);
+  border: 1px solid rgba(127,29,29,0.2);
+  border-radius: 14px;
+  padding: 16px 18px;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(239,68,68,0.06);
+  margin-bottom: 8px;
+}
+.fuel-title { font-size: 14px; font-weight: 800; color: var(--red); }
+.fuel-desc { font-size: 11px; color: #991B1B; margin-top: 4px; }
+
+/* ── FOOTER ── */
+.footer {
+  padding: 14px 16px env(safe-area-inset-bottom, 14px);
+  text-align: center;
+  font-size: 10px;
+  color: #2a2a2a;
+  letter-spacing: 0.5px;
+}
+
+/* ── LOADING ── */
+.loading-screen {
+  min-height: 100dvh;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  transition: opacity 0.4s;
+}
+.loading-screen.hide { opacity: 0; pointer-events: none; }
+.loading-ring {
+  width: 64px; height: 64px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(249,115,22,0.25), rgba(249,115,22,0.06));
+  border: 2px solid rgba(249,115,22,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 32px;
+  animation: loadPulse 1.5s ease-in-out infinite;
+}
+@keyframes loadPulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.1); opacity: 1; }
+}
+
+/* Hidden file input */
+#fileInput { display: none; }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loadingScreen">
+  <div style="text-align:center">
+    <div class="loading-ring">🔥</div>
+    <div style="font-size:18px;font-weight:800;color:var(--orange);letter-spacing:3px">FENIX</div>
+    <div style="font-size:11px;color:var(--text4);margin-top:6px;letter-spacing:1px">OTONOM PANEL</div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <div class="logo-icon">🔥</div>
+    <div>
+      <div class="logo-text">FENIX</div>
+      <div class="logo-sub">OTONOM</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="credit-badge" id="creditBadge">
+      <span style="font-size:11px">⚡</span>
+      <span class="credit-num" id="creditNum">15</span>
+    </div>
+    <button class="jobs-btn" id="jobsBtn" onclick="toggleView()">
+      📋 <span id="jobsBtnText"></span>
+    </button>
+  </div>
+</div>
+
+<!-- STATUS BADGE -->
+<div id="statusArea"></div>
+
+<!-- MAIN -->
+<div class="content" id="mainContent"></div>
+
+<!-- FOOTER -->
+<div class="footer">Telefonu kapatsan da islem devam eder</div>
+
+<!-- FILE INPUT -->
+<input type="file" id="fileInput">
+
+<script>
+// ════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════
+const API = window.location.origin;
+
+const SHORTCUTS = [
+  { id:'pro', label:'Video Isle', icon:'🎬', color:'#F97316', gradient:'linear-gradient(135deg,#F97316,#EA580C)', desc:'Kurgu, efekt, stabilizasyon', accept:'video/*', endpoint:'/api/pro/render', field:'video' },
+  { id:'360', label:'360° Birlestir', icon:'🌐', color:'#3B82F6', gradient:'linear-gradient(135deg,#3B82F6,#2563EB)', desc:'Stitching, horizon lock', accept:'image/*,video/*,.insv', endpoint:'/api/pro/stitch', field:'images' },
+  { id:'dublaj', label:'Dublaj Yap', icon:'🎙️', color:'#8B5CF6', gradient:'linear-gradient(135deg,#8B5CF6,#7C3AED)', desc:'Ses klonlama, lip-sync', accept:'video/*,audio/*', endpoint:'/api/dubbing/voiceover', field:'video' },
+  { id:'eticaret', label:'Urun Cek', icon:'🛍️', color:'#10B981', gradient:'linear-gradient(135deg,#10B981,#059669)', desc:'Arka plan sil, 3D tur', accept:'image/*', endpoint:'/api/pro/remove-bg', field:'image' },
+  { id:'free', label:'Hizli Isle', icon:'⚡', color:'#EAB308', gradient:'linear-gradient(135deg,#EAB308,#CA8A04)', desc:'Temel video isleme', accept:'video/*,image/*', endpoint:'/api/pro/render', field:'video' },
+];
+
+const ALL_IDS = ['pro','360','dublaj','eticaret','free'];
+const TRIAL_MAX = 2;
+
+// ════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════
+let plan = localStorage.getItem('fenix_plan') || 'free';
+let credits = parseInt(localStorage.getItem('fenix_otonom_credits') || '15');
+let trialCredits = parseInt(localStorage.getItem('fenix_trial_credits') ?? TRIAL_MAX);
+let jobs = JSON.parse(localStorage.getItem('fenix_jobs') || '[]');
+let currentView = 'shortcuts'; // shortcuts | jobs
+let activeUploadId = null;
+
+// ════════════════════════════════════════
+//  QR TOKEN LOGIN
+// ════════════════════════════════════════
+(async function initToken() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('t');
+  if (token && token.length >= 8) {
+    try {
+      const res = await fetch(`${API}/api/card/${token}`);
+      if (res.ok) {
+        const data = await res.json();
+        plan = data.plan || 'free';
+        credits = data.credits || 15;
+        localStorage.setItem('fenix_plan', plan);
+        localStorage.setItem('fenix_otonom_credits', credits);
+      }
+    } catch(e) {}
+  }
+  // Init trial
+  if (localStorage.getItem('fenix_trial_credits') === null && plan !== 'free') {
+    trialCredits = TRIAL_MAX;
+    localStorage.setItem('fenix_trial_credits', trialCredits);
+  }
+  // Hide loading
+  setTimeout(() => {
+    document.getElementById('loadingScreen').classList.add('hide');
+    setTimeout(() => document.getElementById('loadingScreen').remove(), 400);
+  }, 600);
+  render();
+})();
+
+// ════════════════════════════════════════
+//  CARD LOGIC
+// ════════════════════════════════════════
+function getOwnedCards() {
+  if (plan === 'master' || plan === 'otonom') return ALL_IDS;
+  if (plan === 'pro') return ['pro','free'];
+  if (plan === '360') return ['360','free'];
+  if (plan === 'dublaj') return ['dublaj','free'];
+  if (plan === 'eticaret') return ['eticaret','free'];
+  return ['free'];
+}
+
+function getActiveCards() {
+  if (plan === 'master' || plan === 'otonom') return ALL_IDS;
+  if (trialCredits > 0) return ALL_IDS;
+  return getOwnedCards();
+}
+
+const isMaster = () => plan === 'master' || plan === 'otonom';
+const isTrialActive = () => trialCredits > 0 && !isMaster();
+
+// ════════════════════════════════════════
+//  RENDER
+// ════════════════════════════════════════
+function render() {
+  renderCredits();
+  renderStatus();
+  renderJobsBtn();
+  if (currentView === 'shortcuts') renderShortcuts();
+  else renderJobs();
+}
+
+function renderCredits() {
+  const badge = document.getElementById('creditBadge');
+  const num = document.getElementById('creditNum');
+  num.textContent = credits;
+  badge.className = 'credit-badge' + (credits <= 3 ? ' low' : '');
+}
+
+function renderStatus() {
+  const area = document.getElementById('statusArea');
+  if (isMaster()) {
+    area.innerHTML = `
+      <div class="status-badge master">
+        <div class="status-icon">🔓</div>
+        <div style="flex:1">
+          <div class="status-title">MASTER OTONOM</div>
+          <div class="status-desc">Tum kisa yollar aktif</div>
+        </div>
+      </div>`;
+  } else if (isTrialActive()) {
+    area.innerHTML = `
+      <div class="status-badge trial">
+        <div class="status-icon">🎁</div>
+        <div style="flex:1">
+          <div class="status-title">DENEME HAKKI</div>
+          <div class="status-desc">Tum ozellikler acik — ${trialCredits} kullanim kaldi</div>
+        </div>
+        <div class="trial-count">${trialCredits}</div>
+      </div>`;
+  } else {
+    area.innerHTML = '';
+  }
+}
+
+function renderJobsBtn() {
+  const btn = document.getElementById('jobsBtn');
+  const text = document.getElementById('jobsBtnText');
+  const activeJobs = jobs.filter(j => j.status === 'processing' || j.status === 'queued').length;
+
+  if (currentView === 'jobs') {
+    text.textContent = '← Geri';
+    btn.className = 'jobs-btn';
+    btn.querySelector('.badge')?.remove();
+  } else {
+    text.textContent = jobs.length > 0 ? jobs.length : '';
+    btn.className = 'jobs-btn' + (activeJobs > 0 ? ' active' : '');
+    btn.querySelector('.badge')?.remove();
+    if (activeJobs > 0) {
+      const b = document.createElement('span');
+      b.className = 'badge';
+      b.textContent = activeJobs;
+      btn.appendChild(b);
+    }
+  }
+}
+
+function renderShortcuts() {
+  const active = getActiveCards();
+  const content = document.getElementById('mainContent');
+  let html = '<div class="section-label">Dosya at, gerisini Fenix yapsin</div>';
+
+  SHORTCUTS.forEach(sc => {
+    const unlocked = active.includes(sc.id);
+    html += `
+      <div class="shortcut ${unlocked ? '' : 'locked'}" onclick="${unlocked ? `tapShortcut('${sc.id}')` : ''}">
+        ${unlocked ? `<div class="glow" style="background:${sc.gradient};box-shadow:0 0 12px ${sc.color}66"></div>` : ''}
+        <div class="sc-icon" style="background:${unlocked ? sc.color+'18' : '#0e0e0e'};border:1px solid ${unlocked ? sc.color+'15' : '#1a1a1a'}">
+          ${unlocked ? sc.icon : '🔒'}
+        </div>
+        <div style="flex:1">
+          <div class="sc-label" style="color:${unlocked ? '#eee' : ''}">${sc.label}</div>
+          <div class="sc-desc">${unlocked ? sc.desc : sc.id.toUpperCase()+' karti veya Otonom paketi al'}</div>
+        </div>
+        ${unlocked ? `<div class="sc-btn" style="background:${sc.gradient};box-shadow:0 2px 12px ${sc.color}33">AT →</div>` : ''}
+      </div>`;
+  });
+
+  if (credits === 0) {
+    html += `
+      <div class="fuel-empty">
+        <div class="fuel-title">Yakit Tukendi</div>
+        <div class="fuel-desc">Kredi yukle ve devam et</div>
+      </div>`;
+  }
+
+  content.innerHTML = html;
+}
+
+function renderJobs() {
+  const content = document.getElementById('mainContent');
+  const activeJobs = jobs.filter(j => j.status === 'processing' || j.status === 'queued').length;
+
+  if (jobs.length === 0) {
+    content.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <div class="empty-text">Henuz islem yok</div>
+        <button class="empty-btn" onclick="toggleView()">Dosya At</button>
+      </div>`;
+    return;
+  }
+
+  let html = `<div class="section-label">${activeJobs > 0 ? activeJobs+' islem devam ediyor' : 'Gecmis islemler'}</div>`;
+
+  jobs.forEach(job => {
+    const sc = SHORTCUTS.find(s => s.id === job.shortcutId) || SHORTCUTS[0];
+    const elapsed = formatTime(Date.now() - job.startedAt);
+    const statusLabel = job.status === 'done' ? 'HAZIR' : job.status === 'error' ? 'HATA' : job.status === 'uploading' ? 'YUKLUYOR' : job.status === 'queued' ? 'SIRADA' : '%'+job.progress;
+    const statusClass = job.status === 'done' ? 'done' : job.status === 'error' ? 'error' : 'pending';
+
+    html += `
+      <div class="job-card ${job.status === 'done' ? 'done' : ''}">
+        <div class="job-header">
+          <span class="job-icon">${sc.icon}</span>
+          <div style="flex:1;min-width:0">
+            <div class="job-name">${job.fileName}</div>
+            <div class="job-meta">${sc.label} · ${elapsed}</div>
+          </div>
+          <span class="job-status ${statusClass}">${statusLabel}</span>
+        </div>
+        ${['processing','queued','uploading'].includes(job.status) ? `
+          <div class="job-progress">
+            <div class="job-progress-bar" style="background:${sc.gradient};width:${job.status==='uploading'?10:job.status==='queued'?5:job.progress}%;box-shadow:0 0 8px ${sc.color}44"></div>
+          </div>` : ''}
+        ${job.status === 'done' && job.outputUrl ? `
+          <a href="${job.outputUrl}" download class="job-download" style="background:${sc.gradient};box-shadow:0 4px 16px ${sc.color}33">INDIR</a>` : ''}
+        ${job.status === 'error' ? `<div class="job-error">${job.error||'Bilinmeyen hata'}</div>` : ''}
+      </div>`;
+  });
+
+  content.innerHTML = html;
+}
+
+// ════════════════════════════════════════
+//  ACTIONS
+// ════════════════════════════════════════
+function toggleView() {
+  currentView = currentView === 'shortcuts' ? 'jobs' : 'shortcuts';
+  render();
+}
+
+function tapShortcut(id) {
+  if (credits <= 0) { showToast('Yakit tukendi! Kredi yukle.', 'error'); return; }
+  activeUploadId = id;
+  const sc = SHORTCUTS.find(s => s.id === id);
+  const input = document.getElementById('fileInput');
+  input.accept = sc.accept;
+  input.click();
+}
+
+document.getElementById('fileInput').addEventListener('change', async function(e) {
+  const file = e.target.files?.[0];
+  if (!file || !activeUploadId) return;
+
+  const sc = SHORTCUTS.find(s => s.id === activeUploadId);
+  const jobId = crypto.randomUUID();
+
+  // Add job
+  jobs.unshift({ id: jobId, shortcutId: activeUploadId, fileName: file.name, status: 'uploading', progress: 0, startedAt: Date.now() });
+  saveJobs();
+  currentView = 'jobs';
+  render();
+
+  try {
+    const fd = new FormData();
+    fd.append(sc.field, file, file.name);
+
+    if (activeUploadId === '360' || activeUploadId === 'eticaret') {
+      const res = await fetch(`${API}${sc.endpoint}`, { method: 'POST', body: fd });
+      if (!res.ok) throw new Error('Islem basarisiz');
+      const data = await res.json();
+      updateJob(jobId, { id: data.jobId||data.id||jobId, status: data.downloadUrl ? 'done' : 'queued', progress: data.downloadUrl ? 100 : 0, outputUrl: data.downloadUrl });
+    } else {
+      const uploadRes = await fetch(`${API}/api/pro/upload`, { method: 'POST', body: fd });
+      if (!uploadRes.ok) throw new Error('Yukleme basarisiz');
+      const { fileId } = await uploadRes.json();
+      const body = activeUploadId === 'dublaj'
+        ? { fileId, targetLang: 'tr', sourceLang: 'tr' }
+        : { sourceFileId: fileId, resolution: activeUploadId === 'pro' ? '1080' : '720' };
+      const jobRes = await fetch(`${API}${sc.endpoint}`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+      if (!jobRes.ok) throw new Error('Islem baslatilamadi');
+      const jobData = await jobRes.json();
+      updateJob(jobId, { id: jobData.jobId||jobData.id||jobId, status: 'queued', progress: 0 });
+    }
+
+    // Deduct credit
+    const owned = getOwnedCards();
+    if (isTrialActive() && !owned.includes(activeUploadId)) {
+      trialCredits--;
+      localStorage.setItem('fenix_trial_credits', trialCredits);
+    } else {
+      credits--;
+      localStorage.setItem('fenix_otonom_credits', credits);
+    }
+    showToast('Kuyruga alindi — telefonu kapatsan da devam eder', 'ok');
+  } catch(err) {
+    updateJob(jobId, { status: 'error', error: err.message || 'Hata' });
+    showToast(err.message || 'Hata olustu', 'error');
+  }
+
+  activeUploadId = null;
+  this.value = '';
+  render();
+});
+
+// ════════════════════════════════════════
+//  HELPERS
+// ════════════════════════════════════════
+function updateJob(id, updates) {
+  jobs = jobs.map(j => j.id === id ? { ...j, ...updates } : j);
+  saveJobs();
+  render();
+}
+
+function saveJobs() {
+  localStorage.setItem('fenix_jobs', JSON.stringify(jobs));
+}
+
+function formatTime(ms) {
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return s + 's';
+  return Math.floor(s/60) + 'd ' + (s%60) + 's';
+}
+
+function showToast(msg, type) {
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:env(safe-area-inset-bottom,20px);left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:14px;font-size:13px;font-weight:700;z-index:999;animation:fadeUp .3s ease;font-family:Inter,sans-serif;max-width:90%;text-align:center;`;
+  if (type === 'error') {
+    t.style.background = 'linear-gradient(135deg,#2d0a0a,#1a0000)';
+    t.style.color = '#EF4444';
+    t.style.border = '1px solid #7F1D1D33';
+  } else {
+    t.style.background = 'linear-gradient(135deg,#052e16,#0a1a0a)';
+    t.style.color = '#22C55E';
+    t.style.border = '1px solid #16653433';
+  }
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, 2500);
+}
+
+// ════════════════════════════════════════
+//  POLLING
+// ════════════════════════════════════════
+setInterval(async () => {
+  const active = jobs.filter(j => j.status === 'processing' || j.status === 'queued');
+  if (!active.length) return;
+  for (const job of active) {
+    try {
+      const url = job.shortcutId === '360'
+        ? `${API}/api/pro/stitch/status/${job.id}`
+        : job.shortcutId === 'dublaj'
+        ? `${API}/api/dubbing/status/${job.id}`
+        : `${API}/api/pro/render-progress/${job.id}`;
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const d = await res.json();
+      updateJob(job.id, { status: d.status, progress: d.progress ?? job.progress, outputUrl: d.downloadUrl || d.outputUrl, error: d.error });
+      if (d.status === 'done') showToast('Hazir! Indir butonuna bas.', 'ok');
+    } catch(e) {}
+  }
+}, 3000);
+
+// Fade-up animation
+const style = document.createElement('style');
+style.textContent = '@keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}';
+document.head.appendChild(style);
+</script>
+</body>
+</html>
