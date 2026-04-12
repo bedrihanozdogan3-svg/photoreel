@@ -464,7 +464,8 @@ router.post('/auto-produce', pipelineRateLimit, _pipeUpload.array('photos', 20),
 // ═══════════════════════════════════════════
 //  STATUS & DOWNLOAD
 // ═══════════════════════════════════════════
-router.get('/status/:jobId', lightRateLimit, (req, res) => {
+// Status polling — rate limit YOK (hafif endpoint, sık sorgulanır)
+router.get('/status/:jobId', (req, res) => {
   const job = _pipelineJobs[req.params.jobId];
   if (!job) return res.status(404).json({ ok: false, error: 'Job bulunamadı' });
   res.json({ ok: true, ...job });
@@ -871,21 +872,39 @@ function getTransitionDuration(category) {
   return 0.4;
 }
 
-/** FFmpeg çalıştır */
-function runFFmpeg(args) {
+/** FFmpeg çalıştır (120sn timeout) */
+function runFFmpeg(args, timeoutMs = 120000) {
   return new Promise((resolve, reject) => {
     logger.info('FFmpeg çalıştırılıyor', { args: args.slice(0, 6).join(' ') + '...' });
     const proc = spawn('ffmpeg', args, { stdio: ['ignore', 'pipe', 'pipe'] });
     let stderr = '';
-    proc.stderr.on('data', d => { stderr += d.toString(); });
+    let killed = false;
+
+    const timer = setTimeout(() => {
+      killed = true;
+      proc.kill('SIGKILL');
+      logger.error('FFmpeg TIMEOUT — 120sn aşıldı, process öldürüldü');
+      reject(new Error('FFmpeg timeout: 120 saniye aşıldı'));
+    }, timeoutMs);
+
+    proc.stderr.on('data', d => {
+      stderr += d.toString();
+      // stderr buffer'ı sınırla (bellek koruması)
+      if (stderr.length > 10000) stderr = stderr.slice(-5000);
+    });
     proc.on('close', code => {
+      clearTimeout(timer);
+      if (killed) return;
       if (code === 0) resolve();
       else {
         logger.error('FFmpeg hatası', { code, stderr: stderr.slice(-500) });
         reject(new Error(`FFmpeg çıkış kodu: ${code} — ${stderr.slice(-200)}`));
       }
     });
-    proc.on('error', err => reject(new Error(`FFmpeg başlatılamadı: ${err.message}`)));
+    proc.on('error', err => {
+      clearTimeout(timer);
+      reject(new Error(`FFmpeg başlatılamadı: ${err.message}`));
+    });
   });
 }
 
