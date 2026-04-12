@@ -1859,6 +1859,7 @@
     <button onclick="_fenixAutoRun()" style="height:28px;padding:0 14px;border-radius:6px;background:linear-gradient(90deg,#F97316,#ea580c);border:none;color:#000;font-size:10px;font-weight:800;cursor:pointer;letter-spacing:.3px;display:flex;align-items:center;gap:4px;" title="Fenix otomatik pipeline: Arka plan sil → Yeni arka plan → Reels video üret">🤖 AI Yapsın</button>
     <div class="tb-credit">Kredi: <b id="credits">15</b></div>
     <div style="font-size:12px;font-weight:800;letter-spacing:.5px;color:#F97316;padding:0 6px;">fenixal <span style="color:#fff;opacity:.5;">pro</span></div>
+    <button onclick="showQR()" style="height:28px;padding:0 8px;border-radius:6px;background:transparent;border:1px solid #F9731644;color:#F97316;font-size:14px;cursor:pointer" title="QR Kod">📱</button>
   </div>
 </div>
 
@@ -25405,6 +25406,30 @@ function _activateScaleTool(model) {
   toast('Model boyutunu fare ile ölçekle','ok',2000);
 }
 
+</script>
+
+<!-- QR Modal -->
+<div id="qrOverlay" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);align-items:center;justify-content:center">
+<div style="background:#151515;border:2px solid #F9731655;border-radius:20px;padding:28px;text-align:center;max-width:320px;width:90%">
+<div style="font-size:10px;color:#666;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px">FENIX AI</div>
+<div style="font-size:20px;font-weight:800;color:#F97316;margin-bottom:16px">PRO</div>
+<canvas id="qrCanvas" style="border-radius:12px;border:3px solid #F97316;box-shadow:0 0 30px #F9731644"></canvas>
+<div id="qrToken" style="margin-top:12px;font-size:11px;color:#555;letter-spacing:1px;font-family:monospace"></div>
+<div style="margin-top:14px;font-size:11px;color:#777">Telefona kurmak icin tara</div>
+<button onclick="document.getElementById('qrOverlay').style.display='none'" style="margin-top:16px;padding:10px 32px;border:1px solid #333;background:transparent;color:#888;border-radius:10px;cursor:pointer;font-size:12px">Kapat</button>
+</div>
+</div>
+<script>
+function showQR(){
+var o=document.getElementById('qrOverlay');o.style.display='flex';
+var t=new URLSearchParams(window.location.search).get('t')||localStorage.getItem('fenix_qr_pro')||'';
+var url='https://fenix-ai-1002279588287.europe-west1.run.app/fenix-otonom-mobile.html'+(t?'?t='+t:'');
+document.getElementById('qrToken').textContent=t?t.slice(0,8).toUpperCase()+' ... '+t.slice(-4).toUpperCase():'';
+var c=document.getElementById('qrCanvas'),x=c.getContext('2d');
+var img=new Image();img.crossOrigin='anonymous';
+img.src='https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=F97316&bgcolor=FFFFFF&data='+encodeURIComponent(url);
+img.onload=function(){c.width=200;c.height=200;x.drawImage(img,0,0)};
+}
 </script>
 
 </body>
