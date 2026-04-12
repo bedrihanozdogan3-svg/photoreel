@@ -543,6 +543,14 @@ function sendNotif(catId, name) {
 
 // ── INIT ──
 (async function init() {
+  // ?reset=1 ile tüm verileri sıfırla
+  if (new URLSearchParams(window.location.search).get('reset')) {
+    localStorage.clear();
+    credits = 30; trialCredits = TRIAL_MAX;
+    localStorage.setItem('fenix_otonom_credits', '30');
+    localStorage.setItem('fenix_trial_credits', String(TRIAL_MAX));
+    history.replaceState(null, '', window.location.pathname);
+  }
   const t = new URLSearchParams(window.location.search).get('t');
   if (t && t.length >= 8) {
     cardToken = t;
