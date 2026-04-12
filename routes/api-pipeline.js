@@ -210,23 +210,20 @@ const CATEGORY_TRANSITIONS = {
   aksesuar:   ['fadewhite', 'slideleft', 'smoothleft', 'fade'],
 };
 
-// SAHNE PROMPT KURALI: Sadece YÜZEY + ARKA PLAN + IŞIK.
-// Kesinlikle insan, model, manken, el, ürün YOK.
-const _NO_ITEMS = 'STRICT RULE: The image must contain ONLY an empty surface and background. Absolutely NO people, NO human models, NO mannequins, NO hands, NO products, NO objects, NO items. Just an empty backdrop ready for product placement.';
-
+// Kategori bazlı sahne seçenekleri — Gemini her seferinde rastgele biri seçer
 const SCENE_PROMPTS = {
-  gida:       `Empty food photography backdrop: rustic wooden table surface, warm golden hour lighting from window, soft bokeh background, no food. ${_NO_ITEMS}`,
-  icecek:     `Empty beverage photography backdrop: dark surface with subtle water droplets, cool blue rim light, dark gradient background. ${_NO_ITEMS}`,
-  kozmetik:   `Empty cosmetic photography backdrop: white marble surface, soft pink fabric draped in background, gold shimmer, diffuse lighting. ${_NO_ITEMS}`,
-  giyim:      `Empty product photography backdrop: clean white seamless studio paper, soft even lighting from both sides, light gray gradient, minimal. ${_NO_ITEMS}`,
-  elektronik: `Empty tech photography backdrop: matte black surface, blue-purple neon ambient glow from edges, dark background. ${_NO_ITEMS}`,
-  spor:       `Empty sports photography backdrop: concrete floor surface, outdoor natural bright light, blurred green trees in background. ${_NO_ITEMS}`,
-  ev:         `Empty home decor photography backdrop: light wood table surface, natural window light, blurred plants in background, Scandinavian style. ${_NO_ITEMS}`,
-  otomotiv:   `Empty automotive photography backdrop: dark polished floor, dramatic rim lighting from sides, dark background. ${_NO_ITEMS}`,
-  pet:        `Empty pet product photography backdrop: soft green grass surface, warm natural sunlight, soft focus flowers in background. ${_NO_ITEMS}`,
-  taki:       `Empty jewelry photography backdrop: black velvet surface, single spotlight from above, soft bokeh lights in dark background. ${_NO_ITEMS}`,
-  oyuncak:    `Empty children product photography backdrop: bright pastel colored surface, even soft lighting, colorful blurred confetti in background. ${_NO_ITEMS}`,
-  aksesuar:   `Empty accessory photography backdrop: clean white surface with subtle shadow, soft directional light, light gray gradient background. ${_NO_ITEMS}`,
+  gida:       'a rustic wooden kitchen table with warm golden hour sunlight from a window, herbs nearby | a dark slate surface with dramatic side lighting | a marble kitchen counter with morning light',
+  icecek:     'a dark bar counter with cool blue neon rim light and water droplets | an ice-covered surface with condensation | a sleek black granite table with moody lighting',
+  kozmetik:   'a white marble vanity with rose petals and soft pink light | a glass shelf with gold accents and diffuse lighting | a velvet draped surface with warm spotlights',
+  giyim:      'a clean white studio backdrop with soft even lighting | a minimalist concrete surface with directional light | a light gray fabric backdrop with natural window light',
+  elektronik: 'a matte black desk with blue-purple neon glow from edges | a dark tech workspace with RGB lighting | a sleek carbon fiber surface with dramatic rim light',
+  spor:       'a concrete gym floor with bright natural light | an outdoor grass field with sunlight | a wooden bench in a sports locker room',
+  ev:         'a Scandinavian light wood table with plants nearby | a cozy living room shelf with warm lamp light | a modern kitchen counter with natural window light',
+  otomotiv:   'a dark polished garage floor with dramatic rim lighting | a carbon surface with spotlight | a sleek showroom pedestal with dark background',
+  pet:        'soft green grass in a sunny garden | a cozy pet bed with warm light | a wooden deck with afternoon sunlight',
+  taki:       'a black velvet surface with single spotlight creating sparkle | a dark mirror surface with bokeh lights | a luxurious leather display with gold accents',
+  oyuncak:    'a bright pastel colored playroom floor | a colorful confetti scattered table | a cheerful nursery shelf with soft lighting',
+  aksesuar:   'a polished office desk with warm lamp light | a granite table surface with elegant styling | a modern wooden shelf with minimalist decor | a chic dining table with soft ambient light | a marble surface with gold accessories nearby',
 };
 
 // ═══════════════════════════════════════════
@@ -575,7 +572,11 @@ async function autoProducePipeline(jobId, files, opts) {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 contents: [{ parts: [
-                  { text: `This is a product photo. Keep the product EXACTLY as it is — do NOT modify, remove, or regenerate the product. Only change the BACKGROUND behind and around the product. Replace the background with: ${scenePrompt}. The product must be clearly visible, centered, and prominent in the final image. Output a vertical 9:16 product photography image.` },
+                  { text: `This is a product photo for e-commerce. Keep the product EXACTLY as it is — same shape, same color, same angle, same details. Do NOT modify or regenerate the product.
+
+Only REPLACE the background. Choose the most fitting scene from these options: ${scenePrompt}
+
+Pick the scene that best matches the product's style and luxury level. Place the product naturally on that surface — it should look like a real professional product photo taken in that setting. The product must be clearly visible, well-lit, centered, and the main focus. Output a vertical 9:16 image.` },
                   { inlineData: { mimeType, data: b64 } }
                 ]}],
                 generationConfig: { responseModalities: ['IMAGE', 'TEXT'] }
