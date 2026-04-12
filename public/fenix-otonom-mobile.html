@@ -564,10 +564,10 @@ function sendNotif(catId, name) {
       if (r.ok) { const d = await r.json(); credits = d.credits || 0; plan = d.plan || plan; localStorage.setItem('fenix_otonom_credits', credits); }
     } catch(e) {}
   }
-  // Herkese deneme kredisi ver (ilk kullanımda)
-  if (!localStorage.getItem('fenix_trial_credits')) { trialCredits=TRIAL_MAX; localStorage.setItem('fenix_trial_credits',trialCredits); }
-  // Kredi 0 ise ve kart yoksa varsayılan test kredisi ver
-  if (credits <= 0 && !cardToken) { credits = 30; localStorage.setItem('fenix_otonom_credits', credits); }
+  // Herkese deneme kredisi ver
+  if (trialCredits <= 0 || !localStorage.getItem('fenix_trial_credits')) { trialCredits=TRIAL_MAX; localStorage.setItem('fenix_trial_credits',String(trialCredits)); }
+  // Kredi 0 ise varsayılan test kredisi ver (kart yoksa her zaman)
+  if (credits <= 0) { credits = 30; localStorage.setItem('fenix_otonom_credits', String(credits)); }
   try { const o=JSON.parse(localStorage.getItem('fenix_jobs')||'[]'); if(o.length>0&&o[0].shortcutId){localStorage.removeItem('fenix_jobs');jobs=[]} } catch(e){localStorage.removeItem('fenix_jobs');jobs=[]}
   reqNotif();
   setTimeout(()=>{const l=document.getElementById('loadingScreen');if(l){l.classList.add('hide');setTimeout(()=>l.remove(),400)}},500);
