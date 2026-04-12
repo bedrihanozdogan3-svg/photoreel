@@ -269,7 +269,7 @@ body{
   </div>
 </div>
 
-<input type="file" id="fileInput">
+<input type="file" id="fileInput" multiple>
 
 <script>
 const API = window.location.origin;
@@ -498,7 +498,7 @@ const CATEGORIES = [
         {id:'oto_settings',icon:'⚙️',label:'Ayarlar',isAction:true},
       ]},
     ],
-    defaultEndpoint:'/api/otonom/auto-produce', defaultAccept:'video/*,image/*', defaultField:'files'
+    defaultEndpoint:'/api/pipeline/auto-produce', defaultAccept:'video/*,image/*', defaultField:'photos'
   },
 ];
 
@@ -621,7 +621,8 @@ function renderJobs() {
   el.innerHTML = show.map(job => {
     const cat = CATEGORIES.find(c=>c.id===job.catId)||CATEGORIES[0];
     const isAct = ['processing','queued','uploading'].includes(job.status);
-    const st = job.status==='done'?'HAZIR':job.status==='error'?'HATA':job.status==='uploading'?'YUKLUYOR':job.status==='queued'?'SIRADA':'%'+job.progress;
+    const stageLabels = {'removing-bg':'BG SILIYOR','generating-scene':'SAHNE URETIYOR','compositing':'BIRLESTIRIYOR','building-reels':'REELS OLUSTURUYOR','preparing':'HAZIRLANIYOR','starting':'BASLIYOR'};
+    const st = job.status==='done'?'HAZIR':job.status==='error'?'HATA':job.status==='uploading'?'YUKLUYOR':job.status==='queued'?'SIRADA':job.stage&&stageLabels[job.stage]?stageLabels[job.stage]+' %'+job.progress:'%'+job.progress;
     const sc = job.status==='done'?'done':job.status==='error'?'error':'pending';
     return `<div class="job ${job.status==='done'?'done':''}">
       <span class="j-icon">${job.icon||'🔥'}</span>
@@ -692,6 +693,36 @@ async function execAction(catId, cmdId, cmd) {
   jobs.unshift({id:jid,catId,cmdId,name:cmd?.label||cmdId,icon:cmd?.icon||'🤖',status:'queued',progress:0,ts:Date.now()});
   saveJobs(); render();
   try {
+    // Otonom "Tam Oto" — dosya seçtir, pipeline'a gönder
+    if (catId === 'otonom' && cmdId === 'oto_auto') {
+      updJob(jid, { status: 'processing', progress: 0 });
+      const inp = document.getElementById('fileInput');
+      inp.accept = 'image/*';
+      inp.onchange = async function() {
+        const files = this.files;
+        if (!files?.length) { updJob(jid, { status: 'error', error: 'Dosya secilmedi' }); return; }
+        const fd = new FormData();
+        for (let i = 0; i < files.length; i++) fd.append('photos', files[i], files[i].name);
+        fd.append('category', 'giyim');
+        fd.append('removeBg', 'true');
+        fd.append('generateScene', 'true');
+        fd.append('transition', 'auto');
+        fd.append('lut', 'auto');
+        fd.append('addLogo', 'true');
+        updJob(jid, { name: `${files.length} foto → Reels`, progress: 5 });
+        try {
+          const r = await fetch(`${API}/api/pipeline/auto-produce`, { method: 'POST', body: fd });
+          if (!r.ok) throw new Error('Pipeline basarisiz');
+          const d = await r.json();
+          if (d.jobId) { updJob(jid, { id: d.jobId, status: 'processing' }); pollPipelineJob(d.jobId, jid, catId); }
+          deduct(catId); showToast('Otonom uretim basladi! 🔥','ok');
+        } catch(e) { updJob(jid, { status: 'error', error: e.message }); showToast(e.message,'error'); }
+        this.onchange = null; this.value = '';
+      };
+      inp.click();
+      return;
+    }
+
     const r = await fetch(`${API}${cat.defaultEndpoint}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan,action:cmdId})});
     if(!r.ok) throw new Error('Basarisiz');
     const d = await r.json();
@@ -702,24 +733,112 @@ async function execAction(catId, cmdId, cmd) {
 }
 
 document.getElementById('fileInput').addEventListener('change', async function(e) {
-  const file = e.target.files?.[0];
-  if (!file || !activeUpload) return;
+  const files = e.target.files;
+  if (!files?.length || !activeUpload) return;
   const {catId,cmdId,field,icon} = activeUpload;
   const cat = CATEGORIES.find(c=>c.id===catId);
   const jid = crypto.randomUUID();
-  jobs.unshift({id:jid,catId,cmdId,name:file.name,icon:icon||'📄',status:'uploading',progress:0,ts:Date.now()});
+  const fileCount = files.length;
+  jobs.unshift({id:jid,catId,cmdId,name:fileCount>1?`${fileCount} dosya`:files[0].name,icon:icon||'📄',status:'uploading',progress:0,ts:Date.now()});
   saveJobs(); render();
   try {
-    const fd = new FormData(); fd.append(field, file, file.name);
-    const r = await fetch(`${API}${cat.defaultEndpoint}`,{method:'POST',body:fd});
-    if(!r.ok) throw new Error('Basarisiz');
-    const d = await r.json();
-    updJob(jid,{id:d.jobId||d.id||jid,status:d.downloadUrl?'done':'queued',progress:d.downloadUrl?100:0,url:d.downloadUrl});
-    if(d.downloadUrl) sendNotif(catId,file.name);
+    const fd = new FormData();
+
+    // Pipeline endpoint'leri için özel işlem
+    const isPipeline = cat.defaultEndpoint.startsWith('/api/pipeline');
+    const isEticaret = catId === 'eticaret';
+
+    if (isPipeline || isEticaret) {
+      // Çoklu dosya desteği — pipeline photos field'ı kullanır
+      for (let i = 0; i < files.length; i++) {
+        fd.append(isPipeline ? 'photos' : (isEticaret ? 'image' : field), files[i], files[i].name);
+      }
+      // Kategori bilgisini ekle (pipeline sahne/LUT/geçiş seçimi için)
+      fd.append('category', detectProductCategory(catId, cmdId));
+      fd.append('removeBg', 'true');
+      fd.append('generateScene', 'true');
+      fd.append('transition', 'auto');
+      fd.append('lut', 'auto');
+      fd.append('addLogo', 'true');
+      fd.append('logoText', 'Fenix AI');
+
+      // E-ticaret BG sil komutu → pipeline/remove-bg
+      const endpoint = isEticaret && (cmdId === 'et_removebg' || cmdId === 'et_changebg')
+        ? '/api/pipeline/remove-bg'
+        : cat.defaultEndpoint;
+
+      const r = await fetch(`${API}${endpoint}`, { method: 'POST', body: fd });
+      if (!r.ok) throw new Error('Basarisiz');
+      const d = await r.json();
+
+      if (d.jobId) {
+        // Async job — polling başlat
+        updJob(jid, { id: d.jobId, status: 'processing', progress: 5 });
+        pollPipelineJob(d.jobId, jid, catId);
+      } else if (d.downloadUrl) {
+        updJob(jid, { status: 'done', progress: 100, url: d.downloadUrl });
+        sendNotif(catId, files[0].name);
+      } else {
+        updJob(jid, { status: 'done', progress: 100, url: d.downloadUrl || d.fileId ? `/api/pipeline/download/${d.fileId}` : null });
+      }
+    } else {
+      // Normal endpoint (PRO, 360, Dublaj)
+      fd.append(field, files[0], files[0].name);
+      const r = await fetch(`${API}${cat.defaultEndpoint}`, { method: 'POST', body: fd });
+      if (!r.ok) throw new Error('Basarisiz');
+      const d = await r.json();
+      updJob(jid, { id: d.jobId || d.id || jid, status: d.downloadUrl ? 'done' : 'queued', progress: d.downloadUrl ? 100 : 0, url: d.downloadUrl });
+      if (d.downloadUrl) sendNotif(catId, files[0].name);
+    }
+
     deduct(catId); showToast('Kuyruga alindi','ok');
   } catch(e) { updJob(jid,{status:'error',error:e.message}); showToast(e.message,'error'); }
   activeUpload=null; this.value=''; render();
 });
+
+// Pipeline job polling — durumu canlı takip et
+function pollPipelineJob(jobId, localJid, catId) {
+  const iv = setInterval(async () => {
+    try {
+      const r = await fetch(`${API}/api/pipeline/status/${jobId}`);
+      if (!r.ok) { clearInterval(iv); return; }
+      const d = await r.json();
+      updJob(localJid, { progress: d.progress || 0, stage: d.stage });
+      if (d.status === 'done') {
+        clearInterval(iv);
+        updJob(localJid, { status: 'done', progress: 100, url: d.downloadUrl });
+        sendNotif(catId, 'Reels');
+        showToast('Reels hazir! 🔥','ok');
+      } else if (d.status === 'error') {
+        clearInterval(iv);
+        updJob(localJid, { status: 'error', error: d.error });
+        showToast(d.error || 'Hata olustu','error');
+      }
+    } catch(e) { /* polling devam */ }
+  }, 2000);
+  // 5dk timeout
+  setTimeout(() => clearInterval(iv), 5 * 60 * 1000);
+}
+
+// Ürün kategorisi algıla (pipeline sahne/LUT seçimi için)
+function detectProductCategory(catId, cmdId) {
+  if (catId === 'eticaret') {
+    const map = {
+      et_tshirt:'giyim',et_dress:'giyim',et_shoes:'giyim',et_bag:'giyim',et_hat:'giyim',et_glasses:'giyim',
+      et_jewelry:'taki',et_watch:'taki',
+      et_phone:'elektronik',et_laptop:'elektronik',et_headphone:'elektronik',et_camera:'elektronik',et_tv:'elektronik',et_tablet:'elektronik',et_console:'elektronik',et_charger:'elektronik',
+      et_furniture:'ev',et_lamp:'ev',et_carpet:'ev',et_curtain:'ev',et_kitchen:'ev',et_bath:'ev',et_garden:'ev',et_decor:'ev',
+      et_skincare:'kozmetik',et_makeup:'kozmetik',et_perfume:'kozmetik',et_hair:'kozmetik',et_nail:'kozmetik',et_cream:'kozmetik',
+      et_food:'gida',et_drink:'icecek',et_snack:'gida',et_organic:'gida',et_supplement:'gida',et_package:'gida',
+      et_sportgear:'spor',et_sportshoe:'spor',et_camp:'spor',et_bike:'spor',et_swim:'spor',et_yoga:'spor',
+      et_toy:'oyuncak',et_baby:'oyuncak',et_school:'oyuncak',et_game:'oyuncak',
+      et_carpart:'otomotiv',et_tire:'otomotiv',et_accessory:'otomotiv',et_tool:'otomotiv',
+      et_petfood:'pet',et_petacc:'pet',et_petbed:'pet',et_petcloth:'pet',
+    };
+    return map[cmdId] || 'giyim';
+  }
+  return catId === 'otonom' ? 'giyim' : catId;
+}
 
 document.getElementById('msgInput').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();sendMessage()}});
 
@@ -761,7 +880,8 @@ setInterval(async()=>{
       let url;
       if(job.catId==='360') url=`${API}/api/pro/stitch/status/${job.id}`;
       else if(job.catId==='dublaj') url=`${API}/api/dubbing/status/${job.id}`;
-      else if(job.catId==='otonom') url=`${API}/api/otonom/status/${job.id}`;
+      else if(job.catId==='otonom') url=`${API}/api/pipeline/status/${job.id}`;
+      else if(job.catId==='eticaret') url=`${API}/api/pipeline/status/${job.id}`;
       else url=`${API}/api/pro/render-progress/${job.id}`;
       const r=await fetch(url);if(!r.ok) continue;
       const d=await r.json();

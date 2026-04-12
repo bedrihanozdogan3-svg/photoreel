@@ -421,6 +421,10 @@ app.use('/api/claude-local', localClaudeRoutes);
 const codeRoutes = require('./routes/api-gemini-code');
 app.use('/api/code', requireAdmin, codeRoutes);
 
+// Fenix Pipeline — Reels üretim hattı (arka plan silme → sahne → slideshow → export)
+const pipelineRoutes = require('./routes/api-pipeline');
+app.use('/api/pipeline', pipelineRoutes);
+
 // Fenix Kontrol Paneli v2 (ember tasarım)
 app.get('/kontrol', requireAdmin, (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'kontrol2.html'));
