@@ -684,6 +684,8 @@ function renderContent() {
 
   // YouTube wizard modu
   if (cat.isWizard && cat.id === 'youtube') { renderYouTubeWizard(el); return; }
+  // Mix Reel wizard modu
+  if (cat.id === 'mixreel') { renderMixReelWizard(el); return; }
 
   el.innerHTML = cat.sections.map(sec => `
     <div class="section">
@@ -822,6 +824,32 @@ document.getElementById('fileInput').addEventListener('change', async function(e
   if (!files?.length || !activeUpload) return;
   const {catId,cmdId,field,icon} = activeUpload;
   const cat = CATEGORIES.find(c=>c.id===catId);
+
+  // YouTube kendi wizard'ını kullanıyor — skip
+  if (catId === 'youtube') return;
+
+  // Mix Reel dışı sekmelerde: "Şimdi İşle / Kuyruğa Ekle" seçeneği göster
+  if (catId !== 'mixreel' && catId !== 'otonom' && files[0]?.type?.startsWith('video/')) {
+    const choice = await showUploadChoice(files[0], catId);
+    if (choice === 'queue') {
+      // Kuyruğa ekle (işleme yok, Mix Reel için beklet)
+      addToMixQueue(files[0], catId, cmdId, icon);
+      this.value = '';
+      activeUpload = null;
+      return;
+    }
+    if (choice === 'both') {
+      // Hem işle hem kuyruğa at
+      addToMixQueue(files[0], catId, cmdId, icon);
+      // devam et — aşağıda normal işleme yapılacak
+    }
+    if (choice === 'cancel') {
+      this.value = '';
+      activeUpload = null;
+      return;
+    }
+    // choice === 'process' → normal devam
+  }
   const jid = crypto.randomUUID();
   const fileCount = files.length;
   jobs.unshift({id:jid,catId,cmdId,name:fileCount>1?`${fileCount} dosya`:files[0].name,icon:icon||'📄',status:'uploading',progress:0,ts:Date.now()});
@@ -1067,6 +1095,213 @@ setInterval(async()=>{
     }catch(e){}
   }
 },3000);
+
+// ═══════════════════════════════════════════════
+// VIDEO YÜKLEME SEÇENEĞİ (Şimdi İşle / Kuyruğa Ekle)
+// ═══════════════════════════════════════════════
+
+function showUploadChoice(file, catId) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML = `
+      <div style="background:#111;border:1px solid #333;border-radius:16px;padding:24px;max-width:340px;width:100%;">
+        <div style="text-align:center;margin-bottom:16px;">
+          <div style="font-size:32px;margin-bottom:8px;">📹</div>
+          <div style="font-size:14px;font-weight:700;color:#fff;">${file.name}</div>
+          <div style="font-size:11px;color:#888;margin-top:4px;">${(file.size/1024/1024).toFixed(1)} MB</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button onclick="this.closest('div[style*=fixed]')._resolve('process')" style="padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#22C55E,#16A34A);color:#fff;font-size:14px;font-weight:700;cursor:pointer;">🎬 ŞİMDİ İŞLE</button>
+          <button onclick="this.closest('div[style*=fixed]')._resolve('queue')" style="padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#8B5CF6,#7C3AED);color:#fff;font-size:14px;font-weight:700;cursor:pointer;">📋 MIX REEL KUYRUĞUNA EKLE</button>
+          <button onclick="this.closest('div[style*=fixed]')._resolve('both')" style="padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#F97316,#EA580C);color:#fff;font-size:14px;font-weight:700;cursor:pointer;">🔄 HEM İŞLE HEM KUYRUĞA AT</button>
+          <button onclick="this.closest('div[style*=fixed]')._resolve('cancel')" style="padding:10px;border:1px solid #333;border-radius:12px;background:none;color:#666;font-size:12px;cursor:pointer;">İptal</button>
+        </div>
+      </div>
+    `;
+    overlay._resolve = (choice) => { document.body.removeChild(overlay); resolve(choice); };
+    document.body.appendChild(overlay);
+  });
+}
+
+// ═══════════════════════════════════════════════
+// MIX REEL KUYRUK SİSTEMİ
+// ═══════════════════════════════════════════════
+
+function addToMixQueue(file, catId, cmdId, icon) {
+  const entry = {
+    id: 'mq_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+    name: file.name,
+    size: file.size,
+    catId,
+    cmdId,
+    icon: icon || '📹',
+    addedAt: Date.now(),
+    selected: false,
+    // File URL oluştur (local blob)
+    blobUrl: URL.createObjectURL(file),
+    file: file, // referansı tut
+  };
+  mixReelQueue.push(entry);
+  localStorage.setItem('fenix_mixreel_queue', JSON.stringify(mixReelQueue.map(q => ({...q, file:undefined, blobUrl:undefined}))));
+  showToast(`📋 Mix Reel kuyruğuna eklendi (${mixReelQueue.length} video)`, 'ok');
+  render();
+}
+
+// Mix Reel state
+let mixState = { transition:'fade', format:'reels', colorFilter:'none', tempo:'normal', template:null, beatSync:false, textOverlay:null, hashtags:'' };
+
+function renderMixReelWizard(el) {
+  const queue = mixReelQueue;
+  const selected = queue.filter(q => q.selected);
+  const jetonCost = selected.length; // her video 1 jeton
+  const hasJetons = jetons >= jetonCost;
+
+  el.innerHTML = `
+    <div style="padding:12px;display:flex;flex-direction:column;gap:12px;">
+
+      <!-- KUYRUK -->
+      <div class="section">
+        <div class="sec-header" style="--sec-color:#D946EF"><div class="sec-line"></div><span class="sec-title">KUYRUK (${queue.length} video)</span><div class="sec-line-r"></div></div>
+        ${queue.length === 0 ? `<div style="padding:30px;text-align:center;color:#555;font-size:12px;">Henüz video yok.<br>PRO, 360° veya Dublaj sekmesinden video yükleyip<br>"Kuyruğa Ekle" seçin.</div>` : `
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:250px;overflow-y:auto;">
+          ${queue.map((q, i) => `
+            <div style="display:flex;align-items:center;gap:8px;padding:10px;background:${q.selected?'rgba(217,70,239,.1)':'rgba(255,255,255,.03)'};border:1px solid ${q.selected?'rgba(217,70,239,.4)':'rgba(255,255,255,.06)'};border-radius:10px;cursor:pointer;" onclick="mixReelQueue[${i}].selected=!mixReelQueue[${i}].selected;render()">
+              <span style="font-size:20px;">${q.selected?'☑️':'⬜'}</span>
+              <span style="font-size:16px;">${q.icon}</span>
+              <div style="flex:1;">
+                <div style="font-size:12px;color:#fff;font-weight:600;">${q.name}</div>
+                <div style="font-size:10px;color:#888;">${q.catId.toUpperCase()} · ${(q.size/1024/1024).toFixed(1)} MB</div>
+              </div>
+              <button onclick="event.stopPropagation();mixReelQueue.splice(${i},1);render()" style="background:none;border:none;color:#EF4444;font-size:14px;cursor:pointer;">🗑️</button>
+            </div>
+          `).join('')}
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <button onclick="mixReelQueue.forEach(q=>q.selected=true);render()" style="flex:1;padding:8px;border:1px solid #333;border-radius:8px;background:none;color:#aaa;font-size:11px;cursor:pointer;">✅ Hepsini Seç</button>
+          <button onclick="mixReelQueue.forEach(q=>q.selected=false);render()" style="flex:1;padding:8px;border:1px solid #333;border-radius:8px;background:none;color:#aaa;font-size:11px;cursor:pointer;">⬜ Temizle</button>
+        </div>
+        `}
+      </div>
+
+      ${selected.length > 0 ? `
+      <!-- GEÇİŞ EFEKTİ -->
+      <div class="section">
+        <div class="sec-header" style="--sec-color:#3B82F6"><div class="sec-line"></div><span class="sec-title">GECIS EFEKTI</span><div class="sec-line-r"></div></div>
+        <div class="cmd-grid" style="margin-top:8px;">
+          ${['fade','slide','zoom','dissolve','wipe','circle','diagonal','pixelize'].map(t =>
+            `<div class="cmd ${mixState.transition===t?'active':''}" style="${mixState.transition===t?'border-color:#3B82F6;background:rgba(59,130,246,.12);':''}" onclick="mixState.transition='${t}';render()"><span class="c-icon">${{fade:'🌅',slide:'➡️',zoom:'🔍',dissolve:'💨',wipe:'🧹',circle:'⭕',diagonal:'📐',pixelize:'⚡'}[t]}</span><div class="c-label">${t}</div></div>`
+          ).join('')}
+        </div>
+      </div>
+
+      <!-- ŞABLON -->
+      <div class="section">
+        <div class="sec-header" style="--sec-color:#EC4899"><div class="sec-line"></div><span class="sec-title">TREND SABLON</span><div class="sec-line-r"></div></div>
+        <div class="cmd-grid" style="margin-top:8px;">
+          ${[
+            {id:null,icon:'🚫',label:'Yok'},
+            {id:'fast_cuts',icon:'⚡',label:'Hizli Kesim'},
+            {id:'slow_motion',icon:'🐌',label:'Slow-Mo'},
+            {id:'vintage_vlog',icon:'📷',label:'Vintage'},
+            {id:'dark_mood',icon:'🌑',label:'Dark'},
+            {id:'product_show',icon:'🛍️',label:'Urun'},
+            {id:'travel',icon:'✈️',label:'Seyahat'},
+            {id:'sport',icon:'🏃',label:'Spor'},
+          ].map(t =>
+            `<div class="cmd ${mixState.template===t.id?'active':''}" style="${mixState.template===t.id?'border-color:#EC4899;background:rgba(236,72,153,.12);':''}" onclick="mixState.template=${t.id?`'${t.id}'`:'null'};render()"><span class="c-icon">${t.icon}</span><div class="c-label">${t.label}</div></div>`
+          ).join('')}
+        </div>
+      </div>
+
+      <!-- FORMAT -->
+      <div class="section">
+        <div class="sec-header" style="--sec-color:#10B981"><div class="sec-line"></div><span class="sec-title">FORMAT</span><div class="sec-line-r"></div></div>
+        <div class="cmd-grid" style="margin-top:8px;">
+          ${[{id:'reels',icon:'📱',label:'Reels 9:16'},{id:'tiktok',icon:'🎵',label:'TikTok'},{id:'shorts',icon:'▶️',label:'Shorts'},{id:'square',icon:'⬜',label:'Kare 1:1'},{id:'landscape',icon:'🖥️',label:'Yatay 16:9'}].map(f =>
+            `<div class="cmd ${mixState.format===f.id?'active':''}" style="${mixState.format===f.id?'border-color:#10B981;background:rgba(16,185,129,.12);':''}" onclick="mixState.format='${f.id}';render()"><span class="c-icon">${f.icon}</span><div class="c-label">${f.label}</div></div>`
+          ).join('')}
+        </div>
+      </div>
+
+      <!-- EKSTRALAR -->
+      <div class="section">
+        <div class="sec-header" style="--sec-color:#8B5CF6"><div class="sec-line"></div><span class="sec-title">EKSTRALAR</span><div class="sec-line-r"></div></div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid ${mixState.beatSync?'rgba(236,72,153,.4)':'rgba(255,255,255,.06)'};border-radius:10px;">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">🥁</span><span style="font-size:12px;color:#e4e4e7">Beat Sync (Muzik Ritmine Kes)</span></div>
+            <label style="position:relative;width:44px;height:24px;cursor:pointer;">
+              <input type="checkbox" ${mixState.beatSync?'checked':''} onchange="mixState.beatSync=this.checked;render()" style="opacity:0;width:0;height:0;">
+              <span style="position:absolute;inset:0;background:${mixState.beatSync?'#EC4899':'#333'};border-radius:24px;transition:.3s"></span>
+              <span style="position:absolute;top:2px;left:${mixState.beatSync?'22px':'2px'};width:20px;height:20px;background:#fff;border-radius:50%;transition:.3s"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- FATURA -->
+      <div class="section">
+        <div class="sec-header" style="--sec-color:#EAB308"><div class="sec-line"></div><span class="sec-title">FATURA</span><div class="sec-line-r"></div></div>
+        <div style="margin-top:8px;padding:14px;background:rgba(168,85,247,.05);border:1px solid rgba(168,85,247,.2);border-radius:12px;font-size:12px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;color:#a1a1aa;">
+            <span>${selected.length} video mix isleme</span><span style="color:#A855F7">${jetonCost} Jeton</span>
+          </div>
+          <div style="border-top:1px solid rgba(168,85,247,.2);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:700;">
+            <span style="color:#fff">TOPLAM</span>
+            <span style="color:#A855F7;font-size:16px;">💎 ${jetonCost} Jeton (${(jetonCost*0.5).toFixed(2)}$)</span>
+          </div>
+          <div style="margin-top:4px;font-size:10px;color:#71717a;">Bakiye: 💎 ${jetons} Jeton ${hasJetons?'✅':'❌ Yetersiz'}</div>
+        </div>
+        <button onclick="mixReelApprove()" style="width:100%;margin-top:10px;padding:14px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;${hasJetons?'background:linear-gradient(135deg,#D946EF,#A855F7);color:#fff;':'background:#222;color:#555;pointer-events:none;'}">
+          🚀 MIX REEL OLUŞTUR (${jetonCost} Jeton)
+        </button>
+      </div>
+      ` : ''}
+
+    </div>
+  `;
+}
+
+function mixReelApprove() {
+  const selected = mixReelQueue.filter(q => q.selected);
+  if (selected.length === 0) { showToast('Video secin!','error'); return; }
+  const cost = selected.length;
+  if (jetons < cost) { showToast('Yetersiz Jeton! '+cost+' Jeton gerekli.','error'); return; }
+
+  // Jeton kes
+  jetons -= cost;
+  updateWallet();
+
+  // İş oluştur
+  const jid = 'mix_'+Date.now();
+  jobs.unshift({id:jid, catId:'mixreel', cmdId:'mix_render', name:`${selected.length} video Mix Reel`, icon:'🎧',
+    status:'processing', progress:0, ts:Date.now(),
+    meta: { clips: selected.length, transition: mixState.transition, format: mixState.format, template: mixState.template, beatSync: mixState.beatSync, jetons: cost }
+  });
+  saveJobs();
+  showToast('💎 '+cost+' Jeton kesildi! Mix Reel oluşturuluyor...','success');
+
+  // Kuyruktan seçilenleri kaldır
+  mixReelQueue = mixReelQueue.filter(q => !q.selected);
+  localStorage.setItem('fenix_mixreel_queue', JSON.stringify(mixReelQueue.map(q => ({...q, file:undefined, blobUrl:undefined}))));
+
+  render();
+
+  // Fabrikaya gönder (TODO: gerçek API bağlantısı)
+  fetch(API+'/api/factory/approve', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ factory:'remix', clips:selected.length, ...mixState })
+  }).then(r=>r.json()).then(d=>{
+    updJob(jid,{status:'processing',progress:10,id:d.jobId||jid});
+  }).catch(e=>{updJob(jid,{status:'error',error:e.message});});
+}
+
+// renderContent'e Mix Reel wizard ekle
+function renderMixReelCheck(el, cat) {
+  if (cat.id === 'mixreel') { renderMixReelWizard(el); return true; }
+  return false;
+}
 
 // ═══════════════════════════════════════════════
 // YOUTUBE WIZARD (Adım adım fabrika giriş akışı)
