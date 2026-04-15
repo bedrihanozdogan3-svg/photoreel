@@ -324,7 +324,7 @@ const CATEGORIES = [
         {id:'pro_objremove',icon:'🧹',label:'Nesne Sil'},{id:'pro_bgchange',icon:'🌄',label:'Arka Plan'},
       ]},
     ],
-    defaultEndpoint:'/api/pro/render', defaultAccept:'video/*', defaultField:'video'
+    defaultEndpoint:'/api/factory/approve', defaultAccept:'video/*', defaultField:'video', factory:'reels'
   },
   {
     id:'360', label:'360°', icon:'🌐', color:'#3B82F6', tabColor:'#3B82F6',
@@ -375,7 +375,7 @@ const CATEGORIES = [
         {id:'360_vr',icon:'🥽',label:'VR'},{id:'360_livestream',icon:'📡',label:'Canli'},
       ]},
     ],
-    defaultEndpoint:'/api/pro/stitch', defaultAccept:'image/*,video/*,.insv', defaultField:'images'
+    defaultEndpoint:'/api/factory/approve', defaultAccept:'image/*,video/*,.insv', defaultField:'video', factory:'youtube'
   },
   {
     id:'dublaj', label:'Dublaj', icon:'🎙️', color:'#8B5CF6', tabColor:'#8B5CF6',
@@ -399,7 +399,7 @@ const CATEGORIES = [
         {id:'dub_audiogram',icon:'📊',label:'Audiogram'},
       ]},
     ],
-    defaultEndpoint:'/api/dubbing/voiceover', defaultAccept:'video/*,audio/*', defaultField:'video'
+    defaultEndpoint:'/api/factory/approve', defaultAccept:'video/*,audio/*', defaultField:'video', factory:'dubbing'
   },
   {
     id:'eticaret', label:'E-Ticaret', icon:'🛍️', color:'#10B981', tabColor:'#10B981',
@@ -479,7 +479,7 @@ const CATEGORIES = [
         {id:'et_etsy',icon:'🟡',label:'Etsy'},{id:'et_shopify',icon:'🟢',label:'Shopify'},
       ]},
     ],
-    defaultEndpoint:'/api/pipeline/auto-produce', defaultAccept:'image/*', defaultField:'photos'
+    defaultEndpoint:'/api/factory/approve', defaultAccept:'image/*', defaultField:'photos', factory:'ecommerce'
   },
   {
     id:'youtube', label:'YouTube', icon:'🎬', color:'#FF0000', tabColor:'#FF0000',
@@ -555,7 +555,7 @@ const CATEGORIES = [
         {id:'oto_settings',icon:'⚙️',label:'Ayarlar',isAction:true},
       ]},
     ],
-    defaultEndpoint:'/api/pipeline/auto-produce', defaultAccept:'video/*,image/*', defaultField:'photos'
+    defaultEndpoint:'/api/factory/approve', defaultAccept:'video/*,image/*', defaultField:'photos', factory:'reels'
   },
 ];
 
@@ -872,67 +872,104 @@ document.getElementById('fileInput').addEventListener('change', async function(e
   jobs.unshift({id:jid,catId,cmdId,name:fileCount>1?`${fileCount} dosya`:files[0].name,icon:icon||'📄',status:'uploading',progress:0,ts:Date.now()});
   saveJobs(); render();
   try {
-    const fd = new FormData();
+    // ═══ FABRİKA SİSTEMİ — Tüm sekmeler /api/factory/approve'a gider ═══
+    const factoryType = cat.factory || catId;
+    const FACTORY_API = 'https://fenix-factory-194617495310.europe-west1.run.app';
 
-    // Pipeline endpoint'leri için özel işlem
-    const isPipeline = cat.defaultEndpoint.startsWith('/api/pipeline');
-    const isEticaret = catId === 'eticaret';
+    // 1. Önce GCS'ye yükle (hızlı — sunucudan geçmez)
+    updJob(jid, { status: 'uploading', progress: 5 });
+    const signRes = await fetch(`${API}/api/pro/upload/signed-url`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fileName: files[0].name, contentType: files[0].type, fileSize: files[0].size }),
+    });
+    const signData = await signRes.json();
 
-    if (isPipeline || isEticaret) {
-      // Pipeline photos field'ı kullanır
-      for (let i = 0; i < files.length; i++) {
-        fd.append('photos', files[i], files[i].name);
+    if (signData.ok && signData.uploadUrl) {
+      // GCS resumable upload
+      updJob(jid, { status: 'uploading', progress: 10 });
+      try {
+        const initRes = await fetch(signData.uploadUrl, { method: 'POST', headers: { 'Content-Type': files[0].type || 'video/mp4', 'Content-Length': '0', 'x-goog-resumable': 'start' } });
+        const resumeUrl = initRes.headers.get('Location') || signData.uploadUrl;
+        await fetch(resumeUrl, { method: 'PUT', headers: { 'Content-Range': `bytes 0-${files[0].size-1}/${files[0].size}` }, body: files[0] });
+      } catch(uploadErr) {
+        // Fallback: eski FormData upload
+        const fd = new FormData();
+        fd.append(field, files[0], files[0].name);
+        await fetch(`${API}/api/pro/upload`, { method: 'POST', body: fd });
       }
-      // Kategori bilgisini ekle (pipeline sahne/LUT/geçiş seçimi için)
-      fd.append('category', detectProductCategory(catId, cmdId));
-      fd.append('removeBg', 'true');
-      fd.append('generateScene', 'true');
-      fd.append('transition', 'auto');
-      fd.append('lut', 'auto');
-      fd.append('addLogo', 'true');
-      fd.append('logoText', 'Fenix AI');
 
-      // BG sil komutu → sadece arka plan silme, reels değil
-      const isBgOnly = (cmdId === 'et_removebg' || cmdId === 'et_changebg' || cmdId === 'et_whitebg');
-      if (isBgOnly) {
-        // remove-bg 'image' field bekliyor, photos'u sil, image olarak ekle
-        fd.delete('photos');
-        fd.append('image', files[0], files[0].name);
-      }
-      const endpoint = isBgOnly
-        ? '/api/pipeline/remove-bg'
-        : '/api/pipeline/auto-produce';
+      updJob(jid, { status: 'uploading', progress: 60 });
 
-      const r = await fetch(`${API}${endpoint}`, { method: 'POST', body: fd });
-      if (!r.ok) throw new Error('Basarisiz');
-      const d = await r.json();
+      // 2. Upload tamamlandı — polis kontrolü
+      const completeRes = await fetch(`${API}/api/pro/upload/complete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileId: signData.fileId, gcsPath: signData.gcsPath, factory: factoryType }),
+      });
+      const completeData = await completeRes.json();
 
-      if (d.jobId) {
-        // Async job — polling başlat
-        updJob(jid, { id: d.jobId, status: 'processing', progress: 5 });
-        pollPipelineJob(d.jobId, jid, catId);
-      } else if (d.downloadUrl) {
-        updJob(jid, { status: 'done', progress: 100, url: d.downloadUrl });
-        sendNotif(catId, files[0].name);
+      updJob(jid, { status: 'processing', progress: 70 });
+
+      // 3. Fabrikaya gönder
+      const approveRes = await fetch(`${FACTORY_API}/api/factory/approve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          uid: 'user_' + (cardToken || 'anon'),
+          factory: factoryType,
+          fileUrl: `gs://fenix-factory-jobs/${signData.gcsPath}`,
+          fileName: files[0].name,
+          fileSize: files[0].size,
+          duration: completeData.duration || 0,
+          quality: '1080p',
+          cmdId,
+        }),
+      });
+      const approveData = await approveRes.json();
+
+      if (approveData.ok) {
+        updJob(jid, { id: approveData.jobId || jid, status: 'processing', progress: 80 });
+        showToast('Fabrikaya gonderildi! ' + factoryType.toUpperCase(), 'ok');
+        // Polling başlat
+        pollFactoryJob(approveData.jobId || signData.fileId, jid, catId);
       } else {
-        updJob(jid, { status: 'done', progress: 100, url: d.downloadUrl || d.fileId ? `/api/pipeline/download/${d.fileId}` : null });
+        updJob(jid, { status: 'error', error: approveData.error || 'Fabrika hatası' });
+        showToast(approveData.error || 'Hata', 'error');
       }
     } else {
-      // Normal endpoint (PRO, 360, Dublaj)
-      fd.append(field, files[0], files[0].name);
-      const r = await fetch(`${API}${cat.defaultEndpoint}`, { method: 'POST', body: fd });
-      if (!r.ok) throw new Error('Basarisiz');
-      const d = await r.json();
-      updJob(jid, { id: d.jobId || d.id || jid, status: d.downloadUrl ? 'done' : 'queued', progress: d.downloadUrl ? 100 : 0, url: d.downloadUrl });
-      if (d.downloadUrl) sendNotif(catId, files[0].name);
+      throw new Error(signData.error || 'Upload başarısız');
     }
 
-    deduct(catId); showToast('Kuyruga alindi','ok');
   } catch(e) { updJob(jid,{status:'error',error:e.message}); showToast(e.message,'error'); }
   activeUpload=null; this.value=''; render();
 });
 
 // Pipeline job polling — durumu canlı takip et
+// ═══ FABRİKA İŞ TAKİBİ ═══
+function pollFactoryJob(jobId, localJid, catId) {
+  const FACTORY_API = 'https://fenix-factory-194617495310.europe-west1.run.app';
+  const iv = setInterval(async () => {
+    try {
+      const r = await fetch(`${FACTORY_API}/api/factory/status/${jobId}`);
+      if (!r.ok) { clearInterval(iv); return; }
+      const d = await r.json();
+      updJob(localJid, { progress: d.progress || 0, stage: d.currentStep });
+      if (d.status === 'done') {
+        clearInterval(iv);
+        updJob(localJid, { status: 'done', progress: 100, url: d.outputUrl || d.downloadUrl });
+        sendNotif(catId, 'Fabrika');
+        showToast('Hazir! ' + catId.toUpperCase() + ' tamamlandi 🔥','ok');
+      } else if (d.status === 'error') {
+        clearInterval(iv);
+        updJob(localJid, { status: 'error', error: d.error || d.errors?.[0]?.message });
+        showToast(d.error || 'Fabrika hatasi','error');
+      }
+    } catch(e) { /* devam et */ }
+  }, 3000);
+}
+
+// ═══ ESKİ PİPELİNE TAKİBİ (geriye uyumluluk) ═══
 function pollPipelineJob(jobId, localJid, catId) {
   const iv = setInterval(async () => {
     try {
