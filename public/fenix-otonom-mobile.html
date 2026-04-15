@@ -486,29 +486,9 @@ const CATEGORIES = [
     gradient:'linear-gradient(135deg,#FF0000,#CC0000)',
     factory: 'youtube',
     currency: 'power',
-    maxDuration: null, // sınırsız
-    sections:[
-      { title:'Video Yukle', color:'#FF0000', cmds:[
-        {id:'yt_upload',icon:'📤',label:'Video Yukle',isAction:true,isFactory:true},
-        {id:'yt_link',icon:'🔗',label:'Link ile Yukle',isAction:true},
-      ]},
-      { title:'Islem Secenekleri', color:'#3B82F6', cmds:[
-        {id:'yt_reframe',icon:'🎯',label:'360 Reframe'},{id:'yt_blur',icon:'😶',label:'Akilli Blur'},
-        {id:'yt_speedramp',icon:'🏎️',label:'Speed Ramp'},{id:'yt_enhance',icon:'💎',label:'4K Iyilestir'},
-      ]},
-      { title:'Dublaj & Ses', color:'#8B5CF6', cmds:[
-        {id:'yt_dubbing',icon:'🎙️',label:'Dublaj (+1⚡)',isFactory:true},{id:'yt_lipsync',icon:'👄',label:'Lip-Sync (+1⚡)',isFactory:true},
-        {id:'yt_voiceclone',icon:'🧬',label:'Ses Klon (+1⚡)',isFactory:true},{id:'yt_translate',icon:'🌍',label:'Ceviri'},
-      ]},
-      { title:'Kalite', color:'#10B981', cmds:[
-        {id:'yt_1080p',icon:'📺',label:'1080p'},{id:'yt_4k',icon:'🖥️',label:'4K'},
-        {id:'yt_8k',icon:'🎥',label:'8K'},
-      ]},
-      { title:'Kuyruk & Durum', color:'#EAB308', cmds:[
-        {id:'yt_queue',icon:'📋',label:'Kuyruk',isAction:true},{id:'yt_status',icon:'📊',label:'Is Durumu',isAction:true},
-        {id:'yt_mixreel',icon:'🎧',label:'Mix Reel Olustur',isAction:true,isMixReel:true},
-      ]},
-    ],
+    maxDuration: null,
+    isWizard: true, // adım adım akış
+    sections:[], // wizard modu — renderContent override edecek
     defaultEndpoint:'/api/factory/approve', defaultAccept:'video/*,.insv', defaultField:'video'
   },
   {
@@ -701,6 +681,9 @@ function renderContent() {
   const active = getActive();
   const el = document.getElementById('contentArea');
   if (!active.includes(cat.id)) { el.innerHTML='<div style="padding:40px;text-align:center;color:var(--text5)">🔒 Kart gerekli</div>'; return; }
+
+  // YouTube wizard modu
+  if (cat.isWizard && cat.id === 'youtube') { renderYouTubeWizard(el); return; }
 
   el.innerHTML = cat.sections.map(sec => `
     <div class="section">
@@ -1084,6 +1067,235 @@ setInterval(async()=>{
     }catch(e){}
   }
 },3000);
+
+// ═══════════════════════════════════════════════
+// YOUTUBE WIZARD (Adım adım fabrika giriş akışı)
+// ═══════════════════════════════════════════════
+let ytState = { file:null, duration:0, durationMin:0, outputs:'5reels', quality:'1080p', dubbing:false, dubLang:'en', lipSync:false, voiceClone:false, subtitle:false, subLang:'en', blur:false, speedRamp:false, powerCost:0 };
+
+function ytCalcPower() {
+  let p = Math.max(1, Math.ceil(ytState.durationMin / 20));
+  if (ytState.dubbing) p += 1;
+  if (ytState.lipSync) p += 1;
+  if (ytState.voiceClone) p += 1;
+  ytState.powerCost = p;
+  return p;
+}
+
+const LANGS = [
+  {code:'en',name:'English'},{code:'tr',name:'Turkce'},{code:'ru',name:'Rusca'},{code:'de',name:'Almanca'},
+  {code:'fr',name:'Fransizca'},{code:'es',name:'Ispanyolca'},{code:'ar',name:'Arapca'},{code:'ja',name:'Japonca'},
+  {code:'zh',name:'Cince'},{code:'ko',name:'Korece'},{code:'pt',name:'Portekizce'},{code:'it',name:'Italyanca'},
+  {code:'hi',name:'Hintce'},{code:'nl',name:'Hollandaca'},{code:'pl',name:'Lehce'},{code:'sv',name:'Isvecce'},
+];
+
+function renderYouTubeWizard(el) {
+  const p = ytCalcPower();
+  const hasPower = power >= p;
+  const langOpts = LANGS.map(l=>`<option value="${l.code}" ${ytState.dubLang===l.code?'selected':''}>${l.name}</option>`).join('');
+  const subLangOpts = LANGS.map(l=>`<option value="${l.code}" ${ytState.subLang===l.code?'selected':''}>${l.name}</option>`).join('');
+
+  el.innerHTML = `
+    <div style="padding:12px;display:flex;flex-direction:column;gap:12px;">
+
+      <!-- ADIM 1: Video Yükle -->
+      <div class="section">
+        <div class="sec-header" style="--sec-color:#FF0000"><div class="sec-line"></div><span class="sec-title">1. VIDEO YUKLE</span><div class="sec-line-r"></div></div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <label style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;background:rgba(255,0,0,.08);border:2px dashed rgba(255,0,0,.3);border-radius:12px;cursor:pointer;color:#FF6666;font-weight:700;font-size:14px;">
+            📤 ${ytState.file ? ytState.file.name : 'Video Sec'}
+            <input type="file" accept="video/*,.insv" style="display:none" onchange="ytFileSelected(this)">
+          </label>
+        </div>
+        ${ytState.file ? `<div style="margin-top:8px;padding:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:8px;font-size:12px;color:#a1a1aa;">
+          📹 <b style="color:#fff">${ytState.durationMin.toFixed(1)} dakika</b> | ${ytState.file.name} | ${(ytState.file.size/1024/1024).toFixed(1)} MB
+          <br>⚡ <b style="color:#EAB308">${Math.max(1,Math.ceil(ytState.durationMin/20))} Power</b> (video ucreti)
+        </div>` : ''}
+      </div>
+
+      <!-- ADIM 2: Çıktı Sayısı (ZORUNLU) -->
+      <div class="section">
+        <div class="sec-header" style="--sec-color:#3B82F6"><div class="sec-line"></div><span class="sec-title">2. CIKTI SECIMI (ZORUNLU)</span><div class="sec-line-r"></div></div>
+        <div class="cmd-grid" style="margin-top:8px;">
+          ${[
+            {id:'1reels',icon:'1️⃣',label:'1 Reels'},{id:'3reels',icon:'3️⃣',label:'3 Reels'},
+            {id:'5reels',icon:'5️⃣',label:'5 Reels'},{id:'10reels',icon:'🔟',label:'10 Reels'},
+            {id:'1short',icon:'📱',label:'1 Kisa (1-5dk)'},{id:'full',icon:'🎬',label:'Tam Video'},
+            {id:'custom',icon:'✏️',label:'Ozel'}
+          ].map(o => `<div class="cmd ${ytState.outputs===o.id?'active':''}" style="${ytState.outputs===o.id?'border-color:#3B82F6;background:rgba(59,130,246,.12);':''}" onclick="ytState.outputs='${o.id}';render()"><span class="c-icon">${o.icon}</span><div class="c-label">${o.label}</div></div>`).join('')}
+        </div>
+      </div>
+
+      <!-- ADIM 3: Kalite (ZORUNLU) -->
+      <div class="section">
+        <div class="sec-header" style="--sec-color:#10B981"><div class="sec-line"></div><span class="sec-title">3. KALITE (ZORUNLU)</span><div class="sec-line-r"></div></div>
+        <div class="cmd-grid" style="margin-top:8px;">
+          ${[{id:'1080p',icon:'📺',label:'1080p'},{id:'4k',icon:'🖥️',label:'4K'},{id:'8k',icon:'🎥',label:'8K'}].map(o =>
+            `<div class="cmd ${ytState.quality===o.id?'active':''}" style="${ytState.quality===o.id?'border-color:#10B981;background:rgba(16,185,129,.12);':''}" onclick="ytState.quality='${o.id}';render()"><span class="c-icon">${o.icon}</span><div class="c-label">${o.label}</div></div>`
+          ).join('')}
+        </div>
+      </div>
+
+      <!-- ADIM 4: Ekstralar (OPSİYONEL — toggle) -->
+      <div class="section">
+        <div class="sec-header" style="--sec-color:#8B5CF6"><div class="sec-line"></div><span class="sec-title">4. EKSTRALAR (OPSIYONEL)</span><div class="sec-line-r"></div></div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+
+          <!-- Dublaj -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid ${ytState.dubbing?'rgba(139,92,246,.4)':'rgba(255,255,255,.06)'};border-radius:10px;">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">🎙️</span><span style="font-size:12px;color:#e4e4e7">Dublaj</span><span style="font-size:10px;color:#EAB308">+1⚡</span></div>
+            <label style="position:relative;width:44px;height:24px;cursor:pointer;">
+              <input type="checkbox" ${ytState.dubbing?'checked':''} onchange="ytState.dubbing=this.checked;if(!this.checked){ytState.lipSync=false;ytState.voiceClone=false;}render()" style="opacity:0;width:0;height:0;">
+              <span style="position:absolute;inset:0;background:${ytState.dubbing?'#8B5CF6':'#333'};border-radius:24px;transition:.3s"></span>
+              <span style="position:absolute;top:2px;left:${ytState.dubbing?'22px':'2px'};width:20px;height:20px;background:#fff;border-radius:50%;transition:.3s"></span>
+            </label>
+          </div>
+          ${ytState.dubbing ? `<div style="padding:6px 12px;"><select onchange="ytState.dubLang=this.value" style="width:100%;background:#111;border:1px solid #333;color:#fff;padding:8px;border-radius:8px;font-size:12px;">${langOpts}</select></div>` : ''}
+
+          <!-- Lip-Sync -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid ${ytState.lipSync?'rgba(236,72,153,.4)':'rgba(255,255,255,.06)'};border-radius:10px;${ytState.dubbing?'':'opacity:.4;pointer-events:none;'}">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">👄</span><span style="font-size:12px;color:#e4e4e7">Lip-Sync</span><span style="font-size:10px;color:#EAB308">+1⚡</span>${!ytState.dubbing?'<span style="font-size:9px;color:#666">(dublaj gerekli)</span>':''}</div>
+            <label style="position:relative;width:44px;height:24px;cursor:pointer;">
+              <input type="checkbox" ${ytState.lipSync?'checked':''} onchange="ytState.lipSync=this.checked;render()" style="opacity:0;width:0;height:0;">
+              <span style="position:absolute;inset:0;background:${ytState.lipSync?'#EC4899':'#333'};border-radius:24px;transition:.3s"></span>
+              <span style="position:absolute;top:2px;left:${ytState.lipSync?'22px':'2px'};width:20px;height:20px;background:#fff;border-radius:50%;transition:.3s"></span>
+            </label>
+          </div>
+
+          <!-- Ses Klonlama -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid ${ytState.voiceClone?'rgba(234,179,8,.4)':'rgba(255,255,255,.06)'};border-radius:10px;${ytState.dubbing?'':'opacity:.4;pointer-events:none;'}">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">🧬</span><span style="font-size:12px;color:#e4e4e7">Ses Klonlama</span><span style="font-size:10px;color:#EAB308">+1⚡</span></div>
+            <label style="position:relative;width:44px;height:24px;cursor:pointer;">
+              <input type="checkbox" ${ytState.voiceClone?'checked':''} onchange="ytState.voiceClone=this.checked;render()" style="opacity:0;width:0;height:0;">
+              <span style="position:absolute;inset:0;background:${ytState.voiceClone?'#EAB308':'#333'};border-radius:24px;transition:.3s"></span>
+              <span style="position:absolute;top:2px;left:${ytState.voiceClone?'22px':'2px'};width:20px;height:20px;background:#fff;border-radius:50%;transition:.3s"></span>
+            </label>
+          </div>
+
+          <!-- Altyazı -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid ${ytState.subtitle?'rgba(6,182,212,.4)':'rgba(255,255,255,.06)'};border-radius:10px;">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">💬</span><span style="font-size:12px;color:#e4e4e7">Altyazi</span></div>
+            <label style="position:relative;width:44px;height:24px;cursor:pointer;">
+              <input type="checkbox" ${ytState.subtitle?'checked':''} onchange="ytState.subtitle=this.checked;render()" style="opacity:0;width:0;height:0;">
+              <span style="position:absolute;inset:0;background:${ytState.subtitle?'#06B6D4':'#333'};border-radius:24px;transition:.3s"></span>
+              <span style="position:absolute;top:2px;left:${ytState.subtitle?'22px':'2px'};width:20px;height:20px;background:#fff;border-radius:50%;transition:.3s"></span>
+            </label>
+          </div>
+
+          <!-- Akıllı Blur -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid ${ytState.blur?'rgba(34,197,94,.4)':'rgba(255,255,255,.06)'};border-radius:10px;">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">😶</span><span style="font-size:12px;color:#e4e4e7">Akilli Blur</span></div>
+            <label style="position:relative;width:44px;height:24px;cursor:pointer;">
+              <input type="checkbox" ${ytState.blur?'checked':''} onchange="ytState.blur=this.checked;render()" style="opacity:0;width:0;height:0;">
+              <span style="position:absolute;inset:0;background:${ytState.blur?'#22C55E':'#333'};border-radius:24px;transition:.3s"></span>
+              <span style="position:absolute;top:2px;left:${ytState.blur?'22px':'2px'};width:20px;height:20px;background:#fff;border-radius:50%;transition:.3s"></span>
+            </label>
+          </div>
+
+          <!-- Speed Ramp -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:rgba(255,255,255,.03);border:1px solid ${ytState.speedRamp?'rgba(249,115,22,.4)':'rgba(255,255,255,.06)'};border-radius:10px;">
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">🏎️</span><span style="font-size:12px;color:#e4e4e7">Speed Ramp</span></div>
+            <label style="position:relative;width:44px;height:24px;cursor:pointer;">
+              <input type="checkbox" ${ytState.speedRamp?'checked':''} onchange="ytState.speedRamp=this.checked;render()" style="opacity:0;width:0;height:0;">
+              <span style="position:absolute;inset:0;background:${ytState.speedRamp?'#F97316':'#333'};border-radius:24px;transition:.3s"></span>
+              <span style="position:absolute;top:2px;left:${ytState.speedRamp?'22px':'2px'};width:20px;height:20px;background:#fff;border-radius:50%;transition:.3s"></span>
+            </label>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ADIM 5: Fatura + Onay -->
+      <div class="section">
+        <div class="sec-header" style="--sec-color:#EAB308"><div class="sec-line"></div><span class="sec-title">5. FATURA</span><div class="sec-line-r"></div></div>
+        <div style="margin-top:8px;padding:14px;background:rgba(234,179,8,.05);border:1px solid rgba(234,179,8,.2);border-radius:12px;font-size:12px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;color:#a1a1aa;">
+            <span>Video (${ytState.durationMin.toFixed(0)}dk)</span><span style="color:#EAB308">${Math.max(1,Math.ceil(ytState.durationMin/20))} Power</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:4px;color:#a1a1aa;">
+            <span>Cikti: ${ytState.outputs}</span><span style="color:#22C55E">dahil</span>
+          </div>
+          ${ytState.dubbing?`<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:#a1a1aa;"><span>Dublaj (${LANGS.find(l=>l.code===ytState.dubLang)?.name})</span><span style="color:#EAB308">+1 Power</span></div>`:''}
+          ${ytState.lipSync?`<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:#a1a1aa;"><span>Lip-Sync</span><span style="color:#EAB308">+1 Power</span></div>`:''}
+          ${ytState.voiceClone?`<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:#a1a1aa;"><span>Ses Klonlama</span><span style="color:#EAB308">+1 Power</span></div>`:''}
+          <div style="border-top:1px solid rgba(234,179,8,.2);margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;font-weight:700;">
+            <span style="color:#fff">TOPLAM</span>
+            <span style="color:#EAB308;font-size:16px">⚡ ${p} Power (${p*15}$)</span>
+          </div>
+          <div style="margin-top:4px;font-size:10px;color:#71717a;">Bakiye: ⚡ ${power} Power ${hasPower?'✅':'❌ Yetersiz'}</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button onclick="ytApprove()" style="flex:1;padding:14px;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;${ytState.file&&hasPower?'background:linear-gradient(135deg,#FF0000,#CC0000);color:#fff;':'background:#222;color:#555;pointer-events:none;'}">
+            ✅ ONAYLA (${p} Power)
+          </button>
+          <button onclick="ytState={file:null,duration:0,durationMin:0,outputs:'5reels',quality:'1080p',dubbing:false,dubLang:'en',lipSync:false,voiceClone:false,subtitle:false,subLang:'en',blur:false,speedRamp:false,powerCost:0};render()" style="padding:14px 20px;border:1px solid #333;border-radius:12px;background:none;color:#999;cursor:pointer;font-family:inherit;">
+            ❌
+          </button>
+        </div>
+      </div>
+
+    </div>
+  `;
+}
+
+function ytFileSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  ytState.file = file;
+  // Video süresini ölç
+  const video = document.createElement('video');
+  video.preload = 'metadata';
+  video.onloadedmetadata = function() {
+    window.URL.revokeObjectURL(video.src);
+    ytState.duration = video.duration;
+    ytState.durationMin = video.duration / 60;
+    render();
+  };
+  video.src = URL.createObjectURL(file);
+}
+
+function ytApprove() {
+  const p = ytCalcPower();
+  if (!ytState.file) { showToast('Video secin!','error'); return; }
+  if (power < p) { showToast('Yetersiz Power! '+p+' Power gerekli.','error'); return; }
+
+  // Power kes
+  power -= p;
+  updateWallet();
+
+  // İş oluştur
+  const jid = 'yt_'+Date.now();
+  jobs.unshift({id:jid, catId:'youtube', cmdId:'yt_upload', name:ytState.file.name, icon:'🎬',
+    status:'uploading', progress:0, ts:Date.now(),
+    meta: { duration:ytState.durationMin, outputs:ytState.outputs, quality:ytState.quality,
+      dubbing:ytState.dubbing, dubLang:ytState.dubLang, lipSync:ytState.lipSync,
+      voiceClone:ytState.voiceClone, blur:ytState.blur, speedRamp:ytState.speedRamp, power:p }
+  });
+  localStorage.setItem('fenix_jobs', JSON.stringify(jobs));
+
+  showToast('⚡ '+p+' Power kesildi! YouTube fabrikasi calisiyor...','success');
+  render();
+
+  // Dosyayı fabrikaya gönder
+  const fd = new FormData();
+  fd.append('video', ytState.file);
+  fd.append('factory', 'youtube');
+  fd.append('quality', ytState.quality);
+  fd.append('outputs', ytState.outputs);
+  fd.append('dubbing', ytState.dubbing);
+  fd.append('dubLang', ytState.dubLang);
+  fd.append('lipSync', ytState.lipSync);
+  fd.append('voiceClone', ytState.voiceClone);
+
+  fetch(API+'/api/factory/approve', {method:'POST', body:fd})
+    .then(r=>r.json())
+    .then(d=>{updJob(jid,{status:'processing',progress:10,id:d.jobId||jid})})
+    .catch(e=>{updJob(jid,{status:'error',error:e.message}); showToast('Hata: '+e.message,'error');});
+
+  // State sıfırla
+  ytState = {file:null,duration:0,durationMin:0,outputs:'5reels',quality:'1080p',dubbing:false,dubLang:'en',lipSync:false,voiceClone:false,subtitle:false,subLang:'en',blur:false,speedRamp:false,powerCost:0};
+}
+
 </script>
 <!-- Önizleme Modal -->
 <div id="previewOverlay" class="preview-overlay" onclick="if(event.target===this)closePreview()">
