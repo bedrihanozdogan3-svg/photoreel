@@ -682,8 +682,8 @@ function sendNotif(catId, name) {
 function render() { try{updateWallet();renderCredits();renderTabs();renderContent();renderJobs()}catch(e){console.error(e)} }
 
 function renderCredits() {
-  document.getElementById('creditNum').textContent = credits;
-  document.getElementById('creditBadge').className = 'h-credit' + (credits<=3?' low':'');
+  // Eski kredi badge yerine ikili cüzdan kullanılıyor (updateWallet ile)
+  updateWallet();
 }
 
 function renderTabs() {
