@@ -1113,22 +1113,9 @@ function renderYouTubeWizard(el) {
         </div>` : ''}
       </div>
 
-      <!-- ADIM 2: Çıktı Sayısı (ZORUNLU) -->
+      <!-- ADIM 2: Kalite (ZORUNLU) -->
       <div class="section">
-        <div class="sec-header" style="--sec-color:#3B82F6"><div class="sec-line"></div><span class="sec-title">2. CIKTI SECIMI (ZORUNLU)</span><div class="sec-line-r"></div></div>
-        <div class="cmd-grid" style="margin-top:8px;">
-          ${[
-            {id:'1reels',icon:'1️⃣',label:'1 Reels'},{id:'3reels',icon:'3️⃣',label:'3 Reels'},
-            {id:'5reels',icon:'5️⃣',label:'5 Reels'},{id:'10reels',icon:'🔟',label:'10 Reels'},
-            {id:'1short',icon:'📱',label:'1 Kisa (1-5dk)'},{id:'full',icon:'🎬',label:'Tam Video'},
-            {id:'custom',icon:'✏️',label:'Ozel'}
-          ].map(o => `<div class="cmd ${ytState.outputs===o.id?'active':''}" style="${ytState.outputs===o.id?'border-color:#3B82F6;background:rgba(59,130,246,.12);':''}" onclick="ytState.outputs='${o.id}';render()"><span class="c-icon">${o.icon}</span><div class="c-label">${o.label}</div></div>`).join('')}
-        </div>
-      </div>
-
-      <!-- ADIM 3: Kalite (ZORUNLU) -->
-      <div class="section">
-        <div class="sec-header" style="--sec-color:#10B981"><div class="sec-line"></div><span class="sec-title">3. KALITE (ZORUNLU)</span><div class="sec-line-r"></div></div>
+        <div class="sec-header" style="--sec-color:#10B981"><div class="sec-line"></div><span class="sec-title">2. KALITE (ZORUNLU)</span><div class="sec-line-r"></div></div>
         <div class="cmd-grid" style="margin-top:8px;">
           ${[{id:'1080p',icon:'📺',label:'1080p'},{id:'4k',icon:'🖥️',label:'4K'},{id:'8k',icon:'🎥',label:'8K'}].map(o =>
             `<div class="cmd ${ytState.quality===o.id?'active':''}" style="${ytState.quality===o.id?'border-color:#10B981;background:rgba(16,185,129,.12);':''}" onclick="ytState.quality='${o.id}';render()"><span class="c-icon">${o.icon}</span><div class="c-label">${o.label}</div></div>`
@@ -1138,7 +1125,7 @@ function renderYouTubeWizard(el) {
 
       <!-- ADIM 4: Ekstralar (OPSİYONEL — toggle) -->
       <div class="section">
-        <div class="sec-header" style="--sec-color:#8B5CF6"><div class="sec-line"></div><span class="sec-title">4. EKSTRALAR (OPSIYONEL)</span><div class="sec-line-r"></div></div>
+        <div class="sec-header" style="--sec-color:#8B5CF6"><div class="sec-line"></div><span class="sec-title">3. EKSTRALAR (OPSIYONEL)</span><div class="sec-line-r"></div></div>
         <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
 
           <!-- Dublaj -->
@@ -1207,13 +1194,13 @@ function renderYouTubeWizard(el) {
 
       <!-- ADIM 5: Fatura + Onay -->
       <div class="section">
-        <div class="sec-header" style="--sec-color:#EAB308"><div class="sec-line"></div><span class="sec-title">5. FATURA</span><div class="sec-line-r"></div></div>
+        <div class="sec-header" style="--sec-color:#EAB308"><div class="sec-line"></div><span class="sec-title">4. FATURA</span><div class="sec-line-r"></div></div>
         <div style="margin-top:8px;padding:14px;background:rgba(234,179,8,.05);border:1px solid rgba(234,179,8,.2);border-radius:12px;font-size:12px;">
           <div style="display:flex;justify-content:space-between;margin-bottom:4px;color:#a1a1aa;">
             <span>Video (${ytState.durationMin.toFixed(0)}dk)</span><span style="color:#EAB308">${Math.max(1,Math.ceil(ytState.durationMin/20))} Power</span>
           </div>
           <div style="display:flex;justify-content:space-between;margin-bottom:4px;color:#a1a1aa;">
-            <span>Cikti: ${ytState.outputs}</span><span style="color:#22C55E">dahil</span>
+            <span>Cikti: Tam Video (orijinal)</span><span style="color:#22C55E">dahil</span>
           </div>
           ${ytState.dubbing?`<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:#a1a1aa;"><span>Dublaj (${LANGS.find(l=>l.code===ytState.dubLang)?.name})</span><span style="color:#EAB308">+1 Power</span></div>`:''}
           ${ytState.lipSync?`<div style="display:flex;justify-content:space-between;margin-bottom:4px;color:#a1a1aa;"><span>Lip-Sync</span><span style="color:#EAB308">+1 Power</span></div>`:''}
