@@ -652,7 +652,22 @@ function sendNotif(catId, name) {
   if (trialCredits <= 0 || !localStorage.getItem('fenix_trial_credits')) { trialCredits=TRIAL_MAX; localStorage.setItem('fenix_trial_credits',String(trialCredits)); }
   // Kredi 0 ise varsayılan test kredisi ver (kart yoksa her zaman)
   if (credits <= 0) { credits = 30; localStorage.setItem('fenix_otonom_credits', String(credits)); }
-  try { const o=JSON.parse(localStorage.getItem('fenix_jobs')||'[]'); if(o.length>0&&o[0].shortcutId){localStorage.removeItem('fenix_jobs');jobs=[]} } catch(e){localStorage.removeItem('fenix_jobs');jobs=[]}
+  // Eski takılı işleri temizle (5dk'dan eski uploading/queued işler)
+  try {
+    const o=JSON.parse(localStorage.getItem('fenix_jobs')||'[]');
+    if(o.length>0&&o[0].shortcutId){localStorage.removeItem('fenix_jobs');jobs=[]}
+    else {
+      const now = Date.now();
+      jobs = o.filter(j => {
+        // 5dk'dan eski uploading/queued işleri sil
+        if (['uploading','queued'].includes(j.status) && (now - j.ts) > 5*60*1000) return false;
+        // 1 saatten eski tüm işleri sil
+        if ((now - j.ts) > 60*60*1000) return false;
+        return true;
+      });
+      localStorage.setItem('fenix_jobs', JSON.stringify(jobs));
+    }
+  } catch(e){localStorage.removeItem('fenix_jobs');jobs=[]}
   reqNotif();
   setTimeout(()=>{const l=document.getElementById('loadingScreen');if(l){l.classList.add('hide');setTimeout(()=>l.remove(),400)}},500);
   try{render()}catch(e){document.getElementById('contentArea').innerHTML='<div style="padding:20px;color:var(--orange)">'+e.message+'</div>'}
@@ -706,6 +721,8 @@ function renderContent() {
   `).join('');
 }
 
+function clearAllJobs() { jobs=[]; localStorage.removeItem('fenix_jobs'); render(); showToast('Tum isler temizlendi','ok'); }
+
 function renderJobs() {
   const el = document.getElementById('jobsArea');
   const show = [...jobs.filter(j=>['processing','queued','uploading'].includes(j.status)), ...jobs.filter(j=>j.status==='done'||j.status==='error').slice(0,3)];
@@ -726,7 +743,7 @@ function renderJobs() {
       <span class="j-status ${sc}">${st}</span>
       ${job.status==='done'&&job.url?`<button class="j-preview" onclick="openPreview('${job.url}','${job.id}','${job.catId}','${(job.name||'').replace(/'/g,'')}')">ÖNIZLE</button><a href="${job.url}" download class="j-dl">INDIR</a>`:''}
     </div>`;
-  }).join('');
+  }).join('') + '<div style="text-align:center;padding:6px;"><button onclick="clearAllJobs()" style="background:none;border:1px solid #333;color:#666;font-size:10px;padding:4px 12px;border-radius:6px;cursor:pointer;">🗑️ Tumunu Temizle</button></div>';
 }
 
 // ── ACTIONS ──
