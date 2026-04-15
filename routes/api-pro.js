@@ -457,6 +457,142 @@ router.get('/status', async (req, res) => {
 //  UPLOAD — Video dosyası yükle, temp fileId döndür
 //  POST /api/pro/upload
 // ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════
+//  GCS DIRECT UPLOAD — Signed URL (video sunucudan geçmez)
+//  Kullanıcı direkt Google Cloud Storage'a yükler
+// ════════════════════════════════════════════════════════════
+router.post('/upload/signed-url', async (req, res) => {
+  try {
+    const { Storage } = require('@google-cloud/storage');
+    const storage = new Storage({ projectId: 'photoreel-491017' });
+    const bucket = storage.bucket('fenix-factory-jobs');
+
+    const { fileName, contentType, fileSize, uid, factory } = req.body;
+
+    if (!fileName) return res.status(400).json({ ok: false, error: 'fileName gerekli' });
+
+    // Dosya boyutu limiti (10GB)
+    if (fileSize && fileSize > 10 * 1024 * 1024 * 1024) {
+      return res.status(413).json({ ok: false, error: 'Maksimum 10GB. Dosyanız çok büyük.' });
+    }
+
+    // Benzersiz dosya yolu
+    const fileId = `upload_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const gcsPath = `uploads/${uid || 'anon'}/${fileId}/${fileName}`;
+
+    // Signed URL oluştur (15dk geçerli, resumable upload)
+    const [url] = await bucket.file(gcsPath).getSignedUrl({
+      version: 'v4',
+      action: 'resumable',
+      expires: Date.now() + 15 * 60 * 1000, // 15dk
+      contentType: contentType || 'video/mp4',
+    });
+
+    logger.info('GCS signed URL oluşturuldu', { fileId, gcsPath, fileSize });
+
+    res.json({
+      ok: true,
+      uploadUrl: url,
+      fileId,
+      gcsPath,
+      bucket: 'fenix-factory-jobs',
+      expiresIn: '15 dakika',
+    });
+
+  } catch (err) {
+    logger.error('Signed URL hatası', { error: err.message });
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// Upload tamamlandı bildirimi — polis kontrolü tetikle
+router.post('/upload/complete', async (req, res) => {
+  try {
+    const { Storage } = require('@google-cloud/storage');
+    const storage = new Storage({ projectId: 'photoreel-491017' });
+    const { fileId, gcsPath, uid, factory } = req.body;
+
+    if (!fileId || !gcsPath) return res.status(400).json({ ok: false, error: 'fileId ve gcsPath gerekli' });
+
+    // GCS'de dosya var mı kontrol
+    const bucket = storage.bucket('fenix-factory-jobs');
+    const [exists] = await bucket.file(gcsPath).exists();
+    if (!exists) return res.status(404).json({ ok: false, error: 'Dosya GCS\'de bulunamadı' });
+
+    // Dosya bilgilerini al
+    const [metadata] = await bucket.file(gcsPath).getMetadata();
+    const fileSize = parseInt(metadata.size) || 0;
+
+    // POLİS KONTROLÜ
+    // 1. Dosya boyutu
+    if (fileSize > 10 * 1024 * 1024 * 1024) {
+      await bucket.file(gcsPath).delete();
+      return res.status(413).json({ ok: false, error: 'Dosya 10GB limitini aşıyor. Silindi.' });
+    }
+
+    // 2. Format kontrolü
+    const contentType = metadata.contentType || '';
+    if (!contentType.startsWith('video/') && !contentType.startsWith('image/')) {
+      await bucket.file(gcsPath).delete();
+      return res.status(400).json({ ok: false, error: 'Geçersiz dosya formatı. Video veya fotoğraf olmalı.' });
+    }
+
+    // 3. GCS'den geçici indirip FFprobe ile süre ölç
+    let duration = 0;
+    let resolution = 'unknown';
+    if (contentType.startsWith('video/')) {
+      try {
+        const tempPath = path.join(TEMP_DIR, `probe_${fileId}.mp4`);
+        // Sadece ilk 5MB'ı indir (metadata için yeterli)
+        const [buffer] = await bucket.file(gcsPath).download({ start: 0, end: 5 * 1024 * 1024 });
+        fs.writeFileSync(tempPath, buffer);
+        const probeResult = await execPromise(`ffprobe -v quiet -print_format json -show_format -show_streams "${tempPath}"`);
+        const probeData = JSON.parse(probeResult.stdout);
+        duration = parseFloat(probeData.format?.duration) || 0;
+        const videoStream = probeData.streams?.find(s => s.codec_type === 'video');
+        if (videoStream) resolution = `${videoStream.width}x${videoStream.height}`;
+        try { fs.unlinkSync(tempPath); } catch(e) {}
+      } catch(e) {
+        logger.warn('FFprobe hatası', { error: e.message });
+      }
+    }
+
+    // Dosya bilgilerini kaydet
+    if (!global._proFiles) global._proFiles = {};
+    global._proFiles[fileId] = {
+      gcsPath,
+      bucket: 'fenix-factory-jobs',
+      size: fileSize,
+      contentType,
+      duration,
+      resolution,
+      uid,
+      factory,
+      uploadedAt: Date.now(),
+    };
+
+    logger.info('Upload tamamlandı — polis onayladı', { fileId, fileSize, duration, resolution });
+
+    res.json({
+      ok: true,
+      fileId,
+      fileSize,
+      duration: Math.round(duration),
+      durationMin: (duration / 60).toFixed(1),
+      resolution,
+      contentType,
+      policeCheck: 'APPROVED',
+    });
+
+  } catch (err) {
+    logger.error('Upload complete hatası', { error: err.message });
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ════════════════════════════════════════════════════════════
+//  LEGACY UPLOAD — Multer (küçük dosyalar için hâlâ çalışır)
+// ════════════════════════════════════════════════════════════
 router.post('/upload', _upload.single('video'), (req, res) => {
   if (!req.file) return res.status(400).json({ ok: false, error: 'Video dosyası gerekli' });
 
