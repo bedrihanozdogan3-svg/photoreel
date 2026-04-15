@@ -10,7 +10,7 @@
 const express = require('express');
 const router  = express.Router();
 const multer  = require('multer');
-const { exec } = require('child_process');
+const { exec, execFile, spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -117,9 +117,19 @@ function downloadVideo(url, dest) {
  */
 function runFFmpeg(cmd, timeoutMs = 180000) {
   return new Promise((resolve, reject) => {
-    exec(cmd, { timeout: timeoutMs, shell: false }, (err, stdout, stderr) => {
+    // String komut gelirse parse et, array gelirse direkt kullan
+    let args;
+    if (typeof cmd === 'string') {
+      // Eski uyumluluk: string komutu parse et (ffmpeg -y -i ...)
+      args = cmd.match(/"[^"]*"|'[^']*'|\S+/g) || [];
+      args = args.map(a => a.replace(/^["']|["']$/g, ''));
+      if (args[0] === 'ffmpeg') args.shift();
+    } else {
+      args = cmd;
+    }
+    execFile('ffmpeg', args, { timeout: timeoutMs }, (err, stdout, stderr) => {
       if (err) {
-        logger.error('FFmpeg hatası', { cmd: cmd.slice(0, 200), error: err.message });
+        logger.error('FFmpeg hatası', { args: JSON.stringify(args).slice(0, 200), error: err.message });
         return reject(new Error('FFmpeg işlem hatası'));
       }
       resolve({ stdout, stderr });
@@ -344,12 +354,13 @@ router.post('/process', async (req, res) => {
       `"${outputPath}"`
     );
 
-    const fullCmd = cmdParts.join(' ');
-    logger.info('FFmpeg komutu', { jobId, cmd: fullCmd.slice(0, 300) });
+    // cmdParts'tan ffmpeg'i çıkar, tırnak temizle, execFile ile çalıştır
+    const ffArgs = cmdParts.slice(1).map(a => a.replace(/^["']|["']$/g, ''));
+    logger.info('FFmpeg komutu', { jobId, args: ffArgs.join(' ').slice(0, 300) });
 
-    // 6. FFmpeg çalıştır
+    // 6. FFmpeg çalıştır (execFile = shell injection koruması)
     await new Promise((resolve, reject) => {
-      exec(fullCmd, { timeout: 180000 }, (err, stdout, stderr) => {
+      execFile('ffmpeg', ffArgs, { timeout: 180000 }, (err, stdout, stderr) => {
         if (err) {
           logger.error('FFmpeg hatası', { jobId, stderr: (stderr || '').slice(0, 500) });
           return reject(new Error('Video işleme hatası'));
@@ -708,21 +719,23 @@ router.post('/render', async (req, res) => {
       const timeoutMs = resolution === '4k' ? 600000 : resolution === '1080' ? 300000 : 180000;
 
       await new Promise((resolve, reject) => {
-        const proc = exec(
-          cmdParts.map(p => (p.includes(' ') ? `"${p}"` : p)).join(' '),
-          { timeout: timeoutMs },
-          (err, _out, stderr) => {
-            if (err) {
-              logger.error('FFmpeg render hatası', { jobId, stderr: (stderr || '').slice(0, 600) });
-              return reject(new Error('FFmpeg render hatası'));
-            }
-            resolve();
+        const ffArgs = cmdParts.slice(1).map(a => a.replace(/^["']|["']$/g, ''));
+        const proc = spawn('ffmpeg', ffArgs, { timeout: timeoutMs });
+        let stderrBuf = '';
+        proc.on('close', (code) => {
+          if (code !== 0) {
+            logger.error('FFmpeg render hatası', { jobId, stderr: stderrBuf.slice(0, 600) });
+            return reject(new Error('FFmpeg render hatası'));
           }
-        );
+          resolve();
+        });
+        proc.on('error', (err) => reject(err));
         // İlerleme: FFmpeg stderr'de "time=HH:MM:SS" yazar
         if (proc.stderr) {
           proc.stderr.on('data', chunk => {
-            const m = chunk.match(/time=(\d{2}):(\d{2}):(\d{2})/);
+            const txt = chunk.toString();
+            stderrBuf += txt;
+            const m = txt.match(/time=(\d{2}):(\d{2}):(\d{2})/);
             if (m) {
               const s = (+m[1]) * 3600 + (+m[2]) * 60 + (+m[3]);
               _renderJobs[jobId].progress = Math.min(92, 20 + Math.round(s * 1.5));
@@ -1009,20 +1022,22 @@ router.post('/render-multi', async (req, res) => {
 
       const timeoutMs = resolution === '4k' ? 900000 : resolution === '1080' ? 450000 : 240000;
       await new Promise((resolve, reject) => {
-        const proc = exec(
-          cmdParts.map(p => (p.includes(' ') ? `"${p}"` : p)).join(' '),
-          { timeout: timeoutMs },
-          (err, _out, stderr) => {
-            if (err) {
-              logger.error('Multi-clip FFmpeg hatası', { jobId, stderr: (stderr || '').slice(-600) });
-              return reject(new Error('FFmpeg hatası: ' + (stderr || '').slice(-200)));
-            }
-            resolve();
+        const ffArgs = cmdParts.slice(1).map(a => a.replace(/^["']|["']$/g, ''));
+        const proc = spawn('ffmpeg', ffArgs, { timeout: timeoutMs });
+        let stderrBuf = '';
+        proc.on('close', (code) => {
+          if (code !== 0) {
+            logger.error('Multi-clip FFmpeg hatası', { jobId, stderr: stderrBuf.slice(-600) });
+            return reject(new Error('FFmpeg hatası: ' + stderrBuf.slice(-200)));
           }
-        );
+          resolve();
+        });
+        proc.on('error', (err) => reject(err));
         if (proc.stderr) {
           proc.stderr.on('data', chunk => {
-            const m = chunk.match(/time=(\d{2}):(\d{2}):(\d{2})/);
+            const txt = chunk.toString();
+            stderrBuf += txt;
+            const m = txt.match(/time=(\d{2}):(\d{2}):(\d{2})/);
             if (m) {
               const s = (+m[1]) * 3600 + (+m[2]) * 60 + (+m[3]);
               _renderJobs[jobId].progress = Math.min(95, 35 + Math.round(s * 1.2));
@@ -1348,6 +1363,53 @@ router.post('/audio/process', _audioUpload.single('audio'), async (req, res) => 
         break;
       }
 
+      case 'video-cut': {
+        // Video kesim — startMs ve endMs arasını kes
+        const vInputPath = req.file ? req.file.path : await downloadToTemp(fileUrl);
+        const vOutId = 'vcut_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+        const vOutPath = path.join(TEMP_DIR, vOutId + '.mp4');
+        const vStartSec = (startMs || 0) / 1000;
+        const vDuration = ((endMs || 0) - (startMs || 0)) / 1000;
+        const vCmd = `ffmpeg -y -i "${vInputPath}" -ss ${vStartSec} -t ${vDuration} -c:v copy -c:a copy "${vOutPath}"`;
+        await execPromise(vCmd);
+        if (!global._proFiles) global._proFiles = {};
+        global._proFiles[vOutId] = { path: vOutPath, created: Date.now() };
+        let realDuration = vDuration;
+        try {
+          const probeResult = await execPromise(`ffprobe -v quiet -print_format json -show_format "${vOutPath}"`);
+          realDuration = parseFloat(JSON.parse(probeResult.stdout).format.duration) || vDuration;
+        } catch (e) {}
+        res.json({ ok: true, jobId: vOutId, status: 'done', downloadUrl: `/api/pro/download/${vOutId}`, duration: realDuration });
+        break;
+      }
+
+      case 'video-split': {
+        // Video bölme — splitTime'da ikiye böl
+        const sInputPath = req.file ? req.file.path : await downloadToTemp(fileUrl);
+        const splitSec = (req.body.splitTimeMs || 0) / 1000;
+        const sOutIdL = 'vsplit_L_' + Date.now();
+        const sOutIdR = 'vsplit_R_' + Date.now();
+        const sOutPathL = path.join(TEMP_DIR, sOutIdL + '.mp4');
+        const sOutPathR = path.join(TEMP_DIR, sOutIdR + '.mp4');
+        await execPromise(`ffmpeg -y -i "${sInputPath}" -t ${splitSec} -c:v copy -c:a copy "${sOutPathL}"`);
+        await execPromise(`ffmpeg -y -i "${sInputPath}" -ss ${splitSec} -c:v copy -c:a copy "${sOutPathR}"`);
+        if (!global._proFiles) global._proFiles = {};
+        global._proFiles[sOutIdL] = { path: sOutPathL, created: Date.now() };
+        global._proFiles[sOutIdR] = { path: sOutPathR, created: Date.now() };
+        let durL = splitSec, durR = 0;
+        try {
+          const pL = await execPromise(`ffprobe -v quiet -print_format json -show_format "${sOutPathL}"`);
+          durL = parseFloat(JSON.parse(pL.stdout).format.duration) || splitSec;
+          const pR = await execPromise(`ffprobe -v quiet -print_format json -show_format "${sOutPathR}"`);
+          durR = parseFloat(JSON.parse(pR.stdout).format.duration) || 0;
+        } catch (e) {}
+        res.json({ ok: true, status: 'done',
+          left: { jobId: sOutIdL, downloadUrl: `/api/pro/download/${sOutIdL}`, duration: durL },
+          right: { jobId: sOutIdR, downloadUrl: `/api/pro/download/${sOutIdR}`, duration: durR },
+        });
+        break;
+      }
+
       case 'merge': {
         const pathA = await downloadToTemp(trackA);
         const pathB = await downloadToTemp(trackB);
@@ -1628,7 +1690,11 @@ router.get('/stitch/status/:jobId', (req, res) => {
 
 function execPromise(cmd) {
   return new Promise((resolve, reject) => {
-    exec(cmd, { maxBuffer: 100 * 1024 * 1024, timeout: 120000 }, (err, stdout, stderr) => {
+    // String komutu parse edip execFile ile çalıştır
+    const args = cmd.match(/"[^"]*"|'[^']*'|\S+/g) || [];
+    const parsed = args.map(a => a.replace(/^["']|["']$/g, ''));
+    const bin = parsed.shift();
+    execFile(bin, parsed, { maxBuffer: 100 * 1024 * 1024, timeout: 120000 }, (err, stdout, stderr) => {
       if (err) reject(new Error(stderr || err.message));
       else resolve(stdout);
     });
@@ -1663,6 +1729,75 @@ router.get('/download-img/:fileId', (req, res) => {
   res.setHeader('Content-Type', 'image/png');
   res.setHeader('Content-Disposition', `attachment; filename="fenix-nobg-${fileId}.png"`);
   fs.createReadStream(fileInfo.path).pipe(res);
+});
+
+// ══════════════════════════════════════════════════════
+//  POST /api/pro/convert-360 — Otonom pipeline 360° video dönüşümü
+//  Gelen INSV/H.265 videoyu H.264 equirectangular MP4'e çevirir
+// ══════════════════════════════════════════════════════
+router.post('/convert-360', _upload.single('video'), async (req, res) => {
+  const inputPath = req.file?.path;
+  if (!inputPath) return res.status(400).json({ ok: false, error: 'Video dosyası gerekli' });
+
+  const originalName = req.file.originalname || '';
+  const isDualFisheye = req.body.dualFisheye === 'true' || /\.(insv|insp)$/i.test(originalName);
+  const outputPath = inputPath + '_360.mp4';
+
+  const ffArgs = ['-y', '-i', inputPath];
+  if (isDualFisheye) {
+    ffArgs.push('-vf', 'v360=dfisheye:equirect:ih_fov=190:iv_fov=190');
+  }
+  ffArgs.push(
+    '-c:v', 'libx264', '-preset', 'fast', '-crf', '20',
+    '-pix_fmt', 'yuv420p', '-movflags', '+faststart',
+    '-c:a', 'aac', '-b:a', '128k', outputPath
+  );
+
+  const jobId = '360cv_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+  if (!global._360ConvertJobs) global._360ConvertJobs = {};
+  global._360ConvertJobs[jobId] = { status: 'processing', progress: 0, message: 'FFmpeg başlatılıyor...' };
+
+  res.json({ ok: true, jobId, message: 'Dönüşüm başlatıldı' });
+
+  // Async FFmpeg
+  const { spawn } = require('child_process');
+  const ffprobe = spawn('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', inputPath]);
+  let durSec = 0;
+  ffprobe.stdout.on('data', d => { durSec = parseFloat(d.toString().trim()) || 0; });
+  await new Promise(r => ffprobe.on('close', r));
+
+  const proc = spawn('ffmpeg', ffArgs);
+  proc.stderr.on('data', chunk => {
+    const m = chunk.toString().match(/time=(\d+):(\d+):(\d+\.\d+)/);
+    if (m && durSec > 0) {
+      const sec = parseInt(m[1]) * 3600 + parseInt(m[2]) * 60 + parseFloat(m[3]);
+      global._360ConvertJobs[jobId].progress = Math.min(99, Math.round((sec / durSec) * 100));
+    }
+  });
+
+  proc.on('close', code => {
+    try { fs.unlinkSync(inputPath); } catch(e) {}
+    if (code !== 0) {
+      try { fs.unlinkSync(outputPath); } catch(e) {}
+      global._360ConvertJobs[jobId] = { status: 'error', message: 'FFmpeg hatası (kod: ' + code + ')' };
+      return;
+    }
+    const outName = `360_${Date.now()}.mp4`;
+    const publicDir = path.join(__dirname, '..', 'public', 'converted');
+    try { fs.mkdirSync(publicDir, { recursive: true }); } catch(e) {}
+    const publicPath = path.join(publicDir, outName);
+    fs.renameSync(outputPath, publicPath);
+    global._360ConvertJobs[jobId] = { status: 'done', progress: 100, url: `/converted/${outName}` };
+    // 1 saat sonra sil
+    setTimeout(() => { try { fs.unlinkSync(publicPath); } catch(e) {} }, 3600000);
+  });
+});
+
+// GET /api/pro/convert-360/:jobId — dönüşüm durumu sorgula
+router.get('/convert-360/:jobId', (req, res) => {
+  const job = global._360ConvertJobs?.[req.params.jobId];
+  if (!job) return res.status(404).json({ ok: false, error: 'İş bulunamadı' });
+  res.json({ ok: true, ...job });
 });
 
 module.exports = router;
