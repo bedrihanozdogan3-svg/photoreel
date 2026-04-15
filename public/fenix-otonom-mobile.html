@@ -610,13 +610,17 @@ function getOwned() {
   if (plan==='master'||plan==='otonom') return ALL_IDS;
   if (plan==='pro') return ['pro'];
   if (plan==='360') return ['360'];
+  if (plan==='youtube') return ['youtube'];
   if (plan==='dublaj') return ['dublaj'];
   if (plan==='eticaret') return ['eticaret'];
+  if (plan==='mixreel') return ['mixreel'];
   return [];
 }
 function getActive() {
   if (plan==='master'||plan==='otonom') return ALL_IDS;
   if (trialCredits > 0) return ALL_IDS;
+  // Power veya Jeton varsa tüm sekmeleri aç
+  if (power > 0 || jetons > 0) return ALL_IDS;
   return getOwned();
 }
 function isMaster() { return plan==='master'||plan==='otonom'; }
@@ -675,7 +679,7 @@ function sendNotif(catId, name) {
 })();
 
 // ── RENDER ──
-function render() { try{renderCredits();renderTabs();renderContent();renderJobs()}catch(e){console.error(e)} }
+function render() { try{updateWallet();renderCredits();renderTabs();renderContent();renderJobs()}catch(e){console.error(e)} }
 
 function renderCredits() {
   document.getElementById('creditNum').textContent = credits;
