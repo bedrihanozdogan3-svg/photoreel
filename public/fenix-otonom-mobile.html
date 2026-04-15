@@ -269,7 +269,10 @@ body{
     <div class="h-brand"><div class="h-title">FENIX</div><div class="h-sub">Otonom Panel</div></div>
   </div>
   <button onclick="showQR()" style="background:none;border:1px solid #22C55E44;border-radius:8px;padding:4px 10px;font-size:16px;cursor:pointer;margin-right:8px" title="QR Kod">📱</button>
-  <div class="h-credit" id="creditBadge">⚡ <span id="creditNum">15</span></div>
+  <div class="h-credit" id="creditBadge" style="display:flex;gap:8px;align-items:center;">
+    <span style="background:rgba(234,179,8,.15);border:1px solid rgba(234,179,8,.3);padding:2px 8px;border-radius:12px;font-size:11px;color:#EAB308;">⚡ <span id="powerNum">3</span></span>
+    <span style="background:rgba(168,85,247,.15);border:1px solid rgba(168,85,247,.3);padding:2px 8px;border-radius:12px;font-size:11px;color:#A855F7;">💎 <span id="jetonNum">45</span></span>
+  </div>
 </div>
 
 <div class="tabs" id="tabsArea"></div>
@@ -289,7 +292,7 @@ body{
 <script>
 const API = window.location.origin;
 const TRIAL_MAX = 10;
-const ALL_IDS = ['pro','360','dublaj','eticaret','otonom'];
+const ALL_IDS = ['pro','360','youtube','dublaj','eticaret','mixreel','otonom'];
 
 const CATEGORIES = [
   {
@@ -479,6 +482,65 @@ const CATEGORIES = [
     defaultEndpoint:'/api/pipeline/auto-produce', defaultAccept:'image/*', defaultField:'photos'
   },
   {
+    id:'youtube', label:'YouTube', icon:'🎬', color:'#FF0000', tabColor:'#FF0000',
+    gradient:'linear-gradient(135deg,#FF0000,#CC0000)',
+    factory: 'youtube',
+    currency: 'power',
+    maxDuration: null, // sınırsız
+    sections:[
+      { title:'Video Yukle', color:'#FF0000', cmds:[
+        {id:'yt_upload',icon:'📤',label:'Video Yukle',isAction:true,isFactory:true},
+        {id:'yt_link',icon:'🔗',label:'Link ile Yukle',isAction:true},
+      ]},
+      { title:'Islem Secenekleri', color:'#3B82F6', cmds:[
+        {id:'yt_reframe',icon:'🎯',label:'360 Reframe'},{id:'yt_blur',icon:'😶',label:'Akilli Blur'},
+        {id:'yt_speedramp',icon:'🏎️',label:'Speed Ramp'},{id:'yt_enhance',icon:'💎',label:'4K Iyilestir'},
+      ]},
+      { title:'Dublaj & Ses', color:'#8B5CF6', cmds:[
+        {id:'yt_dubbing',icon:'🎙️',label:'Dublaj (+1⚡)',isFactory:true},{id:'yt_lipsync',icon:'👄',label:'Lip-Sync (+1⚡)',isFactory:true},
+        {id:'yt_voiceclone',icon:'🧬',label:'Ses Klon (+1⚡)',isFactory:true},{id:'yt_translate',icon:'🌍',label:'Ceviri'},
+      ]},
+      { title:'Kalite', color:'#10B981', cmds:[
+        {id:'yt_1080p',icon:'📺',label:'1080p'},{id:'yt_4k',icon:'🖥️',label:'4K'},
+        {id:'yt_8k',icon:'🎥',label:'8K'},
+      ]},
+      { title:'Kuyruk & Durum', color:'#EAB308', cmds:[
+        {id:'yt_queue',icon:'📋',label:'Kuyruk',isAction:true},{id:'yt_status',icon:'📊',label:'Is Durumu',isAction:true},
+        {id:'yt_mixreel',icon:'🎧',label:'Mix Reel Olustur',isAction:true,isMixReel:true},
+      ]},
+    ],
+    defaultEndpoint:'/api/factory/approve', defaultAccept:'video/*,.insv', defaultField:'video'
+  },
+  {
+    id:'mixreel', label:'Mix Reel', icon:'🎧', color:'#D946EF', tabColor:'#D946EF',
+    gradient:'linear-gradient(135deg,#D946EF,#A855F7)',
+    factory: 'mixreel',
+    currency: 'jeton',
+    sections:[
+      { title:'Kuyruk (Yuklenen Videolar)', color:'#D946EF', cmds:[
+        {id:'mix_queue',icon:'📋',label:'Kuyruk Gor',isAction:true},{id:'mix_select',icon:'☑️',label:'Video Sec',isAction:true},
+        {id:'mix_selectall',icon:'✅',label:'Hepsini Sec',isAction:true},
+      ]},
+      { title:'Gecis Efektleri', color:'#3B82F6', cmds:[
+        {id:'mix_fade',icon:'🌅',label:'Fade'},{id:'mix_slide',icon:'➡️',label:'Slide'},
+        {id:'mix_zoom',icon:'🔍',label:'Zoom'},{id:'mix_glitch',icon:'⚡',label:'Glitch'},
+        {id:'mix_dissolve',icon:'💨',label:'Dissolve'},{id:'mix_wipe',icon:'🧹',label:'Wipe'},
+      ]},
+      { title:'Muzik & Tempo', color:'#EC4899', cmds:[
+        {id:'mix_music',icon:'🎵',label:'Muzik Ekle'},{id:'mix_beat',icon:'🥁',label:'Beat Sync'},
+        {id:'mix_slow',icon:'🐌',label:'Yavas'},{id:'mix_fast',icon:'⚡',label:'Hizli'},
+      ]},
+      { title:'Format', color:'#10B981', cmds:[
+        {id:'mix_reels',icon:'📱',label:'Reels (9:16)'},{id:'mix_tiktok',icon:'🎵',label:'TikTok'},
+        {id:'mix_shorts',icon:'▶️',label:'Shorts'},{id:'mix_custom',icon:'🖥️',label:'Ozel'},
+      ]},
+      { title:'Render', color:'#F97316', cmds:[
+        {id:'mix_render',icon:'🚀',label:'MIX REEL OLUSTUR',isAction:true,isFactory:true},
+      ]},
+    ],
+    defaultEndpoint:'/api/factory/approve', defaultAccept:'video/*', defaultField:'video'
+  },
+  {
     id:'otonom', label:'Otonom', icon:'🤖', color:'#EAB308', tabColor:'#EAB308',
     gradient:'linear-gradient(135deg,#EAB308,#CA8A04)',
     sections:[
@@ -517,13 +579,28 @@ const CATEGORIES = [
   },
 ];
 
-const NOTIF = {pro:'Videon hazir! 🎬','360':'360 videon hazir! 🌐',dublaj:'Dublajin hazir! 🎙️',eticaret:'Urunun hazir! 🛍️',otonom:'Islemin bitti! 🤖'};
+const NOTIF = {pro:'Videon hazir! 🎬','360':'360 videon hazir! 🌐',youtube:'YouTube videon hazir! 🎬',dublaj:'Dublajin hazir! 🎙️',eticaret:'Urunun hazir! 🛍️',mixreel:'Mix Reel hazir! 🎧',otonom:'Islemin bitti! 🤖'};
 
 // ── STATE ──
 let cardToken = new URLSearchParams(window.location.search).get('t') || localStorage.getItem('fenix_card_token') || '';
 let plan = localStorage.getItem('fenix_plan') || 'free';
 let credits = Math.max(parseInt(localStorage.getItem('fenix_otonom_credits') || '0'), 30);
 let trialCredits = Math.max(parseInt(localStorage.getItem('fenix_trial_credits') || '0'), TRIAL_MAX);
+let power = parseInt(localStorage.getItem('fenix_power') || '3');
+let jetons = parseInt(localStorage.getItem('fenix_jetons') || '45');
+
+// Cüzdan güncelle
+function updateWallet() {
+  const pe = document.getElementById('powerNum');
+  const je = document.getElementById('jetonNum');
+  if (pe) pe.textContent = power;
+  if (je) je.textContent = jetons;
+  localStorage.setItem('fenix_power', power);
+  localStorage.setItem('fenix_jetons', jetons);
+}
+
+// Mix Reel kuyruğu (kategorilere atılan videolar)
+let mixReelQueue = JSON.parse(localStorage.getItem('fenix_mixreel_queue') || '[]');
 let jobs = JSON.parse(localStorage.getItem('fenix_jobs') || '[]');
 let activeCat = 'pro';
 let activeUpload = null;
