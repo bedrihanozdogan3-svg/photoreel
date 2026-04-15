@@ -1129,23 +1129,54 @@ function showUploadChoice(file, catId) {
 // ═══════════════════════════════════════════════
 
 function addToMixQueue(file, catId, cmdId, icon) {
-  const entry = {
-    id: 'mq_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
-    name: file.name,
-    size: file.size,
-    catId,
-    cmdId,
-    icon: icon || '📹',
-    addedAt: Date.now(),
-    selected: false,
-    // File URL oluştur (local blob)
-    blobUrl: URL.createObjectURL(file),
-    file: file, // referansı tut
+  // Video süresini ölç
+  const video = document.createElement('video');
+  video.preload = 'metadata';
+  video.onloadedmetadata = function() {
+    const durSec = video.duration;
+    const durMin = durSec / 60;
+    URL.revokeObjectURL(video.src);
+
+    // POLİS KONTROLÜ
+    // YouTube hariç max 20dk
+    if (catId !== 'youtube' && durMin > 20) {
+      showToast(`Bu video ${durMin.toFixed(1)}dk — max 20dk! Kısaltın veya YouTube'a gönderin.`, 'error');
+      return;
+    }
+
+    const entry = {
+      id: 'mq_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+      name: file.name,
+      size: file.size,
+      duration: durSec,
+      durationMin: durMin,
+      catId,
+      cmdId,
+      icon: icon || '📹',
+      addedAt: Date.now(),
+      selected: false,
+      blobUrl: URL.createObjectURL(file),
+      file: file,
+    };
+    mixReelQueue.push(entry);
+    localStorage.setItem('fenix_mixreel_queue', JSON.stringify(mixReelQueue.map(q => ({...q, file:undefined, blobUrl:undefined}))));
+    showToast(`📋 Kuyruğa eklendi: ${file.name} (${durMin.toFixed(1)}dk)`, 'ok');
+    render();
   };
-  mixReelQueue.push(entry);
-  localStorage.setItem('fenix_mixreel_queue', JSON.stringify(mixReelQueue.map(q => ({...q, file:undefined, blobUrl:undefined}))));
-  showToast(`📋 Mix Reel kuyruğuna eklendi (${mixReelQueue.length} video)`, 'ok');
-  render();
+  video.onerror = function() {
+    // Süre ölçülemedi — yine de ekle
+    const entry = {
+      id: 'mq_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+      name: file.name, size: file.size, duration: 0, durationMin: 0,
+      catId, cmdId, icon: icon || '📹', addedAt: Date.now(), selected: false,
+      blobUrl: URL.createObjectURL(file), file: file,
+    };
+    mixReelQueue.push(entry);
+    localStorage.setItem('fenix_mixreel_queue', JSON.stringify(mixReelQueue.map(q => ({...q, file:undefined, blobUrl:undefined}))));
+    showToast(`📋 Kuyruğa eklendi: ${file.name}`, 'ok');
+    render();
+  };
+  video.src = URL.createObjectURL(file);
 }
 
 // Mix Reel state
@@ -1162,7 +1193,7 @@ function renderMixReelWizard(el) {
 
       <!-- KUYRUK -->
       <div class="section">
-        <div class="sec-header" style="--sec-color:#D946EF"><div class="sec-line"></div><span class="sec-title">KUYRUK (${queue.length} video)</span><div class="sec-line-r"></div></div>
+        <div class="sec-header" style="--sec-color:#D946EF"><div class="sec-line"></div><span class="sec-title">KUYRUK (${queue.length} video · ${queue.reduce((s,q)=>s+(q.durationMin||0),0).toFixed(1)}dk)</span><div class="sec-line-r"></div></div>
         ${queue.length === 0 ? `<div style="padding:30px;text-align:center;color:#555;font-size:12px;">Henüz video yok.<br>PRO, 360° veya Dublaj sekmesinden video yükleyip<br>"Kuyruğa Ekle" seçin.</div>` : `
         <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;max-height:250px;overflow-y:auto;">
           ${queue.map((q, i) => `
@@ -1171,7 +1202,12 @@ function renderMixReelWizard(el) {
               <span style="font-size:16px;">${q.icon}</span>
               <div style="flex:1;">
                 <div style="font-size:12px;color:#fff;font-weight:600;">${q.name}</div>
-                <div style="font-size:10px;color:#888;">${q.catId.toUpperCase()} · ${(q.size/1024/1024).toFixed(1)} MB</div>
+                <div style="font-size:10px;color:#888;">
+                  ${q.catId.toUpperCase()} ·
+                  <span style="color:#EAB308;font-weight:600;">${q.durationMin ? q.durationMin.toFixed(1)+'dk' : '?dk'}</span> ·
+                  ${(q.size/1024/1024).toFixed(1)} MB
+                  ${q.durationMin > 20 ? '<span style="color:#EF4444;"> ⚠️ 20dk+</span>' : '<span style="color:#22C55E;"> ✅</span>'}
+                </div>
               </div>
               <button onclick="event.stopPropagation();mixReelQueue.splice(${i},1);render()" style="background:none;border:none;color:#EF4444;font-size:14px;cursor:pointer;">🗑️</button>
             </div>
