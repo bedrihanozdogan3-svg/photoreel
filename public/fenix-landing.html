@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fenix AI — Video Üretim Fabrikası</title>
+<meta name="description" content="Tek tıkla profesyonel video üretimi. 360° aksiyon, dublaj, e-ticaret, podcast — 8 fabrika emrinizde.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--bg:#0a0a0f;--card:#12121a;--card2:#1a1a2e;--border:#2a2a3e;--text:#e0e0e8;--text2:#8888aa;--accent:#f59e0b;--accent2:#ef4444;--green:#10b981;--blue:#3b82f6;--purple:#8b5cf6}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;line-height:1.6;overflow-x:hidden}
+.container{max-width:1200px;margin:0 auto;padding:0 24px}
+
+/* ═══ NAVBAR ═══ */
+.nav{position:fixed;top:0;left:0;right:0;background:rgba(10,10,15,0.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);z-index:100;padding:14px 0}
+.nav-inner{display:flex;align-items:center;justify-content:space-between}
+.logo{font-size:22px;font-weight:800;background:linear-gradient(135deg,#f59e0b,#ef4444);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.nav-links{display:flex;gap:24px;align-items:center}
+.nav-links a{color:var(--text2);text-decoration:none;font-size:14px;transition:color .2s}
+.nav-links a:hover{color:var(--text)}
+.btn{padding:10px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .2s;text-decoration:none;display:inline-block}
+.btn-primary{background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(245,158,11,0.4)}
+.btn-secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--card2)}
+
+/* ═══ HERO ═══ */
+.hero{padding:120px 0 80px;text-align:center;position:relative}
+.hero::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:radial-gradient(ellipse at top,rgba(245,158,11,0.15),transparent 50%);z-index:-1}
+.hero-badge{display:inline-block;padding:6px 14px;background:rgba(245,158,11,0.15);border:1px solid var(--accent);border-radius:20px;color:var(--accent);font-size:12px;font-weight:600;margin-bottom:24px}
+.hero h1{font-size:56px;font-weight:800;line-height:1.1;margin-bottom:20px;background:linear-gradient(135deg,#fff,#aaa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:20px;color:var(--text2);max-width:700px;margin:0 auto 40px}
+.hero-cta{display:flex;gap:16px;justify-content:center;flex-wrap:wrap}
+.hero-cta .btn{padding:14px 28px;font-size:16px}
+.hero-stats{display:flex;justify-content:center;gap:40px;margin-top:60px;flex-wrap:wrap}
+.hero-stat{text-align:center}
+.hero-stat .num{font-size:36px;font-weight:800;color:var(--accent)}
+.hero-stat .lbl{font-size:13px;color:var(--text2)}
+
+/* ═══ SECTIONS ═══ */
+section{padding:80px 0}
+.section-title{text-align:center;margin-bottom:60px}
+.section-title h2{font-size:42px;font-weight:800;margin-bottom:12px}
+.section-title p{font-size:18px;color:var(--text2);max-width:600px;margin:0 auto}
+
+/* ═══ FACTORIES GRID ═══ */
+.factories{background:var(--card)}
+.factory-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.factory-card{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:28px;transition:all .3s;cursor:pointer}
+.factory-card:hover{transform:translateY(-5px);border-color:var(--accent);box-shadow:0 20px 40px rgba(0,0,0,0.3)}
+.factory-icon{font-size:42px;margin-bottom:14px}
+.factory-card h3{font-size:18px;margin-bottom:8px}
+.factory-card .codename{font-size:13px;color:var(--accent);margin-bottom:12px}
+.factory-card p{font-size:14px;color:var(--text2);margin-bottom:16px}
+.factory-card .meta{display:flex;gap:8px;flex-wrap:wrap}
+.factory-card .badge{font-size:11px;padding:4px 10px;border-radius:12px;background:var(--card);color:var(--text2)}
+.factory-card .badge.power{background:rgba(245,158,11,0.15);color:var(--accent)}
+.factory-card .badge.token{background:rgba(59,130,246,0.15);color:var(--blue)}
+
+/* ═══ FEATURES ═══ */
+.feature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px}
+.feature{padding:24px;background:var(--card);border:1px solid var(--border);border-radius:14px}
+.feature-icon{font-size:32px;margin-bottom:14px}
+.feature h3{font-size:18px;margin-bottom:10px}
+.feature p{font-size:14px;color:var(--text2)}
+
+/* ═══ PRICING ═══ */
+.pricing{background:var(--card)}
+.price-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;max-width:900px;margin:0 auto}
+.price-card{background:var(--card2);border:1px solid var(--border);border-radius:18px;padding:40px 28px;text-align:center;transition:all .3s;position:relative}
+.price-card.featured{border-color:var(--accent);transform:scale(1.05)}
+.price-card.featured::before{content:'EN POPÜLER';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;padding:4px 14px;border-radius:12px;font-size:11px;font-weight:700}
+.price-card h3{font-size:22px;margin-bottom:8px}
+.price-card .price{font-size:42px;font-weight:800;margin:20px 0;color:var(--accent)}
+.price-card .price small{font-size:16px;color:var(--text2);font-weight:400}
+.price-card ul{list-style:none;text-align:left;margin:24px 0}
+.price-card li{padding:8px 0;font-size:14px;color:var(--text2)}
+.price-card li::before{content:'✓ ';color:var(--green);font-weight:700;margin-right:6px}
+.price-card .btn{width:100%;margin-top:20px;padding:14px}
+
+/* ═══ HOW IT WORKS ═══ */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:24px;text-align:center}
+.step{padding:24px;position:relative}
+.step-number{width:60px;height:60px;background:linear-gradient(135deg,#f59e0b,#ef4444);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;margin:0 auto 20px;color:#fff}
+.step h3{font-size:18px;margin-bottom:10px}
+.step p{font-size:14px;color:var(--text2)}
+
+/* ═══ CTA ═══ */
+.cta-section{background:linear-gradient(135deg,#1a1040,#0f0f2e);text-align:center;border-radius:20px;padding:80px 40px;margin:80px 24px;max-width:1100px;margin-left:auto;margin-right:auto}
+.cta-section h2{font-size:42px;font-weight:800;margin-bottom:16px}
+.cta-section p{font-size:18px;color:var(--text2);margin-bottom:32px}
+
+/* ═══ FOOTER ═══ */
+footer{padding:40px 0;border-top:1px solid var(--border);text-align:center;color:var(--text2);font-size:14px}
+footer a{color:var(--text);text-decoration:none}
+
+/* ═══ RESPONSIVE ═══ */
+@media(max-width:768px){
+  .hero h1{font-size:36px}
+  .hero p{font-size:16px}
+  .section-title h2{font-size:30px}
+  .nav-links{gap:12px}
+  .nav-links a:not(.btn){display:none}
+  .price-card.featured{transform:none}
+  .hero-stats{gap:20px}
+  .hero-stat .num{font-size:28px}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════ NAVBAR ═══════════════════════ -->
+<nav class="nav">
+  <div class="container nav-inner">
+    <div class="logo">🔥 FENIX</div>
+    <div class="nav-links">
+      <a href="#fabrikalar">Fabrikalar</a>
+      <a href="#nasil">Nasıl Çalışır</a>
+      <a href="#fiyat">Fiyatlar</a>
+      <a href="#" class="btn btn-secondary" onclick="login()">Giriş</a>
+      <a href="#" class="btn btn-primary" onclick="register()">Hemen Başla</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══════════════════════ HERO ═══════════════════════ -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-badge">⚡ Yapay Zeka Video Fabrikası</div>
+    <h1>Tek Tıkla<br>Profesyonel Video Üretimi</h1>
+    <p>360° aksiyon kamerası, ürün fotoğrafı, podcast, dublaj — 8 fabrika ve 200+ pipeline ile dünyada eşi olmayan AI video üretim sistemi.</p>
+    <div class="hero-cta">
+      <a href="#" class="btn btn-primary" onclick="register()">Ücretsiz Dene</a>
+      <a href="#fabrikalar" class="btn btn-secondary">Fabrikaları İncele</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat"><div class="num">8</div><div class="lbl">Fabrika</div></div>
+      <div class="hero-stat"><div class="num">200+</div><div class="lbl">Kısayol</div></div>
+      <div class="hero-stat"><div class="num">16</div><div class="lbl">AI API</div></div>
+      <div class="hero-stat"><div class="num">95%</div><div class="lbl">Marj</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ FABRİKALAR ═══════════════════════ -->
+<section class="factories" id="fabrikalar">
+  <div class="container">
+    <div class="section-title">
+      <h2>8 Özel Fabrika</h2>
+      <p>Her fabrika kendi alanında uzman. Senin tek yapman gereken videoyu yüklemek.</p>
+    </div>
+    <div class="factory-grid">
+      <div class="factory-card">
+        <div class="factory-icon">🏭</div>
+        <h3>The Giant</h3>
+        <div class="codename">YouTube / 360°</div>
+        <p>360° aksiyon kameralarından 4K YouTube videoları üretir. Reframing, blur, speed ramp.</p>
+        <div class="meta"><span class="badge power">⚡ Power</span><span class="badge">GPU</span></div>
+      </div>
+      <div class="factory-card">
+        <div class="factory-icon">🎤</div>
+        <h3>The Vocalist</h3>
+        <div class="codename">Dublaj / Çeviri</div>
+        <p>9 adımlı pipeline ile çoklu konuşmacı dublajı, dudak senkronu, duygu transferi.</p>
+        <div class="meta"><span class="badge power">⚡ Power</span><span class="badge">200+ dil</span></div>
+      </div>
+      <div class="factory-card">
+        <div class="factory-icon">👤</div>
+        <h3>The Face Studio</h3>
+        <div class="codename">Yüz / Lip-Sync</div>
+        <p>Wav2Lip + GFPGAN ile profesyonel yüz işleme. Dudak hareketleri yeni dile uyar.</p>
+        <div class="meta"><span class="badge power">⚡ Power</span><span class="badge">GPU</span></div>
+      </div>
+      <div class="factory-card">
+        <div class="factory-icon">🛒</div>
+        <h3>The Salesman</h3>
+        <div class="codename">E-Ticaret</div>
+        <p>Ürün fotoğrafı arka plan silme, AI sahne üretimi, beyaz fon — Amazon/Trendyol hazır.</p>
+        <div class="meta"><span class="badge token">💎 Jeton</span><span class="badge">Hızlı</span></div>
+      </div>
+      <div class="factory-card">
+        <div class="factory-icon">🎬</div>
+        <h3>The Sprinter</h3>
+        <div class="codename">Reels / TikTok / Shorts</div>
+        <p>Yatay videoyu dikey kırp, AI sahne seç, 8 filtre, 90/180/60 sn formatlar.</p>
+        <div class="meta"><span class="badge token">💎 Jeton</span><span class="badge">Express</span></div>
+      </div>
+      <div class="factory-card">
+        <div class="factory-icon">🎵</div>
+        <h3>The DJ</h3>
+        <div class="codename">Mix Reel</div>
+        <p>Multi-klip birleştirme, 12 geçiş efekti, müzik senkronu, tempo ayarı.</p>
+        <div class="meta"><span class="badge power">⚡ Power</span><span class="badge">Beat-sync</span></div>
+      </div>
+      <div class="factory-card">
+        <div class="factory-icon">🔀</div>
+        <h3>The Remix</h3>
+        <div class="codename">2D Mix Reel</div>
+        <p>AI sahne algılama, beat detection, gain staging, LUFS -14 broadcast standardı.</p>
+        <div class="meta"><span class="badge token">💎 Jeton</span><span class="badge">AI</span></div>
+      </div>
+      <div class="factory-card">
+        <div class="factory-icon">🎙️</div>
+        <h3>The Broadcaster</h3>
+        <div class="codename">Podcast</div>
+        <p>De-clipping, dolgu kelime silme, voice glow, otomatik shorts çıkarma, ID3 metadata.</p>
+        <div class="meta"><span class="badge token">💎 Jeton</span><span class="badge">Podcast</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ NASIL ÇALIŞIR ═══════════════════════ -->
+<section id="nasil">
+  <div class="container">
+    <div class="section-title">
+      <h2>Nasıl Çalışır?</h2>
+      <p>3 adımda profesyonel video</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <h3>Yükle</h3>
+        <p>Videonu/fotoğrafını yükle. Mobil veya PC'den, fark etmez.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <h3>Seç</h3>
+        <p>Kategorini seç (360 Moto, Dublaj, E-Ticaret...) — Fenix gerisini halleder.</p>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <h3>İndir</h3>
+        <p>Dakikalar içinde hazır video. Tek tıkla indir veya sosyal medyaya paylaş.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ ÖZELLİKLER ═══════════════════════ -->
+<section>
+  <div class="container">
+    <div class="section-title">
+      <h2>Neden Fenix?</h2>
+      <p>Dünyada ilk ve tek özellikler</p>
+    </div>
+    <div class="feature-grid">
+      <div class="feature">
+        <div class="feature-icon">🚀</div>
+        <h3>200+ Akıllı Kısayol</h3>
+        <p>Motor, ralli, drift, surf, ski, futbol — her branş için özel HUD, ses, video efekti hazır.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🧠</div>
+        <h3>Otonom Pipeline</h3>
+        <p>Fenix videoyu görür, hangi pipeline'ları paralel çalıştıracağını kendi karar verir.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">⚡</div>
+        <h3>16 AI API Yedekli</h3>
+        <p>ElevenLabs çökse Play.ht devreye girer. Sıfır kesinti garantisi.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🎯</div>
+        <h3>Branş Bazlı HUD</h3>
+        <p>Motor için RPM+vites, surf için dalga yüksekliği, dalış için derinlik+oksijen.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🎬</div>
+        <h3>Otomatik Highlight</h3>
+        <p>En heyecanlı 30 saniyeyi AI bulur. Sosyal medya hazır kısa videolar.</p>
+      </div>
+      <div class="feature">
+        <div class="feature-icon">🌍</div>
+        <h3>200+ Dil Dublaj</h3>
+        <p>Multi-speaker klonlama, duygu transferi, dudak senkronu, nefes efektleri.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ PRICING ═══════════════════════ -->
+<section class="pricing" id="fiyat">
+  <div class="container">
+    <div class="section-title">
+      <h2>Basit Fiyatlandırma</h2>
+      <p>Kullandığın kadar öde — abonelik yok</p>
+    </div>
+    <div class="price-grid">
+      <div class="price-card">
+        <h3>Başlangıç</h3>
+        <div class="price">$5<small>/paket</small></div>
+        <ul>
+          <li>10 Jeton (hafif işler)</li>
+          <li>1 Power (ağır işler)</li>
+          <li>Tüm fabrikalara erişim</li>
+          <li>720p çıktı</li>
+          <li>Email destek</li>
+        </ul>
+        <button class="btn btn-secondary" onclick="register()">Başla</button>
+      </div>
+      <div class="price-card featured">
+        <h3>Profesyonel</h3>
+        <div class="price">$25<small>/paket</small></div>
+        <ul>
+          <li>50 Jeton</li>
+          <li>5 Power</li>
+          <li>Tüm fabrikalara erişim</li>
+          <li>4K çıktı</li>
+          <li>Watermark yok</li>
+          <li>Öncelikli kuyruk</li>
+          <li>WhatsApp destek</li>
+        </ul>
+        <button class="btn btn-primary" onclick="register()">En Popüler</button>
+      </div>
+      <div class="price-card">
+        <h3>Stüdyo</h3>
+        <div class="price">$100<small>/paket</small></div>
+        <ul>
+          <li>250 Jeton</li>
+          <li>25 Power</li>
+          <li>Tüm fabrikalar</li>
+          <li>4K + 360° çıktı</li>
+          <li>API erişimi</li>
+          <li>Özel pipeline talebi</li>
+          <li>7/24 öncelikli destek</li>
+        </ul>
+        <button class="btn btn-secondary" onclick="register()">Stüdyo</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════ CTA ═══════════════════════ -->
+<div class="cta-section">
+  <h2>Hazır mısın?</h2>
+  <p>İlk videona ücretsiz başla. Hoş geldin krediyi al, dene.</p>
+  <a href="#" class="btn btn-primary" style="padding:16px 40px;font-size:18px" onclick="register()">Şimdi Başla</a>
+</div>
+
+<!-- ═══════════════════════ FOOTER ═══════════════════════ -->
+<footer>
+  <div class="container">
+    <p>🔥 <strong>FENIX AI</strong> · Tek tıkla profesyonel video üretimi</p>
+    <p style="margin-top:8px"><a href="/fenix-otonom-mobile.html">Otonom Panel</a> · <a href="https://phoenix-factory-hub.lovable.app">Fabrika Paneli</a> · <a href="https://fenix-nexus.lovable.app">API Gateway</a></p>
+    <p style="margin-top:8px;font-size:12px">© 2026 Fenix AI. Tüm hakları saklıdır.</p>
+  </div>
+</footer>
+
+<script>
+function register() {
+  // Firebase Auth ile kayıt — şimdilik direct otonom panele yönlendir
+  window.location.href = '/fenix-otonom-mobile.html';
+}
+function login() {
+  window.location.href = '/fenix-otonom-mobile.html?login=1';
+}
+
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(a.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+</script>
+</body>
+</html>
