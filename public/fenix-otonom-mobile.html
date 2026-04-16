@@ -827,12 +827,55 @@ async function execAction(catId, cmdId, cmd) {
       return;
     }
 
-    const r = await fetch(`${API}${cat.defaultEndpoint}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({plan,action:cmdId})});
-    if(!r.ok) throw new Error('Basarisiz');
-    const d = await r.json();
-    updJob(jid,{id:d.jobId||jid,status:d.status==='done'?'done':'processing',progress:d.progress||0,url:d.downloadUrl});
-    if(d.status==='done') sendNotif(catId,cmd?.label);
-    deduct(catId); showToast('Kuyruga alindi','ok');
+    // ═══ YENİ: Pipeline Router endpoint'i kullan (kısayol bazlı yönlendirme) ═══
+    // Önce router endpoint'ini dene (yeni sistem), olmazsa eski endpoint'e fallback
+    let r, d;
+    try {
+      // shortcutId formatı: cat_action (örn: "360_moto", "pro_render")
+      const shortcutId = cmdId.startsWith(catId + '_') ? cmdId : `${catId}_${cmdId}`;
+      r = await fetch(`${API}/api/router/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          shortcutId,
+          videoUrl: plan?.fileUrl || plan?.videoUrl || null,
+          userId: window._uid || cardToken || 'anon',
+          options: { plan, ...plan },
+        }),
+      });
+      if (!r.ok) throw new Error('Router endpoint basarisiz');
+      d = await r.json();
+
+      if (d.ok) {
+        // Router fabrikaya yönlendirdi
+        updJob(jid, {
+          id: d.jobId,
+          status: 'processing',
+          progress: 5,
+          factory: d.factory,
+          pipelines: d.pipelines || [],
+        });
+        // Cost dön bilgi: { power: 2 } veya { token: 1 }
+        if (d.cost) deduct(catId);
+        showToast(`✓ ${d.factory} fabrikasına gönderildi (${(d.pipelines||[]).join('+') || 'temel'})`, 'ok');
+        // Polling başlat
+        if (d.jobId) pollPipelineJob(d.jobId, jid, catId);
+        return;
+      }
+      throw new Error(d.error || 'Router hata');
+    } catch (routerErr) {
+      console.warn('Router fallback to legacy endpoint:', routerErr.message);
+      // Eski sistem fallback (geri uyumluluk)
+      r = await fetch(`${API}${cat.defaultEndpoint}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan, action: cmdId }),
+      });
+      if (!r.ok) throw new Error('Basarisiz');
+      d = await r.json();
+      updJob(jid, { id: d.jobId || jid, status: d.status === 'done' ? 'done' : 'processing', progress: d.progress || 0, url: d.downloadUrl });
+      if (d.status === 'done') sendNotif(catId, cmd?.label);
+      deduct(catId); showToast('Kuyruga alindi', 'ok');
+    }
   } catch(e) { updJob(jid,{status:'error',error:e.message}); showToast(e.message,'error'); }
 }
 
